@@ -32,12 +32,16 @@ abstract final class Space {
   static const double xxs = 2, xs = 4, sm = 8, md = 12, lg = 16, xl = 24;
   static const double xxl = 32, xxxl = 48;
   static const double target = 48, paneInset = 8, titleBarHeight = 40;
+
+  /// Control and row height where input is pointer-only (Windows).
+  static const double pointerTarget = 40;
   static const double formMaxWidth = 640, reviewMaxWidth = 760;
   static const double contentMaxWidth = 1280;
   static const double fieldGap = lg, labelGap = sm, helperGap = xs;
   static const double groupGap = xl, actionsGap = xl;
   static const double cardHeaderGap = md, captionGap = xs;
   static const double dialogPadding = xl, dialogTitleGap = md;
+  static const double dialogMaxWidth = 560, popoverMaxWidth = 320;
   static const pillPadding = EdgeInsets.symmetric(horizontal: 10, vertical: xs);
   static double pageGutter(WidthClass w) => switch (w) {
     WidthClass.compact => lg,
@@ -279,6 +283,9 @@ abstract final class SalapiyaTheme {
       dark: brightness == Brightness.dark,
       highContrast: highContrast,
     );
+    // Controls are 40 tall where input is pointer-only, 48 where it is touch.
+    const target = Space.target;
+    final controlHeight = desktop ? Space.pointerTarget : target;
     // Size and line height in logical px; amounts use tabular figures.
     TextStyle type(
       double size,
@@ -337,7 +344,7 @@ abstract final class SalapiyaTheme {
       borderRadius: BorderRadius.circular(Radii.overlay),
     );
     ButtonStyle button({bool filled = false}) => ButtonStyle(
-      minimumSize: WidgetStatePropertyAll(Size(48, desktop ? 38 : 48)),
+      minimumSize: WidgetStatePropertyAll(Size(target, controlHeight)),
       padding: WidgetStatePropertyAll(
         EdgeInsets.symmetric(
           horizontal: Space.lg,
@@ -349,8 +356,7 @@ abstract final class SalapiyaTheme {
           borderRadius: BorderRadius.circular(Radii.control),
         ),
       ),
-      // Component metrics (label size, heights, padding) are set in Chat 3.
-      textStyle: WidgetStatePropertyAll(type(13, 18, FontWeight.w600)),
+      textStyle: WidgetStatePropertyAll(type(14, 20, FontWeight.w600)),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled)
             ? c.secondary
@@ -371,7 +377,7 @@ abstract final class SalapiyaTheme {
       ),
       side: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.focused)
-            ? BorderSide(color: filled ? c.onPrimary : c.focus, width: 3)
+            ? BorderSide(color: filled ? c.onPrimary : c.focus, width: 2)
             : null,
       ),
     );
@@ -406,7 +412,7 @@ abstract final class SalapiyaTheme {
           side: WidgetStateProperty.resolveWith(
             (s) => BorderSide(
               color: s.contains(WidgetState.focused) ? c.focus : c.border,
-              width: s.contains(WidgetState.focused) ? 3 : 1,
+              width: s.contains(WidgetState.focused) ? 2 : 1,
             ),
           ),
         ),
@@ -414,15 +420,92 @@ abstract final class SalapiyaTheme {
       textButtonTheme: TextButtonThemeData(style: button()),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          minimumSize: const WidgetStatePropertyAll(Size(target, target)),
           foregroundColor: WidgetStatePropertyAll(c.primary),
+          side: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.focused)
+                ? BorderSide(color: c.focus, width: 2)
+                : null,
+          ),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: WidgetStatePropertyAll(Size(target, controlHeight)),
+          textStyle: WidgetStatePropertyAll(type(14, 20, FontWeight.w600)),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Radii.control),
+            ),
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.disabled)
+                ? c.secondary
+                : s.contains(WidgetState.selected)
+                ? c.onSelection
+                : c.text,
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? c.selection : c.surface,
+          ),
+          side: WidgetStateProperty.resolveWith(
+            (s) => BorderSide(
+              color: s.contains(WidgetState.focused) ? c.focus : c.border,
+              width: s.contains(WidgetState.focused) ? 2 : 1,
+            ),
+          ),
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.disabled)
+              ? c.secondary
+              : s.contains(WidgetState.selected)
+              ? c.primary
+              : c.border,
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.disabled)
+              ? c.subtle
+              : s.contains(WidgetState.selected)
+              ? c.primary
+              : Colors.transparent,
+        ),
+        checkColor: WidgetStatePropertyAll(c.onPrimary),
+        side: WidgetStateBorderSide.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? null
+              : BorderSide(color: c.border, width: 2),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.onPrimary : c.border,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.primary : c.subtle,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.primary : c.border,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: c.surface,
+        fillColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.disabled) ? c.subtle : c.surface,
+        ),
+        hoverColor: Colors.transparent,
         border: outline,
-        enabledBorder: outline,
+        enabledBorder: WidgetStateInputBorder.resolveWith(
+          (s) => s.contains(WidgetState.hovered)
+              ? outline.copyWith(borderSide: BorderSide(color: c.text))
+              : outline,
+        ),
+        disabledBorder: outline.copyWith(
+          borderSide: BorderSide(color: c.divider),
+        ),
         focusedBorder: outline.copyWith(
           borderSide: BorderSide(color: c.focus, width: 2),
         ),
@@ -446,7 +529,7 @@ abstract final class SalapiyaTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.control),
         ),
-        labelStyle: type(13, 18, FontWeight.w500),
+        labelStyle: type(12, 16, FontWeight.w500),
         padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 6),
       ),
       cardTheme: CardThemeData(
@@ -476,6 +559,14 @@ abstract final class SalapiyaTheme {
         surfaceTintColor: Colors.transparent,
         shape: overlayShape,
         barrierColor: c.modalScrim,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: c.raised,
+        surfaceTintColor: Colors.transparent,
+        shape: overlayShape,
+        headerForegroundColor: c.text,
+        dividerColor: c.divider,
+        todayBorder: BorderSide(color: c.primary),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: c.raised,

@@ -68,8 +68,8 @@ At text scale ≥ 150%, drop one column class.
 | Back / forward | Title-bar buttons, Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
 | Location | Breadcrumb in the title bar (Section › Tab › Page) | Screen title in the app bar; tabs below it |
 | Create actions | "New" menu button in the page header | + button above the dock opens a bottom sheet |
-| Info control ([§6](#6-form-help-pattern)) | A tooltip on hover and keyboard focus; a click pins it as a popover | Tap opens a popover (a bottom sheet if the text needs more than 3 lines) |
-| Dialogs | Centered, width-bounded modal | Bottom sheet for choices and short forms; full-screen page for long forms |
+| Info control ([§6](#6-form-help-pattern)) | A tooltip on hover and keyboard focus; a click pins it as a popover | Tap opens an anchored popover |
+| Dialogs | Centered, width-bounded modal | Centered dialog for confirmations; bottom sheet for choices and short forms; full-screen page for long forms |
 | Forms | Centered column, max width bounded | Full width, scrolls, keyboard insets respected |
 | Row density | Single-line rows may be 40 px when pointer-only; hover state on rows | Rows at least 48 px; no hover |
 | Hover | Required on every interactive element | Not used; pressed state only |
@@ -158,7 +158,7 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
 | `labelMedium` | 12 / 16 | 500 | Pills, tabs |
 | `labelSmall` | 11 / 16 | 600, +0.6 tracking | Eyebrow labels, the only role that may be uppercase |
 
-`displayLarge` (45 / 52) and `headlineLarge` (32 / 40) exist for completeness. Amounts outside the display roles add `FontFeature.tabularFigures()`. Button and chip labels stay at 13 until Chat 3 sets component metrics.
+`displayLarge` (45 / 52) and `headlineLarge` (32 / 40) exist for completeness. Amounts outside the display roles add `FontFeature.tabularFigures()`. Button and segmented-control labels use 14 / 20 (`labelLarge` metrics); chip labels use 12 / 16 (`labelMedium`).
 
 ### Spacing (`Space`)
 
@@ -175,7 +175,7 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
   | `cardPadding(w)` | 16 | 20 | 20 |
 
 - **Fixed values:** `cardHeaderGap` 12, `captionGap` 4, `fieldGap` 16, `labelGap` 8, `helperGap` 4, `groupGap` 24, `actionsGap` 24, `dialogPadding` 24, `dialogTitleGap` 12, `pillPadding` 10 × 4.
-- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40.
+- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320. `pointerTarget` 40 is the control and row height where input is pointer-only (Windows); touch uses `target` 48.
 - **`WidthClass`:** compact < 600, medium 600–999, expanded 1000–1439, wide ≥ 1440. It drops one class at text scale ≥ 150%.
 
 ### Radius (`Radii`)
@@ -232,7 +232,7 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 ### Rows and lists
 
 - **Single-line row:** icon, text, amount and chevron are vertically centered. Height is at least 48 (40 is allowed on Windows when pointer-only).
-- **Two-line row:** the leading icon or avatar is centered on the two-line text block. The amount is right-aligned and aligned with the first line. Height is at least 56.
+- **Two-line row:** the leading icon or avatar, the amount or status, and the chevron are all centered vertically on the row. The amount is right-aligned. Height is at least 56.
 - **Amounts:** tabular figures, right-aligned in their own column, with sign, currency and value kept together. An amount never floats mid-row.
 - **Dividers:** dividers between rows are inset to the text start. There is no divider after the last row.
 - **Text inset:** text keeps at least the card padding from any border.
@@ -258,20 +258,195 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 
 ## 5. Component rules
 
-**Placeholder: defined in Chat 3.**
+The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit.dart`. Every component reads tokens only, works in light, dark and high contrast, and follows the platform from `Theme.of(context).platform`. The older widgets in `components.dart`, `workspace.dart`, `editorial.dart` and `form_presentation.dart` stay until each section chat replaces their uses.
 
-Chat 3 defines each component with its anatomy, states (rest, hover, pressed, focus, disabled with reason, busy, error), light/dark behavior and platform variants. It also builds a debug-only component gallery. These components must be covered:
+### Shared interaction
 
-- **Buttons:** primary, secondary, quiet, destructive and icon buttons.
-- **Cards and metric tiles:** card, metric tile (value, label, context, trend) and section header.
-- **Lists and tables:** list row (one and two lines), table and pager.
-- **Fields:** text, amount, date, dropdown/select with option descriptions, segmented control, switch, checkbox and radio.
-- **Info control and helper text** ([§6](#6-form-help-pattern)).
-- **Dialogs:** dialog, confirmation, bottom sheet and popover. These must meet modern standards: clear title, one-sentence body, a named primary action (never just "OK"), safe Cancel, Esc/Back to close, focus trap and restore, and a scrollable body with fixed actions.
-- **Feedback and states:** toast/snackbar, inline notice, empty state, loading state and status pill.
-- **Navigation:** tabs and the period filter.
-- **Charts:** bar, line and progress, each with an exact-value table option.
-- **Google sign-in button:** follows Google Identity branding (official "G" mark bundled locally, approved light/dark/neutral styles, approved label text such as "Continue with Google"). Verify against the current Google guidelines when it is built.
+- **States:** rest, hover (Windows only, `subtle` fill), pressed (`subtle` fill), focus, disabled, busy and error. No ripple.
+- **Focus ring:** 2 px `focus`, drawn 2 px outside the component and following its radius (`FocusRing`). It shows for keyboard focus only. Stock buttons draw it as a 2 px border from the theme.
+- **Targets:** at least 48×48 on Android. On Windows, 40 (`Space.pointerTarget`) is allowed for buttons, rows, segmented controls and the info control.
+- **Activation:** Enter and Space activate anything focusable. Esc closes the top overlay.
+
+### Buttons (`AppButton`, `AppIconButton`)
+
+| Variant | Use | Built on |
+| --- | --- | --- |
+| Primary | The one main action in a view or modal | `FilledButton` |
+| Secondary | Other actions next to a primary | `OutlinedButton` |
+| Tertiary (quiet) | Low-emphasis actions, Cancel in dialogs, "View all" | `TextButton` |
+| Destructive | Removing records; only as a modal's confirming action or after one | Filled, `error` fill |
+| Icon | Compact actions with an obvious icon; `standard`, `filled` or `outlined` | `IconButton`; the tooltip is required |
+
+- **Metrics:** label 14 / 20 semibold, height 40 on Windows and 48 on Android, control radius.
+- **Busy:** a spinner replaces the icon and the button disables. A button that can be busy has an icon, so its width doesn't change.
+- **Disabled with reason:** pass `disabledReason`. It shows as a tooltip on hover and is read by screen readers.
+
+### Form field with help (`HelpField`, `HelpTextField`, `InfoControl`, `FormErrorSummary`)
+
+- **Anatomy, top to bottom:**
+  - the label (`labelLarge`), then ` *` if required, then the ⓘ info control;
+  - the control;
+  - one line of helper or error text (`bodySmall`).
+- **Label row:** it is always one hit target tall. The label-to-control gap shrinks so the visible gap stays near 8, and fields with and without ⓘ keep the same rhythm.
+- **Required:** ` *` in `secondary`, announced as "‹label›, required". A form that marks required fields says "* Required" once at the top.
+- **Error:**
+  - The message replaces the helper in the same place, with an error icon, as a live region.
+  - The field border turns `error`.
+  - The form owns validation; the component only displays `errorText`.
+- **Error summary:** with two or more errors, `FormErrorSummary` sits at the top of the form and each entry moves focus to its field. No error pop-ups.
+- **Disabled:** `subtle` fill and `divider` border, and the `disabledReason` replaces the helper. **Read-only:** `subtle` fill and a `divider` border; the text stays selectable.
+- **Hover (Windows):** the border darkens to `text`.
+- **Amount field:** `amount: true` adds a ₱ prefix, tabular figures and the decimal keyboard. Parsing stays with the existing rules (`parsePhp`).
+- **Info control:** behavior is in [§6](#6-form-help-pattern).
+  - The hover tooltip uses the tooltip style (`text` fill, control radius).
+  - The pinned popover is level 2 (`raised`, `overlayShadow`, overlay radius), at most `popoverMaxWidth` wide, and kept inside the window.
+  - It opens below the icon, or above it in the lower part of the screen.
+  - It fades in over `Motion.short`.
+  - Screen readers get the text as the control's tooltip without opening it.
+  - **Focus:** a click or tap focuses it only so Esc closes the popover and not a dialog behind it. It never shows a focus ring after a click or tap, and closing it releases focus. The ring appears only for keyboard focus (Tab).
+
+### Date field (`DateField`)
+
+- **Dates are chosen, never typed.** Every date input is a `DateField`. It opens the calendar picker (`showDatePicker`, calendar only, with no switch to typed entry).
+- **The field:**
+  - It looks like a text field: a calendar icon at the end, and the date shown as "29 Oct 2026". With no date, it shows "Choose a date" in `secondary`.
+  - It has the same label, info, helper, error, required and disabled states as `HelpField`.
+- **The picker:** its title is the field label, and its actions are "Choose date" and "Cancel". Focus returns to the field when it closes.
+- **Range:** 2000–2100 by default, as the existing forms use. A form can narrow it.
+- **Clearing:** an optional date shows a "Clear ‹label›" button once it has a value. A required date can't be cleared.
+- **Display only:** the field hands back a `DateTime`. Each form converts it to the format its rules store (`YYYY-MM-DD` today), so domain parsing is unchanged.
+
+### Option picker (`OptionPicker`)
+
+Each option is a `PickerOption` with a short noun-phrase label and an optional one-line description. `PickerStyle.auto` applies this rule:
+
+| Control | When | Descriptions |
+| --- | --- | --- |
+| Segmented control | 2–4 options, labels of at most 12 characters, that change only the *view* (period filter, list or chart). It is also the period filter. | None. Options that differ in effect may not use it, because the effect can't be seen before choosing. |
+| Radio list | Up to 5 options that differ in effect | Always visible under each label. The whole row is the target. |
+| Dropdown | 6 or more options, or long lists such as accounts and categories | Two-line menu items, visible in the open menu before choosing. The selected option's description becomes the helper text. |
+
+Switches and checkboxes are the stock widgets, themed. A switch with help goes inside a `HelpField`.
+
+### Dialogs and sheets (`showAdaptiveModal`, `showAppDialog`, `showAppSheet`, `ModalScaffold`)
+
+- **Structure:**
+  - the title (`headlineSmall`), stating the question or consequence;
+  - a short body, usually one sentence, that scrolls when it has to;
+  - fixed actions.
+- **Spacing:** padding 24, title to body 12, body to actions 24.
+- **Actions:**
+  - The primary is named with a verb, never "OK". Cancel is always present and safe.
+  - **Windows dialogs:** actions are right-aligned, with the primary rightmost. Cancel is tertiary.
+  - **Sheets:** actions stack full width, with the primary on top. Cancel is secondary.
+- **Destructive:** the primary uses the destructive button. Initial focus is on Cancel, so Enter never confirms by accident.
+- **Behavior:**
+  - Esc, Back or the scrim closes the modal and returns `null`.
+  - Focus is trapped inside it and returns to the trigger when it closes.
+  - Motion is `Motion.medium`, or none with reduced motion.
+  - `ModalAction.onPressed` can return `false` to keep the modal open, e.g. when a short form fails validation.
+
+| Content | Windows | Android |
+| --- | --- | --- |
+| Confirmation (incl. destructive), at most 2 actions: `ModalPurpose.confirm` | Centered dialog, max 560 | Centered dialog |
+| Choice or short form, about 3 fields: `ModalPurpose.choice` | Centered dialog, max 640 | Bottom sheet with drag handle, above the keyboard |
+| Long form or review | Pushed page | Full-screen page |
+
+### Cards and headers (`SurfaceCard`, `MetricTile`, `SectionHeader`)
+
+- **`SurfaceCard`:**
+  - level 1 (`surface`, 1 px `divider` border, card radius) with `cardPadding` on all sides;
+  - an optional title (`titleMedium`), caption (`bodySmall`, 4 below) and trailing action, centered on each other, with 12 to the content;
+  - no outer margin, and never nested;
+  - with `onTap`, the whole card is one target with hover, pressed and focus states.
+- **`MetricTile`:** a card with one focal value. It shows a muted label (`labelLarge`), the value 8 below, a context line 4 below that, and an optional trend or status.
+- **`SectionHeader`:** a `titleLarge` header with an optional caption 4 below and a trailing action centered on it. The parent owns the gap after it (`headerGap`).
+
+### List rows (`ListRow`, `ListGroup`)
+
+- **Height:** one line is at least 48, or 40 on Windows. Two lines are at least 56.
+- **Padding:** 12 horizontal and 8 vertical.
+- **Leading icon:** 24, in `secondary`, centered on the text block.
+- **Text:** the title is `titleSmall` and the subtitle is `bodySmall` in `secondary`.
+- **Trailing:** usually an amount or a status pill. It is centered vertically on the row, like the leading icon and the chevron.
+- **Tappable rows:** they get a chevron and hover, pressed and focus states.
+- **`ListGroup`:** hairline dividers inset to the text start, with none after the last row.
+
+### Status (`StatusPill`, `InlineNotice`)
+
+- **`StatusPill`:**
+  - not interactive;
+  - an icon plus a `labelMedium` label, `pillPadding`, pill radius, and a tinted fill;
+  - in high contrast, the fill becomes `surface` with a 1 px border in the status color.
+
+  | Pill | Tone |
+  | --- | --- |
+  | Overdue | `overdue` (rose) |
+  | Due today, Due soon | warning |
+  | Upcoming, Schedule not set | neutral |
+  | Paid off, Settled | success |
+
+  Labels match `DebtDueStatus`. "Settled" is a past-tense state, which [§7](#7-wording-glossary) allows.
+- **`InlineNotice`:** a tinted block with an icon, an optional title and the message. Use it for information, success, warning, error and neutral notes inside a page or form. A notice that reports a change is a live region.
+- **Toast:** the stock `SnackBar` with the theme's `snackBarTheme`. Use it only for a short confirmation of an action the user just took, and never for errors (they are inline).
+
+### Amounts (`MoneyAmount`)
+
+- **Display only:** it shows the string the app already formats (`session.amount(value)`, which gives "Amount hidden" when amounts are hidden). It never formats or calculates.
+- **Sizes:**
+  - **Row:** `titleSmall`.
+  - **Card:** `displaySmall`, stepping down to headline roles to fit.
+  - **Focal:** `displayMedium`, stepping down. It scrolls sideways only as a last resort.
+  - Figures are always tabular, and the line never wraps.
+- **Kinds:**
+  - **Neutral, Spent and You owe:** `text`. "You owe" may get its own role in Chat 10.
+  - **Owed to you:** `owedToYou`. Pair it with a caption such as "Owed to you".
+  - **Screen readers:** the kind is appended, e.g. "Philippine pesos 800.00, owed to you".
+- **Unknown:** a null value shows "Not available yet" in `secondary`, never ₱0.00.
+
+### Empty, loading and error states (`EmptyState`, `LoadingSkeleton`, `ErrorState`)
+
+- **Empty:**
+  - a 32 icon in `secondary`, a title, and a one-line message saying what will appear;
+  - at most one action, which starts with a verb;
+  - centered; it works bare or inside a card.
+- **Loading:**
+  - static `subtle` blocks (`.lines`, `.row`, `.card`) shaped like the content;
+  - no shimmer or animation;
+  - announced as "Loading ‹what›".
+- **Error:**
+  - an error icon, a calm title that states the fact ("Couldn't load your accounts"), and a message saying what is unaffected;
+  - a "Try again" action;
+  - technical detail behind "Show details".
+
+### Provider sign-in (`ProviderSignInButton`, `GoogleSignInButton`)
+
+- **Branding:** provider buttons follow the provider's own branding ([§1](#1-design-principles), principle 11). They show the provider's **official button artwork, unmodified**: nothing is redrawn, recolored or re-typeset.
+- **Adding a provider:** add a `ProviderBrand` with the label, the artwork folder (`<theme>_<square|pill>.png` at 1x, with `2.0x/`, `3.0x/` and `4.0x/` variants), the artwork size and the state-layer colors. These values are the allowed literal exception in `provider_sign_in.dart`.
+- **Google:** the source is the "Android + Web" PNGs (Show text = Yes) from Google's `signin-assets.zip`, per the [Google Identity branding guidelines](https://developers.google.com/identity/branding-guidelines), checked 2026-10-29.
+  - **Files:** copied byte-for-byte into `assets/branding/providers/google/buttons/`. The unzipped bundle stays beside them as the source and is not bundled into the app.
+  - **Label:** "Sign in with Google", which is the only label in the artwork. "Continue with" and "Sign up with" aren't offered.
+  - **Variants:** light, dark and neutral themes, each square or pill.
+  - **Theme:** it follows the app (light or dark) unless set.
+  - **Size:** 180 × 40 logical, never scaled. On Android, the margin around it extends the target to 48.
+  - **States:**
+    - Hover and press add a 10% layer of the artwork's label color.
+    - Keyboard focus shows the focus ring.
+    - Disabled is shown at 38% opacity.
+    - Busy shows a spinner beside the button.
+  - **Why not the SVGs:** the SVG artwork draws the "G" with a CSS conic gradient and Gaussian blurs, which Flutter's SVG renderer can't reproduce. It would draw an approximation, so the PNGs are used.
+  - **Accessibility:** it is announced as "Sign in with Google". Its text is part of the image, so it does not grow with the system text size.
+
+### Deferred to section chats
+
+- **Table and pager:** Chat 8 or 9.
+- **Charts (bar, line, progress with an exact-value table):** Chat 6 or 9.
+- **Tabs:** Chat 4.
+
+### Component gallery (debug only)
+
+- **Where:** `lib/design_system/kit/component_gallery.dart`. It runs only in debug builds started with `--dart-define=SALAPIYA_COMPONENTS=true`. `kDebugMode` is a constant `false` in release, so the gallery is compiled out and has no in-app entry.
+- **What it shows:** every component above, with light and dark side by side on wide windows. A toolbar switches the platform behavior (Windows or Android), the theme (Both, Light, Dark or High contrast), text size (100% or 200%) and reduced motion.
 
 ## 6. Form help pattern
 
@@ -281,7 +456,7 @@ Add help when any of these is true:
 
 - The label uses a domain term (e.g. "Statement", "Installment", "Split method").
 - The field changes balances, schedules, sharing, or what other people see.
-- The field has a format or limit (dates, intervals, counts, decimals).
+- The field has a format or limit (intervals, counts, decimals). Dates don't need format help, because they are always picked from a calendar.
 - A choice can't be undone, or its effect isn't obvious from its label.
 - Field options differ in consequence (e.g. split equally or by amount, payment amounts the same or different each time).
 
@@ -292,8 +467,8 @@ No help is needed for self-explanatory fields such as name, note, or a plain amo
 1. **Helper text:** always visible, under the field. One line (at most about 80 characters). It says *what to enter*, e.g. "The date on your lender's statement." When an error appears, it replaces the helper text in the same place.
 2. **Info control:** an ⓘ icon button right after the label. It says *what the field or option does*, in one sentence (at most about 140 characters), e.g. "Each payment you log is matched to the earliest unpaid due date."
    - **Windows:** a tooltip on hover or keyboard focus; a click pins it as a popover until Esc or a click outside.
-   - **Android:** tap opens a popover (or a bottom sheet if the text needs more than 3 lines).
-   - It has a 48×48 hit area, the semantic label "About ‹field label›", and is reachable by keyboard.
+   - **Android:** tap opens an anchored popover; a tap outside or Back closes it. The ~140-character limit keeps it short enough for a popover even at 200% text, and it keeps the field and keyboard in view.
+   - It has a 48×48 hit area (40 on Windows), the semantic label "About ‹field label›", and is reachable by keyboard.
 
 ### Option explanations
 
@@ -391,8 +566,8 @@ Remove this section when the redesign is finished.
 | --- | --- | --- |
 | 1 | Audit and design spec (this document) | Done |
 | 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Done |
-| 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Next |
-| 4 | App shell: navigation, page header, profile entry | Planned |
+| 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Done |
+| 4 | App shell: navigation, page header, profile entry | Next |
 | 5 | Windows custom title bar | Planned |
 | 6 | Overview dashboard | Planned |
 | 7 | Debts | Planned |
@@ -430,5 +605,19 @@ Each section chat:
 | 2026-10-29 | Radii are control 10, card 14, overlay 20 and pill. Elevation has two levels (hairline cards, shadowed overlays). Motion is 100 / 160 / 200 ms with ease-out. | Approved |
 | 2026-10-29 | Wide content max width is 1280, and the Windows title bar height is 40. | Approved |
 | 2026-10-29 | The existing System/Light/Dark profile setting stays the theme-mode control. | Approved |
+| 2026-10-29 | Component kit (Chat 3) in `lib/design_system/kit/`, with the API and rules in §5. Existing screens are not migrated in Chat 3. | Approved |
+| 2026-10-29 | The Android info control is an anchored popover only. The "bottom sheet if longer than 3 lines" fallback is dropped. | Approved |
+| 2026-10-29 | Option picker rule: segmented only for view-only options without descriptions; a radio list for up to 5 options that differ in effect; a dropdown with two-line items for 6 or more. | Approved |
+| 2026-10-29 | Modal rule: confirmations are centered dialogs on both platforms (this adds to §2 for Android). Choices and short forms are dialogs on Windows and bottom sheets on Android. Long forms are pages. A destructive modal starts with focus on Cancel. | Approved |
+| 2026-10-29 | Required fields are marked ` *`, with "* Required" once at the top of the form. | Approved |
+| 2026-10-29 | Button metrics: 14 / 20 labels, 40 tall on Windows and 48 on Android, 2 px focus border. Chip labels are 12 / 16. These apply app-wide through the theme. | Approved |
+| 2026-10-29 | Table, pager, charts and tabs are deferred to the section chats that first need them. The toast stays the themed stock `SnackBar`. | Approved |
+| 2026-10-29 | Dates are always chosen with a date picker (`DateField`, calendar only), never typed. Section chats replace the existing typed date inputs. | Approved |
+| 2026-10-29 | The info control shows a focus ring only for keyboard focus. A click or tap never leaves a ring, and closing the popover releases focus. | Approved |
+| 2026-10-29 | "Settled" is kept as a status-pill label (a past-tense state). | Approved |
+| 2026-10-29 | The component gallery is debug-only, opened with `--dart-define=SALAPIYA_COMPONENTS=true`. | Approved |
+| 2026-10-30 | List rows center their trailing content (amount, status pill) and chevron vertically, instead of aligning them with the first line. | Approved |
+| 2026-10-30 | The Google button shows Google's official button PNGs, unmodified, from `signin-assets.zip`. The SVGs aren't used because Flutter can't render their gradient "G" faithfully. No font is bundled. | Done |
+| 2026-10-30 | The Google button label becomes "Sign in with Google", the only label in the official artwork (the profile screen says "Continue with Google" today). | Approved |
 | 2026-10-29 | Totals added up across debts and bills per week or month for the dashboard. | Needs approval (Chat 6) |
 | 2026-10-29 | Rewording user-facing messages that live in domain or rule files. | Needs approval (per section chat) |

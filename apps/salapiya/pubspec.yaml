@@ -48,6 +48,7 @@ flutter:
     - assets/branding/horizontal/
     - assets/branding/vertical/
     - assets/branding/display/
+    - assets/branding/providers/google/buttons/
     - assets/fonts/nunitosans/OFL.txt
     - assets/fonts/geist/OFL.txt
     - assets/fonts/sourcesans3/OFL.txt
