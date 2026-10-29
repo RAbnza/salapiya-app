@@ -165,7 +165,7 @@ HTTP is transitive; this app invokes local assets only.
 
 ## Branding proof
 
-See the authoritative [branding register](../../../DESIGN_SYSTEM.md#d1-rendering-decision).
+See the authoritative [branding register](../../DESIGN_SYSTEM_pre-redesign.md#d1-rendering-decision).
 All six original SVGs are byte-identical to D0. Both native renderers report an
 unsupported filter element. Authorized transparent browser exports are the
 default display path; no launcher resources were exported or changed. All six

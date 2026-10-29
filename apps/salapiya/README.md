@@ -15,7 +15,7 @@ supersede the earlier release-gate classification while preserving historical
 before packaging or updating. Final binaries stay local; no automatic public distribution.
 
 The [blueprint](../../docs/PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint), P0-P5 financial/
-identity contracts, [approved final redesign](../../docs/DESIGN_SYSTEM.md#salapiya---final-uiux-redesign-handoff)
+identity contracts, [approved final redesign](../../docs/archive/DESIGN_SYSTEM_pre-redesign.md#salapiya---final-uiux-redesign-handoff)
 and [Android polish](../../docs/archive/salapiya/ANDROID_OVERVIEW_POLISH_HANDOFF.md) govern this
 application. D0-D5/gallery records remain historical references, not a direction to
 restore old layouts. P6 prohibits new screenshots and golden/UI image artifacts;

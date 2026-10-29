@@ -2,7 +2,7 @@
 
 > **Historical record:** preserved development evidence. Current summary: [Development history](../../../DEVELOPMENT_HISTORY.md).
 
-October 17, 2026 (Asia/Manila). Scope: design foundations, shared UI and synthetic proofs. Porcelain, Midnight Spectrum, Magic UI Dock A, mobile design and existing workflows are approved; final visual approval for all M1 revisions through `03950ab` was explicitly granted October 17, 2026 (Asia/Manila). This documentation-only approval does not add manual accessibility/real-device testing or rerun the historical checks below; final dock/menu verification remains in the handoff. See [handoff](../REDESIGN_M1_HANDOFF.md), [contracts](../../../DESIGN_SYSTEM.md#m1-design-foundations-and-component-contracts) and [historical screenshot index](../../../reference/verification/assets/redesign-m1/README.md).
+October 17, 2026 (Asia/Manila). Scope: design foundations, shared UI and synthetic proofs. Porcelain, Midnight Spectrum, Magic UI Dock A, mobile design and existing workflows are approved; final visual approval for all M1 revisions through `03950ab` was explicitly granted October 17, 2026 (Asia/Manila). This documentation-only approval does not add manual accessibility/real-device testing or rerun the historical checks below; final dock/menu verification remains in the handoff. See [handoff](../REDESIGN_M1_HANDOFF.md), [contracts](../../DESIGN_SYSTEM_pre-redesign.md#m1-design-foundations-and-component-contracts) and [historical screenshot index](../../../reference/verification/assets/redesign-m1/README.md).
 
 ## Final desktop dock refinement
 

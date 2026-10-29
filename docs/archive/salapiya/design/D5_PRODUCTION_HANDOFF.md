@@ -2,7 +2,7 @@
 
 > **Historical record:** preserved development evidence. Current summary: [Development history](../../../DEVELOPMENT_HISTORY.md).
 
-> **Presentation baseline superseded - 27 October 2026.** The [final UI/UX redesign handoff](../../../DESIGN_SYSTEM.md#salapiya---final-uiux-redesign-handoff) is the current implementation baseline for review and subsequent P6 work. Its neutral workspace, compact Windows sidebar/toolbar, Android navigation and shared form system replace D0-D5 presentation choices. Historical approvals and screenshots below remain context, not instructions to restore the former design. P0-P5 financial, identity, privacy, persistence and synchronization contracts remain authoritative. This change does not start or certify P6.
+> **Presentation baseline superseded - 27 October 2026.** The [final UI/UX redesign handoff](../../DESIGN_SYSTEM_pre-redesign.md#salapiya---final-uiux-redesign-handoff) is the current implementation baseline for review and subsequent P6 work. Its neutral workspace, compact Windows sidebar/toolbar, Android navigation and shared form system replace D0-D5 presentation choices. Historical approvals and screenshots below remain context, not instructions to restore the former design. P0-P5 financial, identity, privacy, persistence and synchronization contracts remain authoritative. This change does not start or certify P6.
 
 **Finalized:** October 24, 2026 (Asia/Manila).
 
@@ -50,7 +50,7 @@ the older roadmap shortlist is not an adopted dependency list.
 | `features/common/prototype_form.dart` | Shared reviewed forms, draft retention, simulated stale/unavailable results and `DemoViewState` specimens. Retain form composition and review/Edit behavior; replace demo outcomes and draft storage for production. |
 
 Complete feature coverage and entry points are maintained in the
-[screen inventory](../../../DESIGN_SYSTEM.md#screen-state-and-synthetic-scenario-inventory), [D3 record](D3_IMPLEMENTATION.md)
+[screen inventory](../../DESIGN_SYSTEM_pre-redesign.md#screen-state-and-synthetic-scenario-inventory), [D3 record](D3_IMPLEMENTATION.md)
 and [D4 record](D4_IMPLEMENTATION.md); do not duplicate their scenario matrices.
 
 ## Synthetic implementation to replace or adapt

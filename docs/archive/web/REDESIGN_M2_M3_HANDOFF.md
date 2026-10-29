@@ -5,9 +5,9 @@
 **Visual approval:** M1–M5 explicitly approved October 18, 2026 (Asia/Manila). Implementation is complete as recorded below; consolidated technical acceptance is tracked separately in [M6 acceptance](REDESIGN_M6_ACCEPTANCE.md). Historical test results are not retroactively expanded.
 
 
-See the [adaptive navigation foundation](../../DESIGN_SYSTEM.md#adaptive-navigation-and-page-context) for the subsequent desktop dock, header, breadcrumbs and card-alignment refinement, including the reuse contract for M4/M5.
+See the [adaptive navigation foundation](../DESIGN_SYSTEM_pre-redesign.md#adaptive-navigation-and-page-context) for the subsequent desktop dock, header, breadcrumbs and card-alignment refinement, including the reuse contract for M4/M5.
 
-The subsequent [design-led overhaul and horizontal interaction continuation](../../DESIGN_SYSTEM.md#m2m3-design-overhaul-continuation) supersedes the visual composition described here and records its behavioral changes and focused checks.
+The subsequent [design-led overhaul and horizontal interaction continuation](../DESIGN_SYSTEM_pre-redesign.md#m2m3-design-overhaul-continuation) supersedes the visual composition described here and records its behavioral changes and focused checks.
 
 October 17, 2026 (Asia/Manila). Branch: `feat/redesign-m2-m3`. Verified starting remote `main`: `a109b19172ce1f634d1a9cb3f188307967eaff87`. M1 remains approved. This assignment implements M2, records its checkpoint, then continues into M3; no M4–M6, PR or merge is authorized.
 

@@ -100,7 +100,7 @@ An image viewer may show transparent pixels as black/white; the image alpha is
 preserved. Gallery-context comparisons are [Windows export](windows-light-branding.png),
 [Windows SVG](windows-brand-svg.png), [Android export](android-light-branding.png)
 and [Android SVG](android-brand-svg.png). The source manifest, hashes, browser
-dimensions and placement caveats are in the [branding register](../../../../DESIGN_SYSTEM.md#existing-branding-asset-register).
+dimensions and placement caveats are in the [branding register](../../../../archive/DESIGN_SYSTEM_pre-redesign.md#existing-branding-asset-register).
 
 ## What this evidence does and does not establish
 

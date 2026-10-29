@@ -1,5 +1,7 @@
 # Design system
 
+> **Archived 29 October 2026.** This is the design system as it stood before the UI redesign. It is historical, not a rule source. The current spec is [DESIGN_SYSTEM.md](../DESIGN_SYSTEM.md).
+
 ## Contents
 
 - Salapiya native application
@@ -25,13 +27,13 @@ Status: implemented presentation baseline for visual review; P6 has not started.
 
 This handoff supersedes **D0-D5 presentation choices**. In particular, do not restore the Windows floating quick-action tray, dark-only sidebar, oversized hero headings, button walls or technical banners from those historical screenshots. Keep those records for provenance. The accompanying [design system](#final-native-workspace-design-system) and [platform UX](#final-adaptive-navigation-and-interaction) now lead with the implemented rules.
 
-P0-P5 financial/domain, ownership, identity, privacy, immutable evidence, offline storage, synchronization, authorization and recovery contracts are not superseded. The [product blueprint](PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint), [P1](archive/salapiya/P1_LOCAL_FOUNDATION_HANDOFF.md), [P2](archive/salapiya/P2_CONNECTED_IDENTITY_HANDOFF.md), [P3](archive/salapiya/P3_SHARED_EXPENSES_HANDOFF.md), [P4](archive/salapiya/P4_COMPLETE_FINANCIAL_SCOPE_HANDOFF.md) and [P5](archive/salapiya/P5_LIFE_AND_NATIVE_INTEGRATION_HANDOFF.md) remain the functional evidence trail.
+P0-P5 financial/domain, ownership, identity, privacy, immutable evidence, offline storage, synchronization, authorization and recovery contracts are not superseded. The [product blueprint](../PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint), [P1](salapiya/P1_LOCAL_FOUNDATION_HANDOFF.md), [P2](salapiya/P2_CONNECTED_IDENTITY_HANDOFF.md), [P3](salapiya/P3_SHARED_EXPENSES_HANDOFF.md), [P4](salapiya/P4_COMPLETE_FINANCIAL_SCOPE_HANDOFF.md) and [P5](salapiya/P5_LIFE_AND_NATIVE_INTEGRATION_HANDOFF.md) remain the functional evidence trail.
 
 The requested base `e7027ce984a1ad2a9cafa75a6d1bc0d2d35bfe7c` was verified as an ancestor of the starting P5 branch HEAD `5ed1785af22b250074da849f399498674ed2785a`. The descendant added the six supplied reference images. The redesign branch was created from that HEAD. Unrelated untracked `apps/salapiya/android/build/` was preserved and excluded from the commit. No web application, migration, provider configuration or production dataset was changed.
 
 ### Direction and references
 
-The strongest reference is [dashboard_windows_1.png](../apps/salapiya/assets/references/final_redesign/dashboard_windows_1.png): a narrow light sidebar, quiet gray workspace, compact metric row and purposeful white sections. The implemented design adopts that composition while retaining Salapiya's identity, exact financial distinctions and actual available features. The alternate dashboard and four onboarding references informed the first-use frame and phone adaptation; they were not used as fake runtime data or raster UI backgrounds.
+The strongest reference is [dashboard_windows_1.png](../../apps/salapiya/assets/references/final_redesign/dashboard_windows_1.png): a narrow light sidebar, quiet gray workspace, compact metric row and purposeful white sections. The implemented design adopts that composition while retaining Salapiya's identity, exact financial distinctions and actual available features. The alternate dashboard and four onboarding references informed the first-use frame and phone adaptation; they were not used as fake runtime data or raster UI backgrounds.
 
 The seven supplied problem screenshots drove these concrete corrections:
 
@@ -136,32 +138,32 @@ All 70 unmodified native captures are retained in `design/review/final/`. Start 
 
 | Screen | Windows | Android |
 | --- | --- | --- |
-| Welcome | [View](salapiya/design/review/final/windows-welcome.png) | [View](salapiya/design/review/final/android-welcome.png) |
-| Local setup | [View](salapiya/design/review/final/windows-profile-setup.png) | [View](salapiya/design/review/final/android-profile-setup.png) |
-| Google entry | [View](salapiya/design/review/final/windows-connection.png) | [View](salapiya/design/review/final/android-connection.png) |
-| Restore entry | [View](salapiya/design/review/final/windows-restore.png) | [View](salapiya/design/review/final/android-restore.png) |
-| Empty Overview | [View](salapiya/design/review/final/windows-overview-empty.png) | [View](salapiya/design/review/final/android-overview-empty.png) |
-| Account form | [View](salapiya/design/review/final/windows-account-form.png) | [View](salapiya/design/review/final/android-account-form.png) |
-| Life task form | [View](salapiya/design/review/final/windows-task-form.png) | [View](salapiya/design/review/final/android-task-form.png) |
-| Calendar | [View](salapiya/design/review/final/windows-light-calendar.png) | [View](salapiya/design/review/final/android-light-calendar.png) |
-| Learning | [View](salapiya/design/review/final/windows-light-learning.png) | [View](salapiya/design/review/final/android-light-learning.png) |
-| Books | [View](salapiya/design/review/final/windows-light-books.png) | [View](salapiya/design/review/final/android-light-books.png) |
-| Career at 200% | [View](salapiya/design/review/final/windows-large-text-career.png) | [View](salapiya/design/review/final/android-large-text-career.png) |
+| Welcome | [View](../salapiya/design/review/final/windows-welcome.png) | [View](../salapiya/design/review/final/android-welcome.png) |
+| Local setup | [View](../salapiya/design/review/final/windows-profile-setup.png) | [View](../salapiya/design/review/final/android-profile-setup.png) |
+| Google entry | [View](../salapiya/design/review/final/windows-connection.png) | [View](../salapiya/design/review/final/android-connection.png) |
+| Restore entry | [View](../salapiya/design/review/final/windows-restore.png) | [View](../salapiya/design/review/final/android-restore.png) |
+| Empty Overview | [View](../salapiya/design/review/final/windows-overview-empty.png) | [View](../salapiya/design/review/final/android-overview-empty.png) |
+| Account form | [View](../salapiya/design/review/final/windows-account-form.png) | [View](../salapiya/design/review/final/android-account-form.png) |
+| Life task form | [View](../salapiya/design/review/final/windows-task-form.png) | [View](../salapiya/design/review/final/android-task-form.png) |
+| Calendar | [View](../salapiya/design/review/final/windows-light-calendar.png) | [View](../salapiya/design/review/final/android-light-calendar.png) |
+| Learning | [View](../salapiya/design/review/final/windows-light-learning.png) | [View](../salapiya/design/review/final/android-light-learning.png) |
+| Books | [View](../salapiya/design/review/final/windows-light-books.png) | [View](../salapiya/design/review/final/android-light-books.png) |
+| Career at 200% | [View](../salapiya/design/review/final/windows-large-text-career.png) | [View](../salapiya/design/review/final/android-large-text-career.png) |
 
 | Screen | Windows light | Windows dark | Android light | Android dark |
 | --- | --- | --- | --- | --- |
-| Overview | [View](salapiya/design/review/final/windows-light-overview.png) | [View](salapiya/design/review/final/windows-dark-overview.png) | [View](salapiya/design/review/final/android-light-overview.png) | [View](salapiya/design/review/final/android-dark-overview.png) |
-| Accounts | [View](salapiya/design/review/final/windows-light-accounts.png) | [View](salapiya/design/review/final/windows-dark-accounts.png) | [View](salapiya/design/review/final/android-light-accounts.png) | [View](salapiya/design/review/final/android-dark-accounts.png) |
-| Activity | [View](salapiya/design/review/final/windows-light-activity.png) | [View](salapiya/design/review/final/windows-dark-activity.png) | [View](salapiya/design/review/final/android-light-activity.png) | [View](salapiya/design/review/final/android-dark-activity.png) |
-| Cards | [View](salapiya/design/review/final/windows-light-cards.png) | [View](salapiya/design/review/final/windows-dark-cards.png) | [View](salapiya/design/review/final/android-light-cards.png) | [View](salapiya/design/review/final/android-dark-cards.png) |
-| Planning | [View](salapiya/design/review/final/windows-light-planning.png) | [View](salapiya/design/review/final/windows-dark-planning.png) | [View](salapiya/design/review/final/android-light-planning.png) | [View](salapiya/design/review/final/android-dark-planning.png) |
-| Reports | [View](salapiya/design/review/final/windows-light-reports.png) | [View](salapiya/design/review/final/windows-dark-reports.png) | [View](salapiya/design/review/final/android-light-reports.png) | [View](salapiya/design/review/final/android-dark-reports.png) |
-| Import | [View](salapiya/design/review/final/windows-light-import.png) | [View](salapiya/design/review/final/windows-dark-import.png) | [View](salapiya/design/review/final/android-light-import.png) | [View](salapiya/design/review/final/android-dark-import.png) |
-| Files | [View](salapiya/design/review/final/windows-light-files.png) | [View](salapiya/design/review/final/windows-dark-files.png) | [View](salapiya/design/review/final/android-light-files.png) | [View](salapiya/design/review/final/android-dark-files.png) |
-| Debts | [View](salapiya/design/review/final/windows-light-debts.png) | [View](salapiya/design/review/final/windows-dark-debts.png) | [View](salapiya/design/review/final/android-light-debts.png) | [View](salapiya/design/review/final/android-dark-debts.png) |
-| Shared Expenses | [View](salapiya/design/review/final/windows-light-shared.png) | [View](salapiya/design/review/final/windows-dark-shared.png) | [View](salapiya/design/review/final/android-light-shared.png) | [View](salapiya/design/review/final/android-dark-shared.png) |
-| Tasks | [View](salapiya/design/review/final/windows-light-life.png) | [View](salapiya/design/review/final/windows-dark-life.png) | [View](salapiya/design/review/final/android-light-life.png) | [View](salapiya/design/review/final/android-dark-life.png) |
-| Career | [View](salapiya/design/review/final/windows-light-career.png) | [View](salapiya/design/review/final/windows-dark-career.png) | [View](salapiya/design/review/final/android-light-career.png) | [View](salapiya/design/review/final/android-dark-career.png) |
+| Overview | [View](../salapiya/design/review/final/windows-light-overview.png) | [View](../salapiya/design/review/final/windows-dark-overview.png) | [View](../salapiya/design/review/final/android-light-overview.png) | [View](../salapiya/design/review/final/android-dark-overview.png) |
+| Accounts | [View](../salapiya/design/review/final/windows-light-accounts.png) | [View](../salapiya/design/review/final/windows-dark-accounts.png) | [View](../salapiya/design/review/final/android-light-accounts.png) | [View](../salapiya/design/review/final/android-dark-accounts.png) |
+| Activity | [View](../salapiya/design/review/final/windows-light-activity.png) | [View](../salapiya/design/review/final/windows-dark-activity.png) | [View](../salapiya/design/review/final/android-light-activity.png) | [View](../salapiya/design/review/final/android-dark-activity.png) |
+| Cards | [View](../salapiya/design/review/final/windows-light-cards.png) | [View](../salapiya/design/review/final/windows-dark-cards.png) | [View](../salapiya/design/review/final/android-light-cards.png) | [View](../salapiya/design/review/final/android-dark-cards.png) |
+| Planning | [View](../salapiya/design/review/final/windows-light-planning.png) | [View](../salapiya/design/review/final/windows-dark-planning.png) | [View](../salapiya/design/review/final/android-light-planning.png) | [View](../salapiya/design/review/final/android-dark-planning.png) |
+| Reports | [View](../salapiya/design/review/final/windows-light-reports.png) | [View](../salapiya/design/review/final/windows-dark-reports.png) | [View](../salapiya/design/review/final/android-light-reports.png) | [View](../salapiya/design/review/final/android-dark-reports.png) |
+| Import | [View](../salapiya/design/review/final/windows-light-import.png) | [View](../salapiya/design/review/final/windows-dark-import.png) | [View](../salapiya/design/review/final/android-light-import.png) | [View](../salapiya/design/review/final/android-dark-import.png) |
+| Files | [View](../salapiya/design/review/final/windows-light-files.png) | [View](../salapiya/design/review/final/windows-dark-files.png) | [View](../salapiya/design/review/final/android-light-files.png) | [View](../salapiya/design/review/final/android-dark-files.png) |
+| Debts | [View](../salapiya/design/review/final/windows-light-debts.png) | [View](../salapiya/design/review/final/windows-dark-debts.png) | [View](../salapiya/design/review/final/android-light-debts.png) | [View](../salapiya/design/review/final/android-dark-debts.png) |
+| Shared Expenses | [View](../salapiya/design/review/final/windows-light-shared.png) | [View](../salapiya/design/review/final/windows-dark-shared.png) | [View](../salapiya/design/review/final/android-light-shared.png) | [View](../salapiya/design/review/final/android-dark-shared.png) |
+| Tasks | [View](../salapiya/design/review/final/windows-light-life.png) | [View](../salapiya/design/review/final/windows-dark-life.png) | [View](../salapiya/design/review/final/android-light-life.png) | [View](../salapiya/design/review/final/android-dark-life.png) |
+| Career | [View](../salapiya/design/review/final/windows-light-career.png) | [View](../salapiya/design/review/final/windows-dark-career.png) | [View](../salapiya/design/review/final/android-light-career.png) | [View](../salapiya/design/review/final/android-dark-career.png) |
 
 ### Remaining review and P6 boundaries
 
@@ -214,12 +216,12 @@ All paths below are relative to `apps/salapiya/assets/branding/`.
 
 | Asset / link                                                                                                                      | Intrinsic dimensions; viewBox       | Bytes  | Intended use                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------ | ----------------------------------------------------------------------------------------- |
-| [source/salapiya_original.svg](../apps/salapiya/assets/branding/source/salapiya_original.svg)                               | 1888×1588; `0 0 1416 1190.999948`   | 167477 | Archival source; mixed original wordmark/tagline colors, not an automatic runtime variant |
-| [mark/salapiya_mark.svg](../apps/salapiya/assets/branding/mark/salapiya_mark.svg)                                           | 1486×1491; `0 0 1114.5 1118.250011` | 136338 | Symbol on light or dark; compact shell, About or identity region                          |
-| [horizontal/salapiya_horizontal_on_light.svg](../apps/salapiya/assets/branding/horizontal/salapiya_horizontal_on_light.svg) | 1441×463; `0 0 1080.75 347.249998`  | 166550 | Wide welcome/about on Porcelain or white                                                  |
-| [horizontal/salapiya_horizontal_on_dark.svg](../apps/salapiya/assets/branding/horizontal/salapiya_horizontal_on_dark.svg)   | Same horizontal geometry            | 166550 | Wide welcome/about on Midnight Spectrum                                                   |
-| [vertical/salapiya_vertical_on_light.svg](../apps/salapiya/assets/branding/vertical/salapiya_vertical_on_light.svg)         | Same geometry as source             | 167473 | Portrait welcome/about on Porcelain or white                                              |
-| [vertical/salapiya_vertical_on_dark.svg](../apps/salapiya/assets/branding/vertical/salapiya_vertical_on_dark.svg)           | Same geometry as source             | 167473 | Portrait welcome/about on Midnight Spectrum                                               |
+| [source/salapiya_original.svg](../../apps/salapiya/assets/branding/source/salapiya_original.svg)                               | 1888×1588; `0 0 1416 1190.999948`   | 167477 | Archival source; mixed original wordmark/tagline colors, not an automatic runtime variant |
+| [mark/salapiya_mark.svg](../../apps/salapiya/assets/branding/mark/salapiya_mark.svg)                                           | 1486×1491; `0 0 1114.5 1118.250011` | 136338 | Symbol on light or dark; compact shell, About or identity region                          |
+| [horizontal/salapiya_horizontal_on_light.svg](../../apps/salapiya/assets/branding/horizontal/salapiya_horizontal_on_light.svg) | 1441×463; `0 0 1080.75 347.249998`  | 166550 | Wide welcome/about on Porcelain or white                                                  |
+| [horizontal/salapiya_horizontal_on_dark.svg](../../apps/salapiya/assets/branding/horizontal/salapiya_horizontal_on_dark.svg)   | Same horizontal geometry            | 166550 | Wide welcome/about on Midnight Spectrum                                                   |
+| [vertical/salapiya_vertical_on_light.svg](../../apps/salapiya/assets/branding/vertical/salapiya_vertical_on_light.svg)         | Same geometry as source             | 167473 | Portrait welcome/about on Porcelain or white                                              |
+| [vertical/salapiya_vertical_on_dark.svg](../../apps/salapiya/assets/branding/vertical/salapiya_vertical_on_dark.svg)           | Same geometry as source             | 167473 | Portrait welcome/about on Midnight Spectrum                                               |
 
 Resolve the links above from this document; their targets are the existing assets,
 not copies. Product name: **Salapiya**. Tagline: **Your money, on your terms.**
@@ -315,7 +317,7 @@ horizontal 1441×463. Alpha is retained. Original SVG bytes are unchanged from D
 
 The native `branding_test.dart` renders all six pairs into identical transparent
 640×320 contain rectangles on **each platform**. See the
-[review index](salapiya/design/review/d1/README.md), `*-logo-*-svg.png`, `*-logo-*-export.png` and
+[review index](../salapiya/design/review/d1/README.md), `*-logo-*-svg.png`, `*-logo-*-export.png` and
 `*-runtime-branding.json`. Differences include antialiasing/resampling as well as
 unsupported source effects, so the numeric difference is diagnostic, not an
 acceptance score. Windows mean channel difference: 0.56–0.79/255; Android:
@@ -339,8 +341,8 @@ treatment rather than create one silently.
 **Status:** D1R-R01 selects **Luminous Lattice structure + Woven Calm softness**
 after the hands-on D1 comparison. Nunito Sans remains primary (R04).
 The historical D0 directions below explain the chronology; they are not two
-production themes. See the [decision register](archive/salapiya/design/README.md) and
-[D1R live review](archive/salapiya/design/D1R_IMPLEMENTATION.md). These are original modern interpretations,
+production themes. See the [decision register](salapiya/design/README.md) and
+[D1R live review](salapiya/design/D1R_IMPLEMENTATION.md). These are original modern interpretations,
 not reproductions or claims of community endorsement.
 
 ### Current visual grammar
@@ -534,7 +536,7 @@ shell instead of reopening an A/B contest. Typography research is not restarted.
 
 ### Post-P6 presentation additions (29 October 2026)
 
-The [post-P6 handoff](archive/salapiya/POST_P6_PRESENTATION_POLISH_HANDOFF.md) adds shared
+The [post-P6 handoff](salapiya/POST_P6_PRESENTATION_POLISH_HANDOFF.md) adds shared
 `ReviewRow`, `ReviewNotes`, `FormStatus`, `FormSyncStatus` and `FormEvidence`.
 Use semantic success/error/warning roles with named status and icon; local save,
 remote acceptance, downloaded reconciliation and business confirmation are separate.
@@ -568,14 +570,14 @@ The material below is retained for provenance. Conflicting presentation guidance
 
 ## Native design system — D2 corrected framing
 
-**Current implementation (23 October 2026):** [Daylight editorial redesign](archive/salapiya/design/D2_REIMAGINED.md) supersedes the visual selections below. Geist, warm porcelain/graphite, ink balance surfaces, lilac navigation, mint wallets and open ledgers are implemented. Older Gallery motifs remain historical comparisons.
+**Current implementation (23 October 2026):** [Daylight editorial redesign](salapiya/design/D2_REIMAGINED.md) supersedes the visual selections below. Geist, warm porcelain/graphite, ink balance surfaces, lilac navigation, mint wallets and open ledgers are implemented. Older Gallery motifs remain historical comparisons.
 
 **Status:** D1R-R01/R03 refine the P03 baseline in `lib/design_system/`.
 Luminous Lattice is primary; Woven Calm softness and Nunito Sans remain.
-The [current implementation record](archive/salapiya/design/D2_IMPLEMENTATION.md) maps actual reusable components
+The [current implementation record](salapiya/design/D2_IMPLEMENTATION.md) maps actual reusable components
 and records measured proof and limitations. D1R was approved on October 22, 2026 except for the repeated top line,
 removed in D2-F0. Read the
-[creative alternatives](#creative-direction-and-cultural-research) and [decision register](archive/salapiya/design/README.md).
+[creative alternatives](#creative-direction-and-cultural-research) and [decision register](salapiya/design/README.md).
 Use one shared semantic system across Windows and Android; adapt layout/input.
 
 ### Implemented D1R craft and navigation roles
@@ -819,7 +821,7 @@ the separate gallery is explicitly outside that demo preference.
 
 ### Post-P6 review and native caption (29 October 2026)
 
-See the [post-P6 handoff](archive/salapiya/POST_P6_PRESENTATION_POLISH_HANDOFF.md). Reviewed
+See the [post-P6 handoff](salapiya/POST_P6_PRESENTATION_POLISH_HANDOFF.md). Reviewed
 forms retain their controllers, draft/exit guards and original-result recovery.
 Shared forms still close their route where appropriate. Result panels announce
 truthful local, pending, failed and uncertain states; technical evidence expands
@@ -855,12 +857,12 @@ The earlier proposal below is retained as history. Its Windows dock, dark-only s
 
 ## Adaptive navigation and interaction proposal
 
-**Current implementation:** [D2 reimagined](archive/salapiya/design/D2_REIMAGINED.md) replaces the earlier framing below. Windows uses an ink sidebar and a compact floating quick-action tray. Android uses a floating dock with integrated quick actions and a wallet-first Overview with expandable spending detail. All five destinations remain reachable.
+**Current implementation:** [D2 reimagined](salapiya/design/D2_REIMAGINED.md) replaces the earlier framing below. Windows uses an ink sidebar and a compact floating quick-action tray. Android uses a floating dock with integrated quick actions and a wallet-first Overview with expandable spending detail. All five destinations remain reachable.
 
 **Status:** D1R-R02 selects Android B floating navigation and R03 selects its
 modal + action menu. Windows retains collapsible rail/sidebar plus separate
 contextual dock. D2 implements these in the running native shell; final geometry
-and composition await live review. See [D2 evidence](archive/salapiya/design/D2_IMPLEMENTATION.md).
+and composition await live review. See [D2 evidence](salapiya/design/D2_IMPLEMENTATION.md).
 Layout uses available logical width, usable height, text scale and input mode.
 A small platform adapter selects Windows rail/dock or Android capsule, while
 constraints govern each platform's accessible fallback. See
@@ -1135,13 +1137,13 @@ inside visibly labeled scenario previews; they are not claims of real effects.
 **Status — October 24, 2026:** D0–D4 completed and approved; D5 finalized
 under the lightweight inspection/handoff scope. Current Windows/Android
 UI/UX is the accepted production visual baseline; all data/operations remain
-synthetic/in-memory. The [D5 handoff](archive/salapiya/design/D5_PRODUCTION_HANDOFF.md) records service
+synthetic/in-memory. The [D5 handoff](salapiya/design/D5_PRODUCTION_HANDOFF.md) records service
 integration gaps and open G0–G8 gates. No production, security, accessibility,
 performance or synchronization acceptance is inferred. See [D3 coverage and historical
-scenario mapping](D3_IMPLEMENTATION.md) and [D4 coverage](archive/salapiya/design/D4_IMPLEMENTATION.md). Every listed financial
+scenario mapping](salapiya/design/D3_IMPLEMENTATION.md) and [D4 coverage](salapiya/design/D4_IMPLEMENTATION.md). Every listed financial
 capability remains launch scope. D3/D4 placement determines prototype order,
 not production release eligibility. Blueprint IDs refer to
-[§4 and §19](PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint).
+[§4 and §19](../PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint).
 
 D1R updates the design/navigation selection only; financial and Life coverage is
 unchanged. Android B floating and its + menu are selected (D1R-R02/R03).
@@ -1192,14 +1194,14 @@ in the linked source documents; a prototype is not the full acceptance suite.
 | Excluded web operations      | F04                | Hosted web deployment/readiness and disposable web-data conversion are outside native migration; native/cloud operational acceptance remains engineering work | Not D1–D5                                  |
 
 Source anchors:
-[cards/statements](DOMAIN_RULES.md#v2-credit-cards-and-statements),
-[recurring](DOMAIN_RULES.md#v2-b--recurring-obligations),
-[budgets](DOMAIN_RULES.md#v2-c--budgets),
-[goals](DOMAIN_RULES.md#v2-d--savings-goals),
-[forecasts](DOMAIN_RULES.md#v2-e--forecasts),
-[files/imports](DOMAIN_RULES.md#v2-h--supporting-files-imports-and-portability),
-[Shared Expenses implementation and 40-scenario index](archive/web/SHARED_EXPENSES_IMPLEMENTATION.md),
-[trackers](PRODUCT_AND_FEATURES.md#adaptable-trackers-workflows).
+[cards/statements](../DOMAIN_RULES.md#v2-credit-cards-and-statements),
+[recurring](../DOMAIN_RULES.md#v2-b--recurring-obligations),
+[budgets](../DOMAIN_RULES.md#v2-c--budgets),
+[goals](../DOMAIN_RULES.md#v2-d--savings-goals),
+[forecasts](../DOMAIN_RULES.md#v2-e--forecasts),
+[files/imports](../DOMAIN_RULES.md#v2-h--supporting-files-imports-and-portability),
+[Shared Expenses implementation and 40-scenario index](web/SHARED_EXPENSES_IMPLEMENTATION.md),
+[trackers](../PRODUCT_AND_FEATURES.md#adaptable-trackers-workflows).
 The native blueprint supersedes stale deferrals in older documents. Do not infer
 production completeness from this screen-family mapping.
 
@@ -1327,12 +1329,12 @@ This document defines shared foundations and reusable interaction contracts. It 
 
 | Source | Authority in this document |
 | --- | --- |
-| [PROJECT_VISION_AND_FEATURE_BLUEPRINT.md](PRODUCT_AND_FEATURES.md#project-vision-and-feature-blueprint) | Product behavior, privacy, terminology, acceptance scenarios and release scope. |
-| [SYSTEM_ARCHITECTURE.md](ARCHITECTURE.md#system-architecture) v1.0 | React/Next.js frontend, libraries, state ownership, command behavior and module boundaries. |
-| [DATABASE_ARCHITECTURE.md](DATABASE.md#database-architecture) v1.0 | Actual versus derived data, revisions, ownership, statuses, relationships and temporal/monetary meaning. |
+| [PROJECT_VISION_AND_FEATURE_BLUEPRINT.md](../PRODUCT_AND_FEATURES.md#project-vision-and-feature-blueprint) | Product behavior, privacy, terminology, acceptance scenarios and release scope. |
+| [SYSTEM_ARCHITECTURE.md](../ARCHITECTURE.md#system-architecture) v1.0 | React/Next.js frontend, libraries, state ownership, command behavior and module boundaries. |
+| [DATABASE_ARCHITECTURE.md](../DATABASE.md#database-architecture) v1.0 | Actual versus derived data, revisions, ownership, statuses, relationships and temporal/monetary meaning. |
 | [RAbnza/rabnza-dev](https://github.com/RAbnza/rabnza-dev) | Visual identity reference, verified against implementation at commit `bdd57e7b2ad3f30b365915227e4fd594440d9391`. |
 
-The [Comprehensive UI/UX Redesign Plan](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), approved October 17, 2026 under [D01–D04](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md), governs the new visual/interaction target. Its palette roles, typography scale, geometry, density, compact module-switcher frame, mobile navigation and adaptive compositions take precedence over the original visual/navigation recommendations here. This document continues to govern stable accessibility, financial presentation, feedback, state handling and privacy contracts where the plan is silent. Product/system/database rules remain authoritative for behavior and integrity. The [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) governs adoption; approval does not start implementation.
+The [Comprehensive UI/UX Redesign Plan](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), approved October 17, 2026 under [D01–D04](web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md), governs the new visual/interaction target. Its palette roles, typography scale, geometry, density, compact module-switcher frame, mobile navigation and adaptive compositions take precedence over the original visual/navigation recommendations here. This document continues to govern stable accessibility, financial presentation, feedback, state handling and privacy contracts where the plan is silent. Product/system/database rules remain authoritative for behavior and integrity. The [M1–M6 roadmap](web/UI_UX_REDESIGN_MILESTONES.md) governs adoption; approval does not start implementation.
 
 Use **Personal workspace** as the neutral working identity; final product name, wordmark, logo and native branding are deferred to future Windows/Android planning/development. Do not create speculative branding assets or hardcode identity geometry. Section 2 preserves historical portfolio provenance, not a competing target palette.
 
@@ -1371,7 +1373,7 @@ The reference is the actual source on `main` at the pinned commit above, inspect
 
 #### 2.2 Historical extracted palette versus adaptation
 
-These exact source values preserve the October 6 provenance and original adaptation rationale. Their application-interpretation column is historical. They do not override the current D06 tokens and theme-specific action roles in [Plan Section 5](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#5-visual-identity-and-design-tokens).
+These exact source values preserve the October 6 provenance and original adaptation rationale. Their application-interpretation column is historical. They do not override the current D06 tokens and theme-specific action roles in [Plan Section 5](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#5-visual-identity-and-design-tokens).
 
 | Portfolio primitive | Exact value | Application interpretation |
 | --- | --- | --- |
@@ -1429,7 +1431,7 @@ flowchart LR
     C --> M[Money, Career, Time, Reports, Trackers]
 ```
 
-The approved token values live in [Plan Section 5.1](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#51-color-system). Map existing aliases centrally; do not maintain a second competing palette. Hex values describe opaque sRGB colors. Do not lower text/control opacity without testing the resulting composite color.
+The approved token values live in [Plan Section 5.1](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#51-color-system). Map existing aliases centrally; do not maintain a second competing palette. Hex values describe opaque sRGB colors. Do not lower text/control opacity without testing the resulting composite color.
 
 #### 4.2 Core semantic tokens
 
@@ -1472,7 +1474,7 @@ The original palette calculations met 3:1 on the original theme surfaces. Revali
 
 #### 4.5 Contrast evidence and limits
 
-Use the [approved plan's token-pair calculations](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#51-color-system) as design evidence for its palette, replacing the original cooler-palette calculations. Neither the old nor new arithmetic certifies rendered components. M1 verifies contrast for actual composed states, and consumer milestones recheck affected combinations.
+Use the [approved plan's token-pair calculations](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#51-color-system) as design evidence for its palette, replacing the original cooler-palette calculations. Neither the old nor new arithmetic certifies rendered components. M1 verifies contrast for actual composed states, and consumer milestones recheck affected combinations.
 
 Target at least 4.5:1 for normal text and 3:1 for qualifying large text; this system aims for 4.5:1 even in ordinary display labels. These thresholds follow [WCAG contrast guidance](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html). Essential control outlines, focus indicators and chart marks must retain sufficient non-text contrast in their actual surrounding context. Translucency, gradients, selected rows, autofill, error states and native browser controls require separate rendered checks.
 
@@ -1500,7 +1502,7 @@ Start with normal weights 400, 500 and 600 from one variable font file. Use 700 
 
 #### 5.2 Type scale
 
-Use the approved semantic roles in [Plan Section 5.2](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#52-typography-spacing-and-geometry); the aligned scale below uses a 16px root. Do not change the root size to defeat browser preferences.
+Use the approved semantic roles in [Plan Section 5.2](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#52-typography-spacing-and-geometry); the aligned scale below uses a 16px root. Do not change the root size to defeat browser preferences.
 
 | Token / role | Size | Weight | Line height | Tracking |
 | --- | --- | --- | --- | --- |
@@ -1568,7 +1570,7 @@ Centralize stacking layers: base 0, sticky content 10, shell navigation 20, norm
 
 #### 7.1 Application shell
 
-Use the [approved frame and navigation model](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts): Home, integrated module switcher, Find a screen, contextual Add and Account in a compact utility frame. Money, Career, Calendar, Trackers, Shared expenses when enabled, and Reports remain discoverable through one complete directory. Local module sections and actions sit above content; contextual Settings/detail panels remain useful. A permanent global sidebar is not the new target.
+Use the [approved frame and navigation model](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts): Home, integrated module switcher, Find a screen, contextual Add and Account in a compact utility frame. Money, Career, Calendar, Trackers, Shared expenses when enabled, and Reports remain discoverable through one complete directory. Local module sections and actions sit above content; contextual Settings/detail panels remain useful. A permanent global sidebar is not the new target.
 
 On phones use labeled **Home / Calendar / Modules / More** navigation; Modules opens the complete directory. Reserve bottom-bar height plus safe-area space, and avoid obscuring fields/focus with the keyboard or sticky actions. Menus/sheets retain accessible dismissal and focus restoration. Desktop keyboard search is an accelerator, never the only destination path.
 
@@ -1576,7 +1578,7 @@ Preserve capability flags, every current URL/deep link and contextual source rou
 
 #### 7.2 Widths and breakpoints
 
-Follow available width, input and zoom rather than device detection. The [plan's adaptive compositions](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#62-adaptive-composition) replace the original sidebar-driven breakpoint rules.
+Follow available width, input and zoom rather than device detection. The [plan's adaptive compositions](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#62-adaptive-composition) replace the original sidebar-driven breakpoint rules.
 
 | Available width | Approved behavior |
 | --- | --- |
@@ -2033,7 +2035,7 @@ Radix supplies much of the keyboard/focus machinery, but correct labeling, compo
 
 ### 15. UI libraries and implementation responsibilities
 
-Use the current web stack and [Plan Section 9](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#9-library-strategy-and-platform-reuse) for staged/conditional additions. The original architecture selection is not proof of installation. The statuses below reflect the inspected manifest; add/pin dependencies only during assigned implementation when a real consumer justifies them. No package is installed by this approval task.
+Use the current web stack and [Plan Section 9](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#9-library-strategy-and-platform-reuse) for staged/conditional additions. The original architecture selection is not proof of installation. The statuses below reflect the inspected manifest; add/pin dependencies only during assigned implementation when a real consumer justifies them. No package is installed by this approval task.
 
 | Library / tool | Priority and phase | Purpose and manual work avoided | Tradeoff / responsibility |
 | --- | --- | --- | --- |
@@ -2187,7 +2189,7 @@ New feature UI should compose existing patterns first. Add a shared abstraction 
 
 #### 17.1 Historical adoption sequence and current roadmap
 
-The table below preserves the original staged adoption rationale. V1/V2 are complete under their documented scope and V3 is locally accepted under targeted verification; this is not the current implementation backlog. Follow the approved M1–M6 roadmap, beginning with separately assigned M1, and its [change-impact verification strategy](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#145-approved-change-impact-verification-and-delivery-boundaries). M6 covers the redesigned application, not an automatic complete V1–V3 campaign; existing CI and mandatory assertions remain unchanged.
+The table below preserves the original staged adoption rationale. V1/V2 are complete under their documented scope and V3 is locally accepted under targeted verification; this is not the current implementation backlog. Follow the approved M1–M6 roadmap, beginning with separately assigned M1, and its [change-impact verification strategy](web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#145-approved-change-impact-verification-and-delivery-boundaries). M6 covers the redesigned application, not an automatic complete V1–V3 campaign; existing CI and mandatory assertions remain unchanged.
 
 | Historical phase | Design-system scope | Evidence before completion |
 | --- | --- | --- |
@@ -2268,11 +2270,11 @@ The production shell now uses the approved M1 dock and a single upward Modules/M
 
 Money uses native list/detail routes, M1 responsive record patterns, browse/create disclosures and focused financial tasks. Mobile entry/review temporarily replaces the capsule with the task's own controls and safe-area clearance; ordinary browsing keeps bottom-centered navigation. Review and Edit preserve in-memory fields. Existing command validation, preview authority, frozen uncertain commands and identical retries remain required. Input hydration uses the existing `useClientReady` guard. Successful sign-in enters a fresh private document to discard prior client/RSC state; Better Auth and session policies remain authoritative.
 
-Implementation inventory, constraints, actual checks and deferred visual and M6 acceptance are in [the combined handoff](archive/web/REDESIGN_M2_M3_HANDOFF.md). These implementation choices do not grant visual approval or expand M4/M5 scope.
+Implementation inventory, constraints, actual checks and deferred visual and M6 acceptance are in [the combined handoff](web/REDESIGN_M2_M3_HANDOFF.md). These implementation choices do not grant visual approval or expand M4/M5 scope.
 
 ## M1 design foundations and component contracts
 
-Implementation date: October 17, 2026 (Asia/Manila). Authority: approved plan sections 5, 6, 9, 11 and 12. These foundations are complete and explicitly approved October 17, 2026 (Asia/Manila), through `03950ab`. See [handoff and verification](archive/web/REDESIGN_M1_HANDOFF.md) before starting M2.
+Implementation date: October 17, 2026 (Asia/Manila). Authority: approved plan sections 5, 6, 9, 11 and 12. These foundations are complete and explicitly approved October 17, 2026 (Asia/Manila), through `03950ab`. See [handoff and verification](web/REDESIGN_M1_HANDOFF.md) before starting M2.
 
 **Current decision (D06):** **Porcelain**, **Midnight Spectrum**, **Magic UI Dock (Concept A)**, bottom-centered placement, slim proportions and overall M1 direction are approved. Final visual approval on October 17, 2026 (Asia/Manila) includes the active-state and upward-menu refinement; M1 is complete and M2 is ready for separate assignment. Activity architecture, separate expense entry/review, migration and shared states are preserved. This is M1, not an M2 shell or M3 conversion.
 
@@ -2359,15 +2361,15 @@ Researched live documentation, source registries and licenses on October 17, 202
 
 The noncompact adaptation retains Magic UI's distance -> transform -> spring mechanics (mass 0.1, stiffness 150, damping 12), uses clientX and removes blur/hover-only naming. Desktop A opts into a static compact presentation: 60px container height, approximately 384px width at default text size, fixed 90px items, 24px icon tiles and horizontal 12px labels. Dimensions scale with text size. Desktop hover/focus uses a 180ms ease-out surface tint and accent text without width changes, spring motion or icon lift; touch/reduced-motion disables transitions. The pill retains its subtle border/elevation; stronger selected text, an icon border and a small indicator line replace the filled active capsule/tile. Home, Calendar, Modules and More retain native links/buttons; Modules/More open one connected upward popover, sized to the dock and bounded by available viewport height. Desktop rests 1rem plus safe-area above the viewport bottom; the top frame contains application identity only. At heights up to 500px it returns to document flow. Mobile keeps its existing layout, sizes, placement and motion policy. Keyboard users retain labels and focus outlines. Selected icons use a restrained border without an active glow. The Radix concept remains a historical comparison; M2 owns application-wide integration of selected A. Placement, proportions and final active/menu treatment are explicitly approved October 17, 2026 (Asia/Manila). The screenshot gallery is unchanged.
 
-Motion/navigation imports occur only through the development proof. Production exclusion, public sign-in client closure and isolated navigation runtime cost are measured in the [current results](archive/web/verification/REDESIGN_M1_RESULTS.md). Do not infer that later M2 adoption is bundle-free. M2 must choose the approved concept, remove comparison-only branches, preserve semantic/focus/layout contracts and measure actual app routes.
+Motion/navigation imports occur only through the development proof. Production exclusion, public sign-in client closure and isolated navigation runtime cost are measured in the [current results](web/verification/REDESIGN_M1_RESULTS.md). Do not infer that later M2 adoption is bundle-free. M2 must choose the approved concept, remove comparison-only branches, preserve semantic/focus/layout contracts and measure actual app routes.
 
 ### Subsequent adoption
 
-Final visual approval is recorded in the [handoff](archive/web/REDESIGN_M1_HANDOFF.md#final-approval-and-integration); the [rendered proofs](reference/verification/assets/redesign-m1/README.md) remain historical evidence and predate the final dock revisions. Begin broad conversion only under a separate milestone assignment. M2 owns application navigation and Home rollout; M3–M5 own their screens. Reuse existing DTOs/commands, RHF validation, source URLs and financial formatting. A new view is not permission to change supported filters, backend behavior or command recovery. Check real assistive technology and Android input when those environments are available; browser automation is only part of acceptance.
+Final visual approval is recorded in the [handoff](web/REDESIGN_M1_HANDOFF.md#final-approval-and-integration); the [rendered proofs](../reference/verification/assets/redesign-m1/README.md) remain historical evidence and predate the final dock revisions. Begin broad conversion only under a separate milestone assignment. M2 owns application navigation and Home rollout; M3–M5 own their screens. Reuse existing DTOs/commands, RHF validation, source URLs and financial formatting. A new view is not permission to change supported filters, backend behavior or command recovery. Check real assistive technology and Android input when those environments are available; browser automation is only part of acceptance.
 
 ## Adaptive navigation and page context
 
-**Visual approval:** M1–M5 explicitly approved October 18, 2026 (Asia/Manila). Implementation is complete as recorded below; consolidated technical acceptance is tracked separately in [M6 acceptance](archive/web/REDESIGN_M6_ACCEPTANCE.md). Historical test results are not retroactively expanded.
+**Visual approval:** M1–M5 explicitly approved October 18, 2026 (Asia/Manila). Implementation is complete as recorded below; consolidated technical acceptance is tracked separately in [M6 acceptance](web/REDESIGN_M6_ACCEPTANCE.md). Historical test results are not retroactively expanded.
 
 
 Follow-up to the M2/M3 design overhaul, on `feat/redesign-m2-m3`. This refines the existing visual direction; it does not start M4/M5.
@@ -2410,7 +2412,7 @@ Visual acceptance, physical-device touch behavior, zoom and comprehensive assist
 
 ## M2/M3 design overhaul continuation
 
-**Visual approval:** M1–M5 explicitly approved October 18, 2026 (Asia/Manila). Implementation is complete as recorded below; consolidated technical acceptance is tracked separately in [M6 acceptance](archive/web/REDESIGN_M6_ACCEPTANCE.md). Historical test results are not retroactively expanded.
+**Visual approval:** M1–M5 explicitly approved October 18, 2026 (Asia/Manila). Implementation is complete as recorded below; consolidated technical acceptance is tracked separately in [M6 acceptance](web/REDESIGN_M6_ACCEPTANCE.md). Historical test results are not retroactively expanded.
 
 
 This continues the uncommitted design-led work recovered on `feat/redesign-m2-m3` from baseline `fa154fa0aa651472e87f7e9632a8967f8a622e56`. It supersedes the earlier handoff's panel-and-paragraph layout descriptions. The approved Porcelain, Midnight Spectrum and Magic Dock foundations remain.

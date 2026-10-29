@@ -2,7 +2,7 @@
 
 > **Historical record:** preserved development evidence. Current summary: [Development history](../../../DEVELOPMENT_HISTORY.md).
 
-> **Presentation baseline superseded - 27 October 2026.** The [final UI/UX redesign handoff](../../../DESIGN_SYSTEM.md#salapiya---final-uiux-redesign-handoff) is the current implementation baseline for review and subsequent P6 work. Its neutral workspace, compact Windows sidebar/toolbar, Android navigation and shared form system replace D0-D5 presentation choices. Historical approvals and screenshots below remain context, not instructions to restore the former design. P0-P5 financial, identity, privacy, persistence and synchronization contracts remain authoritative. This change does not start or certify P6.
+> **Presentation baseline superseded - 27 October 2026.** The [final UI/UX redesign handoff](../../DESIGN_SYSTEM_pre-redesign.md#salapiya---final-uiux-redesign-handoff) is the current implementation baseline for review and subsequent P6 work. Its neutral workspace, compact Windows sidebar/toolbar, Android navigation and shared form system replace D0-D5 presentation choices. Historical approvals and screenshots below remain context, not instructions to restore the former design. P0-P5 financial, identity, privacy, persistence and synchronization contracts remain authoritative. This change does not start or certify P6.
 
 **Current status — October 24, 2026 (Asia/Manila):** D0–D4 are complete and
 approved, including the full Windows/Android UI/UX reviewed for D5.
@@ -14,7 +14,7 @@ production visual baseline. Preserve this design.
 Start with the single [D5 production handoff](D5_PRODUCTION_HANDOFF.md) for
 architecture, retained frontend, synthetic replacements, inspection findings and
 integration boundaries. [D3](D3_IMPLEMENTATION.md), [D4](D4_IMPLEMENTATION.md) and
-the [screen inventory](../../../DESIGN_SYSTEM.md#screen-state-and-synthetic-scenario-inventory) retain feature/scenario coverage.
+the [screen inventory](../../DESIGN_SYSTEM_pre-redesign.md#screen-state-and-synthetic-scenario-inventory) retain feature/scenario coverage.
 All prototype data and operations remain synthetic/in-memory. Production,
 security, accessibility, performance and synchronization acceptance are not
 complete; G0–G8 remain open. Next is bounded remaining P0 G0 compatibility and
@@ -52,11 +52,11 @@ the shell after the D2-F0 verification gate, now passed on both platforms.
 
 | Document                                                | Purpose                                                                                  |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [Creative direction](../../../DESIGN_SYSTEM.md#creative-direction-and-cultural-research)             | Lattice-led grammar, historical choices, cultural provenance and retained typography |
-| [Branding register](../../../DESIGN_SYSTEM.md#existing-branding-asset-register)                 | Six existing files, usage, integrity, spacing and renderer risks                         |
-| [Design system](../../../DESIGN_SYSTEM.md#final-native-workspace-design-system)                       | Proposed tokens, component contracts, accessibility and motion                           |
-| [Platform experience](../../../DESIGN_SYSTEM.md#final-adaptive-navigation-and-interaction)                   | Windows rail/dock, Selected Android B, Overview, onboarding and task interaction     |
-| [Screen and state inventory](../../../DESIGN_SYSTEM.md#screen-state-and-synthetic-scenario-inventory) | Blueprint coverage, representative finance journeys and synthetic fixtures               |
+| [Creative direction](../../DESIGN_SYSTEM_pre-redesign.md#creative-direction-and-cultural-research)             | Lattice-led grammar, historical choices, cultural provenance and retained typography |
+| [Branding register](../../DESIGN_SYSTEM_pre-redesign.md#existing-branding-asset-register)                 | Six existing files, usage, integrity, spacing and renderer risks                         |
+| [Design system](../../DESIGN_SYSTEM_pre-redesign.md#final-native-workspace-design-system)                       | Proposed tokens, component contracts, accessibility and motion                           |
+| [Platform experience](../../DESIGN_SYSTEM_pre-redesign.md#final-adaptive-navigation-and-interaction)                   | Windows rail/dock, Selected Android B, Overview, onboarding and task interaction     |
+| [Screen and state inventory](../../DESIGN_SYSTEM_pre-redesign.md#screen-state-and-synthetic-scenario-inventory) | Blueprint coverage, representative finance journeys and synthetic fixtures               |
 | [Prototype roadmap](PROTOTYPE_ROADMAP.md)               | D1–D5 scope, architecture, packages, checks, review artifacts and D1 prompt              |
 
 These documents are one evolving design contract. Token values live in DESIGN_SYSTEM; screen
@@ -76,9 +76,9 @@ accepted or waived. Earlier decisions and evidence below remain historical.
 The [Salapiya blueprint](../../../PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint) governs
 scope, financial meaning, identity, synchronization and platform parity. The
 maintainer's D0 and subsequent D1R assignments supply the dated decisions below.
-Historical [visual guidance](../../../DESIGN_SYSTEM.md#design-system-and-visual-guidelines),
+Historical [visual guidance](../../DESIGN_SYSTEM_pre-redesign.md#design-system-and-visual-guidelines),
 [redesign plan](../../web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md) and
-[M1 guide](../../../DESIGN_SYSTEM.md#m1-design-foundations-and-component-contracts) remain evidence, not
+[M1 guide](../../DESIGN_SYSTEM_pre-redesign.md#m1-design-foundations-and-component-contracts) remain evidence, not
 instructions to recreate the web shell.
 
 | ID     | Decision                                                                                                      | Standing and review boundary                                                                                                          |

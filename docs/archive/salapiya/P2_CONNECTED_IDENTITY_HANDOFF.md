@@ -11,7 +11,7 @@ Verified P1 base: `beb5ba3f106173efe265831dadc7dbc5711126a5`, on the requested
 and the bounded P1 Money scope verified below.**
 This is the single P2 milestone report. The [blueprint](../../PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint),
 [P0 handoff](P0_ARCHITECTURE_PROOF_HANDOFF.md), [P1 handoff](P1_LOCAL_FOUNDATION_HANDOFF.md),
-[D5 handoff](design/D5_PRODUCTION_HANDOFF.md) and [screen inventory](../../DESIGN_SYSTEM.md#screen-state-and-synthetic-scenario-inventory)
+[D5 handoff](design/D5_PRODUCTION_HANDOFF.md) and [screen inventory](../DESIGN_SYSTEM_pre-redesign.md#screen-state-and-synthetic-scenario-inventory)
 informed the work. Historical web code, tests, pnpm tooling and migrations remain
 unchanged. No P3–P6 implementation, new provider project, paid activation, main merge,
 force push, database/replication reset or identity-account deletion occurred.

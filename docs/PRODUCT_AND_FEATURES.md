@@ -32,7 +32,7 @@ Read this document together with:
 - [Product vision and feature blueprint](#project-vision-and-feature-blueprint).
 - [System architecture](ARCHITECTURE.md#system-architecture).
 - [Database architecture](DATABASE.md#database-architecture).
-- [Design system and visual guidelines](DESIGN_SYSTEM.md#design-system-and-visual-guidelines).
+- [Design system and visual guidelines](archive/DESIGN_SYSTEM_pre-redesign.md#design-system-and-visual-guidelines).
 - [Original development handoff](archive/web/PROJECT_DEVELOPMENT_HANDOFF.md).
 - [V2 development handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md).
 - [V3 development handoff](archive/web/V3_DEVELOPMENT_HANDOFF.md).
