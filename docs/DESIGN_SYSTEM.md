@@ -424,7 +424,7 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 - **Branding:** provider buttons follow the provider's own branding ([§1](#1-design-principles), principle 11). They show the provider's **official button artwork, unmodified**: nothing is redrawn, recolored or re-typeset.
 - **Adding a provider:** add a `ProviderBrand` with the label, the artwork folder (`<theme>_<square|pill>.png` at 1x, with `2.0x/`, `3.0x/` and `4.0x/` variants), the artwork size and the state-layer colors. These values are the allowed literal exception in `provider_sign_in.dart`.
 - **Google:** the source is the "Android + Web" PNGs (Show text = Yes) from Google's `signin-assets.zip`, per the [Google Identity branding guidelines](https://developers.google.com/identity/branding-guidelines), checked 2026-10-29.
-  - **Files:** copied byte-for-byte into `assets/branding/providers/google/buttons/`. The unzipped bundle stays beside them as the source and is not bundled into the app.
+  - **Files:** copied byte-for-byte into `assets/branding/providers/google/buttons/`. The rest of the zip isn't kept in the repo; download it again from the link above when the artwork needs updating.
   - **Label:** "Sign in with Google", which is the only label in the artwork. "Continue with" and "Sign up with" aren't offered.
   - **Variants:** light, dark and neutral themes, each square or pill.
   - **Theme:** it follows the app (light or dark) unless set.
