@@ -62,13 +62,7 @@ void main() {
             SalapiyaApp(session: runtime.session, settings: settings),
           );
           await localSettle(tester);
-          await localTap(
-            tester,
-            mobile
-                ? find.byKey(const ValueKey('navigation-fallback'))
-                : find.byTooltip('Navigation \u00b7 5 destinations'),
-          );
-          await localTap(tester, find.text('Life').last);
+          await localTap(tester, find.byKey(const ValueKey('nav-life')));
           await localTap(tester, find.text('Tasks').first);
           expect(find.text('A durable accessible task'), findsOneWidget);
           expect(find.textContaining('View state:'), findsNothing);

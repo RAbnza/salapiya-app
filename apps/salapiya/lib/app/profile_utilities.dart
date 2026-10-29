@@ -15,14 +15,22 @@ class ProfileUtilities extends StatelessWidget {
     super.key,
     required this.settings,
     required this.session,
+    this.initialSection = 'Profile',
   });
   final GallerySettings settings;
   final PrototypeSession session;
+
+  /// The profile tab to open on (local profiles only; the demo has none).
+  final String initialSection;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([settings, session]),
     builder: (context, _) => session is LocalSession
-        ? LocalProfileView(session: session as LocalSession, settings: settings)
+        ? LocalProfileView(
+            session: session as LocalSession,
+            settings: settings,
+            initialSection: initialSection,
+          )
         : DemoPage(
             title: 'Profile & utilities',
             child: Column(

@@ -405,15 +405,20 @@ class LocalProfileView extends StatefulWidget {
     super.key,
     required this.session,
     required this.settings,
+    this.initialSection = 'Profile',
   });
   final LocalSession session;
   final GallerySettings settings;
+
+  /// The tab it opens on: Profile, Connection, Devices, Backup & recovery
+  /// or Help.
+  final String initialSection;
   @override
   State<LocalProfileView> createState() => _LocalProfileViewState();
 }
 
 class _LocalProfileViewState extends State<LocalProfileView> {
-  String section = 'Profile';
+  late String section = widget.initialSection;
   Future<void> rename() async {
     final text = TextEditingController(text: widget.session.profile.name);
     String? error;

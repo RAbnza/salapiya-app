@@ -41,9 +41,9 @@ Future<void> financialJourney(WidgetTester tester) async {
   final session = PrototypeSession();
   await tester.pumpWidget(SalapiyaApp(session: session));
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Quick actions'));
+  await tester.tap(find.byKey(const ValueKey('shell-new')));
   await tester.pumpAndSettle();
-  await financialTap(tester, find.text('Add expense').last);
+  await financialTap(tester, find.text('Log expense').last);
   expect(find.byType(FinancialEditor), findsOneWidget);
   await financialEnter(tester, 'field-name', 'Demo lunch');
   await financialEnter(tester, 'field-amount', '185.501');

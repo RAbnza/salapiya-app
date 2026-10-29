@@ -38,7 +38,8 @@ enum ModalPurpose {
 enum ModalPresentation { dialog, sheet }
 
 /// Title, a scrolling body and fixed actions. A destructive primary starts
-/// with focus on Cancel, so Enter never confirms it by accident.
+/// with focus on Cancel, so Enter never confirms it by accident. A choice
+/// list whose rows close the modal passes a null [primary] and keeps Cancel.
 class ModalScaffold<T> extends StatelessWidget {
   const ModalScaffold({
     super.key,
@@ -50,7 +51,7 @@ class ModalScaffold<T> extends StatelessWidget {
   });
   final String title;
   final Widget body;
-  final ModalAction<T> primary;
+  final ModalAction<T>? primary;
   final ModalAction<T>? secondary;
   final ModalPresentation presentation;
 
@@ -63,15 +64,17 @@ class ModalScaffold<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final sheet = presentation == ModalPresentation.sheet;
-    final cancelFirst = primary.destructive;
-    final primaryButton = AppButton(
-      primary.label,
-      variant: primary.destructive
-          ? AppButtonVariant.destructive
-          : AppButtonVariant.primary,
-      onPressed: () => _press(context, primary),
-      expand: sheet,
-    );
+    final cancelFirst = primary?.destructive ?? false;
+    final primaryButton = primary == null
+        ? null
+        : AppButton(
+            primary!.label,
+            variant: primary!.destructive
+                ? AppButtonVariant.destructive
+                : AppButtonVariant.primary,
+            onPressed: () => _press(context, primary!),
+            expand: sheet,
+          );
     final secondaryButton = secondary == null
         ? null
         : AppButton(
@@ -87,11 +90,10 @@ class ModalScaffold<T> extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              primaryButton,
-              if (secondaryButton != null) ...[
+              ?primaryButton,
+              if (primaryButton != null && secondaryButton != null)
                 const SizedBox(height: Space.sm),
-                secondaryButton,
-              ],
+              ?secondaryButton,
             ],
           )
         : OverflowBar(
@@ -100,7 +102,7 @@ class ModalScaffold<T> extends StatelessWidget {
             overflowDirection: VerticalDirection.up,
             spacing: Space.sm,
             overflowSpacing: Space.sm,
-            children: [?secondaryButton, primaryButton],
+            children: [?secondaryButton, ?primaryButton],
           );
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -151,7 +153,7 @@ Future<T?> showAppDialog<T>(
   BuildContext context, {
   required String title,
   required Widget body,
-  required ModalAction<T> primary,
+  required ModalAction<T>? primary,
   ModalAction<T>? secondary = const ModalAction.cancel(),
   double maxWidth = Space.dialogMaxWidth,
 }) => restoringFocus(
@@ -175,16 +177,18 @@ Future<T?> showAppDialog<T>(
   ),
 );
 
-/// A modal bottom sheet with a drag handle; respects the keyboard.
+/// A modal bottom sheet with a drag handle; respects the keyboard. It opens on
+/// the root navigator so it covers the app shell's dock.
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required String title,
   required Widget body,
-  required ModalAction<T> primary,
+  required ModalAction<T>? primary,
   ModalAction<T>? secondary = const ModalAction.cancel(),
 }) => restoringFocus(
   () => showModalBottomSheet<T>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     sheetAnimationStyle: Motion.of(context, Motion.medium) == Duration.zero
@@ -208,7 +212,7 @@ Future<T?> showAdaptiveModal<T>(
   BuildContext context, {
   required String title,
   required Widget body,
-  required ModalAction<T> primary,
+  required ModalAction<T>? primary,
   ModalAction<T>? secondary = const ModalAction.cancel(),
   ModalPurpose purpose = ModalPurpose.confirm,
 }) {

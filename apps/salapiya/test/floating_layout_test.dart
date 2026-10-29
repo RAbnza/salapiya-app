@@ -29,7 +29,7 @@ void main() {
         if (platform == TargetPlatform.windows) {
           expect(dock, findsNothing);
           expect(find.byType(ShellSidebar), findsOneWidget);
-          expect(find.text('Create'), findsOneWidget);
+          expect(find.text('New'), findsOneWidget);
         } else {
           expect(
             tester.getBottomLeft(scroll).dy,

@@ -29,7 +29,7 @@ Future<void> localAction(WidgetTester tester, String label) async {
         ),
       );
     } else {
-      await localTap(tester, find.byTooltip('Quick actions'));
+      await localTap(tester, find.byKey(const ValueKey('shell-new')));
     }
   }
   await localTap(tester, target.first);

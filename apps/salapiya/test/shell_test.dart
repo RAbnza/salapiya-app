@@ -56,7 +56,7 @@ void main() {
                 isNull,
                 reason: '$platform $size $scale $theme',
               );
-              await tester.tap(find.byTooltip('Quick actions'));
+              await tester.tap(find.byKey(const ValueKey('shell-new')));
               await tester.pumpAndSettle();
               await tapVisible(tester, find.text('Add task'));
               expect(find.byType(PrototypeForm), findsOneWidget);
@@ -122,12 +122,12 @@ void main() {
       final moneyPoint = tester.getCenter(
         find.byKey(const ValueKey('nav-money')),
       );
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
       await tester.tapAt(moneyPoint);
       await tester.pumpAndSettle();
       expect(find.text('Money Today'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quick-actions-menu')), findsNothing);
+      expect(find.text('Log expense'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -145,7 +145,7 @@ void main() {
         SalapiyaApp(settings: settings, session: session),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Profile & utilities').last);
+      await tester.tap(find.byKey(const ValueKey('shell-profile')));
       await tester.pumpAndSettle();
       for (final scenario in OverviewScenario.values) {
         session.select(scenario);
@@ -159,7 +159,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
       await tapVisible(tester, find.text('Add task'));
       final taskTitle = find.widgetWithText(TextField, 'Title');
@@ -191,13 +191,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final destination in AppDestination.values) {
-      await tester.tap(find.text('Navigation'));
+      // The dock keeps all five icons (labels hidden) at narrow 200% text.
+      await tester.tap(find.byKey(ValueKey('nav-${destination.name}')));
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text(destination.label).last);
       expect(tester.takeException(), isNull, reason: destination.label);
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Close quick actions'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
     }

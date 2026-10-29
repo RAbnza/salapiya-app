@@ -14,6 +14,7 @@ import '../../../local/local_finance_controller.dart';
 import '../../../finance/finance_screen.dart';
 
 import '../../../app/demo_routes.dart';
+import '../../../app/shell_navigation.dart';
 import '../../../design_system/editorial.dart';
 import '../../../design_system/theme.dart';
 import '../../../prototype/scenarios.dart';
@@ -335,12 +336,15 @@ class _LifeScreenState extends State<LifeScreen> {
                   t,
             ],
             selected: tab,
-            onSelected: (t) => setState(() {
-              tab = t;
-              page = 0;
-              query = '';
-              filter = 'Active';
-            }),
+            onSelected: (t) {
+              ShellNavigation.reportTab(context, t);
+              setState(() {
+                tab = t;
+                page = 0;
+                query = '';
+                filter = 'Active';
+              });
+            },
           ),
           if (tab == 'Calendar')
             calendar()

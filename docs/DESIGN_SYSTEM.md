@@ -54,20 +54,20 @@ Layout adapts to **available width and text scale**. Platform decides **input an
 
 | Width class | Range (logical px) | Navigation | Content columns |
 | --- | --- | --- | --- |
-| Compact | < 600 | Android bottom dock; Windows: menu button opens the destination chooser | 1 |
-| Medium | 600–999 | Collapsed sidebar rail (icons and tooltips) | 1–2 |
-| Expanded | 1000–1439 | Expanded sidebar | 2–3 |
-| Wide | ≥ 1440 | Expanded sidebar | Up to 4; content max width 1280 (`Space.contentMaxWidth`) |
+| Compact | < 600 | Android bottom dock; Windows: a menu button ("Go to") opens the destination chooser | 1 |
+| Medium | 600–999 | Sidebar as a rail, `Space.railWidth` 64 (icons, tooltips, flyouts); it doesn't expand | 1–2 |
+| Expanded | 1000–1439 | Sidebar, `Space.sidebarWidth` 224; collapsible to the rail for the session | 2–3 |
+| Wide | ≥ 1440 | Same as Expanded | Up to 4; content max width 1280 (`Space.contentMaxWidth`) |
 
 At text scale ≥ 150%, drop one column class.
 
 | Concern | Windows | Android |
 | --- | --- | --- |
-| Window chrome | Custom integrated title bar (below). The native caption is removed. | System status bar. Top app bar with the section title, sync status and profile. |
-| Primary navigation | Sidebar: logo, five destinations, profile at the bottom | Floating bottom dock with five labelled destinations; a separate + action |
-| Back / forward | Title-bar buttons, Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
-| Location | Breadcrumb in the title bar (Section › Tab › Page) | Screen title in the app bar; tabs below it |
-| Create actions | "New" menu button in the page header | + button above the dock opens a bottom sheet |
+| Window chrome | A custom title bar across the full window width, above the sidebar and the app bar ([below](#windows-title-bar-chat-5)). The native caption is removed. | System status bar. Top app bar with the section title (the logo mark leads it on Overview), Hide amounts and the profile button, with the sync status pill under the title. |
+| Primary navigation | Sidebar panel flush with the window's left edge: logo, profile card, Go to, five destinations with their tabs, Needs attention, utilities ([App shell](#app-shell-chat-4)) | Floating bottom dock with five labelled destinations ("Shared" is the short label for Shared Expenses); a separate + action above it |
+| Back / forward | Title-bar buttons (Chat 5), Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
+| Location | Breadcrumb in the title bar (Section › Tab › Page). Until Chat 5 it sits in the shell header above the content. | Screen title in the app bar; tabs below it |
+| Create actions | "New" menu button in the shell header (Ctrl+N) | + button above the dock opens a bottom sheet |
 | Info control ([§6](#6-form-help-pattern)) | A tooltip on hover and keyboard focus; a click pins it as a popover | Tap opens an anchored popover |
 | Dialogs | Centered, width-bounded modal | Centered dialog for confirmations; bottom sheet for choices and short forms; full-screen page for long forms |
 | Forms | Centered column, max width bounded | Full width, scrolls, keyboard insets respected |
@@ -75,11 +75,79 @@ At text scale ≥ 150%, drop one column class.
 | Hover | Required on every interactive element | Not used; pressed state only |
 | Keyboard | Every action reachable; Esc closes the top overlay; Ctrl+N opens New | Hardware keyboard works; not required to be optimized |
 
+### App shell (Chat 4)
+
+`lib/app/shell.dart` and `lib/app/shell_navigation.dart`, built from the kit.
+
+- **Destinations:** Overview, Money, Debts, Shared Expenses and Life. Section tabs stay inside each section.
+- **Profile and settings:** one entry, not a destination. It opens the existing profile page and its tabs (Profile, Connection, Devices, Backup & recovery, Help). Connected accounts are under Connection.
+  - Windows: the profile card at the top of the sidebar opens a menu: Profile and settings, Connection, Devices, Backup & recovery.
+  - Android, and Windows below 600: a button with the profile's initial in the header.
+- **Shell header:**
+  - **Windows with the sidebar: the app bar.** It is `Space.appBarHeight` (56) tall on `surface`, with a hairline divider below, and level with the sidebar's logo row.
+    - Left: the breadcrumb (`ShellBreadcrumb`), with chevrons between segments. Earlier segments are muted and go back; the last one is the current place.
+    - Right: the Go to field ("Go to…" with Ctrl and K keycaps, 224 wide; a search icon at Medium width), then New.
+    - Hide amounts, the profile and the sync state live in the sidebar.
+  - **Android, and Windows below 600:** the title or location, Hide amounts, the profile button, and the sync `StatusPill` on its own row.
+  - A 12 bottom gap keeps the header clear of content scrolling under it. The sync status isn't interactive yet; Chat 5 makes it open the sync details.
+- **Windows sidebar** (`ShellSidebar`), after the owner's reference images:
+  - **Panel:** `surface` on the canvas, flush with the window's left, top and bottom edges. It has square corners and a hairline (`divider`, or `text` in high contrast) along its right edge. Glass comes in Chat 5 as the system Mica material, with a fallback to the solid panel on Windows 10, in high contrast, and with transparency off.
+  - **Collapse:** a panel icon button beside the logo; on the rail it sits under the logo mark. The glyph has two states: a panel outline whose chevron points in ("Collapse sidebar") or out ("Expand sidebar").
+  - **Corners:** highlights, the profile card, the Go to field and the theme switch use `Radii.nav` (6).
+  - **Metrics:** these are compact, like Windows 11 navigation.
+    - Rows are `Space.navItem` 36, 4 apart; tab rows are `Space.navTab` 32.
+    - Icons are `Space.navIcon` 16; the avatar is `Space.navAvatar` 28; the Go to box is `Space.navSearch` 32.
+    - Labels use `NavType.label` (13 / 18, regular; medium when selected). Tabs use `bodySmall` (12 / 16). Eyebrows use `labelSmall`.
+    - Horizontal padding is 12 and vertical padding 16.
+  - **Top, fixed:** a logo row as tall as the app bar (56). The logo (32 tall) is on the left and the collapse button on the right.
+  - **Then, scrolling when the window is short:**
+    - **Profile card:** the initial, the name, and the sync state with its icon ("On this device only", or the sync label in warning tone when it needs review). It opens the profile menu.
+    - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
+    - **Needs attention:** rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge.
+  - **Bottom, fixed:**
+    - Hide amounts (a small switch), Settings (opens Profile and settings) and Help.
+    - Then a full-width Light | Dark switch, with an icon and a label on each segment. It shows the theme in use, including what System is giving. Choosing one sets the profile's theme. System stays available in Profile and settings.
+  - **Selected item:** a `subtle` fill and a medium-weight `text` label. Only the icon is `primary`. High contrast adds a `text` outline.
+  - **Rail:** 40 × 40 icon cells with tooltips. The profile initial opens its menu. Sections with tabs open a flyout beside the item. It has a header (the section's icon and name), then the tabs on the same tree line as the expanded sidebar, with the current tab highlighted. The flyout is level 2, with a `control` radius and a hairline border. The badge sits on the icon. The footer is four icon cells: Hide amounts, Settings, Help, and the theme (switches to the other one).
+- **Go to (Ctrl+K):** a dialog near the top of the window. Typing filters; Enter opens the first match. It lists the sections, every tab ("Activity · Money"), the create actions and the profile pages. It jumps to places; it doesn't search records. It opens from the app bar's Go to field, or from the header's menu button on Windows below 600.
+- **Pages:** they open on a navigator inside the content area.
+  - Windows: the sidebar and header stay visible.
+  - Android: the app bar and dock hide while a page is open.
+  - Dialogs, sheets and pickers open on the root navigator; `showAppSheet` uses it, so sheets cover the dock.
+- **Choosing a destination with a page open (Windows)** closes the pages first. A page that refuses, such as one with an unsaved draft, keeps the user where they are.
+- **Overview links** go to the section and tab that hold the source, e.g. "View accounts" opens Money › Accounts. They no longer push a second copy of the section. Entity details (a debt, a bill, a transaction) still open as pages.
+- **Back:**
+  - System Back and Esc close the top page.
+  - On Android, Back on any destination other than Overview goes to Overview, and Back on Overview leaves the app.
+  - On Windows, Alt+← and the mouse back button go back through the history; Alt+→ and the mouse forward button go forward.
+- **History:** it holds destination and tab changes plus open pages, up to 50 steps. Forward only redoes destination and tab changes; it never reopens a closed page or form. Opening a page clears Forward.
+- **Create actions** use the glossary labels: "Log expense", "Log income", "Log a transfer", "Log a debt payment", "Add a debt", "Log a new loan", "Add task" and "Add event", per destination. The Windows menu opens with its first item focused, so Esc and the arrow keys reach it before an open page.
+- **Navigation state for the title bar:** `ShellNavigation.of(context)` exposes:
+  - `destination`, `tab` and `pages`;
+  - `breadcrumb`, a list of `ShellCrumb(label, onSelected)`: `onSelected` goes back to that segment and is null for the current one;
+  - `canGoBack`, `canGoForward`, `goBack()` and `goForward()`.
+
+  Sections report their tab with `ShellNavigation.reportTab(context, tab)`, which does nothing outside the shell. A page's breadcrumb label is its title (passed as the route arguments by `openDemoPage`), or a name derived from its route.
+- **Routes:** there is no route table, and the only deep link is the OAuth callback, so nothing breaks. Every `RouteSettings.name` is unchanged, including `action/<key>`, which keeps the old action keys while the labels change. The only change is that Overview no longer pushes its `<section>/<source>` pages.
+
 ### Windows title bar (Chat 5)
 
-- **One bar across the full window width**, with app canvas or surface colors from tokens, in light and dark themes. Its height is `Space.titleBarHeight` (40).
-- **Left to right:** the logo mark and "Salapiya", then back and forward buttons (disabled when there is no history), then the breadcrumb (current section › tab › page, with each earlier segment clickable), then flexible drag space, then the sync status pill, then the window controls.
-- **Sync status pill:** a short label and an icon, e.g. "On this device", "Synced · 2 min ago", "Syncing…", "3 waiting", "Needs review", "Offline". Clicking it opens the sync detail. The text comes from existing runtime state only.
+Revised again 2026-10-30 at the owner's request. It is a separate custom bar above the sidebar and the app bar, not the app bar itself.
+
+- **One custom bar across the full window width.**
+  - The window is frameless. The title bar sits on top, and the sidebar and the app bar start below it.
+  - It is `Space.titleBarHeight` (40) tall, in tokens for light and dark, with its own custom design rather than a plain strip of window controls.
+- **No logo or app name in it.** The logo lives in the sidebar. If the owner later moves the logo to the title bar, this changes with it.
+- **Contents:**
+  - **Set:** back and forward buttons on the left (disabled when there is no history), flexible drag space, and the window controls on the right.
+  - **Proposed, to be confirmed in Chat 5's plan step:**
+    - **Sync status pill**, clickable, opening the sync details. It moves out of the sidebar's profile card or mirrors it, without duplicating text needlessly. Labels come from existing runtime state only, e.g. "On this device only", "Synced · 2 min ago", "3 waiting", "Needs review", "Offline".
+    - **Go to field** centered as a command box, moved out of the app bar, or kept in the app bar.
+    - **Window-level toggles**, e.g. Hide amounts.
+
+  The breadcrumb stays in the app bar, so the title bar doesn't repeat it.
+- **Drag areas:** the title bar's empty space. Double-click maximizes.
+- **Mica:** optional, as the title bar's and sidebar's backdrop. Decided in Chat 5.
 - **Window controls:** minimize, maximize/restore and close, using Windows 11 geometry and glyphs. Close uses the system red on hover. These are OS conventions, so they are an allowed exception to the purple accent.
 - **Native behavior must keep working:** drag to move, double-click to maximize, Snap Layouts flyout on maximize hover, Aero Snap, the system menu (Alt+Space), resize borders, DPI changes, multiple monitors, and high-contrast system colors.
 - **Native changes are allowed** in `apps/salapiya/windows/runner/` (currently `win32_window.cpp`, `flutter_window.cpp`, `main.cpp`). A windowing package may be added if it is maintained and works offline; state why before adding it.
@@ -158,7 +226,7 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
 | `labelMedium` | 12 / 16 | 500 | Pills, tabs |
 | `labelSmall` | 11 / 16 | 600, +0.6 tracking | Eyebrow labels, the only role that may be uppercase |
 
-`displayLarge` (45 / 52) and `headlineLarge` (32 / 40) exist for completeness. Amounts outside the display roles add `FontFeature.tabularFigures()`. Button and segmented-control labels use 14 / 20 (`labelLarge` metrics); chip labels use 12 / 16 (`labelMedium`).
+`displayLarge` (45 / 52) and `headlineLarge` (32 / 40) exist for completeness. The Windows sidebar's labels use `NavType.label` (13 / 18), a step between `bodySmall` and `bodyMedium`, as Windows 11 navigation does. Amounts outside the display roles add `FontFeature.tabularFigures()`. Button and segmented-control labels use 14 / 20 (`labelLarge` metrics); chip labels use 12 / 16 (`labelMedium`).
 
 ### Spacing (`Space`)
 
@@ -175,12 +243,43 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
   | `cardPadding(w)` | 16 | 20 | 20 |
 
 - **Fixed values:** `cardHeaderGap` 12, `captionGap` 4, `fieldGap` 16, `labelGap` 8, `helperGap` 4, `groupGap` 24, `actionsGap` 24, `dialogPadding` 24, `dialogTitleGap` 12, `pillPadding` 10 × 4.
-- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320. `pointerTarget` 40 is the control and row height where input is pointer-only (Windows); touch uses `target` 48.
+- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320, `railWidth` 64 and `sidebarWidth` 224 (the Windows sidebar), and `navItem` 36, `navTab` 32, `navIcon` 16, `navAvatar` 28 and `navSearch` 32 (its rows and parts), `appBarHeight` 56 (the Windows app bar and the sidebar's logo row), `dockMaxWidth` 480 (Android dock). `pointerTarget` 40 is the control and row height where input is pointer-only (Windows); touch uses `target` 48.
 - **`WidthClass`:** compact < 600, medium 600–999, expanded 1000–1439, wide ≥ 1440. It drops one class at text scale ≥ 150%.
+
+### Windows density (compact scale)
+
+Windows uses a compact scale, one step below Android, so the whole app matches the sidebar. Android keeps the sizes above.
+
+- **Applied by:** the "Windows density" stage after Chat 4, through the theme and the kit. Tokens become platform-aware, so screens built from tokens shrink at once. Section chats replace the remaining literals as they redesign each screen.
+- **Rule for all new Windows UI:** take sizes from this table, never from the Android column.
+
+| Role | Android | Windows |
+| --- | --- | --- |
+| `displayMedium` (focal value) | 36 / 44 | 32 / 40 |
+| `displaySmall` (metric value) | 28 / 36 | 24 / 32 |
+| `headlineMedium` (page title) | 24 / 32 | 20 / 28 |
+| `headlineSmall` (dialog title) | 20 / 28 | 18 / 24 |
+| `titleLarge` (section title) | 18 / 26 | 16 / 22 |
+| `titleMedium` (card title) | 16 / 24 | 14 / 20 |
+| `titleSmall` (row title) | 14 / 20 | 13 / 18 |
+| `bodyLarge` (field input) | 16 / 24 | 14 / 20 |
+| `bodyMedium` (body) | 14 / 20 | 13 / 18 |
+| `bodySmall` (captions, helpers) | 12 / 16 | 12 / 16 |
+| `labelLarge` (buttons, labels) | 14 / 20 | 13 / 18 |
+| `labelMedium`, `labelSmall` | 12 / 16, 11 / 16 | 12 / 16, 11 / 14 |
+| Buttons, fields, segmented controls | 48 | 32 |
+| Icons | 24 | 18 standalone, 16 inside controls and rows |
+| List row (one line / two lines) | 48 / 56 | 36 / 48 |
+| Card padding | 16 / 20 | 16 |
+| Card gap | 12 / 16 | 12 |
+| Corners: controls / cards / overlays | 10 / 14 / 20 | 6 / 10 / 12 |
+
+- **Targets:** on Windows, pointer controls are 32 tall. This meets WCAG 2.2's 24 px minimum and Windows 11's 32 px control height, and replaces the 40 `pointerTarget` there. Android keeps 48.
+- **Unchanged on both platforms:** spacing gutters and the page rules in [§4](#4-spacing-and-alignment-rules), colors, and motion.
 
 ### Radius (`Radii`)
 
-`control` 10 (buttons, fields, chips, tooltips), `card` 14, `overlay` 20 (dialogs, sheet top corners, menus, popovers), `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
+`control` 10 (buttons, fields, chips, tooltips), `nav` 6 (the Windows sidebar's highlights, profile card and theme switch, and the Go to field), `card` 14, `overlay` 20 (dialogs, sheet top corners, menus, popovers), `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
 
 ### Elevation
 
@@ -340,6 +439,7 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
   - **Windows dialogs:** actions are right-aligned, with the primary rightmost. Cancel is tertiary.
   - **Sheets:** actions stack full width, with the primary on top. Cancel is secondary.
 - **Destructive:** the primary uses the destructive button. Initial focus is on Cancel, so Enter never confirms by accident.
+- **Choice lists:** a modal whose rows make the choice (the destination chooser, the New sheet) passes `primary: null` and keeps only Cancel. Each row closes the modal with its value.
 - **Behavior:**
   - Esc, Back or the scrim closes the modal and returns `null`.
   - Focus is trapped inside it and returns to the trigger when it closes.
@@ -441,7 +541,8 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 
 - **Table and pager:** Chat 8 or 9.
 - **Charts (bar, line, progress with an exact-value table):** Chat 6 or 9.
-- **Tabs:** Chat 4.
+- **Tabs:** the first section chat (Chat 6). Adopting them changes section content, so Chat 4 left the existing tab controls in place.
+- **Page header:** the first section chat (Chat 6), for the same reason.
 
 ### Component gallery (debug only)
 
@@ -567,7 +668,8 @@ Remove this section when the redesign is finished.
 | 1 | Audit and design spec (this document) | Done |
 | 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Done |
 | 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Done |
-| 4 | App shell: navigation, page header, profile entry | Next |
+| 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
+| 4b | Windows density: the compact scale in the theme and kit (§3) | Next |
 | 5 | Windows custom title bar | Planned |
 | 6 | Overview dashboard | Planned |
 | 7 | Debts | Planned |
@@ -619,5 +721,33 @@ Each section chat:
 | 2026-10-30 | List rows center their trailing content (amount, status pill) and chevron vertically, instead of aligning them with the first line. | Approved |
 | 2026-10-30 | The Google button shows Google's official button PNGs, unmodified, from `signin-assets.zip`. The SVGs aren't used because Flutter can't render their gradient "G" faithfully. No font is bundled. | Done |
 | 2026-10-30 | The Google button label becomes "Sign in with Google", the only label in the official artwork (the profile screen says "Continue with Google" today). | Approved |
+| 2026-10-30 | Shell: the five destinations are unchanged; one "Profile and settings" entry (sidebar bottom on Windows, header button on Android); Hide amounts and a sync status pill stay in the shell. | Approved |
+| 2026-10-30 | D1: Windows pages open inside the content area with the sidebar visible. Android pages are full screen, with the app bar and dock hidden. | Approved |
+| 2026-10-30 | D2: Overview links switch to the section and tab instead of pushing a copy of the section. | Approved |
+| 2026-10-30 | D3: Android Back from a destination other than Overview goes to Overview first. | Approved |
+| 2026-10-30 | D4: Forward only redoes destination and tab changes, never pages. | Approved |
+| 2026-10-30 | D5: the rail at 600–999 doesn't expand. The sidebar from 1000 up is collapsible, and the choice isn't saved after the app closes. | Approved |
+| 2026-10-30 | D6: on a narrow Android screen (under 360 wide) or at 150% text and up, the dock keeps all five icons and hides the labels, instead of one "Navigation" button. | Approved |
+| 2026-10-30 | D7: the + sheet on Android and the "New" menu on Windows use the glossary labels. Route names keep the old action keys. | Approved |
+| 2026-10-30 | D8: the kit Tabs and page header components move to the first section chat (Chat 6). | Approved |
+| 2026-10-30 | D9: Chat 4 adds Alt+←/→ and the mouse back and forward buttons. Chat 5 adds the on-screen back and forward buttons. | Approved |
+| 2026-10-30 | D10: the logo stays in the sidebar for now; Chat 5 decides whether it moves to the title bar. | Approved |
+| 2026-10-30 | A modal may have no primary action when its rows make the choice (Cancel only). Sheets open on the root navigator. | Done |
+| 2026-10-30 | Owner review: the shell header gets a 12 bottom gap, and Windows header actions center on the title. | Approved |
+| 2026-10-30 | The Windows sidebar is redesigned as a floating card (owner references). The profile card moves to the top with the sync state and a profile menu. Go to (Ctrl+K) is added. Sections expand into their tabs (an accordion with tree lines; flyouts on the rail). A Needs attention group shows existing counts. Hide amounts, theme and Help move to the footer. | Approved |
+| 2026-10-30 | Selected sidebar items use a neutral `subtle` fill and a semibold label; only the icon is purple. | Approved |
+| 2026-10-30 | Glass behind the sidebar is the Windows Mica material, added in Chat 5 with the runner work. Until then the card is solid. | Approved |
+| 2026-10-30 | New stays in the shell header (Ctrl+N), not in the sidebar. | Approved |
+| 2026-10-30 | A Needs attention row for overdue debts (a new UI count over `debtDueSummary`). | Rejected for the sidebar; overdue debts go on the dashboard (Chat 6) |
+| 2026-10-30 | Owner review 2: the sidebar matches the reference sizes. Labels are 13 / 18 and icons 16. Rows are 36 and tab rows 30, below the 40 pointer target, as Windows 11 navigation allows; this is an exception for the sidebar only, and it still meets WCAG 2.2's 24 px target minimum. Text stays 13 rather than the reference's 11 for legibility. | Approved |
+| 2026-10-30 | The sidebar is flush with the window's left, top and bottom edges, rounded on the right only, and collapses with a round handle on its edge. | Superseded (next row) |
+| 2026-10-30 | Owner review 3: the sidebar has square corners with a right hairline. The logo is centered (kept, not removed, per the brand rule). A separator splits Overview from the sections. Rows are 4 apart and tab rows 32. Highlights and the profile card use `Radii.nav` 6. | Approved |
+| 2026-10-30 | Chat 5 layout changes: no separate full-width title bar. The sidebar and content run to the window's top edge. The content's top row holds back/forward, the breadcrumb, drag space, New and the window controls. The sync pill moves to the sidebar's profile card. This replaces the "one bar across the full window width" rule. | Superseded |
 | 2026-10-29 | Totals added up across debts and bills per week or month for the dashboard. | Needs approval (Chat 6) |
 | 2026-10-29 | Rewording user-facing messages that live in domain or rule files. | Needs approval (per section chat) |
+| 2026-10-30 | Owner review 4, after a reference: Windows gets an app bar (56, `surface`, divider below, level with the sidebar's logo row) with a chevron breadcrumb, the Go to field (moved from the sidebar) and New. The collapse control is a panel icon beside the logo (the round edge handle is removed). The sidebar footer adds Settings. Its theme control is a two-option Light \| Dark switch that reflects System; System stays in Profile and settings. | Approved |
+| 2026-10-30 | Chat 5's chrome is the app bar itself (56), with the window controls at its right end; the logo row and the app bar's empty space are the drag areas. | Superseded (next row) |
+| 2026-10-30 | Chat 5: a separate custom title bar across the full window width, above the sidebar and the app bar. It has back/forward, drag space and window controls, plus more (sync pill, Go to and toggles proposed; confirmed in Chat 5). It has no logo or app name; the logo stays in the sidebar. This also supersedes the earlier "sidebar and content run to the top edge" revision. | Approved |
+| 2026-10-30 | Owner review 5: the rail's section flyout is structured like the expanded sidebar (a header with the icon and name, then tabs on a tree line with the current tab highlighted). The collapse toggle has open and closed glyph states. | Approved |
+| 2026-10-30 | The app bar's New button is compact (32 tall, a 16 icon, a 13 label, `Radii.nav`), matching the Go to field. | Approved |
+| 2026-10-30 | Windows uses a compact scale one step below Android for type, controls, icons, rows and card padding, with tighter corners (controls 6, cards 10, overlays 12). It is applied app-wide through the theme and kit in its own stage after Chat 4. This changes the Chat 2 rule "sizes are the same on Windows and Android" for Windows. | Approved |

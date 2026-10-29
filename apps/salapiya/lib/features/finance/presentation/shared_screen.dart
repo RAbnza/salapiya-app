@@ -4,6 +4,7 @@ import '../../../local/local_runtime.dart';
 import '../../../shared/shared_screen.dart';
 
 import '../../../app/demo_routes.dart';
+import '../../../app/shell_navigation.dart';
 import '../../../design_system/editorial.dart';
 import '../../../design_system/theme.dart';
 import '../../../prototype/scenarios.dart';
@@ -225,7 +226,10 @@ class _SharedScreenState extends State<SharedScreen> {
                   label: Text(t),
                   selected: tab == t,
                   showCheckmark: false,
-                  onSelected: (_) => setState(() => tab = t),
+                  onSelected: (_) {
+                    ShellNavigation.reportTab(context, t);
+                    setState(() => tab = t);
+                  },
                 ),
             ],
           ),

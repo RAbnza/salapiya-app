@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../design_system/editorial.dart';
 import '../app/demo_routes.dart';
+import '../app/shell_navigation.dart';
 import '../design_system/theme.dart';
 import '../features/finance/presentation/financial_widgets.dart';
 import '../local/finance_domain.dart';
@@ -1042,10 +1043,13 @@ class _NativeSharedScreenState extends State<NativeSharedScreen> {
                 'Lifecycle',
               ],
               selected: tab,
-              onSelected: (t) => setState(() {
-                tab = t;
-                page = 0;
-              }),
+              onSelected: (t) {
+                ShellNavigation.reportTab(context, t);
+                setState(() {
+                  tab = t;
+                  page = 0;
+                });
+              },
             ),
             if (tab == 'Bills') ...[
               for (final b in g.bills.keys.skip(page * 50).take(50))

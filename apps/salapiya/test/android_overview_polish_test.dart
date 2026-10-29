@@ -131,7 +131,7 @@ Future<void> overviewPolishJourney(
       if (android) {
         expect(find.text('Add expense'), findsNothing);
         expect(find.text("Your money and what's next."), findsOneWidget);
-        expect(find.byTooltip('Quick actions'), findsOneWidget);
+        expect(find.byKey(const ValueKey('shell-new')), findsOneWidget);
         expect(
           find.byKey(const ValueKey('floating-dock-surface')),
           findsOneWidget,
@@ -277,10 +277,10 @@ Future<void> overviewPolishJourney(
     settings.change(() => settings.textScale = 1);
     await localSettle(tester);
     if (android) {
-      await localTap(tester, find.byTooltip('Quick actions'));
-      expect(find.text('Add expense'), findsOneWidget);
+      await localTap(tester, find.byKey(const ValueKey('shell-new')));
+      expect(find.text('Log expense'), findsOneWidget);
     }
-    final addExpense = find.text('Add expense');
+    final addExpense = find.text(android ? 'Log expense' : 'Add expense');
     await tester.ensureVisible(addExpense);
     await tester.pumpAndSettle();
     // Build the native draft reader with a real I/O clock in host widget tests.

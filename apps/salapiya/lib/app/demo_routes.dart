@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../features/finance/presentation/financial_widgets.dart';
+
 /// A single SDK stack for detail/task/utility routes. Primary tabs never push.
 /// Await removal before unlocking callers and restoring their focus.
+/// The page title travels as the route arguments for the shell's breadcrumb.
 Future<T?> openDemoPage<T>(
   BuildContext context,
   Widget page,
-  String name,
-) async {
+  String name, {
+  String? title,
+}) async {
   if (!(ModalRoute.of(context)?.isCurrent ?? true)) return null;
   final origin = FocusManager.instance.primaryFocus;
   final reduced = MediaQuery.disableAnimationsOf(context);
   final route = PageRouteBuilder<T>(
-    settings: RouteSettings(name: name),
+    settings: RouteSettings(
+      name: name,
+      arguments:
+          title ??
+          switch (page) {
+            FinancePage(:final title) || DemoPage(:final title) => title,
+            _ => null,
+          },
+    ),
     transitionDuration: reduced
         ? Duration.zero
         : const Duration(milliseconds: 160),

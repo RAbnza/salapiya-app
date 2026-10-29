@@ -19,12 +19,12 @@ void main() {
       await tester.pumpWidget(const SalapiyaApp());
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('floating-dock-surface')), findsNothing);
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.text('Transfer money'), findsOneWidget);
+      expect(find.text('Log a transfer'), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.text('Transfer money'), findsNothing);
+      expect(find.text('Log a transfer'), findsNothing);
       expect(tester.takeException(), isNull);
       debugDefaultTargetPlatformOverride = null;
     },

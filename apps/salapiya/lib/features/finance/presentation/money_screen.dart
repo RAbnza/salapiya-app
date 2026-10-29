@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/demo_routes.dart';
+import '../../../app/shell_navigation.dart';
 import '../../../design_system/editorial.dart';
 import '../../../design_system/theme.dart';
 import '../../../prototype/scenarios.dart';
@@ -81,7 +82,10 @@ class _MoneyScreenState extends State<MoneyScreen> {
             'Files',
           ],
           selected: tab,
-          onSelected: (value) => setState(() => tab = value),
+          onSelected: (value) {
+            ShellNavigation.reportTab(context, value);
+            setState(() => tab = value);
+          },
         ),
         if (!widget.session.complete)
           const FinanceNotice(

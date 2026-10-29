@@ -15,6 +15,14 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens Profile and settings: directly from the header button, or through
+/// the sidebar's profile menu.
+Future<void> openProfile(WidgetTester tester) async {
+  await tapVisible(tester, find.byKey(const ValueKey('shell-profile')));
+  final item = find.byKey(const ValueKey('profile-menu-Profile and settings'));
+  if (item.evaluate().isNotEmpty) await tapVisible(tester, item);
+}
+
 /// Shared native/widget acceptance journey; never captures screenshots.
 Future<void> shellJourney(WidgetTester tester) async {
   final settings = GallerySettings();
@@ -28,23 +36,20 @@ Future<void> shellJourney(WidgetTester tester) async {
   for (final destination in AppDestination.values) {
     final control = find.byKey(ValueKey('nav-${destination.name}'));
     if (control.evaluate().isEmpty) {
-      final navigation = find.byWidgetPredicate(
-        (w) => w is Text && w.data?.startsWith('Navigation ·') == true,
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('shell-destinations')),
       );
-      if (navigation.evaluate().isNotEmpty) {
-        await tapVisible(tester, navigation);
-      } else {
-        await tester.tap(find.byTooltip('Navigation · 5 destinations'));
-        await tester.pumpAndSettle();
-      }
-      await tapVisible(tester, find.text(destination.label).last);
+      await tapVisible(
+        tester,
+        find.byKey(ValueKey('choose-${destination.name}')),
+      );
     } else {
       await tapVisible(tester, control);
     }
     expect(tester.takeException(), isNull);
   }
-  await tester.tap(find.byKey(const ValueKey('nav-overview')));
-  await tester.pumpAndSettle();
+  await tapVisible(tester, find.byKey(const ValueKey('nav-overview')));
   if (find.byTooltip('Collapse sidebar').evaluate().isNotEmpty) {
     await tester.tap(find.byTooltip('Collapse sidebar'));
     await tester.pumpAndSettle();
@@ -52,25 +57,40 @@ Future<void> shellJourney(WidgetTester tester) async {
     await tester.tap(find.byTooltip('Expand sidebar'));
     await tester.pumpAndSettle();
   }
+  // Overview links switch to the section and tab; Back (Alt+← on Windows)
+  // returns to Overview.
+  final desktop = defaultTargetPlatform == TargetPlatform.windows;
   await tapVisible(tester, find.text('View accounts'));
   expect(find.text('Accounts'), findsWidgets);
-  expect(find.text('Cash wallet'), findsNWidgets(2));
-  await tester.binding.handlePopRoute();
+  expect(find.text('Cash wallet'), findsWidgets);
+  if (desktop) {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+  } else {
+    await tester.binding.handlePopRoute();
+  }
   await tester.pumpAndSettle();
   expect(find.text('Money Today'), findsOneWidget);
 
-  await tester.tap(find.byTooltip('Quick actions'));
+  final newAction = find.byKey(const ValueKey('shell-new'));
+  await tester.tap(newAction);
   await tester.pumpAndSettle();
-  expect(find.text('Transfer money'), findsOneWidget);
-  await tester.binding.handlePopRoute();
+  expect(find.text('Log a transfer'), findsOneWidget);
+  if (desktop) {
+    await tester.tap(newAction);
+  } else {
+    await tester.binding.handlePopRoute();
+  }
   await tester.pumpAndSettle();
-  expect(find.text('Transfer money'), findsNothing);
-  await tester.tap(find.byTooltip('Quick actions'));
+  expect(find.text('Log a transfer'), findsNothing);
+  await tester.tap(newAction);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Add expense').last);
+  await tester.tap(find.text('Log expense').last);
   await tester.pumpAndSettle();
   expect(find.byType(FinancialEditor), findsOneWidget);
-  expect(find.byTooltip('Quick actions'), findsNothing);
+  // Windows keeps the shell around pages; Android pages are full screen.
+  expect(newAction, desktop ? findsOneWidget : findsNothing);
   final field = find.byKey(const ValueKey('field-name'));
   if (kProfileMode) {
     final editable = find.descendant(
@@ -115,13 +135,12 @@ Future<void> shellJourney(WidgetTester tester) async {
     expect(tester.takeException(), isNull);
   }
   session.reset();
-  await tester.tap(find.byTooltip('Hide amounts'));
+  await tester.tap(find.byKey(const ValueKey('shell-hide-amounts')));
   await tester.pumpAndSettle();
   expect(find.text('₱29,300.75'), findsNothing);
-  await tester.tap(find.byTooltip('Show amounts'));
+  await tester.tap(find.byKey(const ValueKey('shell-hide-amounts')));
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Profile & utilities').last);
-  await tester.pumpAndSettle();
+  await openProfile(tester);
   await tapVisible(tester, find.text('Dark'));
   expect(settings.themeMode, ThemeMode.dark);
   await tapVisible(tester, find.text('Reduce motion'));

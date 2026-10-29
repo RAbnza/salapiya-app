@@ -42,6 +42,20 @@ abstract final class Space {
   static const double cardHeaderGap = md, captionGap = xs;
   static const double dialogPadding = xl, dialogTitleGap = md;
   static const double dialogMaxWidth = 560, popoverMaxWidth = 320;
+
+  /// App shell: the Windows sidebar's width as a rail and expanded, and the
+  /// Android dock's width.
+  static const double railWidth = 64, sidebarWidth = 224, dockMaxWidth = 480;
+
+  /// Windows sidebar metrics (compact pointer navigation, sized after
+  /// Windows 11 navigation and the owner's references): item and tab row
+  /// heights, icon, avatar, search box and collapse-handle sizes.
+  static const double navItem = 36, navTab = 32, navIcon = lg;
+  static const double navAvatar = 28, navSearch = xxl;
+
+  /// The Windows app bar over the content, and the sidebar's logo row that
+  /// lines up with it. In Chat 5 it is also the window's title bar.
+  static const double appBarHeight = target + sm;
   static const pillPadding = EdgeInsets.symmetric(horizontal: 10, vertical: xs);
   static double pageGutter(WidthClass w) => switch (w) {
     WidthClass.compact => lg,
@@ -63,8 +77,19 @@ abstract final class Space {
   static const menuDuration = Motion.short;
 }
 
+/// The Windows sidebar's label size: 13 / 18, a step between `bodySmall`
+/// and `bodyMedium`, as Windows 11 navigation uses. Tabs use `bodySmall`.
+abstract final class NavType {
+  static TextStyle? label(BuildContext context) =>
+      Theme.of(context).textTheme.bodyMedium
+          ?.copyWith(fontSize: 13, height: 18 / 13);
+}
+
 abstract final class Radii {
   static const double control = 10, card = 14, overlay = 20, pill = 999;
+
+  /// Dense navigation: the sidebar's highlights, profile card and Go to box.
+  static const double nav = 6;
 }
 
 abstract final class Motion {

@@ -95,13 +95,7 @@ void main() {
           });
           await localSettle(tester);
           expect(tester.takeException(), isNull);
-          await tester.tap(
-            mobile
-                ? find.byKey(const ValueKey('navigation-fallback'))
-                : find.byTooltip('Navigation · 5 destinations'),
-          );
-          await localSettle(tester);
-          await tester.tap(find.text('Money'));
+          await tester.tap(find.byKey(const ValueKey('nav-money')));
           await localSettle(tester);
           expect(find.text('Money'), findsWidgets);
           expect(tester.takeException(), isNull);

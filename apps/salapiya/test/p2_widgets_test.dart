@@ -73,7 +73,7 @@ void main() {
           expect(find.textContaining('Pending outflow'), findsNothing);
           expect(find.textContaining('LOCAL ONLY'), findsNothing);
           expect(tester.takeException(), isNull);
-          final profile = find.byTooltip('Profile & utilities').first;
+          final profile = find.byKey(const ValueKey('shell-profile'));
           await tester.ensureVisible(profile);
           await tester.tap(profile);
           await tester.pumpAndSettle();
