@@ -166,6 +166,27 @@ At text scale ≥ 150%, drop one column class.
 - **High contrast:** the app switches to its high-contrast theme and the native border uses the system colors. Flutter doesn't expose the user's high-contrast palette, so the bar itself uses the app's high-contrast roles.
 - **Back/forward history is UI-layer state** over the existing navigation (destination switches and pushed pages). Routes and route names do not change.
 
+### Android parity with the Windows title bar (planned)
+
+Approved 2026-10-30. Android gets the title bar's features in its own places; there is no title bar on Android. Built across stages (see [§9](#9-redesign-roadmap-temporary)), from the same sources as Windows.
+
+- **App bar:** the title (the logo mark leads it on Overview), then three actions: Go to (search), the bell and the profile button.
+- **Status row** (today's sync pill row): the sync pill on the left, now tappable (opens Profile › Connection, as on Windows), and the Hide amounts eye on the right, moved from the app bar.
+- **Go to:** the search icon opens a full-screen Go to page with the same `GoToEntry` list (sections, tabs, create actions, profile pages), filtered as you type.
+- **Bell:** a count badge; it opens a bottom sheet with the same Needs attention rows as the Windows bell, each going where the item is handled.
+- **Date and calendar:** no clock (the status bar shows it). The date in Overview's header is tappable and opens a calendar sheet with "Open Life › Calendar".
+- **Calculator:** a "Calculator" row at the bottom of the + sheet opens it as a bottom sheet with Copy (the same exact engine and "≈" rule). As each form is redesigned, amount fields get a calculator button whose "Use result" fills the field, on both platforms.
+- **Unchanged:** system Back (no Forward), the + sheet as Quick create's counterpart, the dock.
+- **Ideas needing approval later:** Android launcher shortcuts and the Windows taskbar jump list (native code), and the Android 14+ predictive-back animation.
+
+```
+│ 9:41                  ▴ ▮ 100% │  status bar
+│ ◆ Overview        ⌕   🔔1  (A)  │  app bar
+│ (☁ Synced ›)              👁   │  status row
+├────────────────────────────────┤
+│ Fri, 30 October  ›             │  Overview header (opens the calendar)
+```
+
 ## 3. Tokens
 
 All tokens live in `apps/salapiya/lib/design_system/theme.dart`. Widgets read them through the theme and never write literals:
@@ -696,7 +717,7 @@ Remove this section when the redesign is finished.
 | 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
 | 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
 | 5 | Windows custom title bar | Done |
-| 6 | Overview dashboard | Next |
+| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Next |
 | 7 | Debts | Planned |
 | 8 | Money A: Accounts, Activity, transaction form | Planned |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
@@ -706,6 +727,7 @@ Remove this section when the redesign is finished.
 | 13 | Life B: Learning, Books, Career | Planned |
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help | Planned |
 | 15 | Onboarding: welcome, local setup, Google, restore | Planned |
+| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
 | 17 | Final review | Planned |
 
@@ -715,6 +737,7 @@ Each section chat:
 2. Updates the tests whose text finders change.
 3. Runs only targeted tests.
 4. Ends with manual checks for the owner.
+5. Gives its amount fields the calculator button with "Use result" (Android parity, §2).
 
 ## 10. Decision log
 
@@ -786,3 +809,4 @@ Each section chat:
 | 2026-10-30 | Rejected for the sidebar: Upcoming, Accounts at a glance, Recent places, Pinned places (dashboard content), and a Groups list (too busy with Quick create). A group switcher may suit the Shared Expenses page (Chat 10). | Rejected |
 | 2026-10-30 | Owner review 2 of the title bar's left side: the sidebar's column runs unbroken to the window's top (the bar's line stops at it), the clock (centered in the column, at the owner's request) shows the time emphasized and the date in `secondary`, and back/forward are neutral and sit just past the sidebar's edge. | Done |
 | 2026-10-30 | Icon buttons use `secondary` when disabled, app-wide; the theme had painted them `primary` in every state, so disabled ones looked clickable. | Done |
+| 2026-10-30 | Android parity plan for the title bar's features (§2): app bar with Go to, bell and profile; status row with a tappable sync pill and the Hide amounts eye; tappable Overview date with a calendar sheet; calculator in the + sheet, then in amount fields. Split across Chat 6, the section chats and a new 15b stage. | Approved (planned) |
