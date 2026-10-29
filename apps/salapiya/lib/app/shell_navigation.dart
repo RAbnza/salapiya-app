@@ -810,7 +810,7 @@ class _RailButton extends StatelessWidget {
     this.selected = false,
     this.badge = 0,
     this.glyph,
-    this.dimension = Space.pointerTarget,
+    this.dimension = Space.navRailButton,
   });
   final IconData icon;
   final String tooltip;
@@ -907,13 +907,13 @@ class _RailItemState extends State<_RailItem> {
       // The flyout's header lines up with the rail item it came from.
       alignmentOffset: const Offset(
         Space.railWidth - Space.sm,
-        -Space.pointerTarget - Space.xs,
+        -Space.navRailButton - Space.xs,
       ),
       style: MenuStyle(
         padding: const WidgetStatePropertyAll(EdgeInsets.all(Space.xs)),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Radii.control),
+            borderRadius: BorderRadius.circular(Radii.controlOf(context)),
             side: BorderSide(color: c.highContrast ? c.text : c.divider),
           ),
         ),
@@ -1225,7 +1225,7 @@ class _ProfileCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return MenuAnchor(
       alignmentOffset: compact
-          ? const Offset(Space.railWidth - Space.sm, -Space.pointerTarget)
+          ? const Offset(Space.railWidth - Space.sm, -Space.navRailButton)
           : const Offset(0, Space.xs),
       menuChildren: [
         for (final link in links)
@@ -1249,7 +1249,7 @@ class _ProfileCard extends StatelessWidget {
                 label: semantics,
                 excludeSemantics: true,
                 child: SizedBox.square(
-                  dimension: Space.pointerTarget,
+                  dimension: Space.navRailButton,
                   child: Pressable(
                     key: const ValueKey('shell-profile'),
                     onTap: toggle,

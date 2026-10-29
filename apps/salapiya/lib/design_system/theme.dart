@@ -28,13 +28,34 @@ enum WidthClass {
   );
 }
 
+/// The Windows compact scale (§3, Windows density). Pointer platforms
+/// (Windows, macOS, Linux) are compact; touch platforms keep the full scale.
+abstract final class Density {
+  static bool isCompact(TargetPlatform platform) => switch (platform) {
+    TargetPlatform.android ||
+    TargetPlatform.iOS ||
+    TargetPlatform.fuchsia => false,
+    _ => true,
+  };
+
+  /// Reads the theme's platform, so tests and the gallery can switch it.
+  static bool of(BuildContext context) => isCompact(Theme.of(context).platform);
+}
+
 abstract final class Space {
   static const double xxs = 2, xs = 4, sm = 8, md = 12, lg = 16, xl = 24;
   static const double xxl = 32, xxxl = 48;
   static const double target = 48, paneInset = 8, titleBarHeight = 40;
 
-  /// Control and row height where input is pointer-only (Windows).
-  static const double pointerTarget = 40;
+  /// Control height where input is pointer-only (Windows): buttons, fields,
+  /// segmented controls and icon buttons.
+  static const double pointerTarget = xxl;
+
+  /// List rows on Windows: one line and two lines (Android: 48 and 56).
+  static const double compactRow = navItem, compactTwoLineRow = target;
+
+  /// Icons on Windows: standalone, and inside controls and rows.
+  static const double compactIcon = lg + xxs, compactControlIcon = lg;
   static const double formMaxWidth = 640, reviewMaxWidth = 760;
   static const double contentMaxWidth = 1280;
   static const double fieldGap = lg, labelGap = sm, helperGap = xs;
@@ -53,6 +74,9 @@ abstract final class Space {
   static const double navItem = 36, navTab = 32, navIcon = lg;
   static const double navAvatar = 28, navSearch = xxl;
 
+  /// The rail's square buttons, and the rail flyout's offset from them.
+  static const double navRailButton = xxl + sm;
+
   /// The Windows app bar over the content, and the sidebar's logo row that
   /// lines up with it. In Chat 5 it is also the window's title bar.
   static const double appBarHeight = target + sm;
@@ -68,8 +92,17 @@ abstract final class Space {
 
   /// Compact pages add the dock height to this.
   static double pageBottom(WidthClass w) => w == WidthClass.compact ? xl : xxl;
-  static double cardGap(WidthClass w) => w == WidthClass.compact ? md : lg;
-  static double cardPadding(WidthClass w) => w == WidthClass.compact ? lg : 20;
+
+  /// Card gap and padding. Windows ([dense]) keeps the compact-width values
+  /// at every width.
+  static double cardGap(WidthClass w, {bool dense = false}) =>
+      dense || w == WidthClass.compact ? md : lg;
+  static double cardPadding(WidthClass w, {bool dense = false}) =>
+      dense || w == WidthClass.compact ? lg : 20;
+  static double cardGapOf(BuildContext context) =>
+      cardGap(WidthClass.of(context), dense: Density.of(context));
+  static double cardPaddingOf(BuildContext context) =>
+      cardPadding(WidthClass.of(context), dense: Density.of(context));
 
   // Legacy aliases kept for existing screens; new code uses Radii and Motion.
   static const double cardRadius = Radii.card, controlRadius = Radii.control;
@@ -88,8 +121,21 @@ abstract final class NavType {
 abstract final class Radii {
   static const double control = 10, card = 14, overlay = 20, pill = 999;
 
+  /// Windows' tighter corners for controls, cards and overlays.
+  static const double compactControl = 6, compactCard = 10;
+  static const double compactOverlay = 12;
+
   /// Dense navigation: the sidebar's highlights, profile card and Go to box.
-  static const double nav = 6;
+  static const double nav = compactControl;
+
+  static double controlFor(bool dense) => dense ? compactControl : control;
+  static double cardFor(bool dense) => dense ? compactCard : card;
+  static double overlayFor(bool dense) => dense ? compactOverlay : overlay;
+  static double controlOf(BuildContext context) =>
+      controlFor(Density.of(context));
+  static double cardOf(BuildContext context) => cardFor(Density.of(context));
+  static double overlayOf(BuildContext context) =>
+      overlayFor(Density.of(context));
 }
 
 abstract final class Motion {
@@ -299,18 +345,22 @@ class CraftPreferences extends InheritedWidget {
 }
 
 abstract final class SalapiyaTheme {
-  static ThemeData build(Brightness brightness, {bool highContrast = false}) {
-    final desktop = ![
-      TargetPlatform.android,
-      TargetPlatform.iOS,
-    ].contains(defaultTargetPlatform);
+  /// [platform] defaults to the running one. Windows (and the other pointer
+  /// platforms) get the compact scale from §3; Android keeps the full one.
+  static ThemeData build(
+    Brightness brightness, {
+    bool highContrast = false,
+    TargetPlatform? platform,
+  }) {
+    platform ??= defaultTargetPlatform;
+    final dense = Density.isCompact(platform);
     final c = CraftTheme(
       dark: brightness == Brightness.dark,
       highContrast: highContrast,
     );
-    // Controls are 40 tall where input is pointer-only, 48 where it is touch.
+    // Controls are 32 tall where input is pointer-only, 48 where it is touch.
     const target = Space.target;
-    final controlHeight = desktop ? Space.pointerTarget : target;
+    final controlHeight = dense ? Space.pointerTarget : target;
     // Size and line height in logical px; amounts use tabular figures.
     TextStyle type(
       double size,
@@ -327,8 +377,38 @@ abstract final class SalapiyaTheme {
       color: c.text,
       fontFeatures: amount ? const [FontFeature.tabularFigures()] : null,
     );
+    // Android's size and line height, then Windows' one step down.
+    TextStyle role(
+      (double, double) full,
+      (double, double) compact,
+      FontWeight weight, {
+      double tracking = 0,
+      bool amount = false,
+    }) {
+      final (size, line) = dense ? compact : full;
+      return type(size, line, weight, tracking: tracking, amount: amount);
+    }
+
+    final textTheme = TextTheme(
+      displayLarge: role((45, 52), (40, 48), FontWeight.w600, amount: true),
+      displayMedium: role((36, 44), (32, 40), FontWeight.w600, amount: true),
+      displaySmall: role((28, 36), (24, 32), FontWeight.w600, amount: true),
+      headlineLarge: role((32, 40), (28, 36), FontWeight.w600),
+      headlineMedium: role((24, 32), (20, 28), FontWeight.w600),
+      headlineSmall: role((20, 28), (18, 24), FontWeight.w600),
+      titleLarge: role((18, 26), (16, 22), FontWeight.w600),
+      titleMedium: role((16, 24), (14, 20), FontWeight.w600),
+      titleSmall: role((14, 20), (13, 18), FontWeight.w600),
+      bodyLarge: role((16, 24), (14, 20), FontWeight.w400),
+      bodyMedium: role((14, 20), (13, 18), FontWeight.w400),
+      bodySmall: type(12, 16, FontWeight.w400),
+      labelLarge: role((14, 20), (13, 18), FontWeight.w600),
+      labelMedium: type(12, 16, FontWeight.w500),
+      labelSmall: role((11, 16), (11, 14), FontWeight.w600, tracking: .6),
+    );
+    final controlRadius = Radii.controlFor(dense);
     final outline = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(Radii.control),
+      borderRadius: BorderRadius.circular(controlRadius),
       borderSide: BorderSide(color: c.border),
     );
     final (error, errorSurface) = c.tone(NoticeTone.error);
@@ -365,23 +445,30 @@ abstract final class SalapiyaTheme {
       scrim: Colors.black,
       surfaceTint: Colors.transparent,
     );
+    final overlayRadius = Radii.overlayFor(dense);
     final overlayShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(Radii.overlay),
+      borderRadius: BorderRadius.circular(overlayRadius),
     );
+    final controlShape = WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(controlRadius),
+      ),
+    );
+    // Icons inside buttons and segmented controls; Android keeps the default.
+    final controlIcon = dense
+        ? const WidgetStatePropertyAll(Space.compactControlIcon)
+        : null;
     ButtonStyle button({bool filled = false}) => ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(target, controlHeight)),
       padding: WidgetStatePropertyAll(
         EdgeInsets.symmetric(
-          horizontal: Space.lg,
-          vertical: desktop ? 10 : Space.md,
+          horizontal: dense ? Space.md : Space.lg,
+          vertical: dense ? Space.xs + Space.xxs : Space.md,
         ),
       ),
-      shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.control),
-        ),
-      ),
-      textStyle: WidgetStatePropertyAll(type(14, 20, FontWeight.w600)),
+      shape: controlShape,
+      iconSize: controlIcon,
+      textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled)
             ? c.secondary
@@ -412,25 +499,17 @@ abstract final class SalapiyaTheme {
       brightness: brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: c.canvas,
+      platform: platform,
       fontFamily: 'Geist',
       extensions: [c],
-      textTheme: TextTheme(
-        displayLarge: type(45, 52, FontWeight.w600, amount: true),
-        displayMedium: type(36, 44, FontWeight.w600, amount: true),
-        displaySmall: type(28, 36, FontWeight.w600, amount: true),
-        headlineLarge: type(32, 40, FontWeight.w600),
-        headlineMedium: type(24, 32, FontWeight.w600),
-        headlineSmall: type(20, 28, FontWeight.w600),
-        titleLarge: type(18, 26, FontWeight.w600),
-        titleMedium: type(16, 24, FontWeight.w600),
-        titleSmall: type(14, 20, FontWeight.w600),
-        bodyLarge: type(16, 24, FontWeight.w400),
-        bodyMedium: type(14, 20, FontWeight.w400),
-        bodySmall: type(12, 16, FontWeight.w400),
-        labelLarge: type(14, 20, FontWeight.w600),
-        labelMedium: type(12, 16, FontWeight.w500),
-        labelSmall: type(11, 16, FontWeight.w600, tracking: .6),
-      ),
+      textTheme: textTheme,
+      // Standalone icons on Windows; Android keeps Flutter's default.
+      iconTheme: dense
+          ? IconThemeData(
+              size: Space.compactIcon,
+              color: c.dark ? kDefaultIconLightColor : kDefaultIconDarkColor,
+            )
+          : null,
       filledButtonTheme: FilledButtonThemeData(style: button(filled: true)),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: button().copyWith(
@@ -445,7 +524,13 @@ abstract final class SalapiyaTheme {
       textButtonTheme: TextButtonThemeData(style: button()),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(target, target)),
+          minimumSize: WidgetStatePropertyAll(
+            Size.square(dense ? Space.pointerTarget : target),
+          ),
+          padding: dense ? const WidgetStatePropertyAll(EdgeInsets.zero) : null,
+          iconSize: dense
+              ? const WidgetStatePropertyAll(Space.compactIcon)
+              : null,
           foregroundColor: WidgetStatePropertyAll(c.primary),
           side: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.focused)
@@ -457,12 +542,9 @@ abstract final class SalapiyaTheme {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           minimumSize: WidgetStatePropertyAll(Size(target, controlHeight)),
-          textStyle: WidgetStatePropertyAll(type(14, 20, FontWeight.w600)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Radii.control),
-            ),
-          ),
+          textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
+          iconSize: controlIcon,
+          shape: controlShape,
           foregroundColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.disabled)
                 ? c.secondary
@@ -539,11 +621,26 @@ abstract final class SalapiyaTheme {
           borderSide: BorderSide(color: error, width: 2),
         ),
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: desktop ? 14 : 18,
-        ),
-        isDense: desktop,
+        contentPadding: dense
+            ? const EdgeInsets.symmetric(
+                horizontal: Space.md,
+                vertical: Space.xs + Space.xxs,
+              )
+            : const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+        isDense: dense,
+        // Without these, a prefix or suffix icon makes a field 48 tall.
+        prefixIconConstraints: dense
+            ? const BoxConstraints(
+                minWidth: Space.pointerTarget + Space.xs,
+                minHeight: Space.pointerTarget,
+              )
+            : null,
+        suffixIconConstraints: dense
+            ? const BoxConstraints(
+                minWidth: Space.pointerTarget + Space.xs,
+                minHeight: Space.pointerTarget,
+              )
+            : null,
         helperMaxLines: 4,
         errorMaxLines: 4,
       ),
@@ -552,7 +649,7 @@ abstract final class SalapiyaTheme {
         selectedColor: c.selection,
         side: BorderSide(color: c.divider),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(controlRadius),
         ),
         labelStyle: type(12, 16, FontWeight.w500),
         padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 6),
@@ -562,11 +659,11 @@ abstract final class SalapiyaTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
+          borderRadius: BorderRadius.circular(Radii.cardFor(dense)),
           side: BorderSide(color: c.divider),
         ),
       ),
-      listTileTheme: ListTileThemeData(dense: desktop, iconColor: c.secondary),
+      listTileTheme: ListTileThemeData(dense: dense, iconColor: c.secondary),
       dividerTheme: DividerThemeData(color: c.divider, space: Space.xl),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: c.primary,
@@ -598,9 +695,9 @@ abstract final class SalapiyaTheme {
         modalBarrierColor: c.modalScrim,
         showDragHandle: true,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(Radii.overlay),
+            top: Radius.circular(overlayRadius),
           ),
         ),
       ),
@@ -608,7 +705,7 @@ abstract final class SalapiyaTheme {
         color: c.raised,
         surfaceTintColor: Colors.transparent,
         shape: overlayShape,
-        textStyle: type(14, 20, FontWeight.w400),
+        textStyle: textTheme.bodyMedium,
       ),
       menuTheme: MenuThemeData(
         style: MenuStyle(
@@ -617,20 +714,27 @@ abstract final class SalapiyaTheme {
           shape: WidgetStatePropertyAll(overlayShape),
         ),
       ),
+      // Menu items are rows: 36 tall with 16 icons on Windows.
+      menuButtonTheme: dense
+          ? MenuButtonThemeData(
+              style: ButtonStyle(
+                minimumSize: const WidgetStatePropertyAll(
+                  Size(Space.xxxl + Space.lg, Space.compactRow),
+                ),
+                iconSize: controlIcon,
+              ),
+            )
+          : null,
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
           color: c.text,
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(controlRadius),
         ),
         textStyle: type(12, 16, FontWeight.w400).copyWith(color: c.surface),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: c.text,
-        contentTextStyle: type(
-          14,
-          20,
-          FontWeight.w400,
-        ).copyWith(color: c.surface),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: c.surface),
         actionTextColor: c.dark ? Palette.violet : Palette.lavender,
       ),
     );

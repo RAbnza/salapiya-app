@@ -243,20 +243,27 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
   | `cardPadding(w)` | 16 | 20 | 20 |
 
 - **Fixed values:** `cardHeaderGap` 12, `captionGap` 4, `fieldGap` 16, `labelGap` 8, `helperGap` 4, `groupGap` 24, `actionsGap` 24, `dialogPadding` 24, `dialogTitleGap` 12, `pillPadding` 10 × 4.
-- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320, `railWidth` 64 and `sidebarWidth` 224 (the Windows sidebar), and `navItem` 36, `navTab` 32, `navIcon` 16, `navAvatar` 28 and `navSearch` 32 (its rows and parts), `appBarHeight` 56 (the Windows app bar and the sidebar's logo row), `dockMaxWidth` 480 (Android dock). `pointerTarget` 40 is the control and row height where input is pointer-only (Windows); touch uses `target` 48.
+- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320, `railWidth` 64 and `sidebarWidth` 224 (the Windows sidebar), and `navItem` 36, `navTab` 32, `navIcon` 16, `navAvatar` 28 and `navSearch` 32 (its rows and parts), `appBarHeight` 56 (the Windows app bar and the sidebar's logo row), `dockMaxWidth` 480 (Android dock), `navRailButton` 40 (the rail's square buttons). `pointerTarget` 32 is the control height where input is pointer-only (Windows); touch uses `target` 48. `compactRow` 36 and `compactTwoLineRow` 48 are Windows list rows; `compactIcon` 18 and `compactControlIcon` 16 are Windows icons.
 - **`WidthClass`:** compact < 600, medium 600–999, expanded 1000–1439, wide ≥ 1440. It drops one class at text scale ≥ 150%.
 
 ### Windows density (compact scale)
 
 Windows uses a compact scale, one step below Android, so the whole app matches the sidebar. Android keeps the sizes above.
 
-- **Applied by:** the "Windows density" stage after Chat 4, through the theme and the kit. Tokens become platform-aware, so screens built from tokens shrink at once. Section chats replace the remaining literals as they redesign each screen.
+- **Applied by:** the "Windows density" stage (4b), through the theme and the kit.
+  - `Density.of(context)` is true on pointer platforms. It reads the theme's platform, as `isDesktop` does.
+  - `SalapiyaTheme.build(..., platform:)` builds the scale for a platform; it defaults to the running one.
+  - Context-aware tokens: `Radii.controlOf`/`cardOf`/`overlayOf(context)`, `Space.cardPaddingOf`/`cardGapOf(context)` and `ListRow.leadingSize(context)`. `FocusRing` and `Pressable` default to `Radii.controlOf(context)`.
+  - Screens built from the text theme, the stock Material themes and the kit shrink at once. Section chats replace the remaining hard-coded literals (about 70 font sizes, plus radii) as they redesign each screen.
+  - The sidebar keeps its own approved metrics: its rail buttons stay 40 (`navRailButton`).
 - **Rule for all new Windows UI:** take sizes from this table, never from the Android column.
 
 | Role | Android | Windows |
 | --- | --- | --- |
+| `displayLarge` | 45 / 52 | 40 / 48 |
 | `displayMedium` (focal value) | 36 / 44 | 32 / 40 |
 | `displaySmall` (metric value) | 28 / 36 | 24 / 32 |
+| `headlineLarge` | 32 / 40 | 28 / 36 |
 | `headlineMedium` (page title) | 24 / 32 | 20 / 28 |
 | `headlineSmall` (dialog title) | 20 / 28 | 18 / 24 |
 | `titleLarge` (section title) | 18 / 26 | 16 / 22 |
@@ -267,7 +274,8 @@ Windows uses a compact scale, one step below Android, so the whole app matches t
 | `bodySmall` (captions, helpers) | 12 / 16 | 12 / 16 |
 | `labelLarge` (buttons, labels) | 14 / 20 | 13 / 18 |
 | `labelMedium`, `labelSmall` | 12 / 16, 11 / 16 | 12 / 16, 11 / 14 |
-| Buttons, fields, segmented controls | 48 | 32 |
+| Buttons, fields, segmented controls, icon buttons | 48 (fields 60) | 32 |
+| Menu items | 48 | 36 |
 | Icons | 24 | 18 standalone, 16 inside controls and rows |
 | List row (one line / two lines) | 48 / 56 | 36 / 48 |
 | Card padding | 16 / 20 | 16 |
@@ -279,7 +287,7 @@ Windows uses a compact scale, one step below Android, so the whole app matches t
 
 ### Radius (`Radii`)
 
-`control` 10 (buttons, fields, chips, tooltips), `nav` 6 (the Windows sidebar's highlights, profile card and theme switch, and the Go to field), `card` 14, `overlay` 20 (dialogs, sheet top corners, menus, popovers), `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
+`control` 10 (buttons, fields, chips, tooltips), `card` 14 and `overlay` 20 on Android; Windows uses `compactControl` 6, `compactCard` 10 and `compactOverlay` 12 (read them with `Radii.controlOf(context)` and so on). `nav` 6 (the Windows sidebar's highlights, profile card and theme switch, and the Go to field) equals `compactControl`. Overlays are dialogs, sheet top corners, menus and popovers. `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
 
 ### Elevation
 
@@ -363,7 +371,7 @@ The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit
 
 - **States:** rest, hover (Windows only, `subtle` fill), pressed (`subtle` fill), focus, disabled, busy and error. No ripple.
 - **Focus ring:** 2 px `focus`, drawn 2 px outside the component and following its radius (`FocusRing`). It shows for keyboard focus only. Stock buttons draw it as a 2 px border from the theme.
-- **Targets:** at least 48×48 on Android. On Windows, 40 (`Space.pointerTarget`) is allowed for buttons, rows, segmented controls and the info control.
+- **Targets:** at least 48×48 on Android. On Windows, 32 (`Space.pointerTarget`) for buttons, fields, segmented controls, icon buttons and the info control; rows are 36 ([§3 Windows density](#windows-density-compact-scale)).
 - **Activation:** Enter and Space activate anything focusable. Esc closes the top overlay.
 
 ### Buttons (`AppButton`, `AppIconButton`)
@@ -669,8 +677,8 @@ Remove this section when the redesign is finished.
 | 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Done |
 | 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Done |
 | 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
-| 4b | Windows density: the compact scale in the theme and kit (§3) | Next |
-| 5 | Windows custom title bar | Planned |
+| 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
+| 5 | Windows custom title bar | Next |
 | 6 | Overview dashboard | Planned |
 | 7 | Debts | Planned |
 | 8 | Money A: Accounts, Activity, transaction form | Planned |
@@ -751,3 +759,4 @@ Each section chat:
 | 2026-10-30 | Owner review 5: the rail's section flyout is structured like the expanded sidebar (a header with the icon and name, then tabs on a tree line with the current tab highlighted). The collapse toggle has open and closed glyph states. | Approved |
 | 2026-10-30 | The app bar's New button is compact (32 tall, a 16 icon, a 13 label, `Radii.nav`), matching the Go to field. | Approved |
 | 2026-10-30 | Windows uses a compact scale one step below Android for type, controls, icons, rows and card padding, with tighter corners (controls 6, cards 10, overlays 12). It is applied app-wide through the theme and kit in its own stage after Chat 4. This changes the Chat 2 rule "sizes are the same on Windows and Android" for Windows. | Approved |
+| 2026-10-30 | Windows density implemented (4b): `Density`, `SalapiyaTheme.build(platform:)`, and context-aware radii, card padding and row sizes. The sidebar's rail buttons keep 40 (`navRailButton`). Menu items are 36 on Windows. Android is unchanged. Hard-coded literals in older screens wait for their section chats. | Done, awaiting review |

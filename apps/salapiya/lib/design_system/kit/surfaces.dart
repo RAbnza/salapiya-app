@@ -60,10 +60,10 @@ class SurfaceCard extends StatelessWidget {
     // Material sits inside the fill so stock list tiles in a card still paint.
     return Pressable(
       onTap: onTap,
-      radius: Radii.card,
+      radius: Radii.cardOf(context),
       color: c.surface,
       border: Border.all(color: c.divider),
-      padding: EdgeInsets.all(Space.cardPadding(WidthClass.of(context))),
+      padding: EdgeInsets.all(Space.cardPaddingOf(context)),
       child: Material(type: MaterialType.transparency, child: content),
     );
   }

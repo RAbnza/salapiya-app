@@ -13,7 +13,7 @@ Widget harness(
   TargetPlatform platform = TargetPlatform.windows,
   Brightness brightness = Brightness.light,
 }) => MaterialApp(
-  theme: SalapiyaTheme.build(brightness).copyWith(platform: platform),
+  theme: SalapiyaTheme.build(brightness, platform: platform),
   home: Scaffold(
     body: Align(
       alignment: Alignment.topLeft,
@@ -349,7 +349,7 @@ void main() {
       );
       expect(find.byType(TextField), findsNothing);
       expect(find.text('Choose a date'), findsOneWidget);
-      await tester.tap(find.byType(DateField));
+      await tester.tap(find.text('Choose a date'));
       await tester.pumpAndSettle();
       expect(find.byType(DatePickerDialog), findsOneWidget);
       // Calendar only: no switch to a typed entry and no text input.

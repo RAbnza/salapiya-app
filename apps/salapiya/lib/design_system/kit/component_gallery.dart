@@ -45,10 +45,7 @@ class _ComponentGalleryAppState extends State<ComponentGalleryApp> {
     final shown = !wide && view == _ThemeView.both ? _ThemeView.light : view;
     Widget pane(Brightness b, {bool hc = false}) => _Pane(
       key: ValueKey('$b-$hc'),
-      theme: SalapiyaTheme.build(
-        b,
-        highContrast: hc,
-      ).copyWith(platform: platform),
+      theme: SalapiyaTheme.build(b, highContrast: hc, platform: platform),
     );
     return Scaffold(
       body: SafeArea(
@@ -263,7 +260,7 @@ String _php(int centavos) => DemoMoney.format(BigInt.from(centavos));
 /// Equal-width cards with the grid-owned gap (§4).
 Widget _grid(BuildContext context, List<Widget> children) => LayoutBuilder(
   builder: (context, box) {
-    final gap = Space.cardGap(WidthClass.of(context));
+    final gap = Space.cardGapOf(context);
     final columns = (box.maxWidth / (Space.formMaxWidth / 2)).floor().clamp(
       1,
       children.length,
@@ -786,7 +783,7 @@ class _Cards extends StatelessWidget {
           onTap: () {},
         ),
       ]),
-      SizedBox(height: Space.cardGap(WidthClass.of(context))),
+      SizedBox(height: Space.cardGapOf(context)),
       _grid(context, [
         SurfaceCard(
           title: 'Accounts',

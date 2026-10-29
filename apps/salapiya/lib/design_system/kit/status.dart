@@ -128,7 +128,7 @@ class InlineNotice extends StatelessWidget {
         padding: const EdgeInsets.all(Space.lg),
         decoration: BoxDecoration(
           color: fill,
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(Radii.controlOf(context)),
           border: c.highContrast ? Border.all(color: ink) : null,
         ),
         child: Row(

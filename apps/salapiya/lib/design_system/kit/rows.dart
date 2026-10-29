@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'focus_ring.dart';
 
-/// A list row. One line is at least one hit target tall (48, or 40 on
-/// Windows); two lines are at least 56. The leading icon, the text block,
+/// A list row. One line is at least 48 tall (36 on Windows); two lines are
+/// at least 56 (48 on Windows). The leading icon, the text block,
 /// [trailing] (usually a `MoneyAmount` or `StatusPill`) and the chevron are
 /// all centered vertically on the row.
 class ListRow extends StatelessWidget {
@@ -24,34 +24,46 @@ class ListRow extends StatelessWidget {
   /// Adds a chevron and makes the row one target.
   final VoidCallback? onTap;
 
-  static const horizontalPadding = Space.md;
-  static const leadingSize = Space.xl, leadingGap = Space.md;
+  static const horizontalPadding = Space.md, leadingGap = Space.md;
+
+  /// The leading icon and chevron: 24, or 16 on Windows.
+  static double leadingSize(BuildContext context) =>
+      isDesktop(context) ? Space.compactControlIcon : Space.xl;
 
   /// Where row text starts when rows have a leading icon; dividers inset here.
-  static const textInset = horizontalPadding + leadingSize + leadingGap;
+  static double textInset(BuildContext context) =>
+      horizontalPadding + leadingSize(context) + leadingGap;
 
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
     final twoLine = subtitle != null;
+    final compact = isDesktop(context);
+    final iconSize = leadingSize(context);
     return MergeSemantics(
       child: Semantics(
         button: onTap != null,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: twoLine ? Space.target + Space.sm : hitTarget(context),
+            minHeight: switch ((twoLine, compact)) {
+              (true, true) => Space.compactTwoLineRow,
+              (true, false) => Space.target + Space.sm,
+              (false, true) => Space.compactRow,
+              (false, false) => Space.target,
+            },
           ),
           child: Pressable(
             onTap: onTap,
-            padding: const EdgeInsets.symmetric(
+            // Windows' two-line rows fit 48 with a tighter inset.
+            padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
-              vertical: Space.sm,
+              vertical: compact ? Space.xs + Space.xxs : Space.sm,
             ),
             child: Row(
               children: [
                 if (leading != null) ...[
-                  Icon(leading, size: leadingSize, color: c.secondary),
+                  Icon(leading, size: iconSize, color: c.secondary),
                   const SizedBox(width: leadingGap),
                 ],
                 Expanded(
@@ -73,7 +85,7 @@ class ListRow extends StatelessWidget {
                 ],
                 if (onTap != null) ...[
                   const SizedBox(width: Space.sm),
-                  Icon(Icons.chevron_right, color: c.secondary),
+                  Icon(Icons.chevron_right, size: iconSize, color: c.secondary),
                 ],
               ],
             ),
@@ -100,7 +112,9 @@ class ListGroup extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            indent: leading ? ListRow.textInset : ListRow.horizontalPadding,
+            indent: leading
+                ? ListRow.textInset(context)
+                : ListRow.horizontalPadding,
           ),
         row,
       ],

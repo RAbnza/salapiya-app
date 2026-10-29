@@ -120,10 +120,10 @@ class LoadingSkeleton extends StatelessWidget {
         ),
       ),
       _SkeletonShape.card => Container(
-        padding: EdgeInsets.all(Space.cardPadding(WidthClass.of(context))),
+        padding: EdgeInsets.all(Space.cardPaddingOf(context)),
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.circular(Radii.card),
+          borderRadius: BorderRadius.circular(Radii.cardOf(context)),
           border: Border.all(color: c.divider),
         ),
         child: Column(
@@ -213,7 +213,9 @@ class _ErrorStateState extends State<ErrorState> {
                   padding: const EdgeInsets.all(Space.md),
                   decoration: BoxDecoration(
                     color: c.subtle,
-                    borderRadius: BorderRadius.circular(Radii.control),
+                    borderRadius: BorderRadius.circular(
+                      Radii.controlOf(context),
+                    ),
                   ),
                   child: SelectableText(
                     widget.details!,

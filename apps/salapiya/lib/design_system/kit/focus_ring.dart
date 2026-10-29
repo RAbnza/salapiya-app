@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// True where input is pointer and keyboard first (Windows, macOS, Linux).
-/// Reads the theme's platform so tests and the gallery can switch it.
-bool isDesktop(BuildContext context) => switch (Theme.of(context).platform) {
-  TargetPlatform.android ||
-  TargetPlatform.iOS ||
-  TargetPlatform.fuchsia => false,
-  _ => true,
-};
+/// True where input is pointer and keyboard first (Windows, macOS, Linux),
+/// which also use the compact scale ([Density]). Reads the theme's platform
+/// so tests and the gallery can switch it.
+bool isDesktop(BuildContext context) => Density.of(context);
 
-/// Smallest hit area for this platform: 48 for touch, 40 for pointer-only.
+/// Smallest hit area for this platform: 48 for touch, 32 for pointer-only.
 double hitTarget(BuildContext context) =>
     isDesktop(context) ? Space.pointerTarget : Space.target;
 
@@ -21,15 +17,20 @@ class FocusRing extends StatelessWidget {
     super.key,
     required this.visible,
     required this.child,
-    this.radius = Radii.control,
+    this.radius,
   });
   final bool visible;
-  final double radius;
+
+  /// Defaults to the platform's control radius.
+  final double? radius;
   final Widget child;
   @override
   Widget build(BuildContext context) => CustomPaint(
     foregroundPainter: visible
-        ? _RingPainter(CraftTheme.of(context).focus, radius)
+        ? _RingPainter(
+            CraftTheme.of(context).focus,
+            radius ?? Radii.controlOf(context),
+          )
         : null,
     child: child,
   );
@@ -68,7 +69,7 @@ class Pressable extends StatefulWidget {
     super.key,
     required this.child,
     required this.onTap,
-    this.radius = Radii.control,
+    this.radius,
     this.color,
     this.hoverColor,
     this.border,
@@ -79,7 +80,9 @@ class Pressable extends StatefulWidget {
   });
   final Widget child;
   final VoidCallback? onTap;
-  final double radius;
+
+  /// Defaults to the platform's control radius.
+  final double? radius;
 
   /// Rest fill; hover and pressed use [hoverColor] (default `subtle`).
   final Color? color, hoverColor;
@@ -103,6 +106,7 @@ class _PressableState extends State<Pressable> {
     final c = CraftTheme.of(context);
     final enabled = widget.onTap != null;
     final active = enabled && (pressed || (hovered && isDesktop(context)));
+    final radius = widget.radius ?? Radii.controlOf(context);
     return FocusableActionDetector(
       enabled: enabled,
       focusNode: widget.focusNode,
@@ -126,7 +130,7 @@ class _PressableState extends State<Pressable> {
         onTapCancel: enabled ? () => set(() => pressed = false) : null,
         child: FocusRing(
           visible: focused,
-          radius: widget.radius,
+          radius: radius,
           child: AnimatedContainer(
             duration: Motion.of(context, Motion.quick),
             curve: Motion.enter,
@@ -135,13 +139,13 @@ class _PressableState extends State<Pressable> {
               color: active && !widget.overlay
                   ? (widget.hoverColor ?? c.subtle)
                   : widget.color,
-              borderRadius: BorderRadius.circular(widget.radius),
+              borderRadius: BorderRadius.circular(radius),
               border: widget.border,
             ),
             foregroundDecoration: widget.overlay
                 ? BoxDecoration(
                     color: active ? widget.hoverColor ?? c.subtle : null,
-                    borderRadius: BorderRadius.circular(widget.radius),
+                    borderRadius: BorderRadius.circular(radius),
                   )
                 : null,
             child: widget.child,

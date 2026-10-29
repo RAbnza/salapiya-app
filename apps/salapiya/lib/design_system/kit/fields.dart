@@ -138,7 +138,9 @@ class _InfoControlState extends State<InfoControl> {
                       dimension: size,
                       child: Icon(
                         Icons.info_outline,
-                        size: Space.lg + Space.xs,
+                        size: isDesktop(context)
+                            ? Space.compactControlIcon
+                            : Space.lg + Space.xs,
                         color: pinned ? c.primary : c.secondary,
                       ),
                     ),
@@ -183,7 +185,7 @@ class _InfoControlState extends State<InfoControl> {
       decoration: BoxDecoration(
         color: popover ? c.raised : c.text,
         borderRadius: BorderRadius.circular(
-          popover ? Radii.overlay : Radii.control,
+          popover ? Radii.overlayOf(context) : Radii.controlOf(context),
         ),
         border: popover ? Border.all(color: c.divider) : null,
         boxShadow: popover ? c.overlayShadow : null,
@@ -360,7 +362,7 @@ class HelpTextField extends StatelessWidget {
     final input = Theme.of(context).inputDecorationTheme;
     final style = Theme.of(context).textTheme.bodyLarge!;
     final readOnlyBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(Radii.control),
+      borderRadius: BorderRadius.circular(Radii.controlOf(context)),
       borderSide: BorderSide(color: c.divider),
     );
     return HelpField(
@@ -587,7 +589,7 @@ class FormErrorSummary extends StatelessWidget {
         padding: const EdgeInsets.all(Space.lg),
         decoration: BoxDecoration(
           color: fill,
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(Radii.controlOf(context)),
           border: c.highContrast ? Border.all(color: ink) : null,
         ),
         child: Column(
