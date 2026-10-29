@@ -1,7 +1,10 @@
 #include "win32_window.h"
 
+#include <commctrl.h>
 #include <dwmapi.h>
 #include <flutter_windows.h>
+#include <shellapi.h>
+#include <windowsx.h>
 
 #include "resource.h"
 
@@ -51,6 +54,29 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
     enable_non_client_dpi_scaling(hwnd);
   }
   FreeLibrary(user32_module);
+}
+
+// A maximized window covers its whole monitor when the taskbar auto-hides;
+// leaving one pixel on the taskbar's edge lets it still slide in.
+void LeaveAutoHideTaskbarEdge(HWND hwnd, RECT& rect) {
+  MONITORINFO info{sizeof(info)};
+  if (!GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
+                      &info)) {
+    return;
+  }
+  for (const UINT edge : {ABE_BOTTOM, ABE_TOP, ABE_LEFT, ABE_RIGHT}) {
+    APPBARDATA bar{sizeof(bar)};
+    bar.uEdge = edge;
+    bar.rc = info.rcMonitor;
+    if (!SHAppBarMessage(ABM_GETAUTOHIDEBAREX, &bar)) continue;
+    switch (edge) {
+      case ABE_BOTTOM: rect.bottom -= 1; break;
+      case ABE_TOP: rect.top += 1; break;
+      case ABE_LEFT: rect.left += 1; break;
+      case ABE_RIGHT: rect.right -= 1; break;
+    }
+    return;
+  }
 }
 
 }  // namespace
@@ -198,6 +224,10 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
     case WM_SIZE: {
+      if (wparam != SIZE_MINIMIZED && (wparam == SIZE_MAXIMIZED) != maximized_) {
+        maximized_ = wparam == SIZE_MAXIMIZED;
+        NotifyFrameState();
+      }
       RECT rect = GetClientArea();
       if (child_content_ != nullptr) {
         // Size and position the child window.
@@ -208,6 +238,8 @@ Win32Window::MessageHandler(HWND hwnd,
     }
 
     case WM_ACTIVATE:
+      active_ = LOWORD(wparam) != WA_INACTIVE;
+      NotifyFrameState();
       if (child_content_ != nullptr) {
         SetFocus(child_content_);
       }
@@ -221,6 +253,82 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
+
+    // Custom frame: the client area starts at the window's top edge, so the
+    // app's title bar replaces the caption. Left, right and bottom keep the
+    // native frame. A maximized window hides its frame off-screen, so the
+    // top gets the same padding back.
+    case WM_NCCALCSIZE:
+      if (custom_frame_ && wparam) {
+        auto params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
+        const LONG top = params->rgrc[0].top;
+        const LRESULT result = DefWindowProc(hwnd, message, wparam, lparam);
+        if (result != 0) return result;
+        params->rgrc[0].top = top;
+        if (IsZoomed(hwnd)) {
+          params->rgrc[0].top += ResizeBorderHeight();
+          LeaveAutoHideTaskbarEdge(hwnd, params->rgrc[0]);
+        }
+        return 0;
+      }
+      break;
+
+    case WM_NCHITTEST:
+      if (custom_frame_) {
+        // The native frame answers for its borders.
+        const LRESULT hit = DefWindowProc(hwnd, message, wparam, lparam);
+        if (hit != HTCLIENT) return hit;
+        return FrameHitTest({GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)});
+      }
+      break;
+
+    // The app draws the maximize button, but Windows sees HTMAXBUTTON there
+    // (for Snap Layouts), so its pointer input arrives here.
+    case WM_NCMOUSEMOVE:
+      if (custom_frame_) {
+        if (wparam == HTMAXBUTTON) {
+          if (max_button_ == CaptionState::kNone) {
+            TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE | TME_NONCLIENT,
+                                  hwnd, HOVER_DEFAULT};
+            TrackMouseEvent(&track);
+          }
+          SetMaxButton(max_pressed_ ? CaptionState::kPressed
+                                    : CaptionState::kHover);
+        } else {
+          max_pressed_ = false;
+          SetMaxButton(CaptionState::kNone);
+        }
+      }
+      break;
+
+    case WM_NCMOUSELEAVE:
+      if (custom_frame_) {
+        max_pressed_ = false;
+        SetMaxButton(CaptionState::kNone);
+      }
+      break;
+
+    case WM_NCLBUTTONDOWN:
+    case WM_NCLBUTTONDBLCLK:
+      if (custom_frame_ && wparam == HTMAXBUTTON) {
+        max_pressed_ = true;
+        SetMaxButton(CaptionState::kPressed);
+        return 0;
+      }
+      break;
+
+    case WM_NCLBUTTONUP:
+      if (custom_frame_ && wparam == HTMAXBUTTON) {
+        const bool clicked = max_pressed_;
+        max_pressed_ = false;
+        SetMaxButton(CaptionState::kHover);
+        if (clicked) {
+          PostMessage(hwnd, WM_SYSCOMMAND,
+                      IsZoomed(hwnd) ? SC_RESTORE : SC_MAXIMIZE, 0);
+        }
+        return 0;
+      }
+      break;
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);
@@ -246,6 +354,8 @@ Win32Window* Win32Window::GetThisFromHandle(HWND const window) noexcept {
 void Win32Window::SetChildContent(HWND content) {
   child_content_ = content;
   SetParent(content, window_handle_);
+  SetWindowSubclass(content, ContentProc, 1,
+                    reinterpret_cast<DWORD_PTR>(this));
   RECT frame = GetClientArea();
 
   MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
@@ -277,6 +387,82 @@ void Win32Window::OnDestroy() {
   // No-op; provided for subclasses.
 }
 
+// static
+LRESULT CALLBACK Win32Window::ContentProc(HWND window, UINT message,
+                                          WPARAM wparam, LPARAM lparam,
+                                          UINT_PTR, DWORD_PTR data) noexcept {
+  if (message == WM_NCHITTEST) {
+    // Over caption space, the resize band and the maximize button, let the
+    // top-level window answer (HTCAPTION, HTTOP, HTMAXBUTTON).
+    auto that = reinterpret_cast<Win32Window*>(data);
+    if (that->custom_frame_ &&
+        that->FrameHitTest({GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)}) !=
+            HTCLIENT) {
+      return HTTRANSPARENT;
+    }
+  }
+  return DefSubclassProc(window, message, wparam, lparam);
+}
+
+bool Win32Window::EnableCustomFrame() {
+  if (!window_handle_) return false;
+  custom_frame_ = true;
+  maximized_ = IsZoomed(window_handle_) != 0;
+  SetWindowPos(window_handle_, nullptr, 0, 0, 0, 0,
+               SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                   SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+  if (child_content_ != nullptr) {
+    RECT frame = GetClientArea();
+    MoveWindow(child_content_, frame.left, frame.top, frame.right - frame.left,
+               frame.bottom - frame.top, TRUE);
+  }
+  return true;
+}
+
+void Win32Window::SetCaptionRegions(double height, const LogicalRect& maximize,
+                                    std::vector<LogicalRect> interactive) {
+  caption_height_ = height;
+  max_rect_ = maximize;
+  interactive_ = std::move(interactive);
+}
+
+int Win32Window::ResizeBorderHeight() const {
+  const UINT dpi = GetDpiForWindow(window_handle_);
+  return GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi) +
+         GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi);
+}
+
+LRESULT Win32Window::FrameHitTest(POINT point) const {
+  ScreenToClient(window_handle_, &point);
+  const int border = ResizeBorderHeight();
+  if (!IsZoomed(window_handle_) && point.y >= 0 && point.y < border) {
+    RECT client;
+    GetClientRect(window_handle_, &client);
+    if (point.x < border) return HTTOPLEFT;
+    if (point.x >= client.right - border) return HTTOPRIGHT;
+    return HTTOP;
+  }
+  // The app reports its regions in logical pixels.
+  const double scale = GetDpiForWindow(window_handle_) / 96.0;
+  const double x = point.x / scale, y = point.y / scale;
+  if (y < 0 || y >= caption_height_) return HTCLIENT;
+  for (const auto& rect : interactive_) {
+    if (rect.Contains(x, y)) return HTCLIENT;
+  }
+  if (max_rect_.Contains(x, y)) return HTMAXBUTTON;
+  return HTCAPTION;
+}
+
+void Win32Window::SetMaxButton(CaptionState state) {
+  if (state == max_button_) return;
+  max_button_ = state;
+  NotifyFrameState();
+}
+
+void Win32Window::NotifyFrameState() {
+  if (custom_frame_) OnFrameStateChanged(maximized_, active_, max_button_);
+}
+
 bool Win32Window::SetCaptionTheme(bool dark, COLORREF background,
                                   COLORREF text, COLORREF border) {
   app_theme_set_ = true;
@@ -300,8 +486,8 @@ void Win32Window::UpdateTheme(HWND const window) {
   const bool high_contrast = (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
   BOOL dark = !high_contrast && (app_theme_set_ ? app_dark_ : light_mode == 0);
   const auto dark_result = DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
-  // Windows 11 caption colors; earlier Windows versions simply retain native
-  // defaults. Never change window styles, hit testing, DPI or caption geometry.
+  // Windows 11 caption and border colors; earlier Windows versions simply
+  // retain native defaults. With the custom frame only the border shows.
   const COLORREF system_default = 0xFFFFFFFF;
   const COLORREF background = app_theme_set_ && !high_contrast ? caption_color_ : system_default;
   const COLORREF text = app_theme_set_ && !high_contrast ? caption_text_ : system_default;

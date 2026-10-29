@@ -63,17 +63,17 @@ At text scale ≥ 150%, drop one column class.
 
 | Concern | Windows | Android |
 | --- | --- | --- |
-| Window chrome | A custom title bar across the full window width, above the sidebar and the app bar ([below](#windows-title-bar-chat-5)). The native caption is removed. | System status bar. Top app bar with the section title (the logo mark leads it on Overview), Hide amounts and the profile button, with the sync status pill under the title. |
+| Window chrome | A custom title bar across the full window width, above the sidebar and the app bar ([below](#windows-title-bar-chat-5)). The native caption is removed; the sides and bottom keep the native frame. | System status bar. Top app bar with the section title (the logo mark leads it on Overview), Hide amounts and the profile button, with the sync status pill under the title. |
 | Primary navigation | Sidebar panel flush with the window's left edge: logo, profile card, Go to, five destinations with their tabs, Needs attention, utilities ([App shell](#app-shell-chat-4)) | Floating bottom dock with five labelled destinations ("Shared" is the short label for Shared Expenses); a separate + action above it |
-| Back / forward | Title-bar buttons (Chat 5), Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
-| Location | Breadcrumb in the title bar (Section › Tab › Page). Until Chat 5 it sits in the shell header above the content. | Screen title in the app bar; tabs below it |
+| Back / forward | Title-bar buttons, Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
+| Location | Breadcrumb in the app bar, below the title bar (Section › Tab › Page) | Screen title in the app bar; tabs below it |
 | Create actions | "New" menu button in the shell header (Ctrl+N) | + button above the dock opens a bottom sheet |
 | Info control ([§6](#6-form-help-pattern)) | A tooltip on hover and keyboard focus; a click pins it as a popover | Tap opens an anchored popover |
 | Dialogs | Centered, width-bounded modal | Centered dialog for confirmations; bottom sheet for choices and short forms; full-screen page for long forms |
 | Forms | Centered column, max width bounded | Full width, scrolls, keyboard insets respected |
 | Row density | Single-line rows may be 40 px when pointer-only; hover state on rows | Rows at least 48 px; no hover |
 | Hover | Required on every interactive element | Not used; pressed state only |
-| Keyboard | Every action reachable; Esc closes the top overlay; Ctrl+N opens New | Hardware keyboard works; not required to be optimized |
+| Keyboard | Every action reachable; Esc closes the top overlay; Ctrl+N opens New; Ctrl+K opens Go to; Ctrl+H hides or shows amounts | Hardware keyboard works; not required to be optimized |
 
 ### App shell (Chat 4)
 
@@ -86,12 +86,12 @@ At text scale ≥ 150%, drop one column class.
 - **Shell header:**
   - **Windows with the sidebar: the app bar.** It is `Space.appBarHeight` (56) tall on `surface`, with a hairline divider below, and level with the sidebar's logo row.
     - Left: the breadcrumb (`ShellBreadcrumb`), with chevrons between segments. Earlier segments are muted and go back; the last one is the current place.
-    - Right: the Go to field ("Go to…" with Ctrl and K keycaps, 224 wide; a search icon at Medium width), then New.
-    - Hide amounts, the profile and the sync state live in the sidebar.
-  - **Android, and Windows below 600:** the title or location, Hide amounts, the profile button, and the sync `StatusPill` on its own row.
-  - A 12 bottom gap keeps the header clear of content scrolling under it. The sync status isn't interactive yet; Chat 5 makes it open the sync details.
+    - Right: New. Go to and the sync state are in the title bar. Hide amounts and the profile live in the sidebar.
+    - Without the custom frame (an older runner, or tests that don't turn it on), the app bar keeps the Chat 4 layout: the Go to field (224 wide; a search icon at Medium width) before New, and the sync line in the profile card.
+  - **Android, and Windows below 600:** the title or location, Hide amounts, the profile button, and the sync `StatusPill` on its own row. On Windows the title bar shows the sync state instead, so that row is dropped.
+  - A 12 bottom gap keeps the header clear of content scrolling under it.
 - **Windows sidebar** (`ShellSidebar`), after the owner's reference images:
-  - **Panel:** `surface` on the canvas, flush with the window's left, top and bottom edges. It has square corners and a hairline (`divider`, or `text` in high contrast) along its right edge. Glass comes in Chat 5 as the system Mica material, with a fallback to the solid panel on Windows 10, in high contrast, and with transparency off.
+  - **Panel:** `surface` on the canvas, flush with the window's left, top and bottom edges. It has square corners and a hairline (`divider`, or `text` in high contrast) along its right edge. Mica was deferred in Chat 5, so the panel stays solid.
   - **Collapse:** a panel icon button beside the logo; on the rail it sits under the logo mark. The glyph has two states: a panel outline whose chevron points in ("Collapse sidebar") or out ("Expand sidebar").
   - **Corners:** highlights, the profile card, the Go to field and the theme switch use `Radii.nav` (6).
   - **Metrics:** these are compact, like Windows 11 navigation.
@@ -101,15 +101,16 @@ At text scale ≥ 150%, drop one column class.
     - Horizontal padding is 12 and vertical padding 16.
   - **Top, fixed:** a logo row as tall as the app bar (56). The logo (32 tall) is on the left and the collapse button on the right.
   - **Then, scrolling when the window is short:**
-    - **Profile card:** the initial, the name, and the sync state with its icon ("On this device only", or the sync label in warning tone when it needs review). It opens the profile menu.
+    - **Profile card:** the initial and the name on one line. It opens the profile menu. The sync state is in the title bar; without the custom frame, the card shows it on a second line with its icon.
     - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
-    - **Needs attention:** rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge.
+    - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event. Hidden when the section has none (Shared Expenses in production) and on the rail.
+    - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
   - **Bottom, fixed:**
-    - Hide amounts (a small switch), Settings (opens Profile and settings) and Help.
+    - Settings (opens Profile and settings) and Help. Without the title bar, Hide amounts (a small switch) comes first; with it, Hide amounts is in the title bar.
     - Then a full-width Light | Dark switch, with an icon and a label on each segment. It shows the theme in use, including what System is giving. Choosing one sets the profile's theme. System stays available in Profile and settings.
   - **Selected item:** a `subtle` fill and a medium-weight `text` label. Only the icon is `primary`. High contrast adds a `text` outline.
-  - **Rail:** 40 × 40 icon cells with tooltips. The profile initial opens its menu. Sections with tabs open a flyout beside the item. It has a header (the section's icon and name), then the tabs on the same tree line as the expanded sidebar, with the current tab highlighted. The flyout is level 2, with a `control` radius and a hairline border. The badge sits on the icon. The footer is four icon cells: Hide amounts, Settings, Help, and the theme (switches to the other one).
-- **Go to (Ctrl+K):** a dialog near the top of the window. Typing filters; Enter opens the first match. It lists the sections, every tab ("Activity · Money"), the create actions and the profile pages. It jumps to places; it doesn't search records. It opens from the app bar's Go to field, or from the header's menu button on Windows below 600.
+  - **Rail:** 40 × 40 icon cells with tooltips. The profile initial opens its menu. Sections with tabs open a flyout beside the item. It has a header (the section's icon and name), then the tabs on the same tree line as the expanded sidebar, with the current tab highlighted. The flyout is level 2, with a `control` radius and a hairline border. The badge sits on the icon. The footer is icon cells: Hide amounts (only without the title bar), Settings, Help, and the theme (switches to the other one).
+- **Go to (Ctrl+K):** a dialog near the top of the window. Typing filters; Enter opens the first match. It lists the sections, every tab ("Activity · Money"), the create actions and the profile pages. It jumps to places; it doesn't search records. It opens from the title bar's Go to field (a search button at Medium width), or from the header's menu button on Windows below 600.
 - **Pages:** they open on a navigator inside the content area.
   - Windows: the sidebar and header stay visible.
   - Android: the app bar and dock hide while a page is open.
@@ -132,25 +133,37 @@ At text scale ≥ 150%, drop one column class.
 
 ### Windows title bar (Chat 5)
 
-Revised again 2026-10-30 at the owner's request. It is a separate custom bar above the sidebar and the app bar, not the app bar itself.
+`lib/app/title_bar.dart` (the bar and the runner bridge), `lib/app/title_bar_tools.dart` (clock, bell, calculator), `lib/app/window_chrome.dart` (where it sits), and the runner in `apps/salapiya/windows/runner/`. The decision log has the history; this is the current design.
 
-- **One custom bar across the full window width.**
-  - The window is frameless. The title bar sits on top, and the sidebar and the app bar start below it.
-  - It is `Space.titleBarHeight` (40) tall, in tokens for light and dark, with its own custom design rather than a plain strip of window controls.
-- **No logo or app name in it.** The logo lives in the sidebar. If the owner later moves the logo to the title bar, this changes with it.
-- **Contents:**
-  - **Set:** back and forward buttons on the left (disabled when there is no history), flexible drag space, and the window controls on the right.
-  - **Proposed, to be confirmed in Chat 5's plan step:**
-    - **Sync status pill**, clickable, opening the sync details. It moves out of the sidebar's profile card or mirrors it, without duplicating text needlessly. Labels come from existing runtime state only, e.g. "On this device only", "Synced · 2 min ago", "3 waiting", "Needs review", "Offline".
-    - **Go to field** centered as a command box, moved out of the app bar, or kept in the app bar.
-    - **Window-level toggles**, e.g. Hide amounts.
-
-  The breadcrumb stays in the app bar, so the title bar doesn't repeat it.
-- **Drag areas:** the title bar's empty space. Double-click maximizes.
-- **Mica:** optional, as the title bar's and sidebar's backdrop. Decided in Chat 5.
-- **Window controls:** minimize, maximize/restore and close, using Windows 11 geometry and glyphs. Close uses the system red on hover. These are OS conventions, so they are an allowed exception to the purple accent.
-- **Native behavior must keep working:** drag to move, double-click to maximize, Snap Layouts flyout on maximize hover, Aero Snap, the system menu (Alt+Space), resize borders, DPI changes, multiple monitors, and high-contrast system colors.
-- **Native changes are allowed** in `apps/salapiya/windows/runner/` (currently `win32_window.cpp`, `flutter_window.cpp`, `main.cpp`). A windowing package may be added if it is maintained and works offline; state why before adding it.
+- **One custom bar across the full window width**, `Space.titleBarHeight` (40), on `titleBar` with a hairline below the content column. The sidebar and the app bar start under it; the sidebar's logo row (56) stays level with the app bar.
+- **It frames every screen.** `WindowChrome` puts it above the app's navigator, so welcome, loading and recovery screens have window controls too. Outside the shell, it shows only drag space and the window controls.
+- **No logo or app name.** The logo stays in the sidebar.
+- **Contents, left to right:**
+  - **Left segment (date and clock):** as wide as the sidebar (224, or 64 on the rail), on `surface` with the sidebar's right hairline. The bar's bottom line stops at it, so the sidebar runs unbroken from the window's top edge. The clock is centered in the segment: a 16 clock icon, then "2:45 PM · Fri, 30 Oct" (`NavType.label`, tabular; the time in `text`, medium; the date in `secondary`). It updates each minute, and the time follows the system's 12/24-hour setting. On the rail it shows the time only, centered (`bodySmall`); below 600 there is no segment. It opens a read-only month calendar with today marked and "Open Life › Calendar".
+  - Back and Forward: kit `AppIconButton`s (32), `Space.xs` apart, `Space.sm` past the sidebar's edge (or from the window's edge without one). They are neutral navigation chrome: `text` when enabled, `secondary` when there is no history; the tools on the right keep the accent. Tooltips "Back (Alt+←)" and "Forward (Alt+→)".
+  - **Go to**, moved from the app bar. From 1000 wide it is the `GoToField`, `Space.goToWidth` (320) wide and centered on the window. It narrows rather than overlap either side and keeps at least 48 of drag space beside it. At Medium width it is a search button after Forward. Below 600 the header's menu button stays, because there it is the way to navigate.
+  - Drag space: everything else.
+  - **Bell:** what needs the user, from the existing counts (payments to confirm, waiting to sync, sync needs review), with a `primary` count badge. It opens a menu headed "Needs attention" whose rows go where each item is handled; with none it says "Nothing needs attention". It replaces the sidebar's Needs attention group.
+  - **Calculator:** a popover with a keypad (C, Backspace, Copy, the four operators, digits, the decimal point, =). Typing works while it's open (digits, + − * / or x, Enter or =, Backspace, Delete or C, Ctrl+C, and the numpad); Esc closes it. Arithmetic is on exact fractions, left to right as in Windows' standard mode. A result that doesn't end within 10 decimals shows rounded to centavos and marked "≈" (DOMAIN_RULES §49: rounding is never silent); Copy puts the plain value (for example `416.67`) on the clipboard. It saves nothing. Hidden below 600.
+  - **Hide amounts:** an eye button, "Hide amounts (Ctrl+H)" or "Show amounts (Ctrl+H)", reported as a toggle. It replaces the sidebar footer's row, the rail's cell and, below 600, the header's button.
+  - **Sync status**, moved from the sidebar's profile card. It shows the shell's existing status labels ("On this device only", "Synced", "Synchronizing", "Waiting for connection", or "Demo · …"), in warning tone when sync needs review. It opens Profile › Connection, or Profile and settings in the demo. Below 600 it is icon-only, with the label in its tooltip.
+  - **Window controls:** minimize, maximize or restore, and close (`CaptionButtons`, 46 wide, full height).
+- **Not in the bar:** the logo and app name (they stay in the sidebar) and the breadcrumb (it stays in the app bar).
+- **Colors:** see [§3](#charts-title-bar-high-contrast-and-legacy-colors). Close uses the system red on hover, an allowed exception to the purple accent.
+- **Mica:** deferred. Flutter's Windows engine draws an opaque surface, so Mica would need an unsupported transparent surface. Translucent sidebar text also can't be contrast-checked against a wallpaper tint. The bar and the sidebar stay solid.
+- **Native frame (runner):**
+  - `WM_NCCALCSIZE` moves the client top to the window's top edge. The left, right and bottom frame stay native, which keeps the resize borders, the shadow, Windows 11's rounded corners, Aero Snap, Win+arrow keys and Alt+Space. A maximized window gets its hidden frame back as top padding, minus one pixel on an auto-hide taskbar's edge.
+  - Hit testing: the Flutter view is subclassed to return `HTTRANSPARENT` over the bar's drag space, the top resize band and the maximize button. The window then answers `HTCAPTION` (drag, double-click to maximize, right-click for the system menu), `HTTOP`/`HTTOPLEFT`/`HTTOPRIGHT` (not when maximized), or `HTMAXBUTTON`, which brings up Snap Layouts.
+  - The app sends its regions after each layout, in logical pixels: the bar height, the maximize button and the interactive areas. The runner scales them by the window's DPI at hit-test time, so DPI changes and monitor moves need no extra messages.
+  - The runner owns the maximize button's pointer input. It reports hover and pressed to the app, and maximizes or restores on release. Minimize and close are ordinary app buttons; every window command is posted as a system command (`SC_MINIMIZE`, `SC_MAXIMIZE`, `SC_RESTORE`, `SC_CLOSE`).
+  - The runner also reports maximized and active. Glyphs turn `secondary` while the window is inactive.
+- **Opt-in:** `main.dart` calls `WindowFrame.enable()` before `runApp`, and the native caption stays until it does. An older runner, the debug component gallery (a separate app) and widget tests keep the native caption and the Chat 4 shell layout.
+- **Dialogs and sheets** open below the bar. While one is open, the clock, back, forward, Go to, the tools and the sync status are inert; drag and the window controls keep working. The clock, bell and calculator popovers are menus, which close on Esc or an outside click.
+- **Keyboard and screen readers:**
+  - Tab order, in reading order: the clock, Back, Forward, Go to, the bell, the calculator, Hide amounts, the sync status, then the app. The window controls aren't in the Tab order, as with native caption buttons; Alt+Space reaches them.
+  - Screen readers get named buttons: "Minimize", "Maximize" or "Restore Down", "Close", "Sync status, ‹label›", the clock ("Fri, 30 Oct, 2:45 PM. Open the calendar") and "Notifications, N need attention". The calculator's display is a live region.
+  - The app's navigator, and the shell's content navigator, sit in semantics containers. Without them, a route's modal barrier hid the title bar, the sidebar and the app bar from screen readers.
+- **High contrast:** the app switches to its high-contrast theme and the native border uses the system colors. Flutter doesn't expose the user's high-contrast palette, so the bar itself uses the app's high-contrast roles.
 - **Back/forward history is UI-layer state** over the existing navigation (destination switches and pushed pages). Routes and route names do not change.
 
 ## 3. Tokens
@@ -202,7 +215,7 @@ Status is always shown with an icon and a label too, never by color alone.
 ### Charts, title bar, high contrast and legacy colors
 
 - **Chart series** (`chartSeries`, in order): violet `#6546A3` / `#CABDFA`, teal `#266C80` / `#79C4D2`, plum `#9A4C72` / `#E6BCD4`, ochre `#80631B` / `#E4C572`, blue `#395EB2` / `#A9BCFF`, neutral `#59616F` / `#B9B9C6` (light / dark).
-- **Windows title bar:** `titleBar` (= `canvas`) with `text` and `secondary`. Window controls hover with `windowControlHover` (= `subtle`). Close hovers with `windowCloseHover` `#C42B1C` and a white glyph, following the OS convention.
+- **Windows title bar:** `titleBar` (= `canvas`) with a `divider` hairline below, `text` glyphs, and `secondary` glyphs while the window is inactive. Minimize and maximize hover with `windowControlHover` (`text` at 6%) and press with `windowControlPressed` (`text` at 4%), Windows 11's subtle fills. Close hovers with `windowCloseHover` `#C42B1C` and a white glyph and presses with `windowClosePressed` (that red at 90%), following the OS convention. In high contrast all three fill with `text` and invert the glyph.
 - **High contrast** (`CraftTheme(highContrast: true)`): `secondary`, `border` and `divider` become `text`, and tinted status surfaces become `surface`. Effects are already off in high contrast.
 - **Legacy:** `Palette` (`mint`, `peach`, `lilac`, `ink`, `porcelain`, `midnight`, `violet`, `lavender`) and the craft accents (`warm`, `plum`, `blue`, `focalStart`/`focalEnd`, `latticeEdge`) remain only so existing screens compile. Section chats replace their uses with the roles above; new code must not use them.
 
@@ -243,7 +256,7 @@ Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the lice
   | `cardPadding(w)` | 16 | 20 | 20 |
 
 - **Fixed values:** `cardHeaderGap` 12, `captionGap` 4, `fieldGap` 16, `labelGap` 8, `helperGap` 4, `groupGap` 24, `actionsGap` 24, `dialogPadding` 24, `dialogTitleGap` 12, `pillPadding` 10 × 4.
-- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320, `railWidth` 64 and `sidebarWidth` 224 (the Windows sidebar), and `navItem` 36, `navTab` 32, `navIcon` 16, `navAvatar` 28 and `navSearch` 32 (its rows and parts), `appBarHeight` 56 (the Windows app bar and the sidebar's logo row), `dockMaxWidth` 480 (Android dock), `navRailButton` 40 (the rail's square buttons). `pointerTarget` 32 is the control height where input is pointer-only (Windows); touch uses `target` 48. `compactRow` 36 and `compactTwoLineRow` 48 are Windows list rows; `compactIcon` 18 and `compactControlIcon` 16 are Windows icons.
+- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40, `dialogMaxWidth` 560 (confirmations), `popoverMaxWidth` 320, `railWidth` 64 and `sidebarWidth` 224 (the Windows sidebar), and `navItem` 36, `navTab` 32, `navIcon` 16, `navAvatar` 28 and `navSearch` 32 (its rows and parts), `appBarHeight` 56 (the Windows app bar and the sidebar's logo row), `goToWidth` 320 (the title bar's Go to field), `dockMaxWidth` 480 (Android dock), `navRailButton` 40 (the rail's square buttons). `pointerTarget` 32 is the control height where input is pointer-only (Windows); touch uses `target` 48. `compactRow` 36 and `compactTwoLineRow` 48 are Windows list rows; `compactIcon` 18 and `compactControlIcon` 16 are Windows icons.
 - **`WidthClass`:** compact < 600, medium 600–999, expanded 1000–1439, wide ≥ 1440. It drops one class at text scale ≥ 150%.
 
 ### Windows density (compact scale)
@@ -305,6 +318,10 @@ Modals add `modalScrim`.
 - **Durations:** `quick` 100 ms (hover, press), `short` 160 ms (menus, disclosures, tooltips), `medium` 200 ms (panels, sheets, dialogs, page transitions).
 - **Curves:** `enter` is `Curves.easeOutCubic` and `exit` is `Curves.easeInCubic`. Never bounce.
 - **Reduced motion:** always wrap durations in `Motion.of(context, d)`. It returns zero when reduced motion is on, from either the system setting or the profile preference.
+
+### Windows caption buttons (`CaptionButtons`)
+
+OS values, in one place as [§4](#4-spacing-and-alignment-rules) allows: 46 wide and as tall as the title bar, with 10 px glyphs from Segoe Fluent Icons (Segoe MDL2 Assets on Windows 10): minimize `E921`, maximize `E922`, restore `E923`, close `E8BB`.
 
 ## 4. Spacing and alignment rules
 
@@ -678,8 +695,8 @@ Remove this section when the redesign is finished.
 | 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Done |
 | 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
 | 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
-| 5 | Windows custom title bar | Next |
-| 6 | Overview dashboard | Planned |
+| 5 | Windows custom title bar | Done |
+| 6 | Overview dashboard | Next |
 | 7 | Debts | Planned |
 | 8 | Money A: Accounts, Activity, transaction form | Planned |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
@@ -744,7 +761,7 @@ Each section chat:
 | 2026-10-30 | Owner review: the shell header gets a 12 bottom gap, and Windows header actions center on the title. | Approved |
 | 2026-10-30 | The Windows sidebar is redesigned as a floating card (owner references). The profile card moves to the top with the sync state and a profile menu. Go to (Ctrl+K) is added. Sections expand into their tabs (an accordion with tree lines; flyouts on the rail). A Needs attention group shows existing counts. Hide amounts, theme and Help move to the footer. | Approved |
 | 2026-10-30 | Selected sidebar items use a neutral `subtle` fill and a semibold label; only the icon is purple. | Approved |
-| 2026-10-30 | Glass behind the sidebar is the Windows Mica material, added in Chat 5 with the runner work. Until then the card is solid. | Approved |
+| 2026-10-30 | Glass behind the sidebar is the Windows Mica material, added in Chat 5 with the runner work. Until then the card is solid. | Superseded (Chat 5: Mica deferred) |
 | 2026-10-30 | New stays in the shell header (Ctrl+N), not in the sidebar. | Approved |
 | 2026-10-30 | A Needs attention row for overdue debts (a new UI count over `debtDueSummary`). | Rejected for the sidebar; overdue debts go on the dashboard (Chat 6) |
 | 2026-10-30 | Owner review 2: the sidebar matches the reference sizes. Labels are 13 / 18 and icons 16. Rows are 36 and tab rows 30, below the 40 pointer target, as Windows 11 navigation allows; this is an exception for the sidebar only, and it still meets WCAG 2.2's 24 px target minimum. Text stays 13 rather than the reference's 11 for legibility. | Approved |
@@ -759,4 +776,13 @@ Each section chat:
 | 2026-10-30 | Owner review 5: the rail's section flyout is structured like the expanded sidebar (a header with the icon and name, then tabs on a tree line with the current tab highlighted). The collapse toggle has open and closed glyph states. | Approved |
 | 2026-10-30 | The app bar's New button is compact (32 tall, a 16 icon, a 13 label, `Radii.nav`), matching the Go to field. | Approved |
 | 2026-10-30 | Windows uses a compact scale one step below Android for type, controls, icons, rows and card padding, with tighter corners (controls 6, cards 10, overlays 12). It is applied app-wide through the theme and kit in its own stage after Chat 4. This changes the Chat 2 rule "sizes are the same on Windows and Android" for Windows. | Approved |
-| 2026-10-30 | Windows density implemented (4b): `Density`, `SalapiyaTheme.build(platform:)`, and context-aware radii, card padding and row sizes. The sidebar's rail buttons keep 40 (`navRailButton`). Menu items are 36 on Windows. Android is unchanged. Hard-coded literals in older screens wait for their section chats. | Done, awaiting review |
+| 2026-10-30 | Windows density implemented (4b): `Density`, `SalapiyaTheme.build(platform:)`, and context-aware radii, card padding and row sizes. The sidebar's rail buttons keep 40 (`navRailButton`). Menu items are 36 on Windows. Android is unchanged. Hard-coded literals in older screens wait for their section chats. | Done |
+| 2026-10-30 | Chat 5 title bar, as recommended in the plan: a custom native frame in the runner (no windowing package; `window_manager` and `bitsdojo_window` can't route `HTMAXBUTTON` to a Flutter-drawn button, so Snap Layouts wouldn't appear). Go to moves into the title bar (centered, 320). The sync status moves from the profile card into the title bar and opens the sync details. Hide amounts stays out of the title bar. | Approved |
+| 2026-10-30 | Mica is deferred: Flutter's Windows engine draws an opaque surface. The title bar and the sidebar stay solid. This supersedes "Mica added in Chat 5". | Approved |
+| 2026-10-30 | Title bar colors: `windowControlHover` becomes `text` at 6% (it was `subtle`, nearly invisible on the bar); new `windowControlPressed` (`text` at 4%), `windowClosePressed` (the close red at 90%), `Space.goToWidth` 320 and the `CaptionButtons` OS constants. | Approved |
+| 2026-10-30 | The app's navigator and the shell's content navigator are wrapped in semantics containers, so a route's modal barrier no longer hides the title bar, the sidebar and the app bar from screen readers (found while testing Chat 5; the sidebar issue dates from Chat 4). | Done |
+| 2026-10-30 | Owner review of the Chat 5 title bar (the left side felt empty). The bar's left segment, as wide as the sidebar, shows the date and clock and opens a month calendar; back/forward start the content column. Right of Go to: a notifications bell, a quick calculator and the Hide amounts toggle, then the sync status. | Done |
+| 2026-10-30 | The bell takes over the sidebar's Needs attention group, and the title bar's toggle replaces the sidebar footer's Hide amounts row. Their old place in the sidebar becomes Quick create: the current section's first three create actions as a full list (the Windows counterpart of Android's + button). Ctrl+H toggles Hide amounts. | Done |
+| 2026-10-30 | Rejected for the sidebar: Upcoming, Accounts at a glance, Recent places, Pinned places (dashboard content), and a Groups list (too busy with Quick create). A group switcher may suit the Shared Expenses page (Chat 10). | Rejected |
+| 2026-10-30 | Owner review 2 of the title bar's left side: the sidebar's column runs unbroken to the window's top (the bar's line stops at it), the clock (centered in the column, at the owner's request) shows the time emphasized and the date in `secondary`, and back/forward are neutral and sit just past the sidebar's edge. | Done |
+| 2026-10-30 | Icon buttons use `secondary` when disabled, app-wide; the theme had painted them `primary` in every state, so disabled ones looked clickable. | Done |

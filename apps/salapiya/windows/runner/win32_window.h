@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 // A class abstraction for a high DPI-aware Win32 Window. Intended to be
 // inherited from by classes that wish to specialize with custom
@@ -57,6 +58,27 @@ class Win32Window {
 
   bool SetCaptionTheme(bool dark, COLORREF background, COLORREF text, COLORREF border);
 
+  // A rectangle in the Flutter view's logical pixels.
+  struct LogicalRect {
+    double left, top, right, bottom;
+    bool Contains(double x, double y) const {
+      return x >= left && x < right && y >= top && y < bottom;
+    }
+  };
+
+  // Removes the native caption; the app draws its own title bar. The left,
+  // right and bottom frame stay native (resize borders, shadow, corners).
+  bool EnableCustomFrame();
+
+  // The app's title bar: its height, its maximize button and its
+  // interactive controls. The rest of the bar is caption (drag) space.
+  void SetCaptionRegions(double height, const LogicalRect& maximize,
+                         std::vector<LogicalRect> interactive);
+
+  // The maximize button's pointer state, owned here so Windows can show
+  // the Snap Layouts flyout.
+  enum class CaptionState { kNone = 0, kHover = 1, kPressed = 2 };
+
  protected:
   // Processes and route salient window messages for mouse handling,
   // size change and DPI. Delegates handling of these to member overloads that
@@ -73,6 +95,11 @@ class Win32Window {
   // Called when Destroy is called.
   virtual void OnDestroy();
 
+  // Called when the window's maximized or active state, or the maximize
+  // button's state, changes while the custom frame is on.
+  virtual void OnFrameStateChanged(bool maximized, bool active,
+                                   CaptionState max_button) {}
+
  private:
   friend class WindowClassRegistrar;
 
@@ -88,6 +115,27 @@ class Win32Window {
 
   // Retrieves a class instance pointer for |window|
   static Win32Window* GetThisFromHandle(HWND const window) noexcept;
+
+  // Hosted content (the Flutter view) is transparent to hit testing over the
+  // caption, so this window answers for it.
+  static LRESULT CALLBACK ContentProc(HWND window, UINT message, WPARAM wparam,
+                                      LPARAM lparam, UINT_PTR id,
+                                      DWORD_PTR data) noexcept;
+
+  // Hit test for the custom frame, from a point in screen coordinates.
+  LRESULT FrameHitTest(POINT screen) const;
+
+  // The top resize band, also the padding a maximized window hides.
+  int ResizeBorderHeight() const;
+
+  void SetMaxButton(CaptionState state);
+  void NotifyFrameState();
+  bool custom_frame_ = false;
+  bool maximized_ = false, active_ = true, max_pressed_ = false;
+  CaptionState max_button_ = CaptionState::kNone;
+  double caption_height_ = 0;
+  LogicalRect max_rect_{0, 0, 0, 0};
+  std::vector<LogicalRect> interactive_;
 
   // Update the window frame's theme to match the system theme.
   void UpdateTheme(HWND const window);

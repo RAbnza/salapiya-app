@@ -256,8 +256,9 @@ class ShellNavigationScope extends InheritedNotifier<ShellNavigation> {
   }) : super(notifier: navigation);
 }
 
-/// The sync state shown under the profile name in the sidebar.
-typedef SidebarStatus = ({String label, IconData icon, PillTone tone});
+/// The sync state: in the Windows title bar, or under the profile name in
+/// the sidebar when the native caption is kept.
+typedef ShellStatus = ({String label, IconData icon, PillTone tone});
 
 /// An entry in the sidebar's profile menu.
 typedef SidebarLink = ({String label, IconData icon, VoidCallback onSelected});
@@ -289,7 +290,7 @@ class ShellSidebar extends StatefulWidget {
     required this.navigation,
     required this.expanded,
     required this.profileName,
-    required this.status,
+    this.status,
     required this.profileLinks,
     required this.tabs,
     required this.badges,
@@ -301,11 +302,15 @@ class ShellSidebar extends StatefulWidget {
     required this.onSettings,
     required this.onHelp,
     this.toggle,
+    this.titleBar = false,
+    this.quickCreate = const [],
   });
   final ShellNavigation navigation;
   final bool expanded, hideAmounts;
   final String profileName;
-  final SidebarStatus status;
+
+  /// Null when the title bar shows the sync state.
+  final ShellStatus? status;
   final List<SidebarLink> profileLinks;
 
   /// Each section's tabs, in the order the section shows them.
@@ -323,6 +328,14 @@ class ShellSidebar extends StatefulWidget {
 
   /// Collapses or expands the sidebar; null where only the rail fits.
   final VoidCallback? toggle;
+
+  /// The Windows title bar holds Hide amounts and the bell (what needs
+  /// attention); their sidebar places go, and [quickCreate] takes the
+  /// Needs attention spot.
+  final bool titleBar;
+
+  /// The current section's first create actions.
+  final List<SidebarLink> quickCreate;
   @override
   State<ShellSidebar> createState() => _ShellSidebarState();
 }
@@ -387,7 +400,10 @@ class _ShellSidebarState extends State<ShellSidebar> {
                   const SizedBox(height: Space.lg),
                   for (final destination in AppDestination.values)
                     ...entries(context, destination),
-                  if (wide) ...notices(context),
+                  if (wide)
+                    ...(widget.titleBar
+                        ? quickCreate(context)
+                        : notices(context)),
                 ],
               ),
             ),
@@ -534,6 +550,31 @@ class _ShellSidebarState extends State<ShellSidebar> {
     ];
   }
 
+  /// The Windows counterpart of Android's + button: the current section's
+  /// first create actions, one click each. New keeps the full list.
+  List<Widget> quickCreate(BuildContext context) {
+    if (widget.quickCreate.isEmpty) return const [];
+    final c = CraftTheme.of(context);
+    return [
+      Divider(height: Space.xl, indent: Space.xs, endIndent: Space.xs),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.xs),
+        child: Text(
+          'QUICK CREATE',
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: c.secondary),
+        ),
+      ),
+      for (final link in widget.quickCreate)
+        _UtilityRow(
+          key: ValueKey('quick-${link.label}'),
+          icon: link.icon,
+          label: link.label,
+          onTap: link.onSelected,
+        ),
+    ];
+  }
+
   List<Widget> footer(BuildContext context) {
     final c = CraftTheme.of(context);
     final hideIcon = widget.hideAmounts
@@ -544,12 +585,13 @@ class _ShellSidebarState extends State<ShellSidebar> {
     final dark = c.dark;
     if (!wide) {
       return [
-        _RailButton(
-          key: const ValueKey('shell-hide-amounts'),
-          icon: hideIcon,
-          tooltip: hideLabel,
-          onTap: widget.onHideAmounts,
-        ),
+        if (!widget.titleBar)
+          _RailButton(
+            key: const ValueKey('shell-hide-amounts'),
+            icon: hideIcon,
+            tooltip: hideLabel,
+            onTap: widget.onHideAmounts,
+          ),
         _RailButton(
           icon: Icons.settings_outlined,
           tooltip: 'Settings',
@@ -570,26 +612,27 @@ class _ShellSidebarState extends State<ShellSidebar> {
       ];
     }
     return [
-      _UtilityRow(
-        key: const ValueKey('shell-hide-amounts'),
-        icon: hideIcon,
-        label: 'Hide amounts',
-        toggled: widget.hideAmounts,
-        onTap: widget.onHideAmounts,
-        trailing: ExcludeFocus(
-          child: ExcludeSemantics(
-            child: SizedBox(
-              height: Space.xl - Space.xs,
-              child: FittedBox(
-                child: Switch(
-                  value: widget.hideAmounts,
-                  onChanged: (_) => widget.onHideAmounts(),
+      if (!widget.titleBar)
+        _UtilityRow(
+          key: const ValueKey('shell-hide-amounts'),
+          icon: hideIcon,
+          label: 'Hide amounts',
+          toggled: widget.hideAmounts,
+          onTap: widget.onHideAmounts,
+          trailing: ExcludeFocus(
+            child: ExcludeSemantics(
+              child: SizedBox(
+                height: Space.xl - Space.xs,
+                child: FittedBox(
+                  child: Switch(
+                    value: widget.hideAmounts,
+                    onChanged: (_) => widget.onHideAmounts(),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
       _UtilityRow(
         key: const ValueKey('shell-settings'),
         icon: Icons.settings_outlined,
@@ -1206,8 +1249,9 @@ class _ThemeSwitch extends StatelessWidget {
   }
 }
 
-/// The profile card at the top of the sidebar: initial, name and sync state.
-/// It opens the profile menu. On the rail it is the initial alone.
+/// The profile card at the top of the sidebar: initial, name, and the sync
+/// state unless the title bar shows it. It opens the profile menu. On the
+/// rail it is the initial alone.
 class _ProfileCard extends StatelessWidget {
   const _ProfileCard({
     required this.name,
@@ -1216,7 +1260,7 @@ class _ProfileCard extends StatelessWidget {
     required this.compact,
   });
   final String name;
-  final SidebarStatus status;
+  final ShellStatus? status;
   final List<SidebarLink> links;
   final bool compact;
   @override
@@ -1239,11 +1283,18 @@ class _ProfileCard extends StatelessWidget {
       builder: (context, controller, _) {
         void toggle() =>
             controller.isOpen ? controller.close() : controller.open();
-        final semantics = 'Profile and settings, $name, ${status.label}';
+        final status = this.status;
+        final semantics = [
+          'Profile and settings',
+          name,
+          ?status?.label,
+        ].join(', ');
         if (compact) {
           return Center(
             child: Tooltip(
-              message: 'Profile and settings · ${status.label}',
+              message: status == null
+                  ? 'Profile and settings'
+                  : 'Profile and settings · ${status.label}',
               child: Semantics(
                 button: true,
                 label: semantics,
@@ -1289,26 +1340,27 @@ class _ProfileCard extends StatelessWidget {
                           context,
                         )?.copyWith(color: c.text, fontWeight: FontWeight.w600),
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            status.icon,
-                            size: Space.md,
-                            color: StatusPill.colors(c, status.tone).$1,
-                          ),
-                          const SizedBox(width: Space.xs),
-                          Expanded(
-                            child: Text(
-                              status.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.bodySmall?.copyWith(
-                                color: c.secondary,
+                      if (status != null)
+                        Row(
+                          children: [
+                            Icon(
+                              status.icon,
+                              size: Space.md,
+                              color: StatusPill.colors(c, status.tone).$1,
+                            ),
+                            const SizedBox(width: Space.xs),
+                            Expanded(
+                              child: Text(
+                                status.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.bodySmall?.copyWith(
+                                  color: c.secondary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

@@ -14,6 +14,7 @@ import 'overview.dart';
 import 'previews.dart';
 import 'profile_utilities.dart';
 import 'shell_navigation.dart';
+import 'title_bar.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_editor.dart';
 import '../features/finance/presentation/financial_widgets.dart';
@@ -454,7 +455,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     }
   }
 
-  SidebarStatus get status => !session.production
+  ShellStatus get status => !session.production
       ? (
           label: 'Demo · ${session.syncLabel}',
           icon: Icons.science_outlined,
@@ -476,6 +477,9 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
 
   Widget syncStatus() =>
       StatusPill(status.label, icon: status.icon, tone: status.tone);
+
+  /// The title bar's sync status opens the sync details.
+  void syncDetails() => local == null ? utilities() : utilities('Connection');
 
   /// Opens the New menu with its first item focused, so Esc and the arrow
   /// keys reach the menu before an open page. Focus returns when it closes.
@@ -525,12 +529,14 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     },
   );
 
-  /// Windows: the location, New and Hide amounts above the content (the
-  /// title bar takes the location over later). Android: the top app bar.
+  /// Windows: the location and New above the content; Go to and the sync
+  /// state are in the title bar when it is shown ([titleBar]). Android: the
+  /// top app bar.
   Widget header(
     BuildContext context, {
     required bool desktop,
     required bool rail,
+    required bool titleBar,
   }) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
@@ -577,14 +583,16 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       if (desktop) newButton(width == WidthClass.compact),
       if (!rail) ...[
         if (desktop) const SizedBox(width: Space.sm),
-        AppIconButton(
-          key: const ValueKey('shell-hide-amounts'),
-          tooltip: session.hideAmounts ? 'Show amounts' : 'Hide amounts',
-          onPressed: session.togglePrivacy,
-          icon: session.hideAmounts
-              ? Icons.visibility_off_outlined
-              : Icons.visibility_outlined,
-        ),
+        // On Windows the title bar has Hide amounts when it is shown.
+        if (!(desktop && titleBar))
+          AppIconButton(
+            key: const ValueKey('shell-hide-amounts'),
+            tooltip: session.hideAmounts ? 'Show amounts' : 'Hide amounts',
+            onPressed: session.togglePrivacy,
+            icon: session.hideAmounts
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+          ),
         Tooltip(
           message: 'Profile and settings',
           child: Semantics(
@@ -608,7 +616,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     ];
     if (rail) {
       // Windows with the sidebar: an app bar level with the sidebar's logo
-      // row, with its own divider. Chat 5 adds the window controls to it.
+      // row, with its own divider, below the title bar.
       return Container(
         height: Space.appBarHeight,
         padding: EdgeInsets.symmetric(horizontal: Space.pageGutter(width)),
@@ -625,19 +633,21 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               ),
             ),
             const SizedBox(width: Space.md),
-            if (width == WidthClass.medium)
-              AppIconButton(
-                key: const ValueKey('shell-goto'),
-                icon: Icons.search,
-                tooltip: 'Go to (Ctrl+K)',
-                onPressed: goTo,
-              )
-            else
-              SizedBox(
-                width: Space.sidebarWidth,
-                child: GoToField(onTap: goTo),
-              ),
-            const SizedBox(width: Space.sm),
+            if (!titleBar) ...[
+              if (width == WidthClass.medium)
+                AppIconButton(
+                  key: const ValueKey('shell-goto'),
+                  icon: Icons.search,
+                  tooltip: 'Go to (Ctrl+K)',
+                  onPressed: goTo,
+                )
+              else
+                SizedBox(
+                  width: Space.sidebarWidth,
+                  child: GoToField(onTap: goTo),
+                ),
+              const SizedBox(width: Space.sm),
+            ],
             newButton(false),
           ],
         ),
@@ -651,7 +661,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         Space.pageGutter(width),
         Space.md,
       ),
-      // Without the sidebar, the sync pill gets its own full-width row.
+      // Without the sidebar, the sync pill gets its own full-width row,
+      // unless the Windows title bar shows it.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -670,8 +681,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               ...actions,
             ],
           ),
-          const SizedBox(height: Space.xs),
-          syncStatus(),
+          if (!(desktop && titleBar)) ...[
+            const SizedBox(height: Space.xs),
+            syncStatus(),
+          ],
         ],
       ),
     );
@@ -747,133 +760,174 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       builder: (context, _) {
         final desktop = isDesktop(context);
         final width = WidthClass.of(context);
+        final titleBar = TitleBarScope.maybeOf(context) != null;
         final rail = desktop && width != WidthClass.compact;
         final canExpand = width.index >= WidthClass.expanded.index;
         final isExpanded = canExpand && (expanded ?? !widget.settings.compact);
         final paged = navigation.hasPages;
         final showDock =
             !desktop && !paged && MediaQuery.viewInsetsOf(context).bottom == 0;
-        return PopScope(
-          canPop:
-              !paged &&
-              (desktop || navigation.destination == AppDestination.overview),
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) back(desktop);
-          },
-          child: CallbackShortcuts(
-            bindings: {
-              if (desktop) ...{
-                const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true):
-                    navigation.goBack,
-                const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true):
-                    navigation.goForward,
-                const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-                    openNewMenu,
-                const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-                    goTo,
-              },
+        return TitleBarSlot(
+          items: TitleBarItems(
+            navigation: navigation,
+            status: status,
+            notices: notices,
+            hideAmounts: session.hideAmounts,
+            sidebarWidth: rail
+                ? (isExpanded ? Space.sidebarWidth : Space.railWidth)
+                : 0,
+            onGoTo: goTo,
+            onStatus: syncDetails,
+            onHideAmounts: session.togglePrivacy,
+            onCalendar: () =>
+                navigation.select(AppDestination.life, tab: 'Calendar'),
+          ),
+          child: PopScope(
+            canPop:
+                !paged &&
+                (desktop || navigation.destination == AppDestination.overview),
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) back(desktop);
             },
-            child: Shortcuts(
-              shortcuts: const {
-                SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+            child: CallbackShortcuts(
+              bindings: {
+                if (desktop) ...{
+                  const SingleActivator(
+                    LogicalKeyboardKey.arrowLeft,
+                    alt: true,
+                  ): navigation.goBack,
+                  const SingleActivator(
+                    LogicalKeyboardKey.arrowRight,
+                    alt: true,
+                  ): navigation.goForward,
+                  const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+                      openNewMenu,
+                  const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                      goTo,
+                  const SingleActivator(LogicalKeyboardKey.keyH, control: true):
+                      session.togglePrivacy,
+                },
               },
-              child: Actions(
-                actions: {DismissIntent: _CloseMenu(newMenu)},
-                child: Listener(
-                  onPointerDown: desktop ? pointer : null,
-                  child: Focus(
-                    autofocus: true,
-                    child: Scaffold(
-                      body: SafeArea(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Stable Row/Expanded ancestry preserves destination controllers on resize.
-                            if (rail)
-                              ShellSidebar(
-                                navigation: navigation,
-                                expanded: isExpanded,
-                                profileName: session.profile.name,
-                                status: status,
-                                profileLinks: profileLinks,
-                                tabs: sectionTabs,
-                                badges: {AppDestination.shared: toConfirm},
-                                notices: notices,
-                                hideAmounts: session.hideAmounts,
-                                onHideAmounts: session.togglePrivacy,
-                                themeMode: widget.settings.themeMode,
-                                onThemeMode: (mode) => widget.settings.change(
-                                  () => widget.settings.themeMode = mode,
-                                ),
-                                onSettings: utilities,
-                                onHelp: () => utilities(
-                                  local == null ? 'Profile' : 'Help',
-                                ),
-                                toggle: canExpand
-                                    ? () =>
-                                          setState(() => expanded = !isExpanded)
-                                    : null,
-                              )
-                            else
-                              const SizedBox.shrink(),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  if (desktop || !paged)
-                                    header(
-                                      context,
-                                      desktop: desktop,
-                                      rail: rail,
-                                    ),
-                                  Expanded(
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        Navigator(
-                                          key: navigation.navigatorKey,
-                                          observers: [navigation.observer],
-                                          pages: [
-                                            MaterialPage<void>(
-                                              key: const ValueKey(
-                                                'shell-destinations',
-                                              ),
-                                              child: destinations(showDock),
-                                            ),
-                                          ],
-                                          onDidRemovePage: (_) {},
-                                        ),
-                                        // The scroll viewport extends behind the dock. Only its
-                                        // trailing content padding reserves final-item clearance.
-                                        if (showDock)
-                                          Positioned(
-                                            left: 0,
-                                            right: 0,
-                                            bottom: 0,
-                                            child: MeasureSize(
-                                              onChanged: (size) {
-                                                if (mounted &&
-                                                    dockHeight != size.height) {
-                                                  setState(
-                                                    () => dockHeight =
-                                                        size.height,
-                                                  );
-                                                }
-                                              },
-                                              child: ShellBottomBar(
-                                                selected:
-                                                    navigation.destination,
-                                                select: select,
-                                                onNew: showNewSheet,
-                                              ),
+              child: Shortcuts(
+                shortcuts: const {
+                  SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+                },
+                child: Actions(
+                  actions: {DismissIntent: _CloseMenu(newMenu)},
+                  child: Listener(
+                    onPointerDown: desktop ? pointer : null,
+                    child: Focus(
+                      autofocus: true,
+                      child: Scaffold(
+                        body: SafeArea(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Stable Row/Expanded ancestry preserves destination controllers on resize.
+                              if (rail)
+                                ShellSidebar(
+                                  navigation: navigation,
+                                  expanded: isExpanded,
+                                  profileName: session.profile.name,
+                                  status: titleBar ? null : status,
+                                  titleBar: titleBar,
+                                  quickCreate: [
+                                    for (final item in newItems.take(3))
+                                      (
+                                        label: item.$2,
+                                        icon: item.$3,
+                                        onSelected: () => runNew(item),
+                                      ),
+                                  ],
+                                  profileLinks: profileLinks,
+                                  tabs: sectionTabs,
+                                  badges: {AppDestination.shared: toConfirm},
+                                  notices: notices,
+                                  hideAmounts: session.hideAmounts,
+                                  onHideAmounts: session.togglePrivacy,
+                                  themeMode: widget.settings.themeMode,
+                                  onThemeMode: (mode) => widget.settings.change(
+                                    () => widget.settings.themeMode = mode,
+                                  ),
+                                  onSettings: utilities,
+                                  onHelp: () => utilities(
+                                    local == null ? 'Profile' : 'Help',
+                                  ),
+                                  toggle: canExpand
+                                      ? () => setState(
+                                          () => expanded = !isExpanded,
+                                        )
+                                      : null,
+                                )
+                              else
+                                const SizedBox.shrink(),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    if (desktop || !paged)
+                                      header(
+                                        context,
+                                        desktop: desktop,
+                                        rail: rail,
+                                        titleBar: titleBar,
+                                      ),
+                                    Expanded(
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          // A route's modal barrier hides what is painted
+                                          // before it from screen readers, up to the nearest
+                                          // container; this keeps the sidebar and header.
+                                          Semantics(
+                                            container: true,
+                                            child: Navigator(
+                                              key: navigation.navigatorKey,
+                                              observers: [navigation.observer],
+                                              pages: [
+                                                MaterialPage<void>(
+                                                  key: const ValueKey(
+                                                    'shell-destinations',
+                                                  ),
+                                                  child: destinations(showDock),
+                                                ),
+                                              ],
+                                              onDidRemovePage: (_) {},
                                             ),
                                           ),
-                                      ],
+                                          // The scroll viewport extends behind the dock. Only its
+                                          // trailing content padding reserves final-item clearance.
+                                          if (showDock)
+                                            Positioned(
+                                              left: 0,
+                                              right: 0,
+                                              bottom: 0,
+                                              child: MeasureSize(
+                                                onChanged: (size) {
+                                                  if (mounted &&
+                                                      dockHeight !=
+                                                          size.height) {
+                                                    setState(
+                                                      () => dockHeight =
+                                                          size.height,
+                                                    );
+                                                  }
+                                                },
+                                                child: ShellBottomBar(
+                                                  selected:
+                                                      navigation.destination,
+                                                  select: select,
+                                                  onNew: showNewSheet,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

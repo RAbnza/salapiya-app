@@ -78,8 +78,11 @@ abstract final class Space {
   static const double navRailButton = xxl + sm;
 
   /// The Windows app bar over the content, and the sidebar's logo row that
-  /// lines up with it. In Chat 5 it is also the window's title bar.
+  /// lines up with it. Both sit below the title bar.
   static const double appBarHeight = target + sm;
+
+  /// The Go to field, centered in the Windows title bar.
+  static const double goToWidth = popoverMaxWidth;
   static const pillPadding = EdgeInsets.symmetric(horizontal: 10, vertical: xs);
   static double pageGutter(WidthClass w) => switch (w) {
     WidthClass.compact => lg,
@@ -116,6 +119,20 @@ abstract final class NavType {
   static TextStyle? label(BuildContext context) =>
       Theme.of(context).textTheme.bodyMedium
           ?.copyWith(fontSize: 13, height: 18 / 13);
+}
+
+/// Windows 11 caption buttons: OS geometry and glyphs (Segoe Fluent Icons,
+/// with Segoe MDL2 Assets on Windows 10). §4 allows these OS values here.
+abstract final class CaptionButtons {
+  static const double width = 46;
+  static const minimize = '\uE921', maximize = '\uE922';
+  static const restore = '\uE923', close = '\uE8BB';
+  static const glyph = TextStyle(
+    fontFamily: 'Segoe Fluent Icons',
+    fontFamilyFallback: ['Segoe MDL2 Assets'],
+    fontSize: 10,
+    height: 1,
+  );
 }
 
 abstract final class Radii {
@@ -262,10 +279,16 @@ class CraftTheme extends ThemeExtension<CraftTheme> {
           Color(0xFF59616F),
         ];
 
-  // Windows title bar. Close hover is the OS convention, not the theme.
+  // Windows title bar. Minimize and maximize use Windows 11's subtle fills
+  // (text at 6% on hover, 4% pressed); high contrast fills with `text`.
+  // Close is the OS convention, not the theme.
   Color get titleBar => canvas;
-  Color get windowControlHover => subtle;
+  Color get windowControlHover =>
+      highContrast ? text : text.withValues(alpha: .06);
+  Color get windowControlPressed =>
+      highContrast ? text : text.withValues(alpha: .04);
   static const windowCloseHover = Color(0xFFC42B1C);
+  static const windowClosePressed = Color(0xE6C42B1C);
   static const onWindowCloseHover = Palette.white;
 
   // Elevation: cards are level 1 (surface, divider hairline, no shadow);
@@ -531,7 +554,9 @@ abstract final class SalapiyaTheme {
           iconSize: dense
               ? const WidgetStatePropertyAll(Space.compactIcon)
               : null,
-          foregroundColor: WidgetStatePropertyAll(c.primary),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.disabled) ? c.secondary : c.primary,
+          ),
           side: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.focused)
                 ? BorderSide(color: c.focus, width: 2)
