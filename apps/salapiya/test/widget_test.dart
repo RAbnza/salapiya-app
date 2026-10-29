@@ -102,20 +102,38 @@ void main() {
     }
 
     for (final dark in [false, true]) {
-      final c = CraftTheme(dark: dark);
-      for (final pair in [
-        (c.text, c.surface),
-        (c.secondary, c.surface),
-        (c.primary, c.surface),
-        (c.onPrimary, c.primary),
-        (c.warm, c.warmSurface),
-        (c.plum, c.plumSurface),
-        (c.blue, c.blueSurface),
-        ...NoticeTone.values.map(c.tone),
-      ]) {
-        expect(ratio(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
+      for (final highContrast in [false, true]) {
+        final c = CraftTheme(dark: dark, highContrast: highContrast);
+        for (final pair in [
+          for (final bg in [c.canvas, c.surface, c.raised, c.subtle]) ...[
+            (c.text, bg),
+            (c.secondary, bg),
+            (c.primary, bg),
+          ],
+          (c.onPrimary, c.primary),
+          (c.onPrimary, c.hover),
+          (c.onPrimary, c.pressed),
+          (c.onSelection, c.selection),
+          (c.text, c.selection),
+          (c.warm, c.warmSurface),
+          (c.plum, c.plumSurface),
+          (c.blue, c.blueSurface),
+          ...NoticeTone.values.map(c.tone),
+          c.overdue,
+          c.owedToYou,
+          (c.overdue.$1, c.surface),
+          (c.owedToYou.$1, c.surface),
+          (CraftTheme.onWindowCloseHover, CraftTheme.windowCloseHover),
+        ]) {
+          expect(ratio(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
+        }
+        for (final bg in [c.canvas, c.surface, c.subtle]) {
+          expect(ratio(c.border, bg), greaterThanOrEqualTo(3));
+        }
+        for (final series in c.chartSeries) {
+          expect(ratio(series, c.surface), greaterThanOrEqualTo(3));
+        }
       }
-      expect(ratio(c.border, c.surface), greaterThanOrEqualTo(3));
     }
   });
   for (final size in [

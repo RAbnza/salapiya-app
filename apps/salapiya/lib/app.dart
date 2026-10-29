@@ -63,6 +63,14 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
       debugShowCheckedModeBanner: false,
       theme: SalapiyaTheme.build(Brightness.light),
       darkTheme: SalapiyaTheme.build(Brightness.dark),
+      highContrastTheme: SalapiyaTheme.build(
+        Brightness.light,
+        highContrast: true,
+      ),
+      highContrastDarkTheme: SalapiyaTheme.build(
+        Brightness.dark,
+        highContrast: true,
+      ),
       themeMode: settings.themeMode,
       themeAnimationDuration: Duration.zero,
       builder: (context, child) {
@@ -83,7 +91,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
                 outlinedButtonTheme: OutlinedButtonThemeData(
@@ -91,7 +99,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
                 textButtonTheme: TextButtonThemeData(
@@ -99,7 +107,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
               ),

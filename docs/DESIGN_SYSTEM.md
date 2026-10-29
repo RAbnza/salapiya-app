@@ -57,7 +57,7 @@ Layout adapts to **available width and text scale**. Platform decides **input an
 | Compact | < 600 | Android bottom dock; Windows: menu button opens the destination chooser | 1 |
 | Medium | 600–999 | Collapsed sidebar rail (icons and tooltips) | 1–2 |
 | Expanded | 1000–1439 | Expanded sidebar | 2–3 |
-| Wide | ≥ 1440 | Expanded sidebar | Up to 4; content max width is set in Chat 2 |
+| Wide | ≥ 1440 | Expanded sidebar | Up to 4; content max width 1280 (`Space.contentMaxWidth`) |
 
 At text scale ≥ 150%, drop one column class.
 
@@ -77,7 +77,7 @@ At text scale ≥ 150%, drop one column class.
 
 ### Windows title bar (Chat 5)
 
-- **One bar across the full window width**, with app canvas or surface colors from tokens, in light and dark themes. Its height is a token set in Chat 2.
+- **One bar across the full window width**, with app canvas or surface colors from tokens, in light and dark themes. Its height is `Space.titleBarHeight` (40).
 - **Left to right:** the logo mark and "Salapiya", then back and forward buttons (disabled when there is no history), then the breadcrumb (current section › tab › page, with each earlier segment clickable), then flexible drag space, then the sync status pill, then the window controls.
 - **Sync status pill:** a short label and an icon, e.g. "On this device", "Synced · 2 min ago", "Syncing…", "3 waiting", "Needs review", "Offline". Clicking it opens the sync detail. The text comes from existing runtime state only.
 - **Window controls:** minimize, maximize/restore and close, using Windows 11 geometry and glyphs. Close uses the system red on hover. These are OS conventions, so they are an allowed exception to the purple accent.
@@ -87,19 +87,121 @@ At text scale ≥ 150%, drop one column class.
 
 ## 3. Tokens
 
-**Placeholder: defined in Chat 2.**
+All tokens live in `apps/salapiya/lib/design_system/theme.dart`. Widgets read them through the theme and never write literals:
 
-Chat 2 defines named tokens for color (canvas, surfaces, text, border, divider, primary and states, status pairs, chart series, and the title bar), spacing, radii, type scale (Geist variable font, with tabular figures for amounts), elevation (shadows) and motion. It covers light and dark themes, and high contrast.
+- **Color:** `CraftTheme.of(context).<role>` (a `ThemeExtension`). The Material `ColorScheme` is built from the same roles, so stock widgets match.
+- **Type:** `Theme.of(context).textTheme.<role>`.
+- **Spacing, radius, motion:** `Space.*`, `Radii.*`, `Motion.*`. Width-dependent spacing takes a `WidthClass` from `WidthClass.of(context)`.
 
-Until then:
+Theme mode follows the existing profile setting (System, Light or Dark; System is the default). High contrast is applied automatically when the OS reports it (`MaterialApp.highContrastTheme` / `highContrastDarkTheme`).
 
-- Tokens live in `apps/salapiya/lib/design_system/theme.dart`.
-- Widgets read tokens through the theme. They never write literals.
-- The status color pairs and their contrast figures in the archived doc remain the starting point.
+Every text pair below is at least 4.5:1, and borders and chart series are at least 3:1 (WCAG relative luminance). `test/widget_test.dart` ("semantic foreground pairs meet normal-text contrast") checks them in all four theme variants.
+
+### Neutrals and brand
+
+| Role (`CraftTheme`) | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `canvas` | `#F4F4F7` | `#131318` | App background and title bar |
+| `surface` | `#FFFFFF` | `#1C1C23` | Cards, fields, lists |
+| `raised` | `#FFFFFF` | `#25242D` | Menus, dialogs, sheets, dock |
+| `subtle` | `#EFEEF3` | `#2A2932` | Grouping, read-only and disabled fill |
+| `text` | `#1D1B22` | `#F2F1F5` | Main text and amounts (17.0 / 15.1 on surface) |
+| `secondary` | `#5E5C68` | `#B9B7C3` | Labels, captions, context lines, disabled text (6.6 / 8.6) |
+| `border` | `#7A7886` | `#8D8B99` | Essential control outlines (4.3 / 5.1) |
+| `divider` | `#E4E3EA` | `#35343E` | Hairlines and card edges (decorative) |
+| `primary`, `focus` | `#6546A3` | `#CABDFA` | Primary action, links, focus ring, selected marker (7.1 / 9.8) |
+| `onPrimary` | `#FFFFFF` | `#1E1730` | Text and icons on primary |
+| `hover` / `pressed` | `#573A91` / `#4A2F7E` | `#D7CDFB` / `#BBABF3` | Primary fill states |
+| `selection` / `onSelection` | `#EEE9F8` / `#4A2F7E` | `#30284A` / `#DDD3FC` | Selected row or chip; the one tinted focal card |
+| `modalScrim` | black 44% | black 64% | Modal backdrop |
+
+### Status pairs (foreground / tinted surface)
+
+Status is always shown with an icon and a label too, never by color alone.
+
+| Role | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `tone(success)` | `#146C43` / `#EDF8F1` | `#75D5A5` / `#142B22` | A completed step: synced, confirmed |
+| `tone(warning)` | `#8A4B0F` / `#FFF4DF` | `#F3C16B` / `#312716` | Needs review, due soon, incomplete |
+| `tone(error)` | `#B42318` / `#FFF0ED` | `#FDA29B` / `#371D22` | Validation failure, destructive action |
+| `tone(information)` | `#235EA7` / `#EDF4FF` | `#9AC5FF` / `#19283B` | Explanation, planned information |
+| `tone(neutral)` | `secondary` / `subtle` | same | Ordinary information |
+| `overdue` | `#A1173F` / `#FDEEF2` | `#FF9DB6` / `#3A1A26` | A debt or bill past due. Rose, so it doesn't read as a form error |
+| `owedToYou` | `#0E6A63` / `#E6F5F2` | `#6FD3C7` / `#102E2B` | Money others owe you. Teal, so it doesn't read as "done" |
+
+"You owe" uses neutral `text`; Chat 10 decides whether it needs a role.
+
+### Charts, title bar, high contrast and legacy colors
+
+- **Chart series** (`chartSeries`, in order): violet `#6546A3` / `#CABDFA`, teal `#266C80` / `#79C4D2`, plum `#9A4C72` / `#E6BCD4`, ochre `#80631B` / `#E4C572`, blue `#395EB2` / `#A9BCFF`, neutral `#59616F` / `#B9B9C6` (light / dark).
+- **Windows title bar:** `titleBar` (= `canvas`) with `text` and `secondary`. Window controls hover with `windowControlHover` (= `subtle`). Close hovers with `windowCloseHover` `#C42B1C` and a white glyph, following the OS convention.
+- **High contrast** (`CraftTheme(highContrast: true)`): `secondary`, `border` and `divider` become `text`, and tinted status surfaces become `surface`. Effects are already off in high contrast.
+- **Legacy:** `Palette` (`mint`, `peach`, `lilac`, `ink`, `porcelain`, `midnight`, `violet`, `lavender`) and the craft accents (`warm`, `plum`, `blue`, `focalStart`/`focalEnd`, `latticeEdge`) remain only so existing screens compile. Section chats replace their uses with the roles above; new code must not use them.
+
+### Type scale (Geist)
+
+Geist is the bundled variable font (`assets/fonts/geist/`, OFL 1.1 with the license shipped). It works offline, and all its weights (100–900) render from the one file. Text scales with the system setting. Sizes are the same on Windows and Android.
+
+| Role | Size / line height | Weight | Use |
+| --- | --- | --- | --- |
+| `displayMedium` | 36 / 44 | 600, tabular | The one focal value on a screen |
+| `displaySmall` | 28 / 36 | 600, tabular | Metric tile value |
+| `headlineMedium` | 24 / 32 | 600 | Page title |
+| `headlineSmall` | 20 / 28 | 600 | Dialog title |
+| `titleLarge` | 18 / 26 | 600 | Section title |
+| `titleMedium` | 16 / 24 | 600 | Card title |
+| `titleSmall` | 14 / 20 | 600 | Row title, emphasis |
+| `bodyLarge` | 16 / 24 | 400 | Long reading text, field input |
+| `bodyMedium` | 14 / 20 | 400 | Default body |
+| `bodySmall` | 12 / 16 | 400 | Captions, helper text, context lines |
+| `labelLarge` | 14 / 20 | 600 | Prominent labels |
+| `labelMedium` | 12 / 16 | 500 | Pills, tabs |
+| `labelSmall` | 11 / 16 | 600, +0.6 tracking | Eyebrow labels, the only role that may be uppercase |
+
+`displayLarge` (45 / 52) and `headlineLarge` (32 / 40) exist for completeness. Amounts outside the display roles add `FontFeature.tabularFigures()`. Button and chip labels stay at 13 until Chat 3 sets component metrics.
+
+### Spacing (`Space`)
+
+- **Scale:** `xxs` 2, `xs` 4, `sm` 8, `md` 12, `lg` 16, `xl` 24, `xxl` 32, `xxxl` 48. `target` 48 is the minimum touch target.
+- **Page and card values** (from [§4](#4-spacing-and-alignment-rules), by `WidthClass`):
+
+  | Token | Compact | Medium / Expanded | Wide |
+  | --- | --- | --- | --- |
+  | `pageGutter(w)` | 16 | 24 | 32 |
+  | `pageTop(w)`, `headerGap(w)` | 16 | 24 | 24 |
+  | `sectionGap(w)` | 24 | 32 | 32 |
+  | `pageBottom(w)` | 24 + dock height | 32 | 32 |
+  | `cardGap(w)` | 12 | 16 | 16 |
+  | `cardPadding(w)` | 16 | 20 | 20 |
+
+- **Fixed values:** `cardHeaderGap` 12, `captionGap` 4, `fieldGap` 16, `labelGap` 8, `helperGap` 4, `groupGap` 24, `actionsGap` 24, `dialogPadding` 24, `dialogTitleGap` 12, `pillPadding` 10 × 4.
+- **Widths and heights:** `formMaxWidth` 640, `reviewMaxWidth` 760, `contentMaxWidth` 1280 (the Wide content cap), `titleBarHeight` 40.
+- **`WidthClass`:** compact < 600, medium 600–999, expanded 1000–1439, wide ≥ 1440. It drops one class at text scale ≥ 150%.
+
+### Radius (`Radii`)
+
+`control` 10 (buttons, fields, chips, tooltips), `card` 14, `overlay` 20 (dialogs, sheet top corners, menus, popovers), `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
+
+### Elevation
+
+Two levels only:
+
+- **Level 1 (cards):** `surface` with a 1-px `divider` border and no shadow.
+- **Level 2 (overlays):** `raised` with `overlayShadow`.
+  - Light: black 8% at y4, blur 16, plus black 4% at y1, blur 3.
+  - Dark: black 36% at y8, blur 24. In dark, the lighter surface carries most of the separation.
+
+Modals add `modalScrim`.
+
+### Motion (`Motion`)
+
+- **Durations:** `quick` 100 ms (hover, press), `short` 160 ms (menus, disclosures, tooltips), `medium` 200 ms (panels, sheets, dialogs, page transitions).
+- **Curves:** `enter` is `Curves.easeOutCubic` and `exit` is `Curves.easeInCubic`. Never bounce.
+- **Reduced motion:** always wrap durations in `Motion.of(context, d)`. It returns zero when reduced motion is on, from either the system setting or the profile preference.
 
 ## 4. Spacing and alignment rules
 
-These rules are checkable. "Token" means a named value from [§3](#3-tokens). The numbers below are the intended values; Chat 2 gives them names and may tune them by ±4.
+These rules are checkable. "Token" means a named value from [§3](#3-tokens). The numbers below are the values; [§3](#3-tokens) names them.
 
 ### Tokens only
 
@@ -288,8 +390,8 @@ Remove this section when the redesign is finished.
 | Chat | Stage | Status |
 | --- | --- | --- |
 | 1 | Audit and design spec (this document) | Done |
-| 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Next |
-| 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Planned |
+| 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Done |
+| 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Next |
 | 4 | App shell: navigation, page header, profile entry | Planned |
 | 5 | Windows custom title bar | Planned |
 | 6 | Overview dashboard | Planned |
@@ -323,5 +425,10 @@ Each section chat:
 | 2026-10-29 | Carried over from the archive: the exact-money rules, the accessibility rules, the motion limits, Geist as the typeface, separate sync and business states, and the status color pairs as the starting palette. | Approved (with this spec) |
 | 2026-10-29 | The spacing values in §4, and the Add/Log verb split and glossary in §7. | Approved |
 | 2026-10-29 | Redesign work moves to its own branch, `redesign/ui`, created from `docs/normalize`. | Approved |
+| 2026-10-29 | Tokens (Chat 2): purple-tinted neutrals, primary `#6546A3` / `#CABDFA` kept, archived status pairs kept, new `overdue` (rose) and `owedToYou` (teal) roles, chart series from the archive, and a high-contrast variant. | Approved |
+| 2026-10-29 | Geist stays the only UI font (already bundled, OFL 1.1). The type scale is in §3. | Approved |
+| 2026-10-29 | Radii are control 10, card 14, overlay 20 and pill. Elevation has two levels (hairline cards, shadowed overlays). Motion is 100 / 160 / 200 ms with ease-out. | Approved |
+| 2026-10-29 | Wide content max width is 1280, and the Windows title bar height is 40. | Approved |
+| 2026-10-29 | The existing System/Light/Dark profile setting stays the theme-mode control. | Approved |
 | 2026-10-29 | Totals added up across debts and bills per week or month for the dashboard. | Needs approval (Chat 6) |
 | 2026-10-29 | Rewording user-facing messages that live in domain or rule files. | Needs approval (per section chat) |
