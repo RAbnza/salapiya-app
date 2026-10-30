@@ -118,7 +118,7 @@ void main() {
     final shell = shellOf(tester);
     await tester.tap(find.byKey(const ValueKey('shell-new')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Log expense'));
+    await tester.tap(newItem('Log expense'));
     await tester.pumpAndSettle();
     expect(find.byType(FinancialEditor), findsOneWidget);
     expect(find.byType(ShellSidebar), findsOneWidget);
@@ -134,7 +134,7 @@ void main() {
     // Choosing a destination closes the open page first.
     await tester.tap(find.byKey(const ValueKey('shell-new')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Log income'));
+    await tester.tap(newItem('Log income'));
     await tester.pumpAndSettle();
     expect(shell.hasPages, isTrue);
 
@@ -159,7 +159,7 @@ void main() {
   ) async {
     await pumpShell(tester, const Size(412, 900));
     final shell = shellOf(tester);
-    await tapVisible(tester, find.text('View accounts'));
+    await tapVisible(tester, find.byKey(const ValueKey('overview-available')));
     expect(shell.destination, AppDestination.money);
     expect(crumbs(tester), ['Money', 'Accounts']);
     expect(find.byType(FinancePage), findsNothing);
@@ -168,7 +168,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(shell.destination, AppDestination.overview);
-    expect(find.text('Money Today'), findsOneWidget);
+    expect(find.text('Available money'), findsOneWidget);
     expect(tester.takeException(), isNull);
   }, variant: android);
 
@@ -187,7 +187,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('shell-new')));
     await tester.pumpAndSettle();
-    expect(find.text('Log a transfer'), findsOneWidget);
+    expect(newItem('Log a transfer'), findsOneWidget);
     expect(find.text('Transfer money'), findsNothing);
     expect(tester.takeException(), isNull);
   }, variant: android);

@@ -100,7 +100,7 @@ void main() {
       await tester.pumpAndSettle();
       final original = controller.offset;
       final footerTop = tester.getTopLeft(find.byType(ShellBottomBar)).dy;
-      final finalText = find.textContaining('Next: interview on 23 Oct');
+      final finalText = find.text('Tala reported a payment · example');
       expect(tester.getBottomLeft(finalText).dy, lessThan(footerTop));
       await tester.tap(find.byKey(const ValueKey('nav-money')));
       await tester.pumpAndSettle();
@@ -110,14 +110,11 @@ void main() {
       tester.view.physicalSize = const Size(800, 600);
       await tester.pumpAndSettle();
       expect(controller.offset, greaterThan(0));
-      await tapVisible(tester, find.text('Demo household'));
-      await tapVisible(tester, find.text('Tala reported a payment'));
-      expect(find.text('Review payment confirmation'), findsWidgets);
+      await tapVisible(tester, find.text('1 payment to confirm'));
+      expect(find.text('Payments'), findsWidgets);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.text('Demo household'), findsWidgets);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
+      expect(find.text('1 payment to confirm'), findsWidgets);
       expect(controller.offset, greaterThan(0));
       final moneyPoint = tester.getCenter(
         find.byKey(const ValueKey('nav-money')),
@@ -126,8 +123,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tapAt(moneyPoint);
       await tester.pumpAndSettle();
-      expect(find.text('Money Today'), findsOneWidget);
-      expect(find.text('Log expense'), findsNothing);
+      expect(find.text('Available money'), findsOneWidget);
+      expect(newItem('Log expense'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

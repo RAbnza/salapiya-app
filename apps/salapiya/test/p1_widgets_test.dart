@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
@@ -72,7 +73,7 @@ void main() {
             SalapiyaApp(session: runtime.session, settings: settings),
           );
           await localSettle(tester);
-          expect(find.text('Your day, in balance.'), findsOneWidget);
+          expect(find.byType(OverviewDashboard), findsOneWidget);
           expect(find.textContaining('Tala reported'), findsNothing);
           expect(find.textContaining('DEMO ·'), findsNothing);
           expect(runtime.session!.finance.liquid, BigInt.from(10000));

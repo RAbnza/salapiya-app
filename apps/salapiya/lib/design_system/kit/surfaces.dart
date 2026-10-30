@@ -13,6 +13,7 @@ class SurfaceCard extends StatelessWidget {
     this.caption,
     this.trailing,
     this.onTap,
+    this.accent = false,
   });
   final Widget child;
   final String? title, caption;
@@ -20,6 +21,9 @@ class SurfaceCard extends StatelessWidget {
 
   /// Makes the whole card one target, with hover, pressed and focus states.
   final VoidCallback? onTap;
+
+  /// The one tinted focal card on a screen (`selection`); at most one.
+  final bool accent;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
@@ -61,7 +65,7 @@ class SurfaceCard extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       radius: Radii.cardOf(context),
-      color: c.surface,
+      color: accent ? c.selection : c.surface,
       border: Border.all(color: c.divider),
       padding: EdgeInsets.all(Space.cardPaddingOf(context)),
       child: Material(type: MaterialType.transparency, child: content),
@@ -79,18 +83,21 @@ class MetricTile extends StatelessWidget {
     this.context,
     this.trend,
     this.onTap,
+    this.accent = false,
   });
   final String label;
   final Widget value;
   final String? context;
   final Widget? trend;
   final VoidCallback? onTap;
+  final bool accent;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
     return SurfaceCard(
       onTap: onTap,
+      accent: accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -144,6 +151,53 @@ class SectionHeader extends StatelessWidget {
           ),
         ),
         if (trailing != null) ...[const SizedBox(width: Space.md), trailing!],
+      ],
+    );
+  }
+}
+
+/// The top of a page: a `headlineMedium` title, an optional caption below it
+/// and actions centered on the title. The parent owns the gap after it
+/// (`headerGap`).
+class PageHeader extends StatelessWidget {
+  const PageHeader(
+    this.title, {
+    super.key,
+    this.caption,
+    this.actions = const [],
+  });
+  final String title;
+  final String? caption;
+  final List<Widget> actions;
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(title, style: text.headlineMedium),
+              ),
+              if (caption != null) ...[
+                const SizedBox(height: Space.captionGap),
+                Text(
+                  caption!,
+                  style: text.bodyMedium?.copyWith(
+                    color: CraftTheme.of(context).secondary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        for (final action in actions) ...[
+          const SizedBox(width: Space.sm),
+          action,
+        ],
       ],
     );
   }

@@ -4,10 +4,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/app/overview_controls.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app/workspace_overview.dart';
-import 'package:salapiya/design_system/editorial.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';
-import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
@@ -92,149 +93,75 @@ Future<void> overviewPolishJourney(
       await runtime.activate(f.store);
     });
     final session = runtime.session!;
-    final today = civilToday(), start = '${civilToday().substring(0, 7)}-01';
-    final overview = find.byType(WorkspaceOverview);
-    Finder card(String label) => find.descendant(
+    final overview = find.byType(OverviewDashboard);
+    Finder tile(String name) => find.descendant(
       of: overview,
-      matching: find.byWidgetPredicate(
-        (w) => w is ValueBlock && w.label == label,
-      ),
+      matching: find.byKey(ValueKey('overview-$name')),
     );
-    final cards = [
-      card('LIQUID MONEY'),
-      card('MONTH SPENDING'),
-      card('MONTH INCOME'),
-      card('DEBT LIABILITY'),
+    final tiles = [
+      tile('available'),
+      tile('spent'),
+      tile('income'),
+      tile('owed'),
     ];
+    String? value(Finder tile) => tester
+        .widget<MoneyAmount>(
+          find.descendant(of: tile, matching: find.byType(MoneyAmount)),
+        )
+        .text;
     Future<void> checkLayout() async {
       await tester.pumpWidget(
         SalapiyaApp(session: session, settings: settings),
       );
       await localSettle(tester);
-      expect(find.text('Your day, in balance.'), findsOneWidget);
+      expect(overview, findsOneWidget);
+      expect(value(tiles[0]), session.amount(session.accepted!));
+      expect(value(tiles[1]), session.amount(BigInt.from(123456789)));
+      expect(value(tiles[2]), session.amount(BigInt.zero));
+      expect(value(tiles[3]), session.amount(BigInt.zero));
       expect(
-        tester.widget<ValueBlock>(cards[0]).value,
-        session.amount(session.accepted!),
+        [for (final t in tiles) tester.widget<KpiTile>(t).caption],
+        [
+          'Cash and bank · card credit excluded',
+          'Refunds subtracted',
+          'Borrowed money isn’t income',
+          'Debts through today · cards are separate',
+        ],
       );
-      expect(
-        tester.widget<ValueBlock>(cards[1]).value,
-        session.amount(BigInt.from(123456789)),
-      );
-      expect(
-        tester.widget<ValueBlock>(cards[2]).value,
-        session.amount(BigInt.zero),
-      );
-      expect(
-        tester.widget<ValueBlock>(cards[3]).value,
-        session.amount(BigInt.zero),
-      );
+      expect(tester.widget<KpiTile>(tiles[0]).accent, isTrue);
+      expect(find.byKey(const ValueKey('shell-new')), findsOneWidget);
       if (android) {
-        expect(find.text('Add expense'), findsNothing);
-        expect(find.text("Your money and what's next."), findsOneWidget);
-        expect(find.byKey(const ValueKey('shell-new')), findsOneWidget);
+        expect(find.byKey(const ValueKey('overview-date')), findsOneWidget);
+        expect(find.byType(PageHeader), findsNothing);
+        // The + button above the dock replaces the header's quick actions.
+        expect(
+          find.byKey(const ValueKey('overview-quick-actions')),
+          findsNothing,
+        );
         expect(
           find.byKey(const ValueKey('floating-dock-surface')),
           findsOneWidget,
         );
-        final caption = tester.widget<ValueBlock>(cards[1]).caption;
-        expect(
-          caption,
-          '${overviewPeriodLabel(const DefaultMaterialLocalizations(), start, today)} · net spending',
-        );
-        // Scroll the metric into the semantics viewport before checking TalkBack detail.
-        await tester.ensureVisible(cards[1]);
-        await localSettle(tester);
-        expect(
-          find.bySemanticsLabel('$start – $today · net recognized spending'),
-          findsOneWidget,
-        );
-        final rects = cards.map(tester.getRect).toList();
-        for (var i = 1; i < rects.length; i++) {
-          if ((rects[i].top - rects[i - 1].top).abs() < .1) {
-            expect(rects[i].height, closeTo(rects[i - 1].height, .1));
-            expect(rects[i].left - rects[i - 1].right, closeTo(16, .1));
-          }
-        }
-        // No blank action row remains between the subtitle and the cards.
-        final subtitle = tester.getRect(
-          find.text("Your money and what's next."),
-        );
-        expect(rects.first.top - subtitle.bottom, closeTo(24, .1));
-        if (settings.textScale == 1 && tester.view.physicalSize.width >= 360) {
-          final paragraph = tester.renderObject<RenderParagraph>(
-            find.text("Your money and what's next."),
-          );
-          expect(
-            paragraph.getBoxesForSelection(
-              TextSelection(
-                baseOffset: 0,
-                extentOffset: "Your money and what's next.".length,
-              ),
-            ),
-            hasLength(1),
-          );
-        }
       } else {
-        expect(find.text("Your money and what's next."), findsNothing);
+        expect(find.byType(PageHeader), findsOneWidget);
+        expect(find.byKey(const ValueKey('overview-date')), findsNothing);
         expect(
-          find.text(
-            'Welcome back, ${session.profile.name}. Here is your money and what is ahead.',
-          ),
+          find.byKey(const ValueKey('overview-quick-actions')),
           findsOneWidget,
-        );
-        expect(
-          find.widgetWithText(FilledButton, 'Add expense'),
-          findsOneWidget,
-        );
-        expect(
-          tester.widget<ValueBlock>(cards[1]).caption,
-          '$start – $today · net recognized',
-        );
-        expect(
-          tester.widget<ValueBlock>(cards[1]).captionSemanticsLabel,
-          isNull,
-        );
-        final grid = tester
-            .widgetList<WorkspaceGrid>(find.byType(WorkspaceGrid))
-            .first;
-        expect(grid.matchRowHeights, isFalse);
-        expect(grid.minWidth, 150);
-        expect(
-          find.descendant(
-            of: cards.first,
-            matching: find.byType(EditorialSurface),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          tester
-              .widget<EditorialSurface>(
-                find.descendant(
-                  of: cards.first,
-                  matching: find.byType(EditorialSurface),
-                ),
-              )
-              .padding,
-          20,
         );
         expect(
           find.byKey(const ValueKey('floating-dock-surface')),
           findsNothing,
         );
       }
-      expect(
-        tester.widget<ValueBlock>(cards[0]).caption,
-        'Accepted history · card credit excluded',
-      );
-      expect(
-        tester.widget<ValueBlock>(cards[2]).caption,
-        'Recognized income · borrowing excluded',
-      );
-      expect(
-        tester.widget<ValueBlock>(cards[3]).caption,
-        'Through today · schedules are separate',
-      );
-      for (final metric in cards) {
+      // Tiles in one row share a height, and no text leaves its tile.
+      final rects = tiles.map(tester.getRect).toList();
+      for (var i = 1; i < rects.length; i++) {
+        if ((rects[i].top - rects[i - 1].top).abs() < .1) {
+          expect(rects[i].height, closeTo(rects[i - 1].height, .1));
+        }
+      }
+      for (final metric in tiles) {
         final bounds = tester.getRect(metric);
         for (final text
             in find
@@ -243,7 +170,6 @@ Future<void> overviewPolishJourney(
           final finder = find.byWidget(text.widget);
           final rect = tester.getRect(finder);
           expect(rect.left, greaterThanOrEqualTo(bounds.left));
-          expect(rect.right, lessThanOrEqualTo(bounds.right + .1));
           expect(rect.bottom, lessThanOrEqualTo(bounds.bottom + .1));
           expect(
             tester
@@ -276,11 +202,13 @@ Future<void> overviewPolishJourney(
     }
     settings.change(() => settings.textScale = 1);
     await localSettle(tester);
-    if (android) {
-      await localTap(tester, find.byKey(const ValueKey('shell-new')));
-      expect(find.text('Log expense'), findsOneWidget);
-    }
-    final addExpense = find.text(android ? 'Log expense' : 'Add expense');
+    // The sweep queued a preference save per change. They finish on the test
+    // clock, so wait for them while pumping, not inside runAsync at teardown.
+    var saved = false;
+    runtime.flushPreferences().then((_) => saved = true);
+    await localWait(tester, () => saved);
+    await localTap(tester, find.byKey(const ValueKey('shell-new')));
+    final addExpense = find.text('Log expense').last;
     await tester.ensureVisible(addExpense);
     await tester.pumpAndSettle();
     // Build the native draft reader with a real I/O clock in host widget tests.

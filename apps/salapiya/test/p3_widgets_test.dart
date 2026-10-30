@@ -118,7 +118,7 @@ void main() {
               ),
             );
             await localSettle(tester);
-            await localTap(tester, find.text('Open your groups').first);
+            await localTap(tester, find.byKey(const ValueKey('nav-shared')));
             await localWait(
               tester,
               () => find.text(name).evaluate().isNotEmpty,

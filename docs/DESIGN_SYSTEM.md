@@ -187,6 +187,55 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 │ Fri, 30 October  ›             │  Overview header (opens the calendar)
 ```
 
+### Overview dashboard (Chat 6)
+
+`lib/app/overview_dashboard.dart` (layout, tabs and sources), `overview_cards.dart` (cards), `overview_controls.dart` (compact controls and tiles), `overview_charts.dart` (charts), `overview_data.dart` (display-only derivations) and `overview_demo.dart` (the demo sample); tested in `test/overview_dashboard_test.dart`. Goal: within five seconds, where your money stands, what is due and what changed. Owner review 1 (2026-10-30) reworked it after the owner's reference dashboards: compact sizes, KPI tiles with sparklines, mixed card widths, more widget types and tabs.
+
+- **Header.**
+  - Windows: a `PageHeader` with "Overview" and the long date ("Friday, 30 October 2026"). From 1104 wide the quick actions sit on the same row, right-aligned so they end at the content's right edge (the cards' and tab row's edge), centered on the title; they wrap from the end if needed. Narrower, they go under it.
+  - Android: one compact row, 4 above the tabs: a calendar icon and the long date in `titleSmall`, 48 tall, opening a calendar sheet with "Open Life › Calendar"; at its end, a dues pill ("N overdue" in the overdue tone, else "N due this week") that opens the Debts & Dues tab, hidden when nothing is due or the download is incomplete. No quick actions: the + button above the dock already offers them.
+  - **Quick actions** (Windows only): the shell's first four New items (Log expense, Log income, Log a transfer, Log a debt payment) as small outlined chips that open the same editors. On Windows with the title bar, the sidebar's Quick create repeats the first three.
+- **Tabs** (`AppTabs`): Summary · Spending · Debts & Dues · Accounts & Activity. Summary is the five-second view. A tab change resets that tab's cards.
+- **Notices**, under the tabs, only when they apply: "Your first download isn't finished" (warning); "N changes are waiting to sync" with available money including them (information, live region); "Sync needs review" with Review.
+- **Summary:**
+  - **KPI tiles** (`KpiTile`): an icon badge and label (every tile reserves the height of the tallest label in the set at its width, so values line up when one label wraps and another doesn't), the value (`MoneySize.tile`), a change line and a sparkline beside the value (under it when narrow). Captions stay ("Cash and bank · card credit excluded", "Refunds subtracted", "Borrowed money isn't income", "Debts through today · cards are separate").
+    - **Available money** (the one accent card): sparkline of the closing balance of all accounts over the last 30 days; change since the end of last month.
+    - **Spent this month:** sparkline of the running total; change against the same days of last month.
+    - **Income this month:** sparkline of the running total; change against the same days of last month.
+    - **What you owe:** sparkline of the last five month ends and today; change since the end of last month.
+  - **Spending this month** (the wide hero): the total and its change, then a Daily | Running segmented control: a bar per day, or the running total (filled) against last month's (dashed) with a legend. Under the chart, a stat strip (`StatStrip`): Highest day, Days with spending ("23 of 30"), Top category and Last month by now. Exact values under "Show values".
+  - **Due and overdue** (R1–R3), beside the hero: This week | This month and Calendar | List.
+    - Calendar: the calendar, Overdue on top and the day filter. Summary shows 4 rows per group before "Show all N"; the Debts & Dues tab shows 6. Overdue days are tinted rose as well as marked with the icon.
+    - Calendar or List is chosen from a settings icon (`AppIconButton`, tooltip "Layout: ‹current›") in the card's top-right corner, which opens a menu with both (the current one checked). This week | This month stays a segmented control.
+    - List (owner review 2, for sharing a screenshot): "This month · 1–31 Oct · as of Fri, 30 Oct", the totals plus "Total due" when something is overdue, then every item of the period in one table (Due date with "N days overdue", Item, Type, Status, Amount), sorted by date, with no row limit. Narrow cards show the same items as rows.
+  - **Recent activity** (5 rows) beside **At a glance**; then **Next up in Life** and **Shared Expenses**.
+- **Spending:**
+  - **Spending by category:** a donut (top five and "Other") with "Top category" in the hole, and a legend of each category's share and exact amount. Net-negative categories are left out of the shares.
+    - Legend rows: the swatch and name are vertically centered beside the share and amount; the share sits over the amount, or beside it on one line when the legend is wide. Only under 192 × the text scale does the amount take its own line.
+    - Hovering (Windows) or tapping (Android) a section selects it: it grows 4 outward, the hole shows its name, share and amount, and its legend row is highlighted. Legend rows select their section the same way (hover, tap, or Enter by keyboard). Leaving the chart or tapping its hole clears it.
+  - **Budgets:** a half-circle gauge of the total used across budgets with a limit (warning tone when over), beside each budget's slim bar and line ("45.13% used", "₱X over", zero-limit). An empty state when there are none.
+  - **Largest expenses this month:** the five largest, as a table.
+- **Debts & Dues:** Due and overdue beside **What you owe over time** (filled line, then a stat strip: Today, Since end of ‹month› with Paid down / Added, Highest; then "By debt": each debt with what you owe on it and a slim bar of its share); then **Debt payoff** as a table: name and pill, a bar with one step per scheduled payment (a continuous bar above 24), the progress line, and what you owe.
+- **Accounts & Activity:** an account card per active account (type icon, balance, 30-day sparkline, "Last 30 days"), a Card debt card ("Available credit ₱X, not money you have"), then **Recent activity** (10 rows).
+- **Uneven rows:** a card can center its content in the height its grid row gives it (`OverviewCard(centered: true)`): the header stays at the top and the space left is split above and below the content. The Spending tab's category and budgets cards use it, so whichever is shorter doesn't leave a gap at its bottom.
+- **"Show values"** sits 16 below the figures above it.
+- **Tables** (`ActivityCard`, the dues list, the payoff table): columns when the card is at least 528 × the text scale wide; a list of rows otherwise. The amount column has one width per table, measured from its widest amount (`moneyColumnWidth`), so every other column starts at the same x on every row.
+- **Sizes (dashboard only):** card titles `titleSmall`, captions `bodySmall`; KPI and chart totals `MoneySize.tile`; card actions are small links (`CardLink`, `labelMedium` in `primary` with a chevron); segmented controls (`MiniSegmented`) and quick-action chips look 32 tall. On Android every one of them keeps a 48 × 48 hit area (`TouchArea` adds transparent space around it). The rest of the app keeps its sizes.
+- **States:**
+  - An incomplete download shows "Not available yet" in every money value, list and chart; changes and sparklines are hidden.
+  - Hidden amounts hide charts, the donut and every change line and sparkline ("Amounts hidden"); other values show "Amount hidden".
+  - Each card has its own empty state.
+- **Dates:** "Today" is `civilToday()` (Asia/Manila), with `debtDueStatus` for every row. "This week" is Monday to Sunday; "This month" is the calendar month. Period rows start today; anything earlier is only under Overdue. "Last month" covers the same days, stopping at its own last day.
+- **Changes** (`ChangeLine`): an arrow and the change in whole basis points of the earlier value, shown with one decimal and rounded toward zero ("↑ 4.2%"), then what it compares with. Rises in available money and income use the success tone; rises in spending and what you owe use warning; no change is neutral; an earlier zero shows "New". Screen readers hear "Up 4.2% vs 1–28 Sep".
+- **Snapshots:** money values, charts and sparklines use accepted history. Dues and debt progress use the Debts screen's records, which include waiting work.
+- **Layout** (`DashboardGrid`, a 12-column grid by content width; at 150% text the width counts as two-thirds):
+  - From 1104: tiles 3 columns each; hero 8 + dues 4; Recent activity 8 + At a glance 4; Life 6 + Shared 6; category 5 + budgets 7; dues 6 + owed 6; account cards 3 each; tables full width.
+  - From 688: tiles and account cards two to a row; everything else full width.
+  - Narrower, and always on Android: one column in priority order (Summary: tiles, At a glance, dues, hero, activity, Life, Shared). Tiles and account cards pair up when the column is at least 336 wide.
+  - Cards in a row match the tallest (`_EqualHeightRow`). The grid owns the gap.
+  - **Narrow cards and large text:** row amounts and pills, a card's header control and label amounts move below the text under 336 × the text scale (640 for a header with a segmented control); the donut, gauge and tables switch to stacked layouts; segmented controls and the tab row scroll sideways rather than shrink text.
+- **Demo build:** the same dashboard, filled by a sample profile replayed in memory through the real rules (`planLocal`), dated relative to today: three accounts that end today on the demo balances (₱29,300.75 in all, as Money shows), two months of spending and income, a debt due soon, one 3 days overdue, one paid off, a card statement due in 5 days and three budgets. Demo scenarios (empty, incomplete, waiting changes, review) and hidden amounts apply. Nothing is stored. The previous demo Overview layout is no longer shown.
+
 ## 3. Tokens
 
 All tokens live in `apps/salapiya/lib/design_system/theme.dart`. Widgets read them through the theme and never write literals:
@@ -507,6 +556,15 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
   - with `onTap`, the whole card is one target with hover, pressed and focus states.
 - **`MetricTile`:** a card with one focal value. It shows a muted label (`labelLarge`), the value 8 below, a context line 4 below that, and an optional trend or status.
 - **`SectionHeader`:** a `titleLarge` header with an optional caption 4 below and a trailing action centered on it. The parent owns the gap after it (`headerGap`).
+- **`PageHeader`** (Chat 6): a `headlineMedium` page title, an optional `bodyMedium` caption 4 below, and actions centered on the title. The parent owns the gap after it (`headerGap`).
+- **Accent:** `SurfaceCard(accent: true)` and `MetricTile(accent: true)` use the `selection` fill. Use it for the one tinted focal card on a screen, never more.
+
+### Tabs (`AppTabs`; Chat 6 owner review)
+
+- Underline tabs that switch between views of one page: `labelLarge` text, `secondary` (medium weight) or `primary` (semibold) when selected, with a 2 px `primary` underline on the row's `divider` hairline. 12 between tabs.
+- Each tab is `hitTarget` tall (32 on Windows, 48 on Android). The row scrolls sideways when it doesn't fit; text never shrinks.
+- Screen readers hear each tab as a selected or unselected button in a group. Each tab's key is `ValueKey(value)`.
+- First used by the Overview. Section screens adopt it in their own chats.
 
 ### List rows (`ListRow`, `ListGroup`)
 
@@ -516,6 +574,7 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 - **Text:** the title is `titleSmall` and the subtitle is `bodySmall` in `secondary`.
 - **Trailing:** usually an amount or a status pill. It is centered vertically on the row, like the leading icon and the chevron.
 - **Tappable rows:** they get a chevron and hover, pressed and focus states.
+- **`stackTrailing`:** puts the trailing item under the text, end-aligned, for rows too narrow to hold both (the caller decides, because `ListRow` sits inside intrinsic-height layouts and can't measure itself).
 - **`ListGroup`:** hairline dividers inset to the text start, with none after the last row.
 
 ### Status (`StatusPill`, `InlineNotice`)
@@ -541,6 +600,7 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 - **Display only:** it shows the string the app already formats (`session.amount(value)`, which gives "Amount hidden" when amounts are hidden). It never formats or calculates.
 - **Sizes:**
   - **Row:** `titleSmall`.
+  - **Tile:** `headlineMedium`, stepping down to `headlineSmall` and `titleMedium` (the compact dashboard value; Overview only).
   - **Card:** `displaySmall`, stepping down to headline roles to fit.
   - **Focal:** `displayMedium`, stepping down. It scrolls sideways only as a last resort.
   - Figures are always tabular, and the line never wraps.
@@ -583,12 +643,34 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
   - **Why not the SVGs:** the SVG artwork draws the "G" with a CSS conic gradient and Gaussian blurs, which Flutter's SVG renderer can't reproduce. It would draw an approximation, so the PNGs are used.
   - **Accessibility:** it is announced as "Sign in with Google". Its text is part of the image, so it does not grow with the system text size.
 
+### Charts (`OverviewBarChart`, `OverviewLineChart`, `Sparkline`, `OverviewDonut`, `BudgetGauge`, `ChartLegend`, `ChartValues`; Chat 6)
+
+- **Library:** `fl_chart` 1.3.0 (MIT), pinned.
+  - It is pure Dart, with no native code or bundled assets, so it works offline.
+  - It is maintained, and every color and text style is passed in, so it follows light, dark and high contrast.
+  - It is needed for the line charts.
+  - The rejected alternatives: Syncfusion (a commercial license) and hand-drawn painters for lines with hover tooltips.
+- **Look:**
+  - Series colors come from `chartSeries`.
+  - Grid lines are `divider` hairlines, horizontal only, and axis labels use `bodySmall` in `secondary`.
+  - Tooltips are `raised` with a `divider` border and the control radius.
+  - The plot is 144 tall (`Space.xxxl * 3`); the hero chart is 192 (`Space.xxxl * 4`).
+  - Bars have rounded tops. Lines are curved without overshoot; a filled line fades from its color at 24% to nothing.
+  - **Sparkline:** a decorative line with a soft fill, no axes or touch, 40 tall (96 wide beside a value). Screen readers skip it; its tile says the values.
+  - **Donut:** 160 across, 16-wide sections 2 apart, starting at 12 o'clock; the hole holds a label that scales down rather than overflow.
+  - **Gauge:** a half circle, 12 wide with round caps, `subtle` track and `primary` fill (warning when over).
+- **Rules:**
+  - Charts never animate (`duration: Duration.zero`).
+  - No money appears on an axis, because axis labels would have to abbreviate it. Exact values appear in tooltips and in "Show values" (`ChartValues`, a disclosure of rows).
+  - Each chart has a screen-reader summary.
+  - Series differ by more than color: solid against dashed, with a `ChartLegend`.
+- **Progress bars** on the Overview are `SlimBar` (6 tall, pill ends) and `SegmentBar` (one 8-tall step per scheduled payment, 2 apart). Both are decorative; their row carries the words in its semantics label.
+- **Charts are hidden while amounts are hidden.**
+
 ### Deferred to section chats
 
 - **Table and pager:** Chat 8 or 9.
-- **Charts (bar, line, progress with an exact-value table):** Chat 6 or 9.
-- **Tabs:** the first section chat (Chat 6). Adopting them changes section content, so Chat 4 left the existing tab controls in place.
-- **Page header:** the first section chat (Chat 6), for the same reason.
+- **Tabs:** built in Chat 6's owner review (`AppTabs`, above) for the Overview. Section screens keep their existing tab controls until their own chats adopt it.
 
 ### Component gallery (debug only)
 
@@ -687,23 +769,26 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | --- | --- | --- |
 | Available money (confirmed); projected available money with waiting work | `LocalSession.accepted`, `.projected` (`lib/local/local_runtime.dart`) | Readable |
 | This month's spending and income; spending by category | Postings in `localFinance.acceptedSnapshot` (already summed in `app/workspace_overview.dart`); `categoryName` | Readable (existing view aggregation) |
-| Daily spending (sparkline) | `LocalFinancialController.spendingOn(date)` | Readable |
+| Daily spending | Expense postings in `acceptedSnapshot`, grouped by date (`dailySpending` in `app/overview_data.dart`). `spendingOn(date)` reads the projected snapshot (it includes waiting work), so the Overview doesn't use it. | UI aggregation (approved, Chat 6) |
 | Account balances | `snapshot.accounts`, `snapshot.balance(id, through:)` | Readable |
 | Card debt and available credit | `LocalFinancialController.cardLiabilityAndCredit` | Readable |
 | Total debt owed | `LocalFinancialController.debtTotal` | Readable |
 | Per debt: next due date and amount, overdue installments and amount, status (Overdue / Due today / Due soon / Upcoming / Schedule not set), days until next, final scheduled due | `debtDueSummary`, `DebtDueSummary`, `compareDebtUrgency` (`lib/finance/debt_rules.dart`) | Readable |
-| Everything due in a date range (debt installments, card statements, card installments, recurring bills) with dates and amounts | `financialReminderSources(snapshot, from, through)` (`lib/finance/planning_queries.dart`) | Readable; the weekly/monthly calendar and overdue list come from this |
-| Totals due this week or this month across all debts and bills | Sum of the rows above | UI aggregation (needs approval) |
+| Everything due in a date range (debt installments, card statements, card installments, recurring bills) with dates and amounts | `financialReminderSources(snapshot, from, through)` (`lib/finance/planning_queries.dart`). Recurring bills appear only once their occurrences are generated. | Readable; the weekly/monthly calendar and overdue list come from this |
+| Totals due this week or this month across all debts and bills | Sum of the rows above | UI aggregation (approved, Chat 6) |
 | Recurring bills and their state | `recurringOccurrences` | Readable |
 | Budget progress | `budgetSpending(snapshot, budget)` with the budget record | Readable |
 | Savings set aside | `savingsReserved`, `eligibleSavings` (`lib/finance/planning_rules.dart`) | Readable |
 | Balance forecast | `financialForecast` (as used by Reports) | Readable |
 | Shared Expenses attention counts (to confirm, waiting for others, waiting for the group, rejected, changed sources) | `runtime.connected.needMyConfirmation`, `waitingForOthers`, `sharedPendingCount`, `sharedReviewCount`, `changedPrivateSources` | Readable |
-| Who owes whom per group | `SharedRepository.groups` → `SharedGroup.positions()` | Readable |
+| Who owes whom per group | `SharedRepository.groups` → `SharedGroup.positions()`. Loading the groups runs `store.reconcileShared()`, which writes, so the Overview doesn't use it. | Readable only by opening the repository (not on the Overview) |
 | Life agenda (tasks, events, financial reminders) | `DurableLifeController.agendaWindow` (`lib/life/life_controller.dart`) | Readable |
-| Sync state: label, waiting count, needs review, download complete, connected or on this device, last synced | `LocalSession.syncLabel`, `pendingCount`, `needsReview`, `complete`, `local`; `lastSyncedAt` (`lib/connected/connected_runtime.dart`) | Readable (check that `lastSyncedAt` is exposed to the UI in Chat 5 or 6) |
+| Sync state: label, waiting count, needs review, download complete, connected or on this device | `LocalSession.syncLabel`, `pendingCount`, `needsReview`, `complete`, `local` | Readable |
+| Last synced time | `lastSyncedAt` is read only inside `connected_store.dart`; the UI can't reach it | New logic (sync layer; not built) |
 | Amount privacy | `session.hideAmounts` | Readable; every dashboard value must respect it |
-| Month-over-month or longer trends outside Reports | Not available as a query | New logic, or UI aggregation over postings (needs approval) |
+| Month-over-month spending (same day span) and what you owe at each month end | Postings in `acceptedSnapshot` (`SpendingComparison`, `debtBalanceByMonth`) | UI aggregation (approved, Chat 6) |
+| Per-debt payoff progress (payments logged, scheduled amount left) | `DebtDueSummary` plus the schedule rows (`DebtProgress`) | UI aggregation (approved, Chat 6) |
+| Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
 
@@ -717,7 +802,7 @@ Remove this section when the redesign is finished.
 | 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
 | 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
 | 5 | Windows custom title bar | Done |
-| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Next |
+| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Owner review 1 rebuilt; in owner review |
 | 7 | Debts | Planned |
 | 8 | Money A: Accounts, Activity, transaction form | Planned |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
@@ -791,7 +876,7 @@ Each section chat:
 | 2026-10-30 | The sidebar is flush with the window's left, top and bottom edges, rounded on the right only, and collapses with a round handle on its edge. | Superseded (next row) |
 | 2026-10-30 | Owner review 3: the sidebar has square corners with a right hairline. The logo is centered (kept, not removed, per the brand rule). A separator splits Overview from the sections. Rows are 4 apart and tab rows 32. Highlights and the profile card use `Radii.nav` 6. | Approved |
 | 2026-10-30 | Chat 5 layout changes: no separate full-width title bar. The sidebar and content run to the window's top edge. The content's top row holds back/forward, the breadcrumb, drag space, New and the window controls. The sync pill moves to the sidebar's profile card. This replaces the "one bar across the full window width" rule. | Superseded |
-| 2026-10-29 | Totals added up across debts and bills per week or month for the dashboard. | Needs approval (Chat 6) |
+| 2026-10-29 | Totals added up across debts and bills per week or month for the dashboard. | Approved (Chat 6: period and overdue totals on the dues card) |
 | 2026-10-29 | Rewording user-facing messages that live in domain or rule files. | Needs approval (per section chat) |
 | 2026-10-30 | Owner review 4, after a reference: Windows gets an app bar (56, `surface`, divider below, level with the sidebar's logo row) with a chevron breadcrumb, the Go to field (moved from the sidebar) and New. The collapse control is a panel icon beside the logo (the round edge handle is removed). The sidebar footer adds Settings. Its theme control is a two-option Light \| Dark switch that reflects System; System stays in Profile and settings. | Approved |
 | 2026-10-30 | Chat 5's chrome is the app bar itself (56), with the window controls at its right end; the logo row and the app bar's empty space are the drag areas. | Superseded (next row) |
@@ -810,3 +895,23 @@ Each section chat:
 | 2026-10-30 | Owner review 2 of the title bar's left side: the sidebar's column runs unbroken to the window's top (the bar's line stops at it), the clock (centered in the column, at the owner's request) shows the time emphasized and the date in `secondary`, and back/forward are neutral and sit just past the sidebar's edge. | Done |
 | 2026-10-30 | Icon buttons use `secondary` when disabled, app-wide; the theme had painted them `primary` in every state, so disabled ones looked clickable. | Done |
 | 2026-10-30 | Android parity plan for the title bar's features (§2): app bar with Go to, bell and profile; status row with a tappable sync pill and the Hide amounts eye; tappable Overview date with a calendar sheet; calculator in the + sheet, then in amount fields. Split across Chat 6, the section chats and a new 15b stage. | Approved (planned) |
+| 2026-10-30 | Overview widgets (Chat 6): the required dues card with its calendar, overdue rows and payoff progress, plus every optional widget proposed (Available money, this month's tiles, category bars, daily spending, compared with last month, what you owe over time, accounts, budgets, Shared Expenses counts, Life next up, recent activity, insights). Quick actions are left out, because Quick create, New and the + button already cover them. | Approved |
+| 2026-10-30 | Date rules for the dashboard: "This week" runs Monday to Sunday (ISO, as the recurrence grammar), "This month" is the calendar month, and period lists start today, with anything earlier only under Overdue and no lookback limit. | Approved |
+| 2026-10-30 | Dues and debt progress read the Debts screen's records (with waiting work), so both screens agree. Money values and charts stay on accepted history. | Approved |
+| 2026-10-30 | The Due today and Due soon labels (`debtDueStatus`) apply to card statements, card installments and recurring bills too. | Approved |
+| 2026-10-30 | Display derivations in `app/overview_data.dart`: dues grouping and day counts, payments logged and scheduled amount left, daily spending, month-over-month over the same day span, and month-end totals of what you owe. | Approved |
+| 2026-10-30 | Charts use `fl_chart` 1.3.0 (offline, MIT, themable), with no animation, no money on axes, a spoken summary and exact values under "Show values". | Approved |
+| 2026-10-30 | `PageHeader` is added to the kit. `SurfaceCard` and `MetricTile` gain `accent` for the one tinted focal card. The Tabs component moves to Chat 8. | Done |
+| 2026-10-30 | Not built: balance-based payoff progress, net position, "last synced", and group balances on the Overview. Each needs logic or a side effect outside the UI. | Rejected for Chat 6 |
+| 2026-10-30 | Owner review 1 of the Overview (reference dashboards): the "Tiles + hero" layout on a 12-column grid (KPI tiles with sparklines and a vs-last-month change, a wide spending chart beside the dues, 2/3 + 1/3 pairs). | Approved |
+| 2026-10-30 | The Overview gets underline tabs (Summary, Spending, Debts & Dues, Accounts & Activity), built as the kit's `AppTabs`. This reverses moving Tabs to Chat 8 for the Overview; section screens still adopt it in their chats. | Approved |
+| 2026-10-30 | Compact sizes on the Overview only: `titleSmall` card titles, `MoneySize.tile` values, small link actions, and 32-tall segmented controls and chips. Android keeps 48 hit areas through transparent space. The rest of the app keeps the approved sizes. | Approved |
+| 2026-10-30 | New Overview widgets: quick actions (the shell's first four New items), a category donut, account cards with 30-day sparklines and a budget gauge. Also added: largest expenses this month, and payoff bars with a step per payment. | Approved |
+| 2026-10-30 | Display derivations added to `overview_data.dart`: closing balance by day, income by day, change and share in whole basis points (rounded toward zero, shown with one decimal), the top-five-and-Other category shares, budget totals across limits, and the largest expenses. | Approved |
+| 2026-10-30 | The demo build shows the new Overview, filled by a sample profile replayed in memory through `planLocal`, ending on the demo account balances. The previous demo Overview layout is retired (its files are unused; deleting them needs approval). | Done |
+| 2026-10-30 | Owner review 2 of the Overview: a stat strip under the spending and owed charts (they left empty space beside taller cards); "By debt" in What you owe over time; a Calendar | List view on Due and overdue, the list being a screenshot-ready table of the period's items with totals; table amount columns measured to one width, fixing misaligned Category and payoff columns; payoff bar steps were drawn 0 tall and now show. | Approved |
+| 2026-10-30 | Owner review 3 of the Overview: quick actions right-aligned to the content edge on the title row; 16 above "Show values"; the Spending tab's category and budgets cards center their content when the other card is taller; the dues card's Calendar | List moves to a settings icon menu in its top-right corner. | Approved |
+| 2026-10-30 | Owner review 4: the category donut's sections and legend rows are selectable by hover or tap, showing the category's name, share and amount in the hole. | Approved |
+| 2026-10-30 | Android drops the Overview's quick actions; the + button above the dock already has them. Windows keeps them. | Approved |
+| 2026-10-30 | Tab names "Debts & Dues" and "Accounts & Activity" (capitalized at the owner's request). KPI tiles reserve the tallest label's height so values line up. | Approved |
+| 2026-10-30 | Android's Overview header is one compact row: the date (calendar icon, `titleSmall`) and a dues pill that opens Debts & Dues, with 4 to the tabs. | Approved |

@@ -15,11 +15,16 @@ class ListRow extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.stackTrailing = false,
   });
   final String title;
   final String? subtitle;
   final IconData? leading;
   final Widget? trailing;
+
+  /// Puts [trailing] under the text, end-aligned, for rows too narrow to
+  /// hold both side by side (e.g. at 200% text). Amounts are never cut.
+  final bool stackTrailing;
 
   /// Adds a chevron and makes the row one target.
   final VoidCallback? onTap;
@@ -76,10 +81,17 @@ class ListRow extends StatelessWidget {
                           subtitle!,
                           style: text.bodySmall?.copyWith(color: c.secondary),
                         ),
+                      if (stackTrailing && trailing != null) ...[
+                        const SizedBox(height: Space.xs),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: trailing,
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                if (trailing != null) ...[
+                if (trailing != null && !stackTrailing) ...[
                   const SizedBox(width: Space.lg),
                   trailing!,
                 ],

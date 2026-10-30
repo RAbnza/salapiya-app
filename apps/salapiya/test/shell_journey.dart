@@ -4,9 +4,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app/shell.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/prototype/scenarios.dart';
+
+/// [label] in the New menu or sheet, not the Overview's quick actions.
+Finder newItem(String label) {
+  final quick = find
+      .descendant(
+        of: find.byType(OverviewDashboard),
+        matching: find.text(label),
+      )
+      .evaluate()
+      .toSet();
+  return find.byElementPredicate(
+    (e) =>
+        e.widget is Text &&
+        (e.widget as Text).data == label &&
+        !quick.contains(e),
+  );
+}
 
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder.first);
@@ -30,7 +48,7 @@ Future<void> shellJourney(WidgetTester tester) async {
   await tester.pumpWidget(SalapiyaApp(settings: settings, session: session));
   await tester.pumpAndSettle();
   expect(find.byType(SalapiyaShell), findsOneWidget);
-  expect(find.text('Money Today'), findsOneWidget);
+  expect(find.text('Available money'), findsOneWidget);
   expect(find.text('₱29,300.75'), findsOneWidget);
 
   for (final destination in AppDestination.values) {
@@ -60,7 +78,7 @@ Future<void> shellJourney(WidgetTester tester) async {
   // Overview links switch to the section and tab; Back (Alt+← on Windows)
   // returns to Overview.
   final desktop = defaultTargetPlatform == TargetPlatform.windows;
-  await tapVisible(tester, find.text('View accounts'));
+  await tapVisible(tester, find.byKey(const ValueKey('overview-available')));
   expect(find.text('Accounts'), findsWidgets);
   expect(find.text('Cash wallet'), findsWidgets);
   if (desktop) {
@@ -71,22 +89,22 @@ Future<void> shellJourney(WidgetTester tester) async {
     await tester.binding.handlePopRoute();
   }
   await tester.pumpAndSettle();
-  expect(find.text('Money Today'), findsOneWidget);
+  expect(find.text('Available money'), findsOneWidget);
 
   final newAction = find.byKey(const ValueKey('shell-new'));
   await tester.tap(newAction);
   await tester.pumpAndSettle();
-  expect(find.text('Log a transfer'), findsOneWidget);
+  expect(newItem('Log a transfer'), findsOneWidget);
   if (desktop) {
     await tester.tap(newAction);
   } else {
     await tester.binding.handlePopRoute();
   }
   await tester.pumpAndSettle();
-  expect(find.text('Log a transfer'), findsNothing);
+  expect(newItem('Log a transfer'), findsNothing);
   await tester.tap(newAction);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Log expense').last);
+  await tester.tap(newItem('Log expense'));
   await tester.pumpAndSettle();
   expect(find.byType(FinancialEditor), findsOneWidget);
   // Windows keeps the shell around pages; Android pages are full screen.
@@ -123,11 +141,11 @@ Future<void> shellJourney(WidgetTester tester) async {
     session.select(scenario);
     await tester.pumpAndSettle();
     if (scenario == OverviewScenario.incomplete) {
-      expect(find.text('Not yet available'), findsOneWidget);
+      expect(find.text('Not available yet'), findsWidgets);
       expect(find.text('₱29,300.75'), findsNothing);
     }
     if (scenario == OverviewScenario.empty) {
-      expect(find.text('₱0.00'), findsOneWidget);
+      expect(find.text('₱0.00'), findsWidgets);
     }
     if (scenario == OverviewScenario.pending) {
       expect(find.textContaining('₱29,115.25'), findsOneWidget);

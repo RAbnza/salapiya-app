@@ -691,7 +691,14 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   }
 
   Widget section(AppDestination destination) => switch (destination) {
-    AppDestination.overview => Overview(session: session, open: source),
+    AppDestination.overview => Overview(
+      session: session,
+      open: source,
+      actions: [
+        for (final item in newItemsFor(AppDestination.overview).take(4))
+          (label: item.$2, icon: item.$3, onSelected: () => runNew(item)),
+      ],
+    ),
     AppDestination.money => MoneyScreen(
       key: ValueKey((session.finance, navigation.revisionOf(destination))),
       session: session,

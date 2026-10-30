@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/local/local_runtime.dart';
@@ -297,7 +298,7 @@ Future<void> localMoneyJourney(
     SalapiyaApp(production: true, settings: settings, localRuntime: runtime),
   );
   await localSettle(tester);
-  expect(find.text('Your day, in balance.'), findsOneWidget);
+  expect(find.byType(OverviewDashboard), findsOneWidget);
   expect(find.text('Create a local offline profile'), findsNothing);
   await localTap(tester, find.byKey(const ValueKey('nav-debts')));
   expect(find.text('A clear view of what you owe'), findsOneWidget);

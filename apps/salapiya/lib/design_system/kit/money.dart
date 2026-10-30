@@ -14,7 +14,8 @@ enum MoneyKind {
   final String? spoken;
 }
 
-enum MoneySize { row, card, focal }
+/// `tile` is the compact dashboard value (Overview KPI tiles and charts).
+enum MoneySize { row, tile, card, focal }
 
 /// Shows an amount the app has already formatted (`session.amount(value)`,
 /// which also returns "Amount hidden" when amounts are hidden). It never
@@ -50,10 +51,13 @@ class MoneyAmount extends StatelessWidget {
     ?switch (size) {
       MoneySize.focal => t.displayMedium,
       MoneySize.card => t.displaySmall,
+      MoneySize.tile => t.headlineMedium,
       MoneySize.row => t.titleSmall,
     },
     if (size == MoneySize.focal) ?t.displaySmall,
-    if (size != MoneySize.row) ...[?t.headlineMedium, ?t.headlineSmall],
+    if (size == MoneySize.focal || size == MoneySize.card) ?t.headlineMedium,
+    if (size != MoneySize.row) ?t.headlineSmall,
+    if (size == MoneySize.tile) ?t.titleMedium,
   ];
 
   @override
