@@ -745,7 +745,7 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
   /// Rules that name no field, and the field each is about. The rules' own
   /// words stay (DESIGN_SYSTEM §7).
   static const ruleFields = [
-    ('That account name already exists', 'name'),
+    ('You already have an account with this name', 'name'),
     ('That category name already exists', 'name'),
     ('Choose a supported account type', 'kind'),
     ('Choose income or expense classification', 'classification'),
@@ -753,12 +753,13 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
     ('Choose an appropriate', 'category'),
     ('Choose an account in this profile', 'account'),
     ('New activity requires an active account', 'account'),
+    ('balance starts from that day', 'date'),
     ('opening cutoff', 'date'),
     ('A refund cannot precede', 'date'),
     ('Choose different source and destination', 'destination'),
-    ('A withheld fee must use', 'feeDate'),
-    ('Every split must be positive', 'splitAmount'),
-    ('Refund exceeds', 'refundPosting'),
+    ('A fee taken out of the amount', 'feeDate'),
+    ('Each split must be more than zero', 'splitAmount'),
+    ('more than is left to refund', 'refundPosting'),
     ('Choose an eligible original', 'refundPosting'),
     ('Allocate each original', 'refundPosting'),
     ('Refund allocations must equal', 'amount'),
@@ -834,10 +835,14 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
         'This takes ${account.name} below zero. It has ${shownBalance(account.id)}.',
       );
     }
+    // The refund message says what's left, which Hide amounts keeps hidden.
+    final message = c.amountsHidden
+        ? e.message.replaceAll(RegExp(r' ₱[\d,.]+ is left\.'), '')
+        : e.message;
     for (final (text, field) in ruleFields) {
-      if (e.message.contains(text)) return (field, e.message);
+      if (message.contains(text)) return (field, message);
     }
-    return (null, e.message);
+    return (null, message);
   }
 
   Future<void> save() async {

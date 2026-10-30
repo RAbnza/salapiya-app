@@ -453,7 +453,10 @@ void main() {
         await enter(tester, 'name', 'Wallet');
         await enter(tester, 'cutoff', '2026-10-14');
         await localTap(tester, submit());
-        expect(fieldError(tester, 'name'), contains('already exists'));
+        expect(
+          fieldError(tester, 'name'),
+          'You already have an account with this name.',
+        );
       } finally {
         await close(tester, f, c);
       }
@@ -473,7 +476,10 @@ void main() {
         await enter(tester, 'name', 'Old');
         await enter(tester, 'date', '2025-12-01');
         await localTap(tester, submit());
-        expect(fieldError(tester, 'date'), contains('opening cutoff'));
+        expect(
+          fieldError(tester, 'date'),
+          'Choose a date after 1 Jan 2026. Wallet’s balance starts from that day.',
+        );
       } finally {
         await close(tester, f, c);
       }
@@ -577,6 +583,97 @@ void main() {
       }
     });
 
+    testWidgets('a refund over what is left says how much is left', (
+      tester,
+    ) async {
+      sized(tester);
+      final (f, c, _, bank) = await open(tester);
+      try {
+        late String id;
+        await tester.runAsync(() async {
+          id = await f.post('expense', {
+            'name': 'Sofa',
+            'account': bank,
+            'amount': '1500.00',
+            'category': 'category-other',
+          });
+          await c.reload();
+        });
+        await tester.pumpWidget(app(c, FinancialAction.refund, sourceId: id));
+        await localSettle(tester);
+        await enter(tester, 'amount', '2000.00');
+        await enter(tester, 'date', '2026-10-22');
+        await enter(tester, 'reason', 'Returned');
+        await localTap(tester, submit());
+        expect(
+          fieldError(tester, 'select-refundPosting'),
+          'That’s more than is left to refund here. ₱1,500.00 is left.',
+        );
+        // With Hide amounts on, it says the same without the amount.
+        c.privacyHidden = () => true;
+        await localTap(tester, submit());
+        expect(
+          fieldError(tester, 'select-refundPosting'),
+          'That’s more than is left to refund here.',
+        );
+      } finally {
+        await close(tester, f, c);
+      }
+    });
+
+    testWidgets('splits and withheld fees say what to fix, on their field', (
+      tester,
+    ) async {
+      sized(tester);
+      final (f, c, wallet, bank) = await open(tester);
+      try {
+        await tester.pumpWidget(
+          app(
+            c,
+            FinancialAction.expense,
+            initial: {
+              'account': wallet,
+              'name': 'Groceries',
+              'date': '2026-10-21',
+              'split': 'true',
+              'splitAmount': '100.00',
+            },
+          ),
+        );
+        await localSettle(tester);
+        await enter(tester, 'amount', '100.00');
+        await localTap(tester, submit());
+        expect(
+          fieldError(tester, 'splitAmount'),
+          startsWith('Each split must be more than zero'),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(
+          app(
+            c,
+            FinancialAction.transfer,
+            initial: {
+              'account': bank,
+              'destination': wallet,
+              'date': '2026-10-21',
+              'fee': '5.00',
+              'feeTreatment': 'withheld',
+              'feeDate': '2026-10-22',
+            },
+          ),
+        );
+        await localSettle(tester);
+        await enter(tester, 'amount', '100.00');
+        await localTap(tester, submit());
+        expect(
+          fieldError(tester, 'feeDate'),
+          'A fee taken out of the amount has to use the transfer date.',
+        );
+      } finally {
+        await close(tester, f, c);
+      }
+    });
+
     testWidgets('a problem no field can show sits above the form', (
       tester,
     ) async {
@@ -606,7 +703,12 @@ void main() {
         await localSettle(tester);
         await enter(tester, 'reason', 'Twice');
         await localTap(tester, submit());
-        expect(find.textContaining('Resolve dependent'), findsOneWidget);
+        expect(
+          find.text(
+            'This record has a refund or an adjustment. Reverse that first.',
+          ),
+          findsOneWidget,
+        );
         expect(find.byType(InlineNotice), findsWidgets);
       } finally {
         await close(tester, f, c);

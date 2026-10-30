@@ -49,6 +49,26 @@ String civilDate(String value) {
 
 String phpDecimal(BigInt value) =>
     '${value.isNegative ? '-' : ''}${value.abs() ~/ BigInt.from(100)}.${(value.abs() % BigInt.from(100)).toString().padLeft(2, '0')}';
+
+/// "14 Oct 2026" and "₱1,200.00", for messages people read.
+String _shownDate(String date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final d = DateTime.parse(date);
+  return '${d.day} ${months[d.month - 1]} ${d.year}';
+}
+
+String _shownPeso(BigInt value) {
+  final digits = (value.abs() ~/ BigInt.from(100)).toString().replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+$)'),
+    (m) => '${m[1]},',
+  );
+  final cents = (value.abs() % BigInt.from(100)).toString().padLeft(2, '0');
+  return '${value.isNegative ? '−' : ''}₱$digits.$cents';
+}
+
 BigInt signedPhp(String value) =>
     value.startsWith('-') ? -parsePhp(value.substring(1)) : parsePhp(value);
 BigInt sumMinor(Iterable<BigInt> values) =>
@@ -380,9 +400,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           financeType(r) != 'financialFile' &&
           s.revision(r.source!).actionId == replaced!.actionId,
     )) {
-      reject(
-        'Resolve dependent refund/adjustment evidence before changing this source.',
-      );
+      reject('This record has a refund or an adjustment. Reverse that first.');
     }
     previous = replaced.id;
     actionId = replaced.actionId;
@@ -411,7 +429,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
     }
     if (!opening && on.compareTo(a.cutoff) <= 0) {
       reject(
-        'Activity must occur after ${a.name}’s opening cutoff ${a.cutoff}.',
+        'Choose a date after ${_shownDate(a.cutoff)}. ${a.name}’s balance starts from that day.',
       );
     }
     if (x != BigInt.zero) {
@@ -441,7 +459,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           reject('Choose a supported account type.');
         }
         if (s.accounts.any((a) => a.name.toLowerCase() == name.toLowerCase())) {
-          reject('That account name already exists.');
+          reject('You already have an account with this name.');
         }
         date = civilDate(value('cutoff'));
         total = amount('amount', zero: true);
@@ -493,7 +511,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           }
           if (allocated >= total) {
             reject(
-              'Every split must be positive and the exact parts must equal the total. Leave a positive remainder.',
+              'Each split must be more than zero, and they must add up to less than the total, so something is left for the last category.',
             );
           }
           classified(
@@ -539,7 +557,9 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
               ? date
               : civilDate(value(key('Date')));
           if (treatment == 'withheld' && feeDate != date) {
-            reject('A withheld fee must use the transfer date.');
+            reject(
+              'A fee taken out of the amount has to use the transfer date.',
+            );
           }
           if (treatment == 'withheld') withheld += fee;
           final bearing = treatment == 'separate'
@@ -634,7 +654,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           final available = portion.value.amount - refunded;
           if (part > available) {
             reject(
-              'Refund exceeds the remaining original purchase/fee portion (${phpDecimal(available)} PHP).',
+              'That’s more than is left to refund here. ${_shownPeso(available)} is left.',
             );
           }
           allocations.add({
