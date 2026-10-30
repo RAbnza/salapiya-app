@@ -6,6 +6,8 @@ import 'package:salapiya/app.dart';
 import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/design_system/workspace.dart';
 
+import 'shell_journey.dart' show newItem;
+
 void main() {
   testWidgets(
     'desktop commands replace the floating dock and remain keyboard accessible',
@@ -21,10 +23,10 @@ void main() {
       expect(find.byKey(const ValueKey('floating-dock-surface')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.text('Log a transfer'), findsOneWidget);
+      expect(newItem('Log a transfer'), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.text('Log a transfer'), findsNothing);
+      expect(newItem('Log a transfer'), findsNothing);
       expect(tester.takeException(), isNull);
       debugDefaultTargetPlatformOverride = null;
     },

@@ -66,8 +66,9 @@ void main() {
           await tester.pumpAndSettle();
           expect(runtime.session!.accepted, BigInt.from(10000));
           expect(runtime.session!.projected, BigInt.from(9001));
+          // The waiting purchase counts once: 100.00 less 9.99.
           expect(
-            find.textContaining('includes waiting work once'),
+            find.textContaining('available money is ₱90.01'),
             findsOneWidget,
           );
           expect(find.textContaining('Pending outflow'), findsNothing);
