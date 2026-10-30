@@ -32,6 +32,31 @@ import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../p0/exact_money.dart';
 
+/// Rules that name no field, and the field each is about, so the problem
+/// shows there in red. A test holds these to the rules' own words.
+const nativeRuleFields = [
+  ('Choose an active account', 'account'),
+  ('more than is left on this payment', 'paymentRow'),
+  ('Choose a payment in the current schedule', 'paymentRow'),
+  ('applied to due dates', 'paymentRow'),
+  ('Choose a payment from this debt’s current schedule', 'paymentRow'),
+  ('The amount must equal what lowers your debt', 'amount'),
+  ('on or after the day this debt started', 'date'),
+  ('This debt is closed', 'debt'),
+  ('The payoff amount must equal', 'reduction'),
+  ('more than is left to break down', 'reduction'),
+  ('Choose a payment logged on this debt', 'payment'),
+  ('Confirm the payoff amount', 'verified'),
+  ('Confirm these dates and amounts', 'verified'),
+  ('Confirm this charge or waiver', 'verified'),
+  ('Principal left can’t be more', 'outstandingPrincipal'),
+  ('fee taken out up front must be less', 'withheld'),
+  ('A waiver can’t be more', 'amount'),
+  ('Choose an unpaid charge on this debt', 'chargeSource'),
+  ('This waiver needs', 'waiver'),
+  ('isn’t supported here', 'debt'),
+];
+
 class FinanceInput {
   const FinanceInput(
     this.key,
@@ -953,31 +978,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
     if (problem != null && mounted) await showProblem(problem, problemField);
   }
 
-  /// Rules that name no field, and the field each is about, so the problem
-  /// shows there in red. The rules' own words stay (DESIGN_SYSTEM §7).
-  static const ruleFields = [
-    ('active cash account', 'account'),
-    ('Payment exceeds remaining scheduled due', 'paymentRow'),
-    ('Choose an installment in the current schedule', 'paymentRow'),
-    ('Due allocations plus', 'paymentRow'),
-    ('Use this debt’s current schedule', 'paymentRow'),
-    ('Actual cash must equal', 'amount'),
-    ('Debt activity cannot precede', 'date'),
-    ('This debt is closed', 'debt'),
-    ('Provider payoff must reconcile', 'reduction'),
-    ('Classification exceeds', 'reduction'),
-    ('Choose an actual payment on this debt', 'payment'),
-    ('Confirm the exact provider payoff', 'verified'),
-    ('Confirm provider dates', 'verified'),
-    ('Confirm the provider adjustment', 'verified'),
-    ('Known outstanding principal', 'outstandingPrincipal'),
-    ('Review net proceeds', 'withheld'),
-    ('Waiver exceeds', 'amount'),
-    ('Waiver needs', 'chargeSource'),
-    ('This waiver needs', 'waiver'),
-    ('Unsupported debt', 'debt'),
-  ];
-
   /// Where a rule's problem belongs, and what to say there. Going below zero
   /// is said in terms of the chosen account, with what it holds.
   (String?, String) locateProblem(LocalRuleException e) {
@@ -993,7 +993,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
               'This takes ${account.name} below zero. It has ${shownBalance(account.id)}.',
             );
     }
-    for (final (text, field) in ruleFields) {
+    for (final (text, field) in nativeRuleFields) {
       if (e.message.contains(text)) return (field, e.message);
     }
     return (null, e.message);

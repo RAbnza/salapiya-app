@@ -329,6 +329,24 @@ void main() {
       );
     });
 
+    testWidgets('a card header\'s link and menu center on each other', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      // Phones put the link under the title, where it has the room.
+      for (final width in const [1440.0, 1200.0, 720.0]) {
+        await show(tester, session, platform: windows, width: width);
+        expect(
+          tester.getCenter(find.byKey(const ValueKey('money-add-account'))).dy,
+          tester
+              .getCenter(find.byKey(const ValueKey('money-accounts-menu')))
+              .dy,
+          reason: '$width',
+        );
+      }
+    });
+
     testWidgets('account icons follow the account, not its place', (
       tester,
     ) async {

@@ -828,13 +828,19 @@ class OverviewCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: heading),
-                if (trailing != null && !stack) ...[
+                // Centered on each other: a link is shorter than an icon
+                // button.
+                if ((trailing != null && !stack) || corner != null) ...[
                   const SizedBox(width: Space.sm),
-                  trailing!,
-                ],
-                if (corner != null) ...[
-                  const SizedBox(width: Space.xs),
-                  corner!,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (trailing != null && !stack) trailing!,
+                      if (trailing != null && !stack && corner != null)
+                        const SizedBox(width: Space.xs),
+                      ?corner,
+                    ],
+                  ),
                 ],
               ],
             ),

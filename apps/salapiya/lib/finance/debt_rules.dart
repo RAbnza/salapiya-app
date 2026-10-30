@@ -14,7 +14,7 @@ void planDebt(FinanceRuleContext c) {
   final s = c.s, v = c.v, op = c.operation;
   if (v['debtComponentContract'] != null && v['debtComponentContract'] != '1') {
     reject(
-      'Unsupported debt component evidence version. Preserve the original source.',
+      'This debt record came from a different version of Salapiya. Update the app before changing it.',
     );
   }
   if (['debtImport', 'borrowing'].contains(op)) {
@@ -25,7 +25,7 @@ void planDebt(FinanceRuleContext c) {
       'bnpl',
       'flexible_manual',
     ].contains(c.value('debtType'))) {
-      reject('Choose a supported debt type.');
+      reject('Choose a debt type.');
     }
     if (c.value('principal').isNotEmpty) c.money('principal');
     v['debt'] = c.old?.actionId ?? c.command.id;
@@ -34,40 +34,40 @@ void planDebt(FinanceRuleContext c) {
         v['debtComponentContract'] == '1' &&
         c.value('outstandingPrincipal').isNotEmpty &&
         c.money('outstandingPrincipal', zero: true) > c.total) {
-      reject(
-        'Known outstanding principal cannot exceed the imported recognized liability. Original principal is separate historical evidence.',
-      );
+      reject('Principal left can’t be more than what you owe now.');
     }
     if (op == 'debtImport') {
       c.post('debt_liability', -c.total);
       c.post('equity', c.total);
       c.effects.add(
-        'Opening recognized liability only. No cash proceeds, income or new expense. Principal breakdown remains separately evidenced.',
+        'Adds what you owe now. No money moves, and it isn’t income or spending.',
       );
     } else {
       final withheld = c.money('withheld', zero: true),
           financed = c.money('financedFee', zero: true);
       if (withheld >= c.total || c.total + financed > maxComponent) {
-        reject('Review net proceeds and financed fees.');
+        reject(
+          'The fee taken out up front must be less than the amount borrowed.',
+        );
       }
       c.post('debt_liability', -(c.total + financed));
       if (c.value('fundingUse') == 'purchase') {
         if (withheld != BigInt.zero) {
           reject(
-            'Purchase funding requires an explicit separate cash proceeds workflow for withheld fees.',
+            'A fee can only be taken out up front when you received cash.',
           );
         }
         c.expense(c.total);
       } else if (c.value('fundingUse') == 'cash') {
         c.cash(c.total - withheld);
       } else {
-        reject('Choose actual cash proceeds or a financed purchase.');
+        reject('Choose how you used the loan.');
       }
       if (withheld + financed != BigInt.zero) {
         c.expense(withheld + financed, key: 'feeCategory');
       }
       c.effects.add(
-        'Borrowing is not income. Withheld and financed fees are distinct actual charges; neither is deducted twice.',
+        'A loan isn’t income. A fee taken out up front or added to the loan counts once.',
       );
     }
     return;
@@ -75,7 +75,7 @@ void planDebt(FinanceRuleContext c) {
   final debt = c.ref('debt', {'debtImport', 'borrowing'});
   v['debt'] = debt.actionId;
   if (c.date.compareTo(debt.date) < 0) {
-    reject('Debt activity cannot precede its opening/start date.');
+    reject('Choose a date on or after the day this debt started.');
   }
   if (s.current.any(
     (r) =>
@@ -83,7 +83,7 @@ void planDebt(FinanceRuleContext c) {
         financeType(r) == 'debtPayoff' &&
         r.values['debt'] == debt.actionId,
   )) {
-    reject('This debt is closed. Resolve the closure evidence first.');
+    reject('This debt is closed, so nothing more can be logged on it.');
   }
   final liability = -financeBalance(
     s,
@@ -105,12 +105,12 @@ void planDebt(FinanceRuleContext c) {
       c.text('reason');
       c.text('reference');
       if (c.value('verified') != 'true') {
-        reject('Confirm the provider adjustment and its exact classification.');
+        reject('Confirm this charge or waiver with your lender first.');
       }
       final adjustment = c.value('adjustmentKind');
       if (['recognized_charge', 'rounding_charge'].contains(adjustment)) {
         if (!['interest', 'fee', 'penalty'].contains(c.value('chargeType'))) {
-          reject('Classify the recognized charge as interest, fee or penalty.');
+          reject('Choose the kind of charge: interest, fee or penalty.');
         }
         c.post('debt_liability', -c.total);
         c.expense(c.total);
@@ -119,13 +119,15 @@ void planDebt(FinanceRuleContext c) {
         'recognized_waiver',
         'rounding_waiver',
       ].contains(adjustment)) {
-        if (c.total > liability) reject('Waiver exceeds recognized liability.');
+        if (c.total > liability) {
+          reject('A waiver can’t be more than what you owe.');
+        }
         if (c.value('waiverBasis') == 'imported_unknown' &&
             financeType(debt) == 'debtImport') {
           if (c.total >
               debtOpeningWaiverCapacity(s, debt, excluding: c.old?.id)) {
             reject(
-              'The opening-basis waiver exceeds supported remaining imported opening evidence; use the original recognized charge source for separately posted charges.',
+              'That’s more than is left of the opening balance to waive. If it’s for a charge you logged, choose that charge.',
             );
           }
           c.post('equity', -c.total);
@@ -143,7 +145,7 @@ void planDebt(FinanceRuleContext c) {
               remaining == null ||
               c.total > remaining) {
             reject(
-              'Waiver needs this debt’s unpaid original recognized charge. Resolve unknown reductions before offsetting its expense.',
+              'Choose an unpaid charge on this debt, and waive no more than what’s left on it. Break down any earlier payments first.',
             );
           }
           c.post(
@@ -160,20 +162,16 @@ void planDebt(FinanceRuleContext c) {
           );
           c.source = charge.id;
         } else {
-          reject(
-            'Choose a supported original recognized charge or disclosed imported-opening waiver.',
-          );
+          reject('Choose what the waiver is for.');
         }
         c.post('debt_liability', c.total);
       } else if (adjustment == 'avoided_future') {
         c.source = debt.id;
       } else {
-        reject(
-          'Choose an explicit provider charge, waiver, rounding treatment or avoided future charge.',
-        );
+        reject('Choose what happened.');
       }
       c.effects.add(
-        'Provider adjustment evidence only: recognized charges/waivers change liability with their supported counterpart; avoided unposted charges have no postings. No cash payment is invented.',
+        'A charge or waiver changes what you owe. No money moves, and a charge you avoided changes nothing.',
       );
     case 'debtPayment':
       c.total = c.money('amount');
@@ -186,7 +184,7 @@ void planDebt(FinanceRuleContext c) {
               c.total ||
           reduction > liability) {
         reject(
-          'Actual cash must equal known liability reduction, new charges, external fees and unresolved clearing.',
+          'The amount must equal what lowers your debt, plus new charges, fees and anything still without a breakdown.',
         );
       }
       if (c.value('certainty') == 'confirmed_total') {
@@ -194,14 +192,14 @@ void planDebt(FinanceRuleContext c) {
             interest != BigInt.zero ||
             fee != BigInt.zero) {
           reject(
-            'Confirmed-total payments reduce already recognized liability; separate new charges explicitly.',
+            'If all of it lowers what you owe, new interest, fees and amounts without a breakdown must be zero. Otherwise choose the exact breakdown.',
           );
         }
       } else if (![
         'known_components',
         'unresolved',
       ].contains(c.value('certainty'))) {
-        reject('Disclose the payment classification evidence.');
+        reject('Choose what this payment covers.');
       }
       c.cash(-c.total);
       c.post('debt_liability', reduction);
@@ -215,19 +213,19 @@ void planDebt(FinanceRuleContext c) {
       final unapplied = c.money('unapplied', zero: true);
       if (sumMinor(allocations.values) + unapplied != contractual) {
         reject(
-          'Due allocations plus explicit unapplied contractual money must equal the contractual payment.',
+          'The amounts applied to due dates, plus what stays unapplied, must equal the payment.',
         );
       }
       if (allocations.isNotEmpty) {
         final schedule = c.ref('scheduleSource', {'debtSchedule'});
         if (schedule.values['debt'] != debt.actionId) {
-          reject('Use this debt’s current schedule.');
+          reject('Choose a payment from this debt’s current schedule.');
         }
         final rows = financeSchedule(schedule.values['schedule']!);
         for (final allocation in allocations.entries) {
           final row = rows.where((r) => r.id == allocation.key).firstOrNull;
           if (row == null) {
-            reject('Choose an installment in the current schedule.');
+            reject('Choose a payment in the current schedule.');
           }
           final paid = sumMinor(
             s.current
@@ -246,18 +244,18 @@ void planDebt(FinanceRuleContext c) {
                 ),
           );
           if (paid + allocation.value + row.paid > row.amount) {
-            reject('Payment exceeds remaining scheduled due.');
+            reject('That’s more than is left on this payment.');
           }
         }
       }
       c.effects.add(
-        'Unknown principal/interest stays unknown. Contractual due satisfaction and recognized-liability reduction are separate.',
+        'Anything without a breakdown stays that way until you break it down. Paying a due date and lowering what you owe are tracked separately.',
       );
     case 'debtClassification':
       final payment = c.ref('payment', {'debtPayment'});
       if (payment.values['debt'] != debt.actionId ||
           payment.date.compareTo(c.date) > 0) {
-        reject('Choose an actual payment on this debt.');
+        reject('Choose a payment logged on this debt.');
       }
       final reduction = c.money('reduction', zero: true),
           interest = c.money('interest', zero: true),
@@ -268,9 +266,7 @@ void planDebt(FinanceRuleContext c) {
           c.total > clearing ||
           c.total + c.used(op, 'payment', payment.id) >
               parsePhp(payment.values['clearing']!)) {
-        reject(
-          'Classification exceeds remaining actual clearing or recognized liability.',
-        );
+        reject('That’s more than is left to break down, or more than you owe.');
       }
       c.text('reason');
       c.source = payment.id;
@@ -279,7 +275,7 @@ void planDebt(FinanceRuleContext c) {
       if (interest != BigInt.zero) c.expense(interest, key: 'interestCategory');
       if (fee != BigInt.zero) c.expense(fee, key: 'feeCategory');
       c.effects.add(
-        'Reclassify existing actual payment evidence. No second cash deduction.',
+        'This breaks down a payment you already logged. No money moves again.',
       );
     case 'debtSchedule':
       final rows = financeSchedule(c.text('schedule', max: 20000));
@@ -309,7 +305,7 @@ void planDebt(FinanceRuleContext c) {
                   (revised.paid != former.paid ||
                       revised.amount < former.paid + allocated)) {
             reject(
-              'Retain stable obligations, historical paid amounts and every actual allocation in the revised schedule.',
+              'An edited schedule must keep every earlier payment and what was paid toward it.',
             );
           }
         }
@@ -317,7 +313,9 @@ void planDebt(FinanceRuleContext c) {
           (r) =>
               !formerRows.any((old) => old.id == r.id) && r.paid != BigInt.zero,
         )) {
-          reject('New schedule obligations cannot invent historical payment.');
+          reject(
+            'A new payment in the schedule can’t already show money paid.',
+          );
         }
       }
       c.total = sumMinor(rows.map((r) => r.amount));
@@ -327,23 +325,21 @@ void planDebt(FinanceRuleContext c) {
             financeType(r) == op &&
             r.values['debt'] == debt.actionId,
       )) {
-        reject(
-          'Revise the current schedule instead of adding a competing schedule.',
-        );
+        reject('This debt already has a schedule. Edit that one.');
       }
       if (financeType(debt) != 'debtImport' &&
           rows.any((r) => r.paid != BigInt.zero)) {
         reject(
-          'Historical paid installments belong only to imported debt setup.',
+          'Only a debt you added with its balance can show earlier payments.',
         );
       }
       if (c.value('verified') != 'true') {
-        reject('Confirm provider dates, totals and historical satisfaction.');
+        reject('Confirm these dates and amounts with your lender first.');
       }
       c.text('reference');
       validateDebtCadence(c, rows);
       c.effects.add(
-        'Scheduled contractual payable is not recognized liability. Historical paid amounts do not deduct cash again.',
+        'A schedule lists what’s due and doesn’t change what you owe. Earlier payments aren’t taken out again.',
       );
     case 'debtPayoff':
       c.total = c.money('amount', zero: true);
@@ -356,12 +352,12 @@ void planDebt(FinanceRuleContext c) {
           c.total != reduction + interest + fee ||
           reduction + waiver != liability) {
         reject(
-          'Provider payoff must reconcile exact cash, recognized liability, waiver and unresolved payments. No balance is forced to zero.',
+          'The payoff amount must equal what you owe less any waiver, plus new interest and fees. Break down any earlier payments first.',
         );
       }
       if (c.value('verified') != 'true' ||
           c.money('providerPayoff', zero: true) != c.total) {
-        reject('Confirm the exact provider payoff amount.');
+        reject('Confirm the payoff amount with your lender first.');
       }
       c.text('reference');
       c.text('reason');
@@ -374,16 +370,16 @@ void planDebt(FinanceRuleContext c) {
             financeType(debt) != 'debtImport' ||
             waiver > debtOpeningWaiverCapacity(s, debt, excluding: c.old?.id)) {
           reject(
-            'This waiver needs its original recognized charge evidence; do not guess an expense offset.',
+            'This waiver needs a charge to apply to, and this debt has none that fits.',
           );
         }
         c.post('equity', -waiver);
       }
       c.effects.add(
-        'Close only after exact reconciliation. Retain old schedules as cancelled future commitments; avoided unposted charges create no expense reversal.',
+        'This closes the debt. Its old schedule stays as cancelled payments, and charges you avoided change nothing.',
       );
     default:
-      reject('Unsupported debt command.');
+      reject('This debt record isn’t supported here.');
   }
   if (['debtPayment', 'debtClassification', 'debtPayoff'].contains(op)) {
     validateDebtReductionSources(c, debt);
@@ -553,7 +549,7 @@ void validateDebtReductionSources(FinanceRuleContext c, LocalRevision debt) {
       reduction = c.money('reduction', zero: true);
   if (principal + sumMinor(sources.values) != reduction) {
     reject(
-      'Explicit principal and recognized-charge reductions must equal the liability reduction; leave both blank when unknown.',
+      'Principal and charges must add up to the amount that lowers what you owe. Leave both blank if you don’t know.',
     );
   }
   final range = debtPrincipalRange(
@@ -564,7 +560,7 @@ void validateDebtReductionSources(FinanceRuleContext c, LocalRevision debt) {
   );
   if (principal > BigInt.zero && (range == null || principal > range.$1)) {
     reject(
-      'Principal reduction exceeds independently supported outstanding principal. Resolve earlier unknown allocations first.',
+      'That’s more principal than is left on this debt. Break down any earlier payments first.',
     );
   }
   for (final entry in sources.entries) {
@@ -578,9 +574,7 @@ void validateDebtReductionSources(FinanceRuleContext c, LocalRevision debt) {
         !recognizedDebtCharge(charge) ||
         available == null ||
         entry.value > available) {
-      reject(
-        'Recognized charge allocation exceeds supported unpaid source capacity.',
-      );
+      reject('That’s more than is left unpaid on that charge.');
     }
   }
 }
@@ -619,7 +613,7 @@ void validateDebtProjection(FinanceRuleContext c) {
     if (i + 1 == postings.length || postings[i + 1].date != p.date) {
       if (liability > BigInt.zero || clearing < BigInt.zero) {
         reject(
-          'Debt correction would over-reduce recognized liability or payment clearing at an economic date.',
+          'This would lower what you owe by more than you owed on that date.',
         );
       }
     }
@@ -634,7 +628,7 @@ void validateDebtProjection(FinanceRuleContext c) {
       );
   if (closed && (liability != BigInt.zero || clearing != BigInt.zero)) {
     reject(
-      'A retained provider payoff must remain exactly reconciled after every correction or reversal.',
+      'This debt’s payoff wouldn’t add up after this change. Reverse the payoff first.',
     );
   }
 }
@@ -642,12 +636,12 @@ void validateDebtProjection(FinanceRuleContext c) {
 Map<String, BigInt> debtAllocations(String input) {
   if (input.trim().isEmpty) return {};
   final rows = input.trim().split('\n');
-  if (rows.length > 120) reject('Allocate at most 120 explicit installments.');
+  if (rows.length > 120) reject('A payment can cover at most 120 due dates.');
   final result = <String, BigInt>{};
   for (final row in rows) {
     final pair = row.split(',').map((s) => s.trim()).toList();
     if (pair.length != 2 || pair[0].isEmpty || result.containsKey(pair[0])) {
-      reject('Use unique installment-label,PHP amount allocation rows.');
+      reject('Each due date can appear only once.');
     }
     result[pair[0]] = component(parsePhp(pair[1]), positive: true);
   }
@@ -672,36 +666,38 @@ void validateDebtCadence(FinanceRuleContext c, List<FinanceScheduleRow> rows) {
       'installmentAmount',
       'splitMode',
     ].any((k) => c.value(k).isNotEmpty)) {
-      reject('Choose a payment frequency for the schedule cadence.');
+      reject('Choose how often you pay.');
     }
     return;
   }
   if (!debtScheduleFrequencies.contains(frequency)) {
-    reject('Choose a weekly, monthly, yearly or custom frequency.');
+    reject('Choose weekly, monthly, yearly or custom.');
   }
-  if (c.value('firstDue').isEmpty) reject('Enter the first due date.');
+  if (c.value('firstDue').isEmpty) {
+    reject('Enter the date of your first payment.');
+  }
   if (civilDate(c.value('firstDue')) != rows.first.date) {
-    reject('The first due date must match the first scheduled installment.');
+    reject('The first due date must match the first payment in the schedule.');
   }
   if (frequency == 'custom') {
     debtIntervalDays(c.value('intervalDays'));
   } else if (c.value('intervalDays').isNotEmpty) {
-    reject('Interval days apply only to a custom frequency.');
+    reject('Days between payments only apply to a custom schedule.');
   }
   if (c.value('installmentAmount').isNotEmpty) c.money('installmentAmount');
   final split = c.value('splitMode');
   if (split.isNotEmpty && !debtSplitModes.contains(split)) {
-    reject('Choose equal, divided or different payment amounts.');
+    reject('Choose how the payments are split.');
   }
   if (split == 'varied' && c.value('installmentAmount').isNotEmpty) {
-    reject('Different payment amounts have no single installment amount.');
+    reject('Payments of different amounts can’t have one payment amount.');
   }
 }
 
 int debtIntervalDays(String input) {
   final days = RegExp(r'^\d{1,4}$').hasMatch(input) ? int.parse(input) : 0;
   if (days < 1 || days > 3660) {
-    reject('Custom interval must be a whole number of days from 1 to 3660.');
+    reject('Enter a whole number of days from 1 to 3660.');
   }
   return days;
 }
@@ -715,7 +711,7 @@ String debtOccurrence(
   String intervalDays = '',
 }) {
   final a = DateTime.parse('${civilDate(anchor)}T00:00:00Z');
-  if (index < 0) reject('Occurrences start at the first due date.');
+  if (index < 0) reject('Payments start on the first due date.');
   DateTime monthsLater(int months) {
     final last = DateTime.utc(a.year, a.month + months + 1, 0).day;
     return DateTime.utc(a.year, a.month + months, a.day > last ? last : a.day);
@@ -726,17 +722,17 @@ String debtOccurrence(
     'monthly' => monthsLater(index),
     'yearly' => monthsLater(12 * index),
     'custom' => a.add(Duration(days: debtIntervalDays(intervalDays) * index)),
-    _ => reject('Choose a weekly, monthly, yearly or custom frequency.'),
+    _ => reject('Choose weekly, monthly, yearly or custom.'),
   };
   return civilDate(day.toIso8601String().substring(0, 10));
 }
 
 /// Splits [total] evenly; any leftover centavos go on the final payment.
 List<BigInt> debtSplitAmounts(BigInt total, int count) {
-  if (count < 1 || count > 120) reject('Generate 1–120 installments.');
+  if (count < 1 || count > 120) reject('Use 1 to 120 payments.');
   final each = total ~/ BigInt.from(count);
   if (each <= BigInt.zero || total > maxComponent) {
-    reject('The total is too small to divide into that many payments.');
+    reject('That amount is too small to split into that many payments.');
   }
   return [
     for (var i = 0; i < count; i++)
@@ -753,11 +749,11 @@ String debtScheduleRows({
   String intervalDays = '',
 }) {
   if (amounts.isEmpty || amounts.length > 120) {
-    reject('Generate 1–120 installments.');
+    reject('Use 1 to 120 payments.');
   }
   for (final amount in amounts) {
     if (amount <= BigInt.zero || amount > maxComponent) {
-      reject('Enter a positive amount for every payment.');
+      reject('Enter an amount above zero for every payment.');
     }
   }
   return [
@@ -774,7 +770,7 @@ String debtCadenceRows({
   required int count,
   String intervalDays = '',
 }) {
-  if (count < 1 || count > 120) reject('Generate 1–120 installments.');
+  if (count < 1 || count > 120) reject('Use 1 to 120 payments.');
   return debtScheduleRows(
     firstDue: firstDue,
     frequency: frequency,

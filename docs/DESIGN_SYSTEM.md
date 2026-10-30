@@ -304,7 +304,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - Cards in a row share one height. A chart or figures card that may end up shorter uses `OverviewCard(centered: true)`. A list always starts at the top, under its header, and closes with `ListEnd`, so the space below reads as the end of the list.
   - When a card is left with empty space, fill it with something useful, such as a `StatStrip` of figures or a per-item breakdown. Never fill it with decoration, and never leave a large gap.
 - **Cards** (`OverviewCard`):
-  - **Header:** a `titleSmall` title and a `bodySmall` caption.
+  - **Header:** a `titleSmall` title and a `bodySmall` caption. A header's link or control and its corner menu center on each other.
   - **View controls:** a small segmented control (`MiniSegmented`) at the header's end. It moves under the heading when the card is narrow.
   - **Layout or settings choices:** an icon menu in the corner (`AppIconButton` + `MenuAnchor`, `corner:`), not a second segmented control.
   - **Links:** small `CardLink`s, never full-size buttons, in a card header.
@@ -1008,6 +1008,30 @@ Each section chat:
 3. Runs only targeted tests.
 4. Ends with manual checks for the owner.
 5. Gives its amount fields the calculator button with "Use result" (Android parity, §2).
+6. Rewords the rule messages it owns (below), at the same time as the screens that show them.
+
+### Rule messages to reword, by chat
+
+Error messages written in rule files stay as they are until the chat that works on their screens. Debts' messages and six Money ones are done (Chat 8). In each chat:
+
+- Propose the wording in the plan, in the glossary's terms (§7), and reword only what the owner approves. What the rules allow doesn't change.
+- Rules that name no field are matched by their words, so update the form's table with them (`nativeRuleFields`, `moneyRuleFields`, or that section's own). `test/rule_messages_test.dart` holds the tables to the rule files; add the chat's rule files to its jargon check.
+- Keep the word "negative" in the below-zero refusals, or update the forms that look for it. `isSyncBlock` reads the start of the sync rule's message, so change them together.
+- Messages only a developer can reach, such as a wrong command id or an unsupported version, need no plain wording unless a person can really see them.
+
+| Chat | Rule files | Messages left | Examples |
+| --- | --- | --- | --- |
+| 9 | `card_rules.dart` | 30 | "Card activity cannot precede its opening evidence.", "Authorization already used or belongs to another card." |
+| 9 | `planning_rules.dart`, `recurrence_rules.dart`, `planning_queries.dart` | 43 | "Choose budget spending basis and lifecycle.", "Choose a supported named IANA timezone.", "Select distinct ISO weekdays 1–7." |
+| 9 | `cash_import_rules.dart` | 40 | "Choose UTF-8 cash CSV up to 1 MiB.", "Unexpected quote in an unquoted CSV field." |
+| 9 | `file_rules.dart` | 7 | "Choose a bounded PDF, JPEG or PNG with exact checksum metadata." |
+| 9 | Money's remaining messages in `finance_domain.dart`, and `finance_rules.dart` | About 35 | "A comparison cannot precede the opening cutoff.", "Reconciliation sources changed. Record a fresh comparison.", "Opening corrections retain their original account and cutoff. Coverage changes require rebaselining.", "Use the explicit management, occurrence decision or link-reversal workflow. Preserve its history." |
+| 10 | `shared_domain.dart`, `shared_repository.dart` | 15 | "Each allocation axis must independently equal the total.", "Connect and synchronize before reviewing this operation." |
+| 11 | `shared_private_domain.dart` | 26 | "Group settlement payments require actual cash evidence.", "Explain the private source reconciliation." |
+| 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages | About 35, with Chat 15 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup." |
+| 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
+
+Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks the errors its own forms show. The counts are from 2026-10-31, and count each distinct message once.
 
 ## 10. Decision log
 
@@ -1127,3 +1151,6 @@ Each section chat:
 | 2026-10-30 | Review shows Card only on card records and To only on transfers: a form's defaults put those values on every command, so a cash expense showed "Destination". Its dates read "21 Oct 2026". | Done |
 | 2026-10-30 | Owner review of Activity: day headers were squeezed between hairlines. Space now sets the days apart: `groupGap` above a day's header, `xs` below it, hairlines only between the rows of a day, and the date in `text` with the day's change in `secondary`. Both platforms. | Approved |
 | 2026-10-30 | Six rule messages reworded for Money, with no change to what the rules allow: the date after an account's starting balance, a duplicate account name, a split that doesn't leave a remainder, a fee taken out of the amount, a refund over what's left, and a record with a refund or adjustment. The forms' field table matches the new words, and Hide amounts drops the amount from the refund message. | Approved |
+| 2026-10-31 | Debts' rule messages are reworded in the glossary's words, with the shared rule messages Debts forms show and the duplicate category message. What the rules allow is unchanged. Review notes under "View details" are reworded too. The forms' field tables are public, and a test holds them to the rules' words and keeps old jargon out of Debts' messages. | Approved |
+| 2026-10-31 | `OverviewCard`'s trailing control and corner menu center on each other; they aligned to the top, so a link sat 4 px above the menu's center. | Done |
+| 2026-10-31 | The remaining rule messages are reworded by the chat that works on their screens, with the owner approving the wording there. §9 lists them by chat. | Approved |

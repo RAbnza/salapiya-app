@@ -31,6 +31,30 @@ const moneyFormActions = {
   FinancialAction.archive,
 };
 
+/// Rules that name no field, and the field each is about. A test holds these
+/// to the rules' own words.
+const moneyRuleFields = [
+  ('You already have an account with this name', 'name'),
+  ('You already have a category with this name', 'name'),
+  ('Choose a supported account type', 'kind'),
+  ('Choose income or expense classification', 'classification'),
+  ('Choose an income classification', 'incomeClass'),
+  ('Choose an appropriate', 'category'),
+  ('Choose an account in this profile', 'account'),
+  ('New activity requires an active account', 'account'),
+  ('balance starts from that day', 'date'),
+  ('opening cutoff', 'date'),
+  ('A refund cannot precede', 'date'),
+  ('Choose different source and destination', 'destination'),
+  ('A fee taken out of the amount', 'feeDate'),
+  ('Each split must be more than zero', 'splitAmount'),
+  ('more than is left to refund', 'refundPosting'),
+  ('Choose an eligible original', 'refundPosting'),
+  ('Allocate each original', 'refundPosting'),
+  ('Refund allocations must equal', 'amount'),
+  ('Transfer principal plus', 'amount'),
+];
+
 /// Log expense, income and a transfer, the account and category forms, and
 /// corrections, reversals, refunds and balance checks, on the compact scale.
 /// Values start from the controller's defaults and every key stays in the
@@ -742,30 +766,6 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
     }
   }
 
-  /// Rules that name no field, and the field each is about. The rules' own
-  /// words stay (DESIGN_SYSTEM §7).
-  static const ruleFields = [
-    ('You already have an account with this name', 'name'),
-    ('That category name already exists', 'name'),
-    ('Choose a supported account type', 'kind'),
-    ('Choose income or expense classification', 'classification'),
-    ('Choose an income classification', 'incomeClass'),
-    ('Choose an appropriate', 'category'),
-    ('Choose an account in this profile', 'account'),
-    ('New activity requires an active account', 'account'),
-    ('balance starts from that day', 'date'),
-    ('opening cutoff', 'date'),
-    ('A refund cannot precede', 'date'),
-    ('Choose different source and destination', 'destination'),
-    ('A fee taken out of the amount', 'feeDate'),
-    ('Each split must be more than zero', 'splitAmount'),
-    ('more than is left to refund', 'refundPosting'),
-    ('Choose an eligible original', 'refundPosting'),
-    ('Allocate each original', 'refundPosting'),
-    ('Refund allocations must equal', 'amount'),
-    ('Transfer principal plus', 'amount'),
-  ];
-
   /// Which account field goes below zero: the rule says that one does, not
   /// which. Plans the same command with consent, in memory, and looks.
   String? belowZeroField() {
@@ -839,7 +839,7 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
     final message = c.amountsHidden
         ? e.message.replaceAll(RegExp(r' ₱[\d,.]+ is left\.'), '')
         : e.message;
-    for (final (text, field) in ruleFields) {
+    for (final (text, field) in moneyRuleFields) {
       if (message.contains(text)) return (field, message);
     }
     return (null, message);

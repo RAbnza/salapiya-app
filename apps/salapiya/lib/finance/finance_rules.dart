@@ -29,7 +29,10 @@ LocalRevision financeSource(LocalSnapshot s, String id, Set<String> types) {
             (r.id == id || r.actionId == id) && types.contains(financeType(r)),
       )
       .firstOrNull;
-  return r ?? reject('The current owned financial source is unavailable.');
+  return r ??
+      reject(
+        'This record isn’t available any more. Go back and choose it again.',
+      );
 }
 
 BigInt financeBalance(
@@ -86,10 +89,10 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
         values['replaceVersion'] != '${replaced.number}' ||
         !nativeFinanceCommands.contains(financeType(replaced)) ||
         replaced.values.containsKey('sharedGroup')) {
-      reject('Review the current financial source in its own workflow.');
+      reject('This record can’t be changed here. Open its current version.');
     }
     if ((values['reason'] ?? '').trim().isEmpty) {
-      reject('Explain the correction.');
+      reject('Say why you’re changing this.');
     }
     if ([
           'reservation',
@@ -117,7 +120,7 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
               financeType(r) != 'financialFile' &&
               financeDependsOn(r, replaced),
         )) {
-      reject('Resolve dependent financial evidence first.');
+      reject('Other records depend on this one. Reverse those first.');
     }
     if (operation == 'financeReversal') {
       FinanceRuleContext(
@@ -258,7 +261,7 @@ class FinanceRuleContext {
   void cash(BigInt n) {
     final a = s.account(text('account'));
     if (a.archived || date.compareTo(a.cutoff) <= 0) {
-      reject('Choose an active cash account after its cutoff.');
+      reject('Choose an active account, with a date after its balance starts.');
     }
     post('cash', n, account: a.id);
   }
@@ -286,10 +289,10 @@ class FinanceRuleContext {
   );
   LocalPlan finish() {
     if (title.isEmpty || title.length > 2000) {
-      reject('Enter a financial description.');
+      reject('Enter a description.');
     }
     if (sumMinor(posts.map((p) => p.amount)) != BigInt.zero) {
-      reject('The financial evidence is unbalanced.');
+      reject('This record doesn’t add up. Check the amounts.');
     }
     validateDebtProjection(this);
     final accounts = [

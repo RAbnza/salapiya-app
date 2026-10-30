@@ -357,7 +357,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       reject('Choose income or expense classification.');
     }
     if (s.categories.any((c) => c.name.toLowerCase() == name.toLowerCase())) {
-      reject('That category name already exists.');
+      reject('You already have a category with this name.');
     }
     return LocalPlan(
       category: LocalCategory(cmd.id, name, classification),
