@@ -119,32 +119,86 @@ List<FinancialReminderSource> overviewDueSources(
 ) {
   final week = duePeriodRange(today, DuePeriod.week).$2;
   final month = monthEnd(today);
-  return financialReminderSources(
+  return namedDueSources(
     s,
-    '1900-01-01',
-    week.compareTo(month) > 0 ? week : month,
-    asOf: today,
+    financialReminderSources(
+      s,
+      '1900-01-01',
+      week.compareTo(month) > 0 ? week : month,
+      asOf: today,
+    ),
   );
 }
 
+/// The same rows with each debt's own name; the rows carry the title of its
+/// schedule record ("‹debt› payment schedule").
+List<FinancialReminderSource> namedDueSources(
+  LocalSnapshot s,
+  Iterable<FinancialReminderSource> sources,
+) => [
+  for (final r in sources)
+    if (r.kind == 'Debt due')
+      FinancialReminderSource(
+        r.id,
+        r.version,
+        r.source,
+        debtRecord(s, s.revision(r.source).values['debt'])?.title ?? r.title,
+        r.date,
+        r.amount,
+        r.kind,
+      )
+    else
+      r,
+];
+
+/// The current debt with this action id.
+LocalRevision? debtRecord(LocalSnapshot s, String? actionId) => s.current
+    .where(
+      (r) =>
+          ['debtImport', 'borrowing'].contains(financeType(r)) &&
+          r.actionId == actionId,
+    )
+    .firstOrNull;
+
 /// Payoff progress for one debt, by its payment schedule.
 class DebtProgress {
-  DebtProgress(this.debt, this.due, this.outstanding)
-    : rows = due.schedule == null
-          ? const []
-          : financeSchedule(due.schedule!.values['schedule']!);
+  DebtProgress(
+    this.debt,
+    this.due,
+    this.outstanding, {
+    this._payoff = false,
+    BigInt? clearing,
+  }) : clearing = clearing ?? BigInt.zero,
+       rows = due.schedule == null
+           ? const []
+           : financeSchedule(due.schedule!.values['schedule']!);
   final LocalRevision debt;
   final DebtDueSummary due;
 
   /// Recognized balance through today; not part of the schedule maths.
   final BigInt outstanding;
+
+  /// Logged payments still without a breakdown.
+  final BigInt clearing;
   final List<FinanceScheduleRow> rows;
+  final bool _payoff;
 
   bool get scheduled => due.schedule != null;
-  bool get closed => due.closed;
+
+  /// A payoff is on record, with or without a schedule (`debtDueSummary` only
+  /// looks when there is one).
+  bool get closed => due.closed || _payoff;
 
   /// Nothing left on the schedule: every payment logged, or closed by payoff.
   bool get finished => scheduled && due.open.isEmpty;
+
+  /// Nothing owed and nothing left to log.
+  bool get settled => !closed && due.open.isEmpty && outstanding <= BigInt.zero;
+
+  /// Every scheduled payment is logged but money is still owed, for example
+  /// after a later lender charge.
+  bool get scheduleFinished => !closed && finished && outstanding > BigInt.zero;
+  bool get paidOff => closed || settled;
   int get total => rows.length;
   int get done => total - due.open.length;
   BigInt get scheduledTotal => sumMinor(rows.map((r) => r.amount));
@@ -160,9 +214,30 @@ class DebtProgress {
       ? 0
       : (scheduledTotal - scheduledLeft) / scheduledTotal;
 
-  /// The pill label: the debt status, or "Settled"/"Closed" as on Debts.
-  String get statusLabel =>
-      due.status?.label ?? (closed ? 'Closed' : 'Settled');
+  /// The pill label: the debt status, or a display label when there is no
+  /// status to show. These are never stored (DOMAIN_RULES).
+  String get statusLabel => closed
+      ? 'Closed'
+      : settled
+      ? 'Settled'
+      : scheduleFinished
+      ? 'Schedule finished'
+      : due.status!.label;
+
+  /// As `DebtDueSummary.urgencyRank`, with finished debts after open ones.
+  int get rank => paidOff
+      ? 5
+      : scheduleFinished
+      ? 4
+      : due.urgencyRank;
+}
+
+/// Most urgent first; debts with nothing left to do come last.
+int compareDebtProgress(DebtProgress a, DebtProgress b) {
+  final byRank = a.rank.compareTo(b.rank);
+  if (byRank != 0) return byRank;
+  final byDue = compareDebtUrgency(a.due, b.due);
+  return byDue != 0 ? byDue : a.debt.title.compareTo(b.debt.title);
 }
 
 List<DebtProgress> overviewDebtProgress(LocalSnapshot s, String today) {
@@ -180,9 +255,23 @@ List<DebtProgress> overviewDebtProgress(LocalSnapshot s, String today) {
           debt.actionId,
           through: today,
         ),
+        // The same test `debtDueSummary` applies to scheduled debts.
+        payoff: s.current.any(
+          (r) =>
+              financeType(r) == 'debtPayoff' &&
+              r.date.compareTo(today) <= 0 &&
+              r.values['debt'] == debt.actionId,
+        ),
+        clearing: financeBalance(
+          s,
+          'debt_clearing',
+          'debt',
+          debt.actionId,
+          through: today,
+        ),
       ),
   ];
-  return result..sort((a, b) => compareDebtUrgency(a.due, b.due));
+  return result..sort(compareDebtProgress);
 }
 
 Iterable<LocalPosting> _expenses(LocalSnapshot s, String from, String to) => s
@@ -368,12 +457,6 @@ int? changeBasisPoints(BigInt current, BigInt previous) =>
 /// negative [whole].
 int? shareBasisPoints(BigInt part, BigInt whole) =>
     whole <= BigInt.zero ? null : (part * BigInt.from(10000) ~/ whole).toInt();
-
-/// "4.2%": basis points with one decimal, rounded toward zero, no sign.
-String percentLabel(int basisPoints) {
-  final bp = basisPoints.abs();
-  return '${bp ~/ 100}.${bp % 100 ~/ 10}%';
-}
 
 /// Spending per category for the donut: the [top] largest positive ones,
 /// then the rest as "Other". Net-negative categories (refunds larger than

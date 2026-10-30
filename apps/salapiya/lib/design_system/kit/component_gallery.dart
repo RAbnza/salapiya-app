@@ -188,6 +188,11 @@ class _Pane extends StatelessWidget {
         final w = WidthClass.of(context);
         final sections = <(String, String, Widget)>[
           (
+            'Sample form',
+            'Log a debt payment at the compact form scale.',
+            const _SampleForm(),
+          ),
+          (
             'Buttons',
             'Hover, Tab and press to see each state.',
             const _Buttons(),
@@ -1026,4 +1031,159 @@ class _States extends StatelessWidget {
       ),
     ),
   ]);
+}
+
+/// The compact form scale on the real fields, in the order of Log a debt
+/// payment (`NativeFinanceEditor`). Nothing here saves.
+class _SampleForm extends StatefulWidget {
+  const _SampleForm();
+  @override
+  State<_SampleForm> createState() => _SampleFormState();
+}
+
+class _SampleFormState extends State<_SampleForm> {
+  final amount = TextEditingController(text: '2000.00');
+  final reference = TextEditingController();
+  String debt = 'phone', row = 'three', account = 'bank', cover = 'all';
+  DateTime date = DateTime(2026, 10, 30);
+  bool showError = false;
+
+  @override
+  void dispose() {
+    amount.dispose();
+    reference.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fieldGap = CompactForm.fieldGap;
+    return CompactForm(
+      child: Builder(
+        builder: (context) => Align(
+          alignment: AlignmentDirectional.topStart,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Space.formMaxWidth),
+            child: SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Step 1 of 2 · Details',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: CraftTheme.of(context).secondary),
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  OptionPicker<String>(
+                    label: 'Debt',
+                    required: true,
+                    style: PickerStyle.dropdown,
+                    value: debt,
+                    options: const [
+                      PickerOption(value: 'phone', label: 'Phone installment'),
+                      PickerOption(
+                        value: 'family',
+                        label: 'Loan from Tita Rosa',
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => debt = v),
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  OptionPicker<String>(
+                    label: 'Which payment?',
+                    style: PickerStyle.dropdown,
+                    helper: 'Only a payment logged against a due date counts toward it.',
+                    value: row,
+                    options: const [
+                      PickerOption(value: '', label: 'Not tied to a due date'),
+                      PickerOption(
+                        value: 'three',
+                        label: 'Installment 3 · Sun, 1 Nov · ₱2,000.00 left',
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => row = v),
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  AmountField(
+                    label: 'Amount',
+                    required: true,
+                    controller: amount,
+                    errorText: showError ? 'Enter an amount above zero.' : null,
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  OptionPicker<String>(
+                    label: 'Paid from',
+                    required: true,
+                    style: PickerStyle.dropdown,
+                    value: account,
+                    options: const [
+                      PickerOption(value: 'bank', label: 'Everyday bank'),
+                      PickerOption(value: 'wallet', label: 'Mobile wallet'),
+                    ],
+                    onChanged: (v) => setState(() => account = v),
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  DateField(
+                    label: 'Date',
+                    required: true,
+                    value: date,
+                    onChanged: (d) {
+                      if (d != null) setState(() => date = d);
+                    },
+                  ),
+                  OptionPicker<String>(
+                    label: 'What does this payment cover?',
+                    style: PickerStyle.radio,
+                    info: 'Only choose the first if your lender confirmed it. If you are not sure, log it now and break it down later.',
+                    value: cover,
+                    options: const [
+                      PickerOption(
+                        value: 'all',
+                        label: 'All of it lowers what I owe',
+                        description: 'Your lender confirmed the whole amount goes to your debt.',
+                      ),
+                      PickerOption(
+                        value: 'unknown',
+                        label: "I don't know the breakdown yet",
+                        description: 'Logs the payment now. You can break it down later.',
+                      ),
+                      PickerOption(
+                        value: 'exact',
+                        label: 'I have the exact breakdown',
+                        description:
+                            'Enter what went to your debt, interest and fees.',
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => cover = v),
+                  ),
+                  SizedBox(height: fieldGap(context)),
+                  FormMoreDetails(
+                    children: [
+                      SizedBox(height: fieldGap(context)),
+                      HelpTextField(
+                        label: 'Lender reference',
+                        controller: reference,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: CompactForm.groupGap(context)),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: Space.sm,
+                    children: [
+                      AppButton.secondary(
+                        showError ? 'Hide the error' : 'Show an error',
+                        onPressed: () => setState(() => showError = !showError),
+                      ),
+                      AppButton('Review', onPressed: () {}),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

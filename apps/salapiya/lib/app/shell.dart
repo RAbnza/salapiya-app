@@ -27,7 +27,6 @@ import '../local/local_profile_view.dart';
 import '../local/local_runtime.dart';
 import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
-import '../finance/debt_screen.dart';
 import '../life/life_controller.dart';
 
 /// A create action: a fixed key (it also names the route, `action/<key>`),
@@ -198,6 +197,12 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         'Reports',
         'Import',
         'Files',
+      ],
+      AppDestination.debts: const [
+        'Summary',
+        'Schedule',
+        'Payments',
+        'History',
       ],
       AppDestination.shared: const [
         'Bills',
@@ -704,12 +709,15 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       session: session,
       initial: navigation.tabOf(destination)!,
     ),
-    AppDestination.debts =>
-      session.production
-          ? NativeDebtsScreen(
-              controller: session.finance as LocalFinancialController,
-            )
-          : DebtsScreen(session: session),
+    AppDestination.debts => DebtsScreen(
+      key: ValueKey((session.finance, navigation.revisionOf(destination))),
+      session: session,
+      initial: navigation.tabOf(destination),
+      actions: [
+        for (final item in newItemsFor(AppDestination.debts))
+          (label: item.$2, icon: item.$3, onSelected: () => runNew(item)),
+      ],
+    ),
     AppDestination.shared => SharedScreen(
       key: ValueKey(navigation.revisionOf(destination)),
       session: session,

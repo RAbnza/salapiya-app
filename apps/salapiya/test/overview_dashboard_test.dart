@@ -816,7 +816,7 @@ void main() {
       expect(find.text('Largest expenses this month'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey(OverviewTab.debts)));
       await tester.pump();
-      expect(find.byType(SegmentBar), findsNWidgets(3));
+      expect(find.byType(SegmentBar), findsNWidgets(5));
       expect(pill('Settled'), findsOneWidget);
       expect(find.textContaining('3 days overdue'), findsWidgets);
       // Bar steps are drawn 8 tall, not collapsed to nothing.

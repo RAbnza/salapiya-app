@@ -33,22 +33,15 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(
-          find.text(
-            'Debt history is unavailable while the initial snapshot is incomplete.',
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('Add existing debt'), findsNothing);
-        expect(find.textContaining('Recognized liability:'), findsNothing);
+        expect(find.text('Your first download isn’t finished'), findsOneWidget);
+        expect(find.text('Not available yet'), findsWidgets);
+        expect(find.text('No debts yet'), findsNothing);
+        expect(find.textContaining('₱'), findsNothing);
         runtime.connected.binding = null;
         runtime.connected.notifyListeners();
         await tester.pumpAndSettle();
-        expect(find.text('Add existing debt'), findsOneWidget);
-        expect(
-          find.textContaining('initial snapshot is incomplete'),
-          findsNothing,
-        );
+        expect(find.text('No debts yet'), findsOneWidget);
+        expect(find.text('Your first download isn’t finished'), findsNothing);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());

@@ -7,13 +7,44 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app/demo_routes.dart';
+import '../connected/financial_contract.dart' show dependencySensitive;
+import '../app/overview_cards.dart' show civilLabel;
+import '../app/overview_data.dart' show DebtProgress, overviewDebtProgress;
+import 'debt_data.dart' show debtPaymentRows;
 import '../design_system/editorial.dart';
+import '../design_system/kit/kit.dart'
+    show
+        AmountField,
+        AppIconButton,
+        CardLink,
+        CompactForm,
+        DateField,
+        FieldInput,
+        FormMoreDetails,
+        HelpTextField,
+        InlineNotice,
+        OptionPicker,
+        PickerOption,
+        PickerStyle,
+        SectionPage,
+        SurfaceCard,
+        isDesktop;
 import '../features/finance/presentation/financial_widgets.dart';
 import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../p0/exact_money.dart';
 import '../features/finance/presentation/financial_editor.dart';
 import '../features/finance/contracts/financial_models.dart';
+
+/// The sync rule's refusal: this change needs the latest records first
+/// (ARCHITECTURE §8.2). It stays a rule; these are the form's words for it.
+bool isSyncBlock(Object e) =>
+    e is LocalRuleException &&
+    e.message.startsWith('Sync now before finalizing');
+
+const syncBlockedTitle = 'Couldn’t check your latest records';
+const syncBlockedMessage =
+    'Salapiya checks your latest records before saving this, and that needs a connection. Nothing was saved, and what you entered is still here.';
 
 class FinanceInput {
   const FinanceInput(
@@ -23,43 +54,39 @@ class FinanceInput {
     this.options,
     this.lines = 1,
     this.help,
+    this.info,
+    this.required = false,
+    this.money = false,
+    this.more = false,
   });
   final String key, label, value;
   final Map<String, String>? options;
   final int lines;
   final String? help;
-}
 
-/// A popup for a form problem. The caller marks the offending input.
-Future<void> showFormError(
-  BuildContext context,
-  String message, {
-  String? fieldLabel,
-}) => showDialog<void>(
-  context: context,
-  builder: (context) => AlertDialog(
-    icon: const Icon(Icons.error_outline),
-    title: const Text('Please check the form'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(message),
-        if (fieldLabel != null) ...[
-          const SizedBox(height: 12),
-          Text('Check “$fieldLabel”. It is marked in red.'),
-        ],
-      ],
-    ),
-    actions: [
-      FilledButton(
-        autofocus: true,
-        onPressed: () => Navigator.pop(context),
-        child: const Text('OK'),
-      ),
-    ],
-  ),
-);
+  /// What the field does, behind the ⓘ (§6).
+  final String? info;
+  final bool required;
+
+  /// An amount field, whatever its label says.
+  final bool money;
+
+  /// Goes under "More details".
+  final bool more;
+
+  /// The same input under another label, e.g. a shared account field.
+  FinanceInput as(String label, {bool required = false, bool more = false}) =>
+      FinanceInput(
+        key,
+        label,
+        value: value,
+        options: options,
+        lines: lines,
+        help: help,
+        required: required,
+        more: more,
+      );
+}
 
 /// Plain-language payment schedule questions. [editing] revises the dates of
 /// an existing schedule; amounts are set while creating it, or later through
@@ -71,9 +98,7 @@ List<FinanceInput> debtCadenceInputs({
   FinanceInput(
     'frequency',
     'How often do you pay?',
-    help: embedded
-        ? 'Optional. Skip it and add the schedule later from Debts.'
-        : null,
+    help: embedded ? 'Optional. You can add the schedule later.' : null,
     options: {
       if (embedded) '': 'Not now · I will set it later',
       if (editing) '': 'No repeating pattern · dates listed below',
@@ -88,11 +113,7 @@ List<FinanceInput> debtCadenceInputs({
     'Pay every how many days?',
     help: 'For example, type 14 for every two weeks.',
   ),
-  const FinanceInput(
-    'firstDue',
-    'When is your next payment due?',
-    help: 'Tap the calendar, or type it like 2026-11-30 (year-month-day).',
-  ),
+  const FinanceInput('firstDue', 'When is your next payment due?'),
   if (!editing) ...[
     const FinanceInput(
       'installmentCount',
@@ -124,7 +145,17 @@ List<FinanceInput> financeInputs(
   FinanceInput ref(String key, String label, Set<String> types) =>
       FinanceInput(key, label, options: financeChoices(s, types));
   final card = ref('card', 'Credit card', {'creditCard'});
-  final debt = ref('debt', 'Debt source', {'debtImport', 'borrowing'});
+  final debt = FinanceInput(
+    'debt',
+    'Debt',
+    required: true,
+    options: {
+      for (final r in s.current.where(
+        (r) => const {'debtImport', 'borrowing'}.contains(financeType(r)),
+      ))
+        r.id: r.title,
+    },
+  );
   final goal = ref('goal', 'Savings goal', {'savingsGoal'});
   final rule = FinanceInput(
     'rule',
@@ -150,6 +181,12 @@ List<FinanceInput> financeInputs(
     options: {
       for (final a in s.accounts.where((a) => !a.archived)) a.id: a.name,
     },
+  );
+  const lenderConfirmed = FinanceInput(
+    'verified',
+    'Confirmed with your lender',
+    value: 'false',
+    options: {'false': 'Not yet', 'true': 'I confirmed this with my lender'},
   );
   const verified = FinanceInput(
     'verified',
@@ -335,10 +372,10 @@ List<FinanceInput> financeInputs(
       const FinanceInput('reason', 'Link reversal reason'),
     ],
     'debtImport' || 'borrowing' => [
-      const FinanceInput('lender', 'Lender / provider'),
+      const FinanceInput('lender', 'Lender', required: true),
       const FinanceInput(
         'debtType',
-        'Debt type',
+        'Type',
         value: 'personal_loan',
         options: {
           'personal_loan': 'Personal loan',
@@ -347,152 +384,183 @@ List<FinanceInput> financeInputs(
           'flexible_manual': 'Flexible credit',
         },
       ),
-      amount,
+      FinanceInput(
+        'amount',
+        op == 'debtImport' ? 'What you owe now' : 'Amount borrowed',
+        required: true,
+        money: true,
+      ),
       const FinanceInput(
         'principal',
-        'Original principal PHP (optional / unknown)',
+        'Original principal',
+        money: true,
+        more: true,
+        help: 'Leave this blank if you do not know it.',
       ),
       if (op == 'debtImport')
         const FinanceInput(
           'outstandingPrincipal',
-          'Provider-confirmed outstanding principal PHP (optional; distinct from original principal)',
+          'Principal left',
+          money: true,
+          more: true,
+          help: 'Only if your lender confirmed it. Leave this blank otherwise.',
         ),
       if (op == 'borrowing') ...[
         const FinanceInput(
           'fundingUse',
-          'Borrowing use',
+          'How you used it',
           value: 'cash',
           options: {
-            'cash': 'Actual cash proceeds',
-            'purchase': 'Financed purchase',
+            'cash': 'Cash you received',
+            'purchase': 'A purchase it paid for',
           },
         ),
-        account,
-        category,
+        account.as('Paid into', required: true),
+        category.as('Category', required: true),
         const FinanceInput(
           'withheld',
-          'Confirmed withheld fee PHP',
+          'Fee taken out up front',
           value: '0.00',
+          money: true,
+          more: true,
         ),
         const FinanceInput(
           'financedFee',
-          'Confirmed financed fee PHP',
+          'Fee added to the loan',
           value: '0.00',
+          money: true,
+          more: true,
         ),
         FinanceInput(
           'feeCategory',
           'Fee category',
           value: 'category-fees',
           options: category.options,
+          more: true,
         ),
       ],
       if (!editing) ...debtCadenceInputs(editing: false, embedded: true),
     ],
     'debtPayment' || 'debtClassification' || 'debtPayoff' => [
       debt,
-      if (op != 'debtClassification') ...[account, amount],
+      if (op != 'debtClassification') ...[
+        FinanceInput(
+          'amount',
+          op == 'debtPayoff' ? 'Payoff amount' : 'Amount',
+          required: true,
+          money: true,
+        ),
+        account.as('Paid from', required: true),
+      ],
       if (op == 'debtClassification')
-        ref('payment', 'Actual unresolved payment', {'debtPayment'}),
+        ref('payment', 'Which payment', {'debtPayment'}),
       const FinanceInput(
         'reduction',
-        'Confirmed recognized liability reduction PHP',
+        'Lowers what you owe',
         value: '0.00',
+        money: true,
       ),
       const FinanceInput(
         'principalReduction',
-        'Provider-confirmed principal within liability reduction PHP (optional; unknown if blank)',
+        'Part of that which is principal',
+        money: true,
+        more: true,
+        help: 'Leave this blank if your lender did not say.',
       ),
       const FinanceInput(
         'reductionSources',
-        'Recognized charge reductions: exact charge revision ID,PHP amount (optional, one per line)',
+        'Charges this lowers',
         lines: 4,
+        more: true,
+        help: 'One per line: the charge record, then the amount.',
       ),
       const FinanceInput(
         'interest',
-        'New recognized interest PHP',
+        'New interest',
         value: '0.00',
+        money: true,
       ),
-      const FinanceInput(
-        'fee',
-        'New recognized contractual fee PHP',
-        value: '0.00',
-      ),
+      const FinanceInput('fee', 'New fee', value: '0.00', money: true),
       FinanceInput(
         'interestCategory',
-        'Interest expense category',
+        'Interest category',
         value: 'category-fees',
         options: category.options,
+        more: true,
       ),
       FinanceInput(
         'feeCategory',
-        'Fee expense category',
+        'Fee category',
         value: 'category-fees',
         options: category.options,
+        more: true,
       ),
       if (op == 'debtPayment') ...[
         const FinanceInput(
           'certainty',
-          'Classification evidence',
+          'What it covers',
           value: 'unresolved',
           options: {
-            'unresolved': 'Unknown breakdown / clearing',
-            'confirmed_total':
-                'Provider-confirmed reduction of recognized total',
-            'known_components': 'Confirmed individual components',
+            'unresolved': "I don't know the breakdown yet",
+            'confirmed_total': 'All of it lowers what I owe',
+            'known_components': 'I have the exact breakdown',
           },
         ),
         const FinanceInput(
           'externalFee',
-          'External payment fee PHP',
+          'Fee you paid to send it',
           value: '0.00',
+          money: true,
+          more: true,
         ),
         const FinanceInput(
           'clearing',
-          'Unresolved actual payment PHP',
+          'Still without a breakdown',
           value: '0.00',
+          money: true,
         ),
-        ref(
-          'scheduleSource',
-          'Current schedule (optional without allocations)',
-          {'debtSchedule'},
-        ),
+        ref('scheduleSource', 'Payment schedule', {'debtSchedule'}),
         const FinanceInput(
           'allocations',
-          'Due allocations: installment-label,PHP amount (one per line)',
+          'Applied to',
           lines: 4,
+          help: 'One per line: the payment name, then the amount.',
         ),
         const FinanceInput(
           'unapplied',
-          'Unapplied contractual payment PHP',
+          'Stays unapplied',
           value: '0.00',
+          money: true,
         ),
       ],
       if (op == 'debtPayoff') ...[
-        const FinanceInput('providerPayoff', 'Provider-confirmed payoff PHP'),
+        // Always the payoff amount: filled in at Review.
+        const FinanceInput('providerPayoff', 'Payoff amount', money: true),
         const FinanceInput(
           'waiver',
-          'Waiver of recognized liability PHP',
+          'Waived by your lender',
           value: '0.00',
+          money: true,
         ),
         const FinanceInput(
           'avoided',
-          'Avoided future unposted charges PHP',
+          'Charges you avoided',
           value: '0.00',
+          money: true,
+          more: true,
         ),
         const FinanceInput(
           'waiverBasis',
-          'Waiver evidence basis',
+          'What the waiver is for',
           value: 'imported_unknown',
-          options: {
-            'imported_unknown':
-                'Imported liability with unknown cost breakdown',
-          },
+          more: true,
+          options: {'imported_unknown': 'An amount in the opening balance'},
         ),
-        verified,
+        lenderConfirmed,
       ],
-      const FinanceInput(
+      FinanceInput(
         'reason',
-        'Payment / classification / payoff evidence reason',
+        op == 'debtPayoff' ? 'Why you paid it off' : 'What you found out',
       ),
     ],
     'debtSchedule' => [
@@ -500,52 +568,46 @@ List<FinanceInput> financeInputs(
       ...debtCadenceInputs(editing: editing, embedded: false),
       const FinanceInput(
         'schedule',
-        'Payment dates, one per line: name,YYYY-MM-DD,PHP amount[,already paid PHP]',
+        'Payment dates',
         lines: 6,
+        help: 'One per line: name, date, amount and, if any, already paid.',
       ),
-      verified,
+      lenderConfirmed,
     ],
     'debtAdjustment' => [
       debt,
-      amount,
+      const FinanceInput('amount', 'Amount', required: true, money: true),
       const FinanceInput(
         'adjustmentKind',
-        'Provider adjustment',
+        'What happened',
         value: 'recognized_charge',
         options: {
-          'recognized_charge': 'New recognized charge',
-          'recognized_waiver': 'Waive existing recognized liability',
-          'rounding_charge': 'Provider-confirmed residual charge',
-          'rounding_waiver': 'Provider-confirmed residual waiver',
-          'avoided_future': 'Avoided future unposted charge (no money)',
+          'recognized_charge': 'A charge from your lender',
+          'recognized_waiver': 'A waiver from your lender',
+          'rounding_charge': 'A small rounding charge',
+          'rounding_waiver': 'A small rounding waiver',
+          'avoided_future': 'A future charge you avoided (no money moved)',
         },
       ),
       const FinanceInput(
         'chargeType',
-        'Recognized charge classification',
+        'Kind of charge',
         value: 'interest',
         options: {'interest': 'Interest', 'fee': 'Fee', 'penalty': 'Penalty'},
       ),
-      category,
+      category.as('Category'),
       const FinanceInput(
         'waiverBasis',
-        'Original waiver basis',
+        'What the waiver is for',
         value: 'recognized_charge',
         options: {
-          'recognized_charge': 'Original recognized charge source',
-          'imported_unknown': 'Imported opening with unknown cost basis',
+          'recognized_charge': 'A charge you logged',
+          'imported_unknown': 'An amount in the opening balance',
         },
       ),
-      ref(
-        'chargeSource',
-        'Exact original recognized charge (required for charge waiver)',
-        {'debtAdjustment', 'borrowing'},
-      ),
-      const FinanceInput(
-        'reason',
-        'Provider adjustment / residual explanation',
-      ),
-      verified,
+      ref('chargeSource', 'Which charge', {'debtAdjustment', 'borrowing'}),
+      const FinanceInput('reason', 'What your lender said'),
+      lenderConfirmed,
     ],
     'creditCard' => [
       const FinanceInput('issuer', 'Issuer'),
@@ -630,27 +692,39 @@ List<FinanceInput> financeInputs(
     ],
     _ => <FinanceInput>[],
   };
+  final debtOp = nativeDebtCommands.contains(op);
+  final quiet = const {
+    'debtImport',
+    'borrowing',
+    'debtClassification',
+  }.contains(op);
   return [
-    const FinanceInput('name', 'Description'),
-    ...fields,
     FinanceInput(
-      'date',
-      'Economic / evidence date · YYYY-MM-DD',
-      value: civilToday(),
+      'name',
+      switch (op) {
+        'debtImport' => 'Debt name',
+        'borrowing' => 'Loan name',
+        _ => 'Description',
+      },
+      required: const {'debtImport', 'borrowing'}.contains(op),
+      more: const {'debtClassification', 'debtPayoff'}.contains(op),
     ),
-    const FinanceInput(
+    ...fields,
+    FinanceInput('date', 'Date', value: civilToday()),
+    FinanceInput(
       'reference',
-      'Provider reference (required for provider evidence)',
+      debtOp ? 'Lender reference' : 'Reference',
+      help: debtOp
+          ? null
+          : 'Needed when your bank or issuer gave you a document.',
+      more: quiet,
     ),
-    const FinanceInput('notes', 'Notes (optional)', lines: 3),
+    FinanceInput('notes', 'Notes', lines: 3, more: debtOp),
     const FinanceInput(
       'acknowledge',
-      'Negative cash balance consent',
+      'This takes the account below zero',
       value: 'false',
-      options: {
-        'false': 'No negative balance acknowledged',
-        'true': 'I acknowledge the resulting negative cash balance',
-      },
+      options: {'false': 'Let me check', 'true': 'That is right'},
     ),
   ];
 }
@@ -728,8 +802,14 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
   final anchors = <String, GlobalKey>{};
   bool scheduleFailed = false;
   late String id = newLocalId();
-  late final draftKey =
-      'finance:${widget.operation}:${widget.replacing?.id ?? ''}';
+  // A prefilled form keeps its own draft, so one debt's draft can't replace
+  // what another debt's row proposed.
+  late final draftKey = [
+    'finance:${widget.operation}:${widget.replacing?.id ?? ''}',
+    ?widget.initial['debt'],
+    ?widget.initial['allocations'],
+    ?widget.initial['payment'],
+  ].join(':');
   Future<void> writes = Future.value();
   LocalCommand? reviewed;
   LocalPlan? plan;
@@ -741,16 +821,33 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       unknown = false,
       dirty = false;
   LocalFinancialController get c => widget.controller;
-  Map<String, String> get reviewDetails => {
+  Map<String, String> get reviewDetails =>
+      simplePayment ? paymentDetails : standardDetails;
+
+  /// The operation behind the form, also when correcting a record.
+  String get recordType => widget.replacing == null
+      ? widget.operation
+      : financeType(widget.replacing!);
+  Map<String, String> get standardDetails => {
     for (final input in inputs)
       if (!['name', 'amount', 'date', 'acknowledge'].contains(input.key) &&
           (values[input.key] ?? '').isNotEmpty)
-        input.label: input.options?[values[input.key]] ?? values[input.key]!,
+        plainLabel(input):
+            input.options?[values[input.key]] ?? values[input.key]!,
     if ((values['reason'] ?? '').isNotEmpty) 'Reason': values['reason']!,
   };
   @override
   void initState() {
     super.initState();
+    if (simplePayment) {
+      final first = (values['allocations'] ?? '').split('\n').first;
+      values['paymentRow'] = first.contains(',') ? first.split(',').first : '';
+      // With one account there is nothing to choose.
+      final accounts = c.snapshot.accounts.where((a) => !a.archived).toList();
+      if (accounts.length == 1 && (values['account'] ?? '').isEmpty) {
+        values['account'] = accounts.single.id;
+      }
+    }
     unawaited(restore());
   }
 
@@ -787,11 +884,46 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         });
   }
 
+  /// A sync is under way before saving.
+  bool syncing = false;
+
+  /// The rule refused the change even after trying to sync.
+  bool syncBlocked = false;
+
+  /// The sync brought new records, so the review was built again.
+  bool rechecked = false;
+
+  bool get needsLatest =>
+      c.connected && reviewed != null && dependencySensitive(reviewed!);
+
+  /// Syncs before a change that needs the latest records. If that brought
+  /// new records the reviewed command is out of date, so it's reviewed again
+  /// on them and nothing saves: returns true.
+  Future<bool> refreshBeforeSaving() async {
+    if (!needsLatest) return false;
+    setState(() => syncing = true);
+    await c.syncLatest?.call();
+    await c.reload();
+    if (mounted) setState(() => syncing = false);
+    if (c.snapshot.version == reviewed!.expectedVersion) return false;
+    reviewed = LocalCommand(
+      id: id,
+      owner: c.store.owner,
+      expectedVersion: c.snapshot.version,
+      kind: reviewed!.kind,
+      values: reviewed!.values,
+    );
+    reviewSnapshot = c.snapshot;
+    plan = planLocal(reviewSnapshot!, reviewed!);
+    return true;
+  }
+
   Future<void> save() async {
     setState(() {
       busy = true;
       error = null;
       errorField = errorMessage = null;
+      syncBlocked = rechecked = false;
     });
     String? problem, problemField;
     try {
@@ -812,6 +944,8 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         );
         reviewSnapshot = c.snapshot;
         plan = planLocal(reviewSnapshot!, reviewed!);
+      } else if (await refreshBeforeSaving()) {
+        rechecked = true;
       } else {
         await c.store.commit(reviewed!);
         await c.reload();
@@ -822,7 +956,10 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
             : 'Saved locally.';
       }
     } catch (e) {
-      if (reviewed != null) {
+      // Stays on Review with everything kept, ready to try again.
+      syncing = false;
+      syncBlocked = isSyncBlock(e);
+      if (reviewed != null && !syncBlocked) {
         try {
           if (await c.store.hasReceipt(id)) {
             await c.reload();
@@ -835,12 +972,13 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
           unknown = true;
         }
       }
-      if (result == null) {
+      if (result == null && !syncBlocked) {
         if (e is LocalRuleException) {
-          problem = e.message;
-          problemField = e.field;
+          (problemField, problem) = locateProblem(e);
+          if (e.message.contains('negative')) needsConsent = true;
         } else if (e is FormatException) {
           problem = e.message;
+          problemField = 'date';
         } else {
           error = 'The save could not be verified. Input and original command identity are retained.';
         }
@@ -856,14 +994,93 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     if (problem != null && mounted) await showProblem(problem, problemField);
   }
 
-  /// A popup with the message, then the offending input is marked in red and
-  /// scrolled into view.
+  /// Rules that name no field, and the field each is about, so the problem
+  /// shows there in red. The rules' own words stay (DESIGN_SYSTEM §7).
+  static const ruleFields = [
+    ('active cash account', 'account'),
+    ('Payment exceeds remaining scheduled due', 'paymentRow'),
+    ('Choose an installment in the current schedule', 'paymentRow'),
+    ('Due allocations plus', 'paymentRow'),
+    ('Use this debt’s current schedule', 'paymentRow'),
+    ('Actual cash must equal', 'amount'),
+    ('Debt activity cannot precede', 'date'),
+    ('This debt is closed', 'debt'),
+    ('Provider payoff must reconcile', 'reduction'),
+    ('Classification exceeds', 'reduction'),
+    ('Choose an actual payment on this debt', 'payment'),
+    ('Confirm the exact provider payoff', 'verified'),
+    ('Confirm provider dates', 'verified'),
+    ('Confirm the provider adjustment', 'verified'),
+    ('Known outstanding principal', 'outstandingPrincipal'),
+    ('Review net proceeds', 'withheld'),
+    ('Waiver exceeds', 'amount'),
+    ('Waiver needs', 'chargeSource'),
+    ('This waiver needs', 'waiver'),
+    ('Unsupported debt', 'debt'),
+  ];
+
+  /// Where a rule's problem belongs, and what to say there. Going below zero
+  /// is said in terms of the chosen account, with what it holds.
+  (String?, String) locateProblem(LocalRuleException e) {
+    if (e.field != null) return (e.field, e.message);
+    if (e.message.contains('negative')) {
+      final account = c.snapshot.accounts
+          .where((a) => a.id == values['account'])
+          .firstOrNull;
+      return account == null
+          ? (null, e.message)
+          : (
+              'account',
+              'This takes ${account.name} below zero. It has ${shownBalance(account.id)}.',
+            );
+    }
+    for (final (text, field) in ruleFields) {
+      if (e.message.contains(text)) return (field, e.message);
+    }
+    return (null, e.message);
+  }
+
+  /// An account's balance today, for the eye: hidden amounts stay hidden.
+  String shownBalance(String id) => c.amountsHidden
+      ? 'Amount hidden'
+      : c.amount(c.snapshot.balance(id, through: civilToday()));
+
+  /// Money leaving the chosen account in this form, once it's a valid amount.
+  BigInt? get leaving {
+    if (!const {
+      'debtPayment',
+      'debtPayoff',
+      'cardPayment',
+    }.contains(recordType)) {
+      return null;
+    }
+    try {
+      return parsePhp(answer('amount'));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Each account's balance under its name, and a warning on the chosen one
+  /// if this amount takes it below zero. Saving is still the rules' call.
+  Map<String, String> balanceLines(Map<String, String> accounts, String key) {
+    final amount = leaving;
+    return {
+      for (final id in accounts.keys)
+        if (id.isNotEmpty)
+          id: [
+            'Balance ${shownBalance(id)}',
+            if (!c.amountsHidden &&
+                amount != null &&
+                id == values[key] &&
+                amount > c.snapshot.balance(id, through: civilToday()))
+              'this takes it below zero',
+          ].join(' · '),
+    };
+  }
+
+  /// The problem shows in place (§6); this brings it into view.
   Future<void> showProblem(String message, String? field) async {
-    await showFormError(
-      context,
-      message,
-      fieldLabel: field == null ? null : labelFor(field),
-    );
     final target = field == null ? null : anchors[field]?.currentContext;
     if (target != null && target.mounted) {
       await Scrollable.ensureVisible(
@@ -872,17 +1089,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         duration: const Duration(milliseconds: 250),
       );
     }
-  }
-
-  String? labelFor(String field) {
-    if (field == 'paymentTotal') return 'Payment amounts';
-    if (field.startsWith('payment-')) {
-      return 'Payment ${(int.tryParse(field.substring(8)) ?? 0) + 1}';
-    }
-    for (final input in inputs) {
-      if (input.key == field) return input.label;
-    }
-    return null;
   }
 
   String? problemFor(String key) => errorField == key ? errorMessage : null;
@@ -929,14 +1135,753 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         }.contains(input.key)) {
       return false;
     }
+    const charges = {'recognized_charge', 'rounding_charge'};
+    const waivers = {'recognized_waiver', 'rounding_waiver'};
+    final kind = values['adjustmentKind'];
+    final type = recordType;
     return switch (input.key) {
       'intervalDays' => values['frequency'] == 'custom',
       'firstDue' ||
       'installmentCount' ||
       'splitMode' => (values['frequency'] ?? '').isNotEmpty,
+      // Shown under the account it's about, once the rules ask.
+      'acknowledge' => false,
+      'providerPayoff' => false,
+      'account' when type == 'borrowing' => values['fundingUse'] == 'cash',
+      'withheld' when type == 'borrowing' => values['fundingUse'] == 'cash',
+      'category' when type == 'borrowing' => values['fundingUse'] == 'purchase',
+      'chargeType' ||
+      'category' when type == 'debtAdjustment' => charges.contains(kind),
+      'waiverBasis' when type == 'debtAdjustment' => waivers.contains(kind),
+      'chargeSource' when type == 'debtAdjustment' =>
+        waivers.contains(kind) && values['waiverBasis'] == 'recognized_charge',
       _ => true,
     };
   }
+
+  /// Log a debt payment asks for the essentials; the rest of the record
+  /// comes from its answers (DESIGN_SYSTEM §2 Debts). Corrections keep every
+  /// field. The rules still check the whole command, and nothing saves
+  /// before Review.
+  bool get simplePayment =>
+      widget.operation == 'debtPayment' && widget.replacing == null;
+  bool needsConsent = false;
+
+  static const coverageChoices = [
+    PickerOption(
+      value: 'confirmed_total',
+      label: 'All of it lowers what I owe',
+      description: 'Your lender confirmed the whole amount goes to your debt.',
+    ),
+    PickerOption(
+      value: 'unresolved',
+      label: "I don't know the breakdown yet",
+      description: 'Logs the payment now. You can break it down later.',
+    ),
+    PickerOption(
+      value: 'known_components',
+      label: 'I have the exact breakdown',
+      description: 'Enter what went to your debt, interest and fees.',
+    ),
+  ];
+
+  /// Debts that can take a payment; a closed one can't.
+  List<DebtProgress> get payable => [
+    for (final d in overviewDebtProgress(c.snapshot, civilToday()))
+      if (!d.closed) d,
+  ];
+
+  DebtProgress? get paymentDebt =>
+      payable.where((d) => d.debt.id == values['debt']).firstOrNull;
+
+  /// Extra due dates, each `id,amount`, past the one in "Which payment?".
+  List<(String, String)> get extraRows => [
+    for (final line in (values['extraRows'] ?? '').split('\n'))
+      if (line.contains(',')) (line.split(',').first, line.split(',').last),
+  ];
+
+  void setExtraRows(List<(String, String)> rows) {
+    values['extraRows'] = [for (final r in rows) '${r.$1},${r.$2}'].join('\n');
+    retain();
+  }
+
+  BigInt optionalAmount(String key) {
+    final text = answer(key);
+    return text.isEmpty
+        ? BigInt.zero
+        : amountOf(text, 'Enter an amount like 1500.00.', field: key);
+  }
+
+  /// What each due date gets out of [contractual]. The row in "Which
+  /// payment?" takes what's left on it; extra dates take what the user
+  /// typed. Nothing else is applied: the rest stays unapplied.
+  ({List<(String, BigInt)> rows, BigInt unapplied}) paymentSplit(
+    BigInt contractual,
+  ) {
+    final open = {
+      for (final (row, left)
+          in paymentDebt?.due.open ?? const <(FinanceScheduleRow, BigInt)>[])
+        row.id: left,
+    };
+    var rest = contractual;
+    final extras = [
+      for (final (i, (id, amount)) in extraRows.indexed)
+        if (id.isNotEmpty)
+          (
+            id,
+            amountOf(
+              amount,
+              'Enter an amount like 1500.00.',
+              field: 'extra-$i',
+            ),
+          ),
+    ];
+    for (final (_, amount) in extras) {
+      rest -= amount;
+    }
+    final id = values['paymentRow'] ?? '';
+    final left = open[id];
+    final rows = <(String, BigInt)>[];
+    if (left != null && rest > BigInt.zero) {
+      final take = rest < left ? rest : left;
+      rows.add((id, take));
+      rest -= take;
+    }
+    return (rows: [...rows, ...extras], unapplied: rest);
+  }
+
+  /// The record's other fields, from the answers.
+  void paymentValues(Map<String, String> v) {
+    final amount = amountOf(
+      answer('amount'),
+      'Enter the amount you paid, like 2000.00.',
+      field: 'amount',
+    );
+    final external = optionalAmount('externalFee');
+    final contractual = amount - external;
+    final split = paymentSplit(contractual);
+    final debt = paymentDebt;
+    v['externalFee'] = phpDecimal(external);
+    v['allocations'] = [
+      for (final (id, value) in split.rows) '$id,${phpDecimal(value)}',
+    ].join('\n');
+    v['scheduleSource'] = split.rows.isEmpty ? '' : debt!.due.schedule!.id;
+    v['unapplied'] = phpDecimal(split.unapplied);
+    if (answer('name').isEmpty && debt != null) {
+      v['name'] = 'Payment · ${debt.debt.title}';
+    }
+    switch (answer('certainty')) {
+      case 'confirmed_total':
+        v['reduction'] = phpDecimal(contractual);
+        v['clearing'] = v['interest'] = v['fee'] = '0.00';
+        v['principalReduction'] = v['reductionSources'] = '';
+      case 'unresolved':
+        v['clearing'] = phpDecimal(contractual);
+        v['reduction'] = v['interest'] = v['fee'] = '0.00';
+        v['principalReduction'] = v['reductionSources'] = '';
+      default:
+        for (final key in ['reduction', 'interest', 'fee', 'clearing']) {
+          v[key] = phpDecimal(optionalAmount(key));
+        }
+    }
+  }
+
+  Map<String, String> get paymentDetails {
+    final v = reviewed?.values ?? const <String, String>{};
+    final applied = (v['allocations'] ?? '')
+        .split('\n')
+        .where((l) => l.isNotEmpty);
+    final unapplied = v['unapplied'] ?? '0.00';
+    return {
+      'Applied to': applied.isEmpty
+          ? 'Not tied to a due date'
+          : [
+              for (final line in applied)
+                '${line.split(',').first}: ${c.amount(parsePhp(line.split(',').last))}',
+            ].join(' · '),
+      if (parsePhp(unapplied) > BigInt.zero)
+        'Stays unapplied': c.amount(parsePhp(unapplied)),
+      'What it covers': coverageChoices
+          .firstWhere(
+            (o) => o.value == v['certainty'],
+            orElse: () => coverageChoices[1],
+          )
+          .label,
+      if ((v['reference'] ?? '').isNotEmpty)
+        'Lender reference': v['reference']!,
+      if ((v['notes'] ?? '').isNotEmpty) 'Notes': v['notes']!,
+    };
+  }
+
+  TextEditingController controllerFor(String key) => fields.putIfAbsent(
+    key,
+    () => TextEditingController(text: values[key] ?? ''),
+  );
+
+  void changed(String key, String value) {
+    values[key] = value;
+    if (errorField == key) errorField = errorMessage = null;
+    retain();
+  }
+
+  Widget amountInput(
+    String key,
+    String label, {
+    String? helper,
+    String? info,
+    bool required = false,
+    bool signed = false,
+  }) => Padding(
+    key: anchor(key),
+    padding: gapAbove(info: info != null),
+    child: AmountField(
+      key: ValueKey('native-$key'),
+      label: label,
+      controller: controllerFor(key),
+      required: required,
+      signed: signed,
+      helper: helper,
+      info: info,
+      errorText: problemFor(key),
+      onChanged: (x) => changed(key, x),
+    ),
+  );
+
+  /// The space above a field; the form's first field has none.
+  EdgeInsets gapAbove({bool info = false}) {
+    final first = firstField;
+    firstField = false;
+    return EdgeInsets.only(
+      top: first ? 0 : CompactForm.gapBefore(context, info: info),
+    );
+  }
+
+  bool firstField = true;
+
+  Widget textInput(
+    String key,
+    String label, {
+    String? helper,
+    String? info,
+    bool required = false,
+    int lines = 1,
+    FieldInput? input,
+  }) => Padding(
+    key: anchor(key),
+    padding: gapAbove(info: info != null),
+    child: HelpTextField(
+      key: ValueKey('native-$key'),
+      label: label,
+      input: input,
+      controller: controllerFor(key),
+      helper: helper,
+      info: info,
+      required: required,
+      maxLines: lines,
+      errorText: problemFor(key),
+      onChanged: (x) => changed(key, x),
+    ),
+  );
+
+  Widget pickInput(
+    String key,
+    String label,
+    Map<String, String> options, {
+    bool required = false,
+    String? helper,
+    String? info,
+    String? disabledReason,
+    ValueChanged<String>? onChanged,
+    Map<String, String> descriptions = const {},
+  }) => Padding(
+    key: anchor(key),
+    padding: gapAbove(info: info != null),
+    child: OptionPicker<String>(
+      key: ValueKey('native-select-$key'),
+      label: label,
+      style: PickerStyle.dropdown,
+      required: required,
+      helper: helper,
+      info: info,
+      disabledReason: disabledReason,
+      errorText: problemFor(key),
+      value: values[key],
+      options: [
+        for (final e in options.entries)
+          PickerOption(
+            value: e.key,
+            label: e.value,
+            description: descriptions[e.key],
+          ),
+      ],
+      onChanged: disabledReason != null
+          ? null
+          : (x) {
+              changed(key, x);
+              onChanged?.call(x);
+            },
+    ),
+  );
+
+  Widget dateInput(
+    String key,
+    String label, {
+    String? helper,
+    bool required = false,
+  }) => Padding(
+    key: anchor(key),
+    padding: gapAbove(),
+    child: DateField(
+      key: ValueKey('native-$key'),
+      label: label,
+      required: required,
+      helper: helper,
+      value: DateTime.tryParse(answer(key)),
+      errorText: problemFor(key),
+      onChanged: (d) =>
+          changed(key, d == null ? '' : d.toIso8601String().substring(0, 10)),
+    ),
+  );
+
+  /// Shown only once the rules ask for it.
+  Widget consentInput() => Padding(
+    key: anchor('acknowledge'),
+    padding: gapAbove(),
+    child: OptionPicker<String>(
+      key: const ValueKey('native-select-acknowledge'),
+      label: 'This takes the account below zero',
+      style: PickerStyle.radio,
+      value: answer('acknowledge'),
+      options: const [
+        PickerOption(
+          value: 'true',
+          label: 'That is right',
+          description: 'Save it with a negative balance.',
+        ),
+        PickerOption(
+          value: 'false',
+          label: 'Let me check',
+          description: 'Keep the balance as it is for now.',
+        ),
+      ],
+      onChanged: (x) {
+        if (errorField == 'account') errorField = errorMessage = null;
+        changed('acknowledge', x);
+      },
+    ),
+  );
+
+  static const dateKeys = {
+    'date',
+    'firstDue',
+    'start',
+    'end',
+    'endExclusive',
+    'issued',
+    'due',
+    'postingDate',
+    'targetDate',
+    'logicalDate',
+    'from',
+    'through',
+  };
+
+  /// Fields that take one kind of value, besides dates and money.
+  static const wholeNumberKeys = {
+    'installmentCount',
+    'intervalDays',
+    'interval',
+    'monthDay',
+    'count',
+  };
+
+  /// Inputs that choose a money account.
+  static const accountKeys = {'account', 'fromAccount'};
+
+  bool isAmount(FinanceInput input) =>
+      input.options == null &&
+      (input.money || (input.lines == 1 && input.label.contains(' PHP')));
+
+  /// A date picker needs no format, and a ₱ field no currency.
+  String plainLabel(FinanceInput input) => input.label
+      .replaceAll(' · YYYY-MM-DD', '')
+      .replaceAll(isAmount(input) ? ' PHP' : '\u0000', '');
+
+  void frequencyChanged(String _) {
+    if (values['frequency'] == '') {
+      clearCadence([
+        'firstDue',
+        'intervalDays',
+        'installmentAmount',
+        'installmentCount',
+        'totalAmount',
+        'paymentAmounts',
+      ]);
+      values['splitMode'] = widget.replacing == null ? 'divide' : '';
+    } else if (values['frequency'] != 'custom') {
+      clearCadence(['intervalDays']);
+    }
+  }
+
+  /// Payments on the chosen debt that still have no breakdown.
+  Map<String, String> breakdownChoices() {
+    final debt = debtFor(values['debt']);
+    return {
+      for (final p in debtPaymentRows(c.snapshot, debt: debt?.actionId))
+        if (p.left > BigInt.zero)
+          p.record.id:
+              '${p.record.title} · ${civilLabel(p.date)} · ${c.amount(p.left)} left',
+    };
+  }
+
+  String? helpFor(FinanceInput input) {
+    if (input.key == 'amount' && recordType == 'debtPayoff') {
+      final debt = debtFor(values['debt']);
+      if (debt != null) {
+        final owed = -financeBalance(
+          c.snapshot,
+          'debt_liability',
+          'debt',
+          debt.actionId,
+          through: civilToday(),
+        );
+        return 'What you owe now: ${c.amount(owed)}';
+      }
+    }
+    return input.help;
+  }
+
+  Widget fieldFor(FinanceInput input) {
+    final key = input.key, label = plainLabel(input);
+    if (key == 'acknowledge') return consentInput();
+    if (dateKeys.contains(key)) {
+      return dateInput(
+        key,
+        label,
+        helper: input.help,
+        required: !label.contains('optional'),
+      );
+    }
+    if (input.options != null) {
+      final classifying =
+          key == 'payment' && recordType == 'debtClassification';
+      return pickInput(
+        key,
+        label,
+        classifying ? breakdownChoices() : input.options!,
+        required: input.required,
+        helper: input.help,
+        info: input.info,
+        disabledReason: key == 'splitMode' && paymentCount == null
+            ? 'Enter how many payments are left first.'
+            : null,
+        onChanged: key == 'frequency' ? frequencyChanged : null,
+        descriptions: accountKeys.contains(key)
+            ? balanceLines(input.options!, key)
+            : const {},
+      );
+    }
+    if (isAmount(input)) {
+      return amountInput(
+        key,
+        label,
+        helper: helpFor(input),
+        info: input.info,
+        required: input.required,
+        signed: input.label.contains('Signed'),
+      );
+    }
+    return textInput(
+      key,
+      label,
+      helper: input.help,
+      info: input.info,
+      required: input.required,
+      lines: input.lines,
+      input: wholeNumberKeys.contains(key)
+          ? FieldInput.wholeNumber
+          : key == 'weekdays'
+          ? FieldInput.numberList
+          : null,
+    );
+  }
+
+  /// A problem no field can show.
+  List<Widget> formProblem(Iterable<String?> shown) {
+    final message = errorMessage;
+    return [
+      if (message != null && !shown.contains(errorField)) ...[
+        InlineNotice(message, tone: NoticeTone.error, live: true),
+        const SizedBox(height: Space.md),
+      ],
+    ];
+  }
+
+  List<Widget> formFields() {
+    final shown = [
+      if (widget.operation != 'financeReversal') ...inputs.where(visible),
+      if (widget.replacing != null && !inputs.any((i) => i.key == 'reason'))
+        const FinanceInput('reason', 'Why you are changing this'),
+    ];
+    final more = shown.where((i) => i.more).toList();
+    return [
+      ...formProblem([
+        for (final i in shown) i.key,
+        'paymentTotal',
+        if (errorField?.startsWith('payment-') ?? false) errorField,
+      ]),
+      for (final input in shown.where((i) => !i.more)) ...[
+        fieldFor(input),
+        if (input.key == 'account' && needsConsent) consentInput(),
+        if (input.key == 'splitMode' &&
+            answer('frequency').isNotEmpty &&
+            paymentCount != null)
+          answer('splitMode') == 'varied'
+              ? paymentAmountFields()
+              : divideSummary(),
+      ],
+      if (more.isNotEmpty) ...[
+        SizedBox(height: CompactForm.fieldGap(context)),
+        FormMoreDetails(
+          open: more.any((i) => i.key == errorField),
+          children: [for (final input in more) fieldFor(input)],
+        ),
+      ],
+      if (needsConsent && !shown.any((i) => i.key == 'account')) consentInput(),
+    ];
+  }
+
+  /// Where the amount goes, as the user changes it.
+  Widget paymentPreview() {
+    final text = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: CraftTheme.of(context).secondary);
+    try {
+      final amount = amountOf(answer('amount'), '', field: 'amount');
+      final split = paymentSplit(amount - optionalAmount('externalFee'));
+      if (split.rows.isEmpty) return const SizedBox.shrink();
+      final parts = [
+        for (final (id, value) in split.rows) '${c.amount(value)} goes to $id',
+        if (split.unapplied > BigInt.zero)
+          '${c.amount(split.unapplied)} stays unapplied',
+      ];
+      return Padding(
+        padding: const EdgeInsets.only(top: Space.xs),
+        child: Text(
+          parts.join(' · '),
+          key: const ValueKey('payment-preview'),
+          style: text,
+        ),
+      );
+    } on LocalRuleException {
+      return const SizedBox.shrink();
+    }
+  }
+
+  List<Widget> extraRowInputs(Map<String, String> rows) {
+    final extras = extraRows;
+    return [
+      for (final (i, (id, _)) in extras.indexed) ...[
+        Padding(
+          padding: EdgeInsets.only(top: CompactForm.fieldGap(context)),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: OptionPicker<String>(
+                  label: 'Also applied to',
+                  style: PickerStyle.dropdown,
+                  value: id,
+                  options: [
+                    for (final e in rows.entries)
+                      if (e.key.isNotEmpty)
+                        PickerOption(value: e.key, label: e.value),
+                  ],
+                  onChanged: (x) => setExtraRows([
+                    for (final (n, row) in extras.indexed)
+                      n == i ? (x, row.$2) : row,
+                  ]),
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              SizedBox(
+                width: Space.xxxl * 3,
+                child: AmountField(
+                  key: ValueKey('native-extra-$i'),
+                  label: 'Amount',
+                  controller: controllerFor('extra-$i'),
+                  errorText: problemFor('extra-$i'),
+                  onChanged: (x) => setExtraRows([
+                    for (final (n, row) in extras.indexed)
+                      n == i ? (row.$1, x) : row,
+                  ]),
+                ),
+              ),
+              AppIconButton(
+                icon: Icons.close,
+                tooltip: 'Remove this due date',
+                onPressed: () {
+                  final next = [
+                    for (final (n, row) in extras.indexed)
+                      if (n != i) row,
+                  ];
+                  for (final (n, row) in next.indexed) {
+                    controllerFor('extra-$n').text = row.$2;
+                  }
+                  setExtraRows(next);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+      if (rows.length > extras.length + 1)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: CardLink(
+            'Add another due date',
+            icon: Icons.add,
+            onPressed: () => setExtraRows([...extras, ('', '')]),
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> paymentFields() {
+    final debts = payable;
+    final debt = paymentDebt;
+    final rows = <String, String>{
+      '': 'Not tied to a due date',
+      for (final (row, left)
+          in debt?.due.open ?? const <(FinanceScheduleRow, BigInt)>[])
+        row.id: '${row.id} · ${civilLabel(row.date)} · ${c.amount(left)} left',
+    };
+    final accounts = {
+      for (final a in c.snapshot.accounts.where((a) => !a.archived))
+        a.id: a.name,
+    };
+    final categories = c.categoryChoices('expense');
+    final known = answer('certainty') == 'known_components';
+    return [
+      ...formProblem(paymentShownKeys),
+      pickInput(
+        'debt',
+        'Debt',
+        {for (final d in debts) d.debt.id: d.debt.title},
+        required: true,
+        onChanged: (_) {
+          values['paymentRow'] = values['extraRows'] = '';
+          setState(() {});
+        },
+      ),
+      pickInput(
+        'paymentRow',
+        'Which payment?',
+        rows,
+        helper: 'Only a payment logged against a due date counts toward it.',
+        disabledReason: debt == null ? 'Choose the debt first.' : null,
+        onChanged: (id) {
+          final left = debt?.due.open
+              .where((o) => o.$1.id == id)
+              .firstOrNull
+              ?.$2;
+          if (left != null && answer('amount').isEmpty) {
+            values['amount'] = controllerFor('amount').text = phpDecimal(left);
+          }
+          setState(() {});
+        },
+      ),
+      amountInput('amount', 'Amount', required: true),
+      paymentPreview(),
+      pickInput(
+        'account',
+        'Paid from',
+        accounts,
+        required: true,
+        descriptions: balanceLines(accounts, 'account'),
+      ),
+      if (needsConsent) consentInput(),
+      dateInput('date', 'Date', required: true),
+      Padding(
+        key: anchor('certainty'),
+        padding: gapAbove(info: true),
+        child: OptionPicker<String>(
+          key: const ValueKey('native-select-certainty'),
+          label: 'What does this payment cover?',
+          style: PickerStyle.radio,
+          value: answer('certainty'),
+          info: 'Only choose the first if your lender confirmed it. If you are not sure, log it now and break it down later.',
+          errorText: problemFor('certainty'),
+          options: coverageChoices,
+          onChanged: (x) => setState(() => changed('certainty', x)),
+        ),
+      ),
+      if (known) ...[
+        amountInput('reduction', 'Lowers what you owe'),
+        amountInput(
+          'principalReduction',
+          'Part of that which is principal',
+          helper: 'Leave this blank if your lender did not say.',
+        ),
+        amountInput('interest', 'New interest'),
+        amountInput('fee', 'New fee'),
+        pickInput('interestCategory', 'Interest category', categories),
+        pickInput('feeCategory', 'Fee category', categories),
+        amountInput('clearing', 'Still without a breakdown'),
+      ],
+      SizedBox(height: CompactForm.fieldGap(context)),
+      FormMoreDetails(
+        open: const {
+          'externalFee',
+          'reference',
+          'notes',
+          'name',
+        }.contains(errorField),
+        children: [
+          amountInput(
+            'externalFee',
+            'Fee you paid to send it',
+            helper: 'For example a transfer fee. It counts as spending.',
+          ),
+          ...extraRowInputs(rows),
+          if (known)
+            textInput(
+              'reductionSources',
+              'Charges this lowers',
+              lines: 4,
+              helper: 'One per line: the charge record, then the amount.',
+            ),
+          textInput('reference', 'Lender reference'),
+          textInput('notes', 'Notes', lines: 3),
+          textInput(
+            'name',
+            'Description',
+            helper: 'Leave this blank to use "Payment · ‹debt›".',
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// The fields that can show their own error.
+  Set<String?> get paymentShownKeys => {
+    'debt',
+    'paymentRow',
+    'amount',
+    'account',
+    'date',
+    'certainty',
+    'externalFee',
+    'reference',
+    'notes',
+    'name',
+    if (answer('certainty') == 'known_components') ...[
+      'reduction',
+      'principalReduction',
+      'interest',
+      'fee',
+      'clearing',
+    ],
+  };
 
   void clearCadence(Iterable<String> keys) {
     for (final key in keys) {
@@ -1063,7 +2008,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       final sum = sumMinor(amounts);
       if (sum != target) {
         reject(
-          'The payments add up to ${c.decimal(sum)} PHP, but the debt is ${c.decimal(target)} PHP. The payments must add up to the debt exactly.',
+          'The payments add up to ${c.amount(sum)}, but the debt is ${c.amount(target)}. The payments must add up to the debt exactly.',
           field: 'paymentTotal',
         );
       }
@@ -1098,8 +2043,8 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       final f => f,
     };
     final money = same
-        ? '${list.length} payments of ${c.decimal(amounts.first)} PHP'
-        : '${list.length} payments totaling ${c.decimal(total)} PHP (${c.decimal(lo)} to ${c.decimal(hi)} each)';
+        ? '${list.length} payments of ${c.amount(amounts.first)}'
+        : '${list.length} payments totaling ${c.amount(total)} (${c.amount(lo)} to ${c.amount(hi)} each)';
     return '$money · $every · first ${list.first.date} · last ${list.last.date}';
   }
 
@@ -1122,7 +2067,19 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     final v = Map<String, String>.from(values)
       ..remove('installmentCount')
       ..remove('totalAmount')
-      ..remove('paymentAmounts');
+      ..remove('paymentAmounts')
+      ..remove('paymentRow')
+      ..remove('extraRows');
+    if (simplePayment) paymentValues(v);
+    if (recordType == 'debtPayoff') v['providerPayoff'] = answer('amount');
+    if (widget.replacing == null && answer('name').isEmpty) {
+      final debt = debtFor(values['debt']);
+      if (debt != null && widget.operation == 'debtPayoff') {
+        v['name'] = 'Payoff · ${debt.title}';
+      } else if (debt != null && widget.operation == 'debtClassification') {
+        v['name'] = 'Breakdown · ${debt.title}';
+      }
+    }
     if (widget.replacing == null &&
         ['debtImport', 'borrowing'].contains(widget.operation)) {
       v.removeWhere((k, _) => cadenceKeys.contains(k));
@@ -1153,6 +2110,12 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     if (rows == null) return;
     scheduleFailed = false;
     try {
+      // The new debt is still waiting to sync, and a schedule needs the
+      // latest records.
+      if (c.connected) {
+        await c.syncLatest?.call();
+        await c.reload();
+      }
       final schedule = LocalCommand(
         id: newLocalId(),
         owner: c.store.owner,
@@ -1176,7 +2139,9 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       scheduleNote = 'Payment schedule saved: $schedulePreview.';
     } catch (e) {
       scheduleFailed = true;
-      final why = e is LocalRuleException
+      final why = isSyncBlock(e)
+          ? 'it needs a connection to check your latest records.'
+          : e is LocalRuleException
           ? e.message
           : e is FormatException
           ? e.message
@@ -1187,28 +2152,13 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     }
   }
 
-  Future<void> pickDate(String key) async {
-    final typed = DateTime.tryParse(answer(key));
-    final today = DateTime.parse('${civilToday()}T00:00:00');
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: typed != null && typed.year >= 2000 && typed.year <= 2100
-          ? typed
-          : today,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked == null || !mounted) return;
-    final text =
-        '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-    values[key] = text;
-    fields[key]?.text = text;
-    retain();
-  }
-
   /// One amount per payment, labeled with the date it falls on.
   Widget paymentAmountFields() {
     final count = paymentCount;
+    final text = Theme.of(context).textTheme;
+    final muted = text.bodySmall?.copyWith(
+      color: CraftTheme.of(context).secondary,
+    );
     List<String>? dates;
     if (count != null) {
       try {
@@ -1227,11 +2177,13 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         dates = null;
       }
     }
+    final top = EdgeInsets.only(top: CompactForm.fieldGap(context));
     if (count == null || dates == null) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 18),
+      return Padding(
+        padding: top,
         child: Text(
           'Enter the next payment date and how many payments are left, and a box for each payment will appear here.',
+          style: muted,
         ),
       );
     }
@@ -1254,70 +2206,67 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     }
     final totalProblem = problemFor('paymentTotal');
     final error = Theme.of(context).colorScheme.error;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: top,
+          child: Text(
             target == null
                 ? 'Enter the amount for each payment. Together they must add up to the whole debt.'
-                : 'Enter the amount for each payment. Together they must add up to the whole debt of ${c.decimal(target)} PHP.',
+                : 'Enter the amount for each payment. Together they must add up to the whole debt of ${c.amount(target)}.',
+            style: muted,
           ),
-          const SizedBox(height: 12),
-          for (var i = 0; i < count; i++)
-            Padding(
-              key: anchor('payment-$i'),
-              padding: const EdgeInsets.only(bottom: 10),
-              child: TextField(
-                key: ValueKey('native-payment-$i'),
-                controller: fields.putIfAbsent(
-                  'payment-$i',
-                  () => TextEditingController(
-                    text: i < entered.length ? entered[i] : '',
-                  ),
+        ),
+        for (var i = 0; i < count; i++)
+          Padding(
+            key: anchor('payment-$i'),
+            padding: top,
+            child: AmountField(
+              key: ValueKey('native-payment-$i'),
+              label: 'Payment ${i + 1} · due ${civilLabel(dates[i])}',
+              controller: fields.putIfAbsent(
+                'payment-$i',
+                () => TextEditingController(
+                  text: i < entered.length ? entered[i] : '',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Payment ${i + 1} · due ${dates[i]} (PHP)',
-                  errorText: problemFor('payment-$i'),
-                ),
-                onChanged: (x) {
-                  final list = payments.toList();
-                  while (list.length <= i) {
-                    list.add('');
-                  }
-                  list[i] = x.trim();
-                  values['paymentAmounts'] = list.join('\n');
-                  if (errorField == 'payment-$i' ||
-                      errorField == 'paymentTotal') {
-                    errorField = null;
-                  }
-                  retain();
-                },
               ),
+              errorText: problemFor('payment-$i'),
+              onChanged: (x) {
+                final list = payments.toList();
+                while (list.length <= i) {
+                  list.add('');
+                }
+                list[i] = x.trim();
+                values['paymentAmounts'] = list.join('\n');
+                if (errorField == 'payment-$i' ||
+                    errorField == 'paymentTotal') {
+                  errorField = errorMessage = null;
+                }
+                retain();
+              },
             ),
-          Text(
-            key: anchor('paymentTotal'),
-            '$filled of $count amounts entered · total ${c.decimal(total)} PHP'
+          ),
+        Padding(
+          key: anchor('paymentTotal'),
+          padding: top,
+          child: Text(
+            '$filled of $count amounts entered · total ${c.amount(total)}'
             '${target == null
                 ? ''
                 : total == target
                 ? ' · adds up to the debt'
                 : total < target
-                ? ' · ${c.decimal(target - total)} PHP still to assign'
-                : ' · ${c.decimal(total - target)} PHP over the debt'}',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
+                ? ' · ${c.amount(target - total)} still to assign'
+                : ' · ${c.amount(total - target)} over the debt'}',
+            style: text.titleSmall?.copyWith(
               color: totalProblem != null ? error : null,
             ),
           ),
-          if (totalProblem != null)
-            Text(totalProblem, style: TextStyle(color: error)),
-        ],
-      ),
+        ),
+        if (totalProblem != null)
+          Text(totalProblem, style: text.bodySmall?.copyWith(color: error)),
+      ],
     );
   }
 
@@ -1329,14 +2278,18 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       final target = debtTarget();
       final parts = debtSplitAmounts(target, count!);
       text = parts.first == parts.last
-          ? 'Your debt of ${c.decimal(target)} PHP will be paid in ${parts.length} equal payments of ${c.decimal(parts.first)} PHP.'
-          : 'Your debt of ${c.decimal(target)} PHP will be paid in ${parts.length} payments of ${c.decimal(parts.first)} PHP, with the last payment ${c.decimal(parts.last)} PHP so the total is exact.';
+          ? 'Your debt of ${c.amount(target)} will be paid in ${parts.length} equal payments of ${c.amount(parts.first)}.'
+          : 'Your debt of ${c.amount(target)} will be paid in ${parts.length} payments of ${c.amount(parts.first)}, with the last payment ${c.amount(parts.last)} so the total is exact.';
     } on LocalRuleException catch (e) {
       text = e.message;
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Text(text),
+      padding: EdgeInsets.only(top: CompactForm.fieldGap(context)),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: CraftTheme.of(context).secondary),
+      ),
     );
   }
 
@@ -1349,220 +2302,170 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => FormExitGuard(
-    dirty: dirty && result == null,
-    busy: busy || loading || unknown,
-    keepDraft: () async {
-      await writes;
-      if (draftFailed) throw StateError('Draft not saved');
-    },
-    child: FinancePage(
-      title: widget.title,
-      child: WorkspaceForm(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) {
+    firstField = true;
+    return FormExitGuard(
+      dirty: dirty && result == null,
+      busy: busy || loading || unknown,
+      keepDraft: () async {
+        await writes;
+        if (draftFailed) throw StateError('Draft not saved');
+      },
+      child: CompactForm(
+        child: SectionPage(
+          title: widget.title,
+          caption: loading || result != null
+              ? null
+              : reviewed == null
+              ? 'Step 1 of 2 · Details · * Required'
+              : 'Step 2 of 2 · Review',
+          maxWidth: Space.formMaxWidth,
+          child: SurfaceCard(child: body()),
+        ),
+      ),
+    );
+  }
+
+  /// Windows: end-aligned, the primary rightmost. Android: full width.
+  Widget actions(Widget primary, [Widget? secondary]) => isDesktop(context)
+      ? Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            if (!loading && result == null) ...[
-              WorkspaceSteps(active: reviewed == null ? 0 : 1),
-              FinanceHeading(
-                'FINANCIAL WORKFLOW',
-                widget.title,
-                'Review the exact effects before saving.',
-              ),
-              const Text(
-                'Back keeps your encrypted draft. Nothing posts until you save reviewed values.',
-              ),
-              const SizedBox(height: 20),
+            if (secondary != null) ...[
+              secondary,
+              const SizedBox(width: Space.sm),
             ],
-            if (loading)
-              const LinearProgressIndicator()
-            else if (result != null) ...[
-              const WorkspaceSteps(active: 2),
-              FormStatus(
-                title: '${widget.title} saved',
-                message: 'Saved securely on this device.',
-                tone: NoticeTone.success,
-              ),
-              if (scheduleNote != null)
-                FormStatus(
-                  title: scheduleFailed
-                      ? 'Schedule not saved'
-                      : 'Schedule saved',
-                  message: scheduleNote!,
-                  tone: scheduleFailed
-                      ? NoticeTone.warning
-                      : NoticeTone.success,
-                ),
-              if (c.connected)
-                FormSyncStatus(state: c.synchronizationStates[id]),
-              if (plan != null)
-                FinancialReview(
-                  plan: plan!,
-                  snapshot: reviewSnapshot!,
-                  amount: c.amount,
-                  hidden: c.amountsHidden,
-                  commandId: id,
-                  details: reviewDetails,
-                ),
-              if (plan == null)
-                FormEvidence(
-                  children: [SelectableText('Original command: $id')],
-                ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
-              ),
-            ] else ...[
-              if (error != null)
-                FormStatus(
-                  title: unknown
-                      ? 'The result is uncertain'
-                      : draftFailed
-                      ? 'Draft needs attention'
-                      : 'Could not save',
-                  message: unknown
-                      ? '$error Reopen this profile to inspect the original command before submitting changed values.'
-                      : error!,
-                  tone: unknown || draftFailed
-                      ? NoticeTone.warning
-                      : NoticeTone.error,
-                ),
-              if (busy)
-                const FormStatus(
-                  title: 'Saving\u2026',
-                  message: 'Keep this form open while the operation completes.',
-                  busy: true,
-                ),
-              if (reviewed == null) ...[
-                for (final input in [
-                  if (widget.operation != 'financeReversal')
-                    ...inputs.where(visible),
-                  if (widget.replacing != null)
-                    const FinanceInput(
-                      'reason',
-                      'Correction / reversal reason',
-                    ),
-                ]) ...[
-                  Padding(
-                    key: anchor(input.key),
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: input.options == null
-                        ? TextField(
-                            key: ValueKey('native-${input.key}'),
-                            controller: fields.putIfAbsent(
-                              input.key,
-                              () => TextEditingController(
-                                text: values[input.key] ?? '',
-                              ),
-                            ),
-                            minLines: input.lines,
-                            maxLines: input.lines,
-                            decoration: InputDecoration(
-                              labelText: input.label,
-                              helperText: input.help,
-                              helperMaxLines: 3,
-                              errorText: problemFor(input.key),
-                              errorMaxLines: 3,
-                              suffixIcon: input.key == 'firstDue'
-                                  ? IconButton(
-                                      tooltip: 'Pick a date',
-                                      icon: const Icon(
-                                        Icons.calendar_today_outlined,
-                                      ),
-                                      onPressed: () => pickDate(input.key),
-                                    )
-                                  : null,
-                            ),
-                            onChanged: (x) {
-                              values[input.key] = x;
-                              if (errorField == input.key) errorField = null;
-                              retain();
-                            },
-                          )
-                        : DropdownButtonFormField<String>(
-                            key: ValueKey('native-select-${input.key}'),
-                            initialValue:
-                                input.options!.containsKey(values[input.key])
-                                ? values[input.key]
-                                : null,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: input.label,
-                              helperText:
-                                  input.key == 'splitMode' &&
-                                      paymentCount == null
-                                  ? 'Enter how many payments are left first.'
-                                  : input.help,
-                              helperMaxLines: 3,
-                              errorText: problemFor(input.key),
-                              errorMaxLines: 3,
-                            ),
-                            items: [
-                              for (final item in input.options!.entries)
-                                DropdownMenuItem(
-                                  value: item.key,
-                                  child: Text(
-                                    item.value,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                            ],
-                            onChanged:
-                                input.key == 'splitMode' && paymentCount == null
-                                ? null
-                                : (x) {
-                                    values[input.key] = x ?? '';
-                                    if (errorField == input.key) {
-                                      errorField = null;
-                                    }
-                                    if (input.key == 'frequency') {
-                                      if (values['frequency'] == '') {
-                                        clearCadence([
-                                          'firstDue',
-                                          'intervalDays',
-                                          'installmentAmount',
-                                          'installmentCount',
-                                          'totalAmount',
-                                          'paymentAmounts',
-                                        ]);
-                                        values['splitMode'] =
-                                            widget.replacing == null
-                                            ? 'divide'
-                                            : '';
-                                      } else if (values['frequency'] !=
-                                          'custom') {
-                                        clearCadence(['intervalDays']);
-                                      }
-                                    }
-                                    retain();
-                                  },
-                          ),
-                  ),
-                  if (input.key == 'splitMode' &&
-                      answer('frequency').isNotEmpty &&
-                      paymentCount != null)
-                    answer('splitMode') == 'varied'
-                        ? paymentAmountFields()
-                        : divideSummary(),
-                ],
-              ] else ...[
-                FinancialReview(
-                  plan: plan!,
-                  snapshot: reviewSnapshot!,
-                  amount: c.amount,
-                  hidden: c.amountsHidden,
-                  commandId: id,
-                  details: reviewDetails,
-                ),
-                if (schedulePreview != null)
-                  FinanceNotice(
-                    'Payment schedule to save: $schedulePreview.\nCheck these dates and amounts match your loan agreement or lender statement. A payment only counts toward a due date when you record it against that date.',
-                  ),
-                if (c.connected)
-                  const FinanceNotice(
-                    'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
-                  ),
-                TextButton(
+            primary,
+          ],
+        )
+      : Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [primary, ?secondary],
+        );
+
+  Widget body() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (loading)
+        const LinearProgressIndicator()
+      else if (result != null) ...[
+        FormStatus(
+          title: '${widget.title} saved',
+          message: 'Saved securely on this device.',
+          tone: NoticeTone.success,
+        ),
+        if (scheduleNote != null)
+          FormStatus(
+            title: scheduleFailed ? 'Schedule not saved' : 'Schedule saved',
+            message: scheduleNote!,
+            tone: scheduleFailed ? NoticeTone.warning : NoticeTone.success,
+          ),
+        if (c.connected) FormSyncStatus(state: c.synchronizationStates[id]),
+        if (plan != null)
+          FinancialReview(
+            plan: plan!,
+            snapshot: reviewSnapshot!,
+            amount: c.amount,
+            hidden: c.amountsHidden,
+            commandId: id,
+            details: reviewDetails,
+            quietNotes: nativeDebtCommands.contains(recordType),
+          ),
+        if (plan == null)
+          FormEvidence(children: [SelectableText('Original command: $id')]),
+        SizedBox(height: CompactForm.groupGap(context)),
+        actions(
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
+          ),
+        ),
+      ] else ...[
+        if (error != null)
+          FormStatus(
+            title: unknown
+                ? 'The result is uncertain'
+                : draftFailed
+                ? 'Draft needs attention'
+                : 'Could not save',
+            message: unknown
+                ? '$error Reopen this profile to inspect the original command before submitting changed values.'
+                : error!,
+            tone: unknown || draftFailed
+                ? NoticeTone.warning
+                : NoticeTone.error,
+          ),
+        if (busy)
+          FormStatus(
+            title: syncing
+                ? 'Checking your latest records\u2026'
+                : 'Saving\u2026',
+            message: 'Keep this form open while the operation completes.',
+            busy: true,
+          ),
+        if (reviewed == null)
+          ...(simplePayment ? paymentFields() : formFields())
+        else ...[
+          FinancialReview(
+            plan: plan!,
+            snapshot: reviewSnapshot!,
+            amount: c.amount,
+            hidden: c.amountsHidden,
+            commandId: id,
+            details: reviewDetails,
+            quietNotes: nativeDebtCommands.contains(recordType),
+          ),
+          if (schedulePreview != null) ...[
+            SizedBox(height: CompactForm.fieldGap(context)),
+            InlineNotice(
+              'Payment schedule to save: $schedulePreview.\nCheck these dates and amounts match your loan agreement or lender statement. A payment only counts toward a due date when you log it against that date.',
+            ),
+          ],
+          if (c.connected) ...[
+            SizedBox(height: CompactForm.fieldGap(context)),
+            const InlineNotice(
+              'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
+            ),
+          ],
+          if (syncBlocked || rechecked || needsLatest)
+            SizedBox(height: CompactForm.fieldGap(context)),
+          if (syncBlocked)
+            const InlineNotice(
+              syncBlockedMessage,
+              title: syncBlockedTitle,
+              tone: NoticeTone.warning,
+              live: true,
+            )
+          else if (rechecked)
+            const InlineNotice(
+              'Syncing brought in newer records, so this review was updated. Check it again, then save.',
+              title: 'Your records changed',
+              tone: NoticeTone.warning,
+              live: true,
+            )
+          else if (needsLatest)
+            const InlineNotice(
+              'Saving this checks your latest records first, so it needs a connection.',
+            ),
+        ],
+        SizedBox(height: CompactForm.groupGap(context)),
+        actions(
+          FilledButton(
+            key: const ValueKey('native-submit'),
+            onPressed: busy || draftFailed || unknown ? null : save,
+            child: Text(
+              busy
+                  ? 'Saving…'
+                  : reviewed == null
+                  ? 'Review'
+                  : syncBlocked
+                  ? 'Sync and save'
+                  : 'Save reviewed values',
+            ),
+          ),
+          reviewed == null
+              ? null
+              : TextButton(
                   onPressed: busy || unknown
                       ? null
                       : () => setState(() {
@@ -1571,26 +2474,11 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
                         }),
                   child: const Text('Edit'),
                 ),
-              ],
-              FilledButton(
-                onPressed: busy || draftFailed || unknown ? null : save,
-                child: Text(
-                  busy
-                      ? 'Saving…'
-                      : reviewed == null
-                      ? 'Review'
-                      : 'Save reviewed values',
-                ),
-              ),
-              if (unknown)
-                FormEvidence(
-                  children: [SelectableText('Original command: $id')],
-                ),
-            ],
-          ],
         ),
-      ),
-    ),
+        if (unknown)
+          FormEvidence(children: [SelectableText('Original command: $id')]),
+      ],
+    ],
   );
 }
 

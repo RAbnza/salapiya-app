@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../design_system/components.dart';
 import '../design_system/editorial.dart';
+import '../design_system/kit/kit.dart' show QuickAction;
 import '../design_system/theme.dart';
 import '../prototype/scenarios.dart';
-import 'overview_controls.dart';
 import 'overview_dashboard.dart';
 
 class SourceLink extends StatelessWidget {

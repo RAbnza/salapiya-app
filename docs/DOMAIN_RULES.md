@@ -85,8 +85,8 @@ early-repayment or settlement logic; nothing posts money)
 **Incomplete or not done**
 - Notifications and sync were out of scope and are not touched.
 - There is no loan maturity or final-payoff date field in the app. The last row
-  of the schedule is shown as "Final scheduled installment", labeled separately
-  from the next installment and as not a provider payoff date.
+  of the schedule is shown as "Last scheduled payment", labeled separately from
+  the next payment and as not a lender payoff date.
 - No "amount to be decided later" state: every payment needs an amount when
   saved. An estimate can be corrected later with Update amounts.
 - The exact-total rule does not allow schedules whose total exceeds the debt

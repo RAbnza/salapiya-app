@@ -4,7 +4,6 @@ import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
 import '../local/finance_domain.dart';
 import 'overview_charts.dart';
-import 'overview_controls.dart';
 import 'overview_data.dart';
 import 'title_bar_tools.dart';
 
@@ -38,194 +37,6 @@ Widget duePill(DebtDueStatus status) => switch (status) {
   'Card installment due' => ('Card installment', Icons.credit_score_outlined),
   _ => ('Recurring bill', Icons.autorenew),
 };
-
-/// True when [width] can't hold text and a trailing item side by side at
-/// the current text size; [base] is the width needed at 100%.
-bool narrowAt(BuildContext context, double width, [double base = rowBase]) =>
-    width < base * MediaQuery.textScalerOf(context).scale(1);
-
-/// Widths, at 100% text, below which trailing items move under the text,
-/// a card's header control moves above its content, and a table or a
-/// side-by-side card layout turns into a list.
-const rowBase = Space.xxxl * 7,
-    periodBase = Space.xxxl * 6 + Space.lg,
-    tableBase = Space.xxxl * 11;
-
-/// A `ListRow` whose trailing item moves under the text when the row is
-/// narrow, so amounts are never cut (§4).
-class AdaptiveRow extends StatelessWidget {
-  const AdaptiveRow({
-    super.key,
-    required this.title,
-    this.subtitle,
-    this.leading,
-    this.trailing,
-    this.onTap,
-  });
-  final String title;
-  final String? subtitle;
-  final IconData? leading;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => ListRow(
-      title: title,
-      subtitle: subtitle,
-      leading: leading,
-      trailing: trailing,
-      onTap: onTap,
-      stackTrailing: narrowAt(context, box.maxWidth),
-    ),
-  );
-}
-
-/// A dashboard card: a compact `titleSmall` header with an optional caption
-/// and a small trailing control, which moves above the content when the card
-/// is narrower than [stackBelow] at the current text size. [corner] (an icon
-/// button) always stays at the header's end.
-class OverviewCard extends StatelessWidget {
-  const OverviewCard({
-    super.key,
-    required this.title,
-    required this.child,
-    this.caption,
-    this.trailing,
-    this.corner,
-    this.stackBelow = rowBase,
-    this.accent = false,
-    this.centered = false,
-  });
-  final String title;
-  final String? caption;
-  final Widget? trailing, corner;
-  final Widget child;
-  final double stackBelow;
-  final bool accent;
-
-  /// When the grid row makes the card taller than its content, center the
-  /// content in the space under the header instead of leaving a gap below.
-  final bool centered;
-  @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    final text = Theme.of(context).textTheme;
-    final heading = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(header: true, child: Text(title, style: text.titleSmall)),
-        if (caption != null) ...[
-          const SizedBox(height: Space.xxs),
-          Text(caption!, style: text.bodySmall?.copyWith(color: c.secondary)),
-        ],
-      ],
-    );
-    return LayoutBuilder(
-      builder: (context, box) {
-        final stack =
-            trailing != null && narrowAt(context, box.maxWidth, stackBelow);
-        final header = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: heading),
-                if (trailing != null && !stack) ...[
-                  const SizedBox(width: Space.sm),
-                  trailing!,
-                ],
-                if (corner != null) ...[
-                  const SizedBox(width: Space.xs),
-                  corner!,
-                ],
-              ],
-            ),
-            if (stack) ...[
-              const SizedBox(height: Space.sm),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: trailing,
-              ),
-            ],
-            const SizedBox(height: Space.md),
-          ],
-        );
-        // The row's height reaches the card as a minimum; pass it on, less
-        // the card's padding and hairline, so the column can use the space.
-        final inset =
-            EdgeInsets.all(Space.cardPaddingOf(context)).vertical +
-            Border.all(color: c.divider).dimensions.vertical;
-        final minimum = centered && box.minHeight > inset
-            ? box.minHeight - inset
-            : 0.0;
-        return SurfaceCard(
-          accent: accent,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minimum),
-            // Header at the top, content centered in the rest: spaceBetween
-            // with an empty last child puts equal space above and below it.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: centered
-                  ? MainAxisAlignment.spaceBetween
-                  : MainAxisAlignment.start,
-              children: [header, child, if (centered) const SizedBox.shrink()],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// A label with its amount at the end, or the amount under it when narrow.
-class LabelAmount extends StatelessWidget {
-  const LabelAmount({super.key, required this.label, required this.amount});
-  final Widget label, amount;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => narrowAt(context, box.maxWidth)
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              label,
-              Align(alignment: AlignmentDirectional.centerEnd, child: amount),
-            ],
-          )
-        : Row(
-            children: [
-              Expanded(child: label),
-              const SizedBox(width: Space.md),
-              amount,
-            ],
-          ),
-  );
-}
-
-/// What a card shows when its source isn't complete yet.
-class NotAvailable extends StatelessWidget {
-  const NotAvailable(this.message, {super.key});
-  final String message;
-  @override
-  Widget build(BuildContext context) => EmptyState(
-    icon: Icons.hourglass_empty,
-    title: MoneyAmount.unknown,
-    message: message,
-  );
-}
-
-/// Shown instead of a chart while amounts are hidden.
-class AmountsHidden extends StatelessWidget {
-  const AmountsHidden({super.key});
-  @override
-  Widget build(BuildContext context) => const EmptyState(
-    icon: Icons.visibility_off_outlined,
-    title: 'Amounts hidden',
-    message: 'Show amounts to see this chart.',
-  );
-}
 
 /// A small muted label over a compact amount.
 class _Figure extends StatelessWidget {
@@ -278,102 +89,74 @@ enum DuesView {
   final String label;
 }
 
-/// R1–R3: what is due this week or month, a calendar strip, and the overdue
-/// rows pinned on top; or, in list view, every item in one table.
-class DuesCard extends StatefulWidget {
-  const DuesCard({
-    super.key,
-    required this.week,
-    required this.month,
-    required this.amount,
-    required this.onOpen,
-    this.available = true,
-    this.shown = 6,
-  });
-  final OverviewDues week, month;
-  final Amount amount;
-  final ValueChanged<FinancialReminderSource> onOpen;
-  final bool available;
-
-  /// Rows shown in each group before "Show all".
-  final int shown;
-  @override
-  State<DuesCard> createState() => _DuesCardState();
+/// One unpaid due item as a list row.
+Widget dueRow(
+  DueItem item,
+  Amount amount,
+  ValueChanged<FinancialReminderSource> onOpen,
+) {
+  final (kind, icon) = dueKind(item.source.kind);
+  return AdaptiveRow(
+    key: ValueKey('due-${item.source.id}'),
+    leading: icon,
+    title: item.source.title,
+    subtitle: [
+      kind,
+      civilLabel(item.date),
+      if (item.days < 0) '${_plural(-item.days, 'day')} overdue',
+    ].join(' · '),
+    trailing: Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MoneyAmount(amount(item.amount)),
+        const SizedBox(height: Space.captionGap),
+        duePill(item.status),
+      ],
+    ),
+    onTap: () => onOpen(item.source),
+  );
 }
 
-class _DuesCardState extends State<DuesCard> {
-  DuePeriod period = DuePeriod.week;
-  DuesView view = DuesView.calendar;
-  String? day;
-  bool all = false;
+/// List view: the period heading with "as of", the totals, then every item
+/// of the period in one table (a list of rows when narrow), with no limit,
+/// for reading at a glance or a screenshot.
+class DuesList extends StatelessWidget {
+  const DuesList({
+    super.key,
+    required this.dues,
+    required this.amount,
+    required this.onOpen,
+  });
+  final OverviewDues dues;
+  final Amount amount;
+  final ValueChanged<FinancialReminderSource> onOpen;
 
-  Widget row(DueItem item) {
-    final (kind, icon) = dueKind(item.source.kind);
-    return AdaptiveRow(
-      key: ValueKey('due-${item.source.id}'),
-      leading: icon,
-      title: item.source.title,
-      subtitle: [
-        kind,
-        civilLabel(item.date),
-        if (item.days < 0) '${_plural(-item.days, 'day')} overdue',
-      ].join(' · '),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MoneyAmount(widget.amount(item.amount)),
-          const SizedBox(height: Space.captionGap),
-          duePill(item.status),
-        ],
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        '${dues.period.label} · ${overviewSpan(dues.start, dues.end)} · as of ${civilLabel(dues.today)}',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: CraftTheme.of(context).secondary,
+        ),
       ),
-      onTap: () => widget.onOpen(item.source),
-    );
-  }
+      const SizedBox(height: Space.sm),
+      DueFigures(dues: dues, amount: amount, list: true),
+      const SizedBox(height: Space.md),
+      _table(context),
+    ],
+  );
 
-  Widget group(String label, List<DueItem> items, {bool overdue = false}) {
-    final c = CraftTheme.of(context);
-    final shownItems = all ? items : items.take(widget.shown).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ListRow.horizontalPadding,
-            vertical: Space.xs,
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: overdue ? c.overdue.$1 : c.secondary),
-          ),
-        ),
-        ListGroup(
-          leading: true,
-          children: [for (final i in shownItems) row(i)],
-        ),
-        if (shownItems.length < items.length)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: CardLink(
-              'Show all ${items.length}',
-              onPressed: () => setState(() => all = true),
-            ),
-          ),
-      ],
-    );
-  }
-
-  /// List view: every item of the period in one table (a list of rows when
-  /// narrow), with no limit, for reading at a glance or a screenshot.
-  Widget table(OverviewDues dues) {
+  Widget _table(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
     final items = [...dues.overdue, ...dues.upcoming];
     final head = text.labelMedium?.copyWith(color: c.secondary);
     final amountWidth = moneyColumnWidth(context, [
       'Amount',
-      for (final i in items) widget.amount(i.amount),
+      for (final i in items) amount(i.amount),
     ]);
     final rowHeight = isDesktop(context)
         ? Space.compactTwoLineRow
@@ -384,7 +167,7 @@ class _DuesCardState extends State<DuesCard> {
           return ListGroup(
             key: const ValueKey('dues-list'),
             leading: true,
-            children: [for (final i in items) row(i)],
+            children: [for (final i in items) dueRow(i, amount, onOpen)],
           );
         }
         Widget cells(List<Widget> children) => Row(
@@ -435,12 +218,12 @@ class _DuesCardState extends State<DuesCard> {
                   civilLabel(i.date),
                   if (i.days < 0) '${_plural(-i.days, 'day')} overdue',
                   i.status.label,
-                  widget.amount(i.amount),
+                  amount(i.amount),
                 ].join(', '),
                 excludeSemantics: true,
                 child: Pressable(
                   key: ValueKey('due-${i.source.id}'),
-                  onTap: () => widget.onOpen(i.source),
+                  onTap: () => onOpen(i.source),
                   padding: const EdgeInsets.symmetric(
                     horizontal: Space.sm,
                     vertical: Space.xs,
@@ -471,7 +254,7 @@ class _DuesCardState extends State<DuesCard> {
                         alignment: AlignmentDirectional.centerStart,
                         child: duePill(i.status),
                       ),
-                      MoneyAmount(widget.amount(i.amount)),
+                      MoneyAmount(amount(i.amount)),
                     ]),
                   ),
                 ),
@@ -480,6 +263,118 @@ class _DuesCardState extends State<DuesCard> {
           ],
         );
       },
+    );
+  }
+}
+
+/// The period's totals. The list view adds the total with what is overdue.
+class DueFigures extends StatelessWidget {
+  const DueFigures({
+    super.key,
+    required this.dues,
+    required this.amount,
+    this.list = false,
+  });
+  final OverviewDues dues;
+  final Amount amount;
+  final bool list;
+  @override
+  Widget build(BuildContext context) {
+    final periodLabel = dues.period == DuePeriod.week ? 'week' : 'month';
+    return Wrap(
+      spacing: Space.xl,
+      runSpacing: Space.md,
+      children: [
+        _Figure('Due this $periodLabel', amount(dues.upcomingTotal)),
+        if (dues.overdue.isNotEmpty)
+          _Figure('Overdue', amount(dues.overdueTotal), overdue: true),
+        if (list && dues.overdue.isNotEmpty)
+          _Figure('Total due', amount(dues.overdueTotal + dues.upcomingTotal)),
+      ],
+    );
+  }
+}
+
+/// R1–R3: what is due this week or month, a calendar strip, and the overdue
+/// rows pinned on top; or, in list view, every item in one table.
+class DuesCard extends StatefulWidget {
+  const DuesCard({
+    super.key,
+    required this.week,
+    required this.month,
+    required this.amount,
+    required this.onOpen,
+    this.available = true,
+    this.shown = 6,
+    this.caption = 'Debts, card statements and recurring bills',
+    this.period,
+    this.onPeriod,
+    this.view,
+    this.onView,
+    this.menu = const [],
+  });
+  final OverviewDues week, month;
+  final Amount amount;
+  final ValueChanged<FinancialReminderSource> onOpen;
+  final bool available;
+
+  /// Rows shown in each group before "Show all".
+  final int shown;
+  final String caption;
+
+  /// Set these to keep the period or layout outside the card, e.g. when the
+  /// card's width depends on them; otherwise the card keeps its own.
+  final DuePeriod? period;
+  final ValueChanged<DuePeriod>? onPeriod;
+  final DuesView? view;
+  final ValueChanged<DuesView>? onView;
+
+  /// More items for the corner menu, after the layouts.
+  final List<Widget> menu;
+  @override
+  State<DuesCard> createState() => _DuesCardState();
+}
+
+class _DuesCardState extends State<DuesCard> {
+  DuePeriod _period = DuePeriod.week;
+  DuesView _view = DuesView.calendar;
+  DuePeriod get period => widget.period ?? _period;
+  DuesView get view => widget.view ?? _view;
+  String? day;
+  bool all = false;
+
+  Widget row(DueItem item) => dueRow(item, widget.amount, widget.onOpen);
+
+  Widget group(String label, List<DueItem> items, {bool overdue = false}) {
+    final c = CraftTheme.of(context);
+    final shownItems = all ? items : items.take(widget.shown).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ListRow.horizontalPadding,
+            vertical: Space.xs,
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium
+                ?.copyWith(color: overdue ? c.overdue.$1 : c.secondary),
+          ),
+        ),
+        ListGroup(
+          leading: true,
+          children: [for (final i in shownItems) row(i)],
+        ),
+        if (shownItems.length < items.length)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: CardLink(
+              'Show all ${items.length}',
+              onPressed: () => setState(() => all = true),
+            ),
+          ),
+      ],
     );
   }
 
@@ -494,22 +389,23 @@ class _DuesCardState extends State<DuesCard> {
         ? dues.upcoming
         : dues.upcoming.where((i) => i.date == day).toList();
     final periodLabel = period == DuePeriod.week ? 'week' : 'month';
-    final secondary = Theme.of(context).textTheme.bodySmall
-        ?.copyWith(color: CraftTheme.of(context).secondary);
     return OverviewCard(
       title: 'Due and overdue',
-      caption: 'Debts, card statements and recurring bills',
+      caption: widget.caption,
       stackBelow: periodBase + rowBase + Space.xxxl,
       trailing: MiniSegmented<DuePeriod>(
         key: const ValueKey('dues-period'),
         label: 'Period',
         options: [for (final p in DuePeriod.values) (p, p.label)],
         selected: period,
-        onSelected: (p) => setState(() {
-          period = p;
-          day = null;
-          all = false;
-        }),
+        onSelected: (p) {
+          widget.onPeriod?.call(p);
+          setState(() {
+            _period = p;
+            day = null;
+            all = false;
+          });
+        },
       ),
       // How the card lays out its items, from a menu in the corner.
       corner: MenuAnchor(
@@ -523,13 +419,17 @@ class _DuesCardState extends State<DuesCard> {
               key: ValueKey(v),
               leadingIcon: Icon(icon),
               trailingIcon: v == view ? const Icon(Icons.check) : null,
-              onPressed: () => setState(() {
-                view = v;
-                day = null;
-                all = false;
-              }),
+              onPressed: () {
+                widget.onView?.call(v);
+                setState(() {
+                  _view = v;
+                  day = null;
+                  all = false;
+                });
+              },
               child: Text(v.label),
             ),
+          ...widget.menu,
         ],
         builder: (context, controller, _) => AppIconButton(
           key: const ValueKey('dues-view'),
@@ -549,41 +449,13 @@ class _DuesCardState extends State<DuesCard> {
               title: 'Nothing due this $periodLabel',
               message: 'Debts, card statements and recurring bills you track show here when they are due.',
             )
+          : list
+          ? DuesList(dues: dues, amount: widget.amount, onOpen: widget.onOpen)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (list) ...[
-                  Text(
-                    '${period.label} · ${overviewSpan(dues.start, dues.end)} · as of ${civilLabel(dues.today)}',
-                    style: secondary,
-                  ),
-                  const SizedBox(height: Space.sm),
-                ],
-                Wrap(
-                  spacing: Space.xl,
-                  runSpacing: Space.md,
-                  children: [
-                    _Figure(
-                      'Due this $periodLabel',
-                      widget.amount(dues.upcomingTotal),
-                    ),
-                    if (dues.overdue.isNotEmpty)
-                      _Figure(
-                        'Overdue',
-                        widget.amount(dues.overdueTotal),
-                        overdue: true,
-                      ),
-                    if (list && dues.overdue.isNotEmpty)
-                      _Figure(
-                        'Total due',
-                        widget.amount(dues.overdueTotal + dues.upcomingTotal),
-                      ),
-                  ],
-                ),
+                DueFigures(dues: dues, amount: widget.amount),
                 const SizedBox(height: Space.md),
-                if (list)
-                  table(dues)
-                else ...[
                   DueCalendar(
                     dues: dues,
                     selected: day,
@@ -620,7 +492,6 @@ class _DuesCardState extends State<DuesCard> {
                             ?.copyWith(color: CraftTheme.of(context).secondary),
                       ),
                     ),
-                ],
               ],
             ),
     );
@@ -777,33 +648,50 @@ class DebtProgressCard extends StatelessWidget {
     required this.amount,
     required this.onOpen,
     this.available = true,
+    this.hidden = false,
   });
   final List<DebtProgress> debts;
   final Amount amount;
   final VoidCallback onOpen;
-  final bool available;
+  final bool available, hidden;
 
   static const shown = 6;
 
-  static Widget pill(DebtProgress d) => switch (d.due.status) {
-    final DebtDueStatus status => duePill(status),
-    null =>
-      d.closed
-          ? const StatusPill(
-              'Closed',
-              icon: Icons.check_circle_outline,
-              tone: PillTone.success,
-            )
-          : const StatusPill.settled(),
-  };
+  static Widget pill(DebtProgress d) => d.closed
+      ? const StatusPill(
+          'Closed',
+          icon: Icons.check_circle_outline,
+          tone: PillTone.success,
+        )
+      : d.settled
+      ? const StatusPill.settled()
+      : d.scheduleFinished
+      ? const StatusPill(
+          'Schedule finished',
+          icon: Icons.event_available_outlined,
+          tone: PillTone.warning,
+        )
+      : duePill(d.due.status!);
 
-  /// The line under the bar.
-  static String progressLine(DebtProgress d, Amount amount) => !d.scheduled
-      ? 'No payment schedule yet'
-      : d.closed
+  /// The line under the bar. With amounts hidden it keeps to the count.
+  static String progressLine(
+    DebtProgress d,
+    Amount amount, {
+    bool hidden = false,
+  }) => d.closed
       ? 'Closed with a payoff'
-      : d.finished
-      ? 'All ${_plural(d.total, 'payment')} logged'
+      : d.settled
+      ? d.scheduled
+            ? 'All ${_plural(d.total, 'payment')} logged'
+            : 'Nothing left to pay'
+      : d.scheduleFinished
+      ? hidden
+            ? 'All ${_plural(d.total, 'payment')} logged'
+            : 'All ${_plural(d.total, 'payment')} logged · ${amount(d.outstanding)} still owed'
+      : !d.scheduled
+      ? 'No payment schedule yet'
+      : hidden
+      ? '${d.done} of ${_plural(d.total, 'payment')} logged'
       : '${d.done} of ${_plural(d.total, 'payment')} logged · ${amount(d.scheduledLeft)} of ${amount(d.scheduledTotal)} left';
 
   @override
@@ -818,7 +706,7 @@ class DebtProgressCard extends StatelessWidget {
             fraction: d.fraction,
           );
     Widget line(DebtProgress d) => Text(
-      progressLine(d, amount),
+      progressLine(d, amount, hidden: hidden),
       style: text.bodySmall?.copyWith(color: c.secondary),
     );
     Widget owed(DebtProgress d) =>
@@ -828,7 +716,8 @@ class DebtProgressCard extends StatelessWidget {
       for (final d in debts.take(shown)) amount(d.outstanding),
     ]);
     Widget item(DebtProgress d, bool table) => Semantics(
-      label: 'Payoff progress for ${d.debt.title}: ${progressLine(d, amount)}',
+      label:
+          'Payoff progress for ${d.debt.title}: ${progressLine(d, amount, hidden: hidden)}',
       child: Pressable(
         key: ValueKey('debt-progress-${d.debt.actionId}'),
         onTap: onOpen,

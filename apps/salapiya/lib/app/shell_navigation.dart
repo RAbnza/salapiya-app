@@ -53,6 +53,7 @@ class ShellNavigation extends ChangeNotifier {
   /// The tab each section opens on.
   static const defaultTabs = {
     AppDestination.money: 'Accounts',
+    AppDestination.debts: 'Summary',
     AppDestination.shared: 'Bills',
     AppDestination.life: 'Calendar',
   };

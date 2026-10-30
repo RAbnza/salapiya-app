@@ -246,6 +246,81 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
   pay(laptop, laptopPlan, -55, 'Installment 1', '1500.00');
   pay(laptop, laptopPlan, -25, 'Installment 2', '1500.00');
 
+  // No schedule yet.
+  debt('Emergency loan', 'personal_loan', '8000.00');
+
+  // Closed by an early payoff.
+  final scooter = debt('Scooter loan', 'installment_loan', '6000.00');
+  final scooterPlan = schedule(
+    scooter,
+    'Scooter loan',
+    day(-40),
+    'custom',
+    '2000.00',
+    3,
+    intervalDays: '30',
+  );
+  pay(scooter, scooterPlan, -40, 'Installment 1', '2000.00');
+  post('debtPayoff', {
+    'date': day(-8),
+    'name': 'Scooter loan payoff',
+    'debt': scooter,
+    'account': bank,
+    'amount': '4000.00',
+    'providerPayoff': '4000.00',
+    'reduction': '4000.00',
+    'interest': '0.00',
+    'fee': '0.00',
+    'waiver': '0.00',
+    'avoided': '0.00',
+    'verified': 'true',
+    'reference': 'Payoff letter',
+    'reason': 'Paid off early',
+  });
+
+  // A different amount each time, a partial payment, and a payment logged
+  // before its breakdown was known.
+  final appliance = debt('Appliance plan', 'bnpl', '9000.00');
+  final applianceDue = day(-20);
+  final appliancePlan = post('debtSchedule', {
+    'date': day(-68),
+    'name': 'Appliance plan',
+    'debt': appliance,
+    'schedule': debtScheduleRows(
+      firstDue: applianceDue,
+      frequency: 'custom',
+      amounts: [
+        for (final v in [2000, 3000, 4000]) BigInt.from(v * 100),
+      ],
+      intervalDays: '30',
+    ),
+    'verified': 'true',
+    'reference': 'Sample agreement',
+    'frequency': 'custom',
+    'firstDue': applianceDue,
+    'intervalDays': '30',
+    'splitMode': 'varied',
+    'installmentAmount': '',
+  });
+  pay(appliance, appliancePlan, -20, 'Installment 1', '2000.00');
+  pay(appliance, appliancePlan, -5, 'Installment 2', '500.00');
+  post('debtPayment', {
+    'date': day(-4),
+    'name': 'Payment',
+    'debt': appliance,
+    'account': bank,
+    'amount': '750.00',
+    'externalFee': '0.00',
+    'reduction': '0.00',
+    'interest': '0.00',
+    'fee': '0.00',
+    'clearing': '750.00',
+    'certainty': 'unresolved',
+    'scheduleSource': '',
+    'allocations': '',
+    'unapplied': '750.00',
+  });
+
   // A card with a statement due within the week.
   final card = post('creditCard', {
     'date': day(-68),
@@ -300,6 +375,13 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
 
 final _cache = <String, LocalSnapshot>{};
 
+/// The sample profile for [today], built once a day.
+LocalSnapshot demoSample(String today, {bool empty = false}) =>
+    _cache.putIfAbsent(
+      '$today:$empty',
+      () => demoOverviewSnapshot(today, empty: empty),
+    );
+
 /// The Overview's source for the demo build: the sample profile, with the
 /// demo session's scenario (empty, incomplete, waiting changes, review) and
 /// hidden amounts applied.
@@ -310,10 +392,7 @@ OverviewSource demoOverviewSource(
 ) {
   final today = civilToday();
   final empty = session.empty;
-  final s = _cache.putIfAbsent(
-    '$today:$empty',
-    () => demoOverviewSnapshot(today, empty: empty),
-  );
+  final s = demoSample(today, empty: empty);
   String name(String? id) =>
       s.categories.where((c) => c.id == id).firstOrNull?.name ?? 'No category';
   final available = sumMinor(

@@ -46,10 +46,9 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.text('Log expense').last);
   expect(find.byType(FinancialEditor), findsOneWidget);
   await financialEnter(tester, 'field-name', 'Demo lunch');
+  // A third decimal is refused as it's typed.
   await financialEnter(tester, 'field-amount', '185.501');
-  FocusManager.instance.primaryFocus?.unfocus();
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  expect(find.textContaining('at most two decimals'), findsOneWidget);
+  expect(find.text('Up to two decimals.'), findsOneWidget);
   await tester.ensureVisible(find.byKey(const ValueKey('field-amount')));
   await financialEnter(tester, 'field-amount', '185.50');
   await tester.pumpAndSettle();
@@ -93,8 +92,9 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.text('Done'));
   expect(session.finance.cardBalance, BigInt.from(600000));
   await financialTap(tester, find.byKey(const ValueKey('nav-debts')));
-  expect(find.text('One step closer.'), findsOneWidget);
-  await financialTap(tester, find.text('Add existing debt'));
+  expect(find.text('Your debts'), findsOneWidget);
+  await financialTap(tester, find.byKey(const ValueKey('shell-new')));
+  await financialTap(tester, find.text('Add a debt'));
   await financialTap(tester, find.byKey(const ValueKey('review-action')));
   await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
   await financialTap(tester, find.text('Done'));

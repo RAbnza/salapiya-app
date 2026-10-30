@@ -48,6 +48,7 @@ class PrototypeSession extends ChangeNotifier {
       life.reset(empty: true);
       scenario = OverviewScenario.local;
     }
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);
@@ -76,6 +77,7 @@ class PrototypeSession extends ChangeNotifier {
     finance = FinancialController()..reset(empty: empty);
     planning = PlanningController(finance)..reset(empty: empty);
     life = LifeController()..reset(empty: empty);
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);
@@ -102,6 +104,7 @@ class PrototypeSession extends ChangeNotifier {
     life = old.$3;
     scenario = old.$4;
     profile.name = old.$5;
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);

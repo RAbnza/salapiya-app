@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../design_system/kit/section_page.dart';
 import '../features/finance/presentation/financial_widgets.dart';
+
+export '../design_system/kit/section_page.dart' show RouteEscape;
 
 /// A single SDK stack for detail/task/utility routes. Primary tabs never push.
 /// Await removal before unlocking callers and restoring their focus.
@@ -21,7 +23,9 @@ Future<T?> openDemoPage<T>(
       arguments:
           title ??
           switch (page) {
-            FinancePage(:final title) || DemoPage(:final title) => title,
+            FinancePage(:final title) ||
+            DemoPage(:final title) ||
+            SectionPage(:final title) => title,
             _ => null,
           },
     ),
@@ -39,22 +43,6 @@ Future<T?> openDemoPage<T>(
   await route.completed;
   if (origin?.context != null) origin!.requestFocus();
   return result;
-}
-
-/// Escape uses the current Navigator route so dialogs keep dismissal priority.
-class RouteEscape extends StatelessWidget {
-  const RouteEscape({super.key, required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => CallbackShortcuts(
-    bindings: {
-      const SingleActivator(LogicalKeyboardKey.escape): () =>
-          Navigator.of(context).maybePop(),
-      const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
-          Navigator.of(context).maybePop(),
-    },
-    child: Focus(autofocus: true, child: child),
-  );
 }
 
 class DemoPage extends StatelessWidget {

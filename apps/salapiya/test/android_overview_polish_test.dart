@@ -4,7 +4,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
-import 'package:salapiya/app/overview_controls.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';

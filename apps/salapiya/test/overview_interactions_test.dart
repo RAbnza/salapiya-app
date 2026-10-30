@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app/overview_controls.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/prototype/activity.dart';
 import 'package:salapiya/prototype/fixtures.dart';
 import 'package:salapiya/prototype/scenarios.dart';

@@ -107,6 +107,10 @@ class FinancialController extends ChangeNotifier {
   DebtRecord debt(String id) => debts.firstWhere((d) => d.id == id);
   String nextCommand() => 'demo-${++_serial}';
   String amount(BigInt value) => DemoMoney.format(value);
+
+  /// The session's Hide amounts, for screens that have only the controller.
+  bool Function()? privacyHidden;
+  bool get amountsHidden => privacyHidden?.call() ?? false;
   List<FinancialPreview> get waitingCommands => _submitted.values
       .where(
         (p) =>

@@ -175,7 +175,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 - **Go to:** the search icon opens a full-screen Go to page with the same `GoToEntry` list (sections, tabs, create actions, profile pages), filtered as you type.
 - **Bell:** a count badge; it opens a bottom sheet with the same Needs attention rows as the Windows bell, each going where the item is handled.
 - **Date and calendar:** no clock (the status bar shows it). The date in Overview's header is tappable and opens a calendar sheet with "Open Life › Calendar".
-- **Calculator:** a "Calculator" row at the bottom of the + sheet opens it as a bottom sheet with Copy (the same exact engine and "≈" rule). As each form is redesigned, amount fields get a calculator button whose "Use result" fills the field, on both platforms.
+- **Calculator:** a "Calculator" row at the bottom of the + sheet opens it as a bottom sheet with Copy (the same exact engine and "≈" rule). As each form is redesigned, amount fields get a calculator button whose "Use result" fills the field, on both platforms (`AmountField`, §5).
 - **Unchanged:** system Back (no Forward), the + sheet as Quick create's counterpart, the dock.
 - **Ideas needing approval later:** Android launcher shortcuts and the Windows taskbar jump list (native code), and the Android 14+ predictive-back animation.
 
@@ -234,7 +234,31 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
   - Narrower, and always on Android: one column in priority order (Summary: tiles, At a glance, dues, hero, activity, Life, Shared). Tiles and account cards pair up when the column is at least 336 wide.
   - Cards in a row match the tallest (`_EqualHeightRow`). The grid owns the gap.
   - **Narrow cards and large text:** row amounts and pills, a card's header control and label amounts move below the text under 336 × the text scale (640 for a header with a segmented control); the donut, gauge and tables switch to stacked layouts; segmented controls and the tab row scroll sideways rather than shrink text.
-- **Demo build:** the same dashboard, filled by a sample profile replayed in memory through the real rules (`planLocal`), dated relative to today: three accounts that end today on the demo balances (₱29,300.75 in all, as Money shows), two months of spending and income, a debt due soon, one 3 days overdue, one paid off, a card statement due in 5 days and three budgets. Demo scenarios (empty, incomplete, waiting changes, review) and hidden amounts apply. Nothing is stored. The previous demo Overview layout and its files are removed.
+- **Demo build:** the same dashboard, filled by a sample profile replayed in memory through the real rules (`planLocal`), dated relative to today: three accounts that end today on the demo balances (₱29,300.75 in all, as Money shows), two months of spending and income, six debts (one due soon, one 3 days overdue, one paid off, one with no schedule, one closed by an early payoff, and one with varied amounts, a partial payment and a payment without a breakdown), a card statement due in 5 days and three budgets. Demo scenarios (empty, incomplete, waiting changes, review) and hidden amounts apply. Nothing is stored. The previous demo Overview layout and its files are removed.
+
+### Debts (Chat 7)
+
+`lib/finance/debt_screen.dart` (the section, its pages and the local source), `debt_cards.dart` (cards and `DebtTable`), `debt_data.dart` (display-only derivations) and `debt_demo.dart` (the demo source); tested in `test/debt_data_test.dart` and `test/debts_dashboard_test.dart`. Five-second question: "What do I owe, what's next, and is anything late?"
+
+- **Header.** Windows: a `PageHeader`, "As of ‹long date› · N debts", with the shell's three New items as chips at the right end. Android: one 48-tall row, the date and a pill ("N overdue", else "N due this week") that opens Schedule; the pill drops under the date when large text can't hold both.
+- **Tabs** (`AppTabs`): Summary · Schedule · Payments · History. They also show in the sidebar, the rail flyout and Go to, and take part in back and forward.
+- **Notices**, under the tabs, only when they apply: first download not finished; changes waiting to sync (Debts include them, so totals can differ from the Overview until they sync); sync needs review.
+- **Summary:**
+  - **KPI tiles:** What you owe (the one accent, with the change since last month end and a sparkline), Overdue ("N payments · oldest N days"), Next payment (amount, then the debt, date and "in N days"; same-day payments are summed) and Due this month.
+  - **Your debts** (8): every debt, most urgent first, then a finished schedule with money still owed, then Settled and Closed. A filter (All, Overdue, Upcoming, No schedule, Paid off; a debt is under exactly one besides All). Each row: name and lender, pill, `SegmentBar`, the progress line, the next payment, what you owe and a "Log payment" link.
+  - **Due next** (4): overdue, then the next 5 rows, debts only, each with "Log payment". It closes with "N more on Schedule" or "That's everything".
+  - **What you owe over time** (`OwedCard`, 7) beside **Needs your input** (5): set a schedule, check a varied amount, break down a payment. Hidden when there is nothing to do; the chart then takes the row.
+- **Schedule:** **Due and overdue**, the Overview's card. Its corner menu picks Calendar or List, All dues or Debts only, and "Open as a page". Calendar sits at 7 beside **Upcoming by month** at 5; List takes the full width with the chart under it.
+- **Shareable list:** the Overview's list view (`DuesList`): the period heading with "as of", the totals, every item with no row limit. "Open as a page" (`DuesListPage`) shows only that, so an Android screenshot has no tabs, dock or + button.
+- **Payments:** **Paid over time** (7, a bar per month for six months with this month, last month and paid down) beside **Payments to break down** (5), then **Payment history** (date, debt, paid from, applied to, breakdown, amount; 25 rows, then "Show more").
+- **History:** every debt record with its earlier versions; rows open the record page, which keeps Correct and Reverse.
+- **Debt details** (`NativeDebtDetail`, a `SectionPage`): the name, pill and "Lender · Type", then "Log a payment" and a More menu (Edit or Set schedule, Update amounts, Break down a payment, Log a lender charge or waiver, Log an early payoff, View record). Below: **Payoff** (the page's accent, 8) beside **About this debt** (4), then **Payments**, one row per scheduled payment, and **Payment history**. Closed and settled debts offer no new payment.
+- **Display states** (`DebtProgress`, also used by the Overview). Closed: a payoff is on record, with or without a schedule. Settled: nothing owed and nothing open. Schedule finished: every scheduled payment is logged but money is still owed. Otherwise the `DebtDueStatus` label.
+- **Tables** (`DebtTable`): as §2 Tables, and they also turn into rows when the fixed columns leave the flexible ones under 48 × the text scale per share.
+- **States:** an incomplete download shows "Not available yet" and no ₱ anywhere. Hidden amounts show "Amount hidden", hide charts, change lines and sparklines, and stop the progress line at "4 of 6 payments logged".
+- **Dates:** the Overview's. "Next" starts today, so overdue rows are never next. Upcoming by month is this month and the next five; this month starts today and overdue stays separate.
+- **Editors:** every Debts form is on the compact scale (§3) with `DateField`, `AmountField`, errors in place and plain labels. Fields most people skip sit under "More details", and fields show only when they apply: Paid into for cash, Category for a purchase, charge and waiver fields by what happened. Negative balance consent appears only once the rules ask. Log a debt payment asks for the essentials and fills the rest of the same command from the answers; corrections keep every field. An early payoff fills the lender's amount from the payoff amount.
+- **Demo build:** the same screens from the Overview's sample (`demoSample`), so both agree. Demo scenarios and hidden amounts apply. Editors open the demo's own forms, and saving there doesn't change the sample.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -248,7 +272,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - **Notices:** under the tabs, only when they apply.
 - **Grid** (`DashboardGrid`, 12 columns; one column on Android, in priority order):
   - Mix card widths with purpose: a hero card at 8 with a side card at 4; pairs at 6 + 6 or 5 + 7; tables and long lists at full width. Small tiles pair up on phones (`PairCard`).
-  - Cards in a row share one height. A card that may end up shorter uses `OverviewCard(centered: true)`.
+  - Cards in a row share one height. A chart or figures card that may end up shorter uses `OverviewCard(centered: true)`. A list always starts at the top, under its header, and closes with `ListEnd`, so the space below reads as the end of the list.
   - When a card is left with empty space, fill it with something useful, such as a `StatStrip` of figures or a per-item breakdown. Never fill it with decoration, and never leave a large gap.
 - **Cards** (`OverviewCard`):
   - **Header:** a `titleSmall` title and a `bodySmall` caption.
@@ -282,9 +306,8 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - **Alignment tests:** for tables, rows and tiles.
   - **Demo sample test:** the sample replays on week, month and year edges.
 - **Reuse:**
-  - **Where the parts live:** the Overview's building blocks are in `lib/app/overview_controls.dart`, `overview_cards.dart` and `overview_charts.dart`.
-  - **Moving them to the kit:** the first section chat that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
-  - **The grid:** `DashboardGrid` moves the same way.
+  - **Where the parts live:** the shared ones are in the kit (§5 Dashboard kit). `DuesCard`, `DuesList`, `DueCalendar`, `DebtProgressCard` and `OwedCard` stay in `lib/app/overview_cards.dart` because they use finance types. The donut, gauge and account cards stay in `lib/app` until another section needs them.
+  - **Moving more to the kit:** the first section chat that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
 - **Lessons from the Overview reviews** (check them before showing the owner):
   - empty space beside a taller card;
   - columns that shift with each row's amount;
@@ -428,6 +451,24 @@ Windows uses a compact scale, one step below Android, so the whole app matches t
 - **Targets:** on Windows, pointer controls are 32 tall. This meets WCAG 2.2's 24 px minimum and Windows 11's 32 px control height, and replaces the 40 `pointerTarget` there. Android keeps 48.
 - **Unchanged on both platforms:** spacing gutters and the page rules in [§4](#4-spacing-and-alignment-rules), colors, and motion.
 
+### Compact form scale (`CompactForm`; Chat 7)
+
+Forms are one step smaller than the base sizes and stay easy to read. Approved by the owner on a sample of Log a debt payment.
+
+| Part | Android | Windows |
+| --- | --- | --- |
+| Typed value | `bodyMedium` 14 / 20 | `bodyMedium` 13 / 18 |
+| Field height | looks 40 (`Space.formControl`), 48 hit area | 32 |
+| Label | `labelMedium` 12 / 16, 4 above the field | same |
+| Helper, error | `bodySmall` 12 / 16, 4 below, always visible | same |
+| Gap between fields / groups / actions | 12 / 16 / 16 | same |
+| Buttons | look 40, 48 hit area | 32 |
+| Form column | full width | max 640 (`Space.formMaxWidth`), centered |
+
+- **Scope:** a theme scope, not an app-wide change. `NativeFinanceEditor` (Debts, and Money's Cards, Planning, Files and Correct/Reverse forms) and Update payment amounts use it. Log expense, income and transfer adopt it in Chat 8, and each later chat adopts it for its own forms.
+- **Hit areas:** an Android field stays 48 tall with its border drawn 4 inside, so its whole height takes taps; buttons get transparent space from `MaterialTapTargetSize.padded`.
+- **ⓘ:** a field with one keeps a label row one hit target tall, and the form leaves out the field gap above it (`CompactForm.gapBefore`).
+
 ### Radius (`Radii`)
 
 `control` 10 (buttons, fields, chips, tooltips), `card` 14 and `overlay` 20 on Android; Windows uses `compactControl` 6, `compactCard` 10 and `compactOverlay` 12 (read them with `Radii.controlOf(context)` and so on). `nav` 6 (the Windows sidebar's highlights, profile card and theme switch, and the Go to field) equals `compactControl`. Overlays are dialogs, sheet top corners, menus and popovers. `pill` 999. `Space.cardRadius`, `controlRadius` and `floatingRadius` (28, the dock) are legacy aliases.
@@ -554,7 +595,12 @@ The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit
 - **Error summary:** with two or more errors, `FormErrorSummary` sits at the top of the form and each entry moves focus to its field. No error pop-ups.
 - **Disabled:** `subtle` fill and `divider` border, and the `disabledReason` replaces the helper. **Read-only:** `subtle` fill and a `divider` border; the text stays selectable.
 - **Hover (Windows):** the border darkens to `text`.
-- **Amount field:** `amount: true` adds a ₱ prefix, tabular figures and the decimal keyboard. Parsing stays with the existing rules (`parsePhp`).
+- **Amount field:** `amount: true` adds a ₱ prefix, tabular figures and the decimal keyboard. Parsing stays with the existing rules (`parsePhp`). `AmountField` adds the calculator at the field's end: a popover on Windows, a sheet on Android. "Use result" fills the field; a result rounded to centavos says so until the value is edited.
+- **What a field accepts (`FieldInput`, `InputGuard`):** a field for one kind of data refuses anything else as it's typed: amounts (digits, one point, two decimals), whole numbers, number lists and typed dates. A small note at the field says why ("Numbers only, like 1500.00.") and goes on the next valid keystroke or after 3 seconds (`Motion.note`). It sits below the field, or above it in the lower part of the screen, clear of the keyboard. A pasted amount loses its ₱, commas and spaces. Most amounts can't be negative; `AmountField(signed: true)` is for the few that can.
+- **Account pickers:** each account shows its balance in the menu, and the chosen one's sits under the field. If the amount is more than that, the line adds "this takes it below zero". Hidden amounts stay hidden.
+- **Changes that need the latest records:** on a connected profile the sync rule (ARCHITECTURE §8.2) needs a fresh sync before some changes, such as a schedule, a payoff or a correction. The form handles this itself: Review says so, and Save syncs first ("Checking your latest records…"). If the sync brought new records, the review is rebuilt and the user checks it again, because nothing saves on a stale review. If it can't sync, the form stays on Review with everything kept, explains why, and the button becomes "Sync and save". Ordinary records never wait.
+- **More details (`FormMoreDetails`):** a quiet disclosure for fields most people skip. It opens by itself when a field inside it has an error.
+- **Page:** a form's title and step line sit in the form's column (`SectionPage(maxWidth: Space.formMaxWidth)`), starting at the card's left edge: "Step 1 of 2 · Details · * Required".
 - **Info control:** behavior is in [§6](#6-form-help-pattern).
   - The hover tooltip uses the tooltip style (`text` fill, control radius).
   - The pinned popover is level 2 (`raised`, `overlayShadow`, overlay radius), at most `popoverMaxWidth` wide, and kept inside the window.
@@ -731,6 +777,14 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 - **Progress bars** on the Overview are `SlimBar` (6 tall, pill ends) and `SegmentBar` (one 8-tall step per scheduled payment, 2 apart). Both are decorative; their row carries the words in its semantics label.
 - **Charts are hidden while amounts are hidden.**
 
+### Dashboard kit (moved from the Overview, Chat 7)
+
+`kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
+
+### Section page (`SectionPage`; Chat 7)
+
+A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
+
 ### Deferred to section chats
 
 - **Table and pager:** Chat 8 or 9.
@@ -774,7 +828,8 @@ No help is needed for self-explanatory fields such as name, note, or a plain amo
 - Plain, second person, present tense. Describe the effect on *your records*: "Counts toward this month's spending", not "Posts to the expense ledger".
 - Use the "Use" column of [§7](#7-wording-glossary). Never imply that Salapiya moves money.
 - No exclamation marks, "simply", "just" or blame. Overdue or error text states facts calmly.
-- Errors appear inline, say what to fix, and name the field: "Enter a date on or after 2026-11-01." When there are several errors, a summary goes at the top of the form, linked to the fields. **No error pop-ups.**
+- Errors appear inline, say what to fix, and name the field: "Enter a date on or after 2026-11-01." When there are several errors, a summary goes at the top of the form, linked to the fields. **No error dialogs.** The one small pop-up is the note at a field that refused a keystroke ([§5](#form-field-with-help-helpfield-helptextfield-infocontrol-formerrorsummary)): it blocks nothing, needs no answer and goes by itself.
+- **Errors after submitting** go on the field they're about, in red, even when the rule names no field: not enough money marks the account. A problem no field can show sits in a notice above the form. Only a problem that's really about the whole record belongs there.
 
 ## 7. Wording glossary
 
@@ -815,6 +870,14 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Provider (debt context) | Lender | The user's real-world lender, never Salapiya |
 | Private review | Check against my records | Shared Expenses reconciliation |
 | Unavailable (unknown value) | Not available yet | Never `₱0.00` for an unknown value |
+| Provider schedule | Payment schedule | Debts |
+| Early settlement | Log an early payoff | "Early payoff" as a noun |
+| Provider charge / waiver / residual | Log a lender charge or waiver | |
+| Classify payment | Break down a payment | |
+| Outstanding balance | What you owe | |
+| Unresolved payment clearing | Payment without a breakdown | |
+| Final scheduled installment | Last scheduled payment | Still labeled as not a payoff date |
+| Installment | Payment | Stored row names ("Installment 3") stay as recorded |
 
 ### Tone rules
 
@@ -852,6 +915,8 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Amount privacy | `session.hideAmounts` | Readable; every dashboard value must respect it |
 | Month-over-month spending (same day span) and what you owe at each month end | Postings in `acceptedSnapshot` (`SpendingComparison`, `debtBalanceByMonth`) | UI aggregation (approved, Chat 6) |
 | Per-debt payoff progress (payments logged, scheduled amount left) | `DebtDueSummary` plus the schedule rows (`DebtProgress`) | UI aggregation (approved, Chat 6) |
+| Debts: total owed (per-debt balances, equal to `debtTotal`), next payment, debts-only overdue and period totals | `DebtsSummary` (`lib/finance/debt_data.dart`) | UI aggregation (approved, Chat 7) |
+| Debts: dues by calendar month, payments per debt, paid per month, paid down, payment rows, record names, what needs the user | `dueByMonth`, `debtPaymentRows`, `paidByMonth`, `paidDownBetween`, `installmentRows`, `recordLabel`, `debtTasks` | UI aggregation (approved, Chat 7) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -866,8 +931,8 @@ Remove this section when the redesign is finished.
 | 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
 | 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
 | 5 | Windows custom title bar | Done |
-| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Owner review 1 rebuilt; in owner review |
-| 7 | Debts | Planned |
+| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Done |
+| 7 | Debts | Done |
 | 8 | Money A: Accounts, Activity, transaction form | Planned |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
 | 10 | Shared Expenses A: groups, Bills, Payments | Planned |
@@ -980,3 +1045,16 @@ Each section chat:
 | 2026-10-30 | Tab names "Debts & Dues" and "Accounts & Activity" (capitalized at the owner's request). KPI tiles reserve the tallest label's height so values line up. | Approved |
 | 2026-10-30 | Android's Overview header is one compact row: the date (calendar icon, `titleSmall`) and a dues pill that opens Debts & Dues, with 4 to the tabs. | Approved |
 | 2026-10-30 | Every section chat from Chat 7 follows the Section screen standard (§2), taken from the Overview: the same page anatomy, grid, cards, data display, sizes, shareable list views, demo data and tests, with content chosen per section. Data screens use the compact Overview sizes. Forms, editors and dialogs are scaled down too (about one step), with a readability floor: values and body text at least `bodyMedium`, nothing below 12. The first chat that redesigns a form applies it through the theme and kit after the owner reviews a sample. Overview building blocks move to the kit when another section first needs them. | Approved |
+| 2026-10-30 | Debts (Chat 7): tabs Summary · Schedule · Payments · History; Your debts as the hero beside Due next; the shareable list shows all dues with a Debts-only choice and can open as a page; Upcoming by month and Needs your input; Debts' tabs in the sidebar and Go to; debt details as one page. | Approved |
+| 2026-10-30 | Log a debt payment asks for the essentials and fills the rest of the same command from the answers, with the rest under "More details". A row's "Log payment" prefills the debt, that payment and what's left on it, proposing "All of it lowers what I owe"; the user confirms at Review. Corrections keep every field. | Approved |
+| 2026-10-30 | Prefilled forms keep their own draft: the draft key includes the debt and the proposed payment, because a saved draft replaced `initial` values. | Done |
+| 2026-10-30 | The Debts display states (Closed without a schedule, Settled without a schedule, Schedule finished) live on `DebtProgress`, so the Overview shows them too. Due rows carry the debt's name, not its schedule record's. | Done |
+| 2026-10-30 | The Android Overview header's pill drops under the date when large text can't hold both (an overflow at 320 wide and 200% text). | Done |
+| 2026-10-30 | The compact form scale in §3, from the owner's review of a sample: Android controls look 40 with a 48 hit area, typed values `bodyMedium`, labels 12. Applied as a scope on the shared editor and Update amounts, not app-wide, so Money's Log expense, income and transfer stay larger until Chat 8. | Approved |
+| 2026-10-30 | A form's title and step line sit in the form's column, starting at the card's left edge (owner review of the sample). | Approved |
+| 2026-10-30 | `NativeFinanceEditor` shows no popups: errors appear on their field, or in a notice above the form when no field can show them (§6). Every date in it is a `DateField`, so typed dates are gone from `finance_screen.dart`. | Done |
+| 2026-10-30 | Owner review of the Debts cards: a list starts at the top of its card, under the header, and closes with `ListEnd` ("That's everything", or "N more on Schedule"). `OverviewCard(centered: true)` is for charts and figures, not lists. | Approved |
+| 2026-10-30 | Owner review of form errors: fields for one kind of data refuse anything else as it's typed, with a small note at the field. This narrows §6's "No error pop-ups" to no error dialogs. Applied in the kit and in `FinancialEditor`. | Approved |
+| 2026-10-30 | Errors after submitting go on the field they're about, in red. A table in the editor maps rules that name no field to theirs, so no rule file changes. Going below zero marks the account and says what it holds; the rest keep the rules' own wording until that's approved. | Approved |
+| 2026-10-30 | Account pickers show each account's balance, and warn before saving when the amount is more than the account holds. | Approved |
+| 2026-10-30 | Forms handle the sync rule themselves instead of showing it as an error: Save syncs first, a sync that brings new records asks for another look at Review, and a failed sync stays on Review with "Sync and save". A debt added with a schedule syncs before saving the schedule. The rule itself is unchanged. | Approved |

@@ -174,6 +174,7 @@ class LocalSession extends PrototypeSession {
     DurableLifeController life,
   ) : super(financial: controller, lifeController: life, production: true) {
     controller.privacyHidden = () => hideAmounts;
+    controller.syncLatest = runtime.connected.syncNow;
     runtime.connected.addListener(notifyListeners);
   }
   final LocalRuntime runtime;

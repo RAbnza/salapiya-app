@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme.dart';
+import 'buttons.dart';
+import 'calculator.dart';
+import 'compact_form.dart';
 import 'focus_ring.dart';
 import 'modals.dart';
 
@@ -73,6 +78,7 @@ class _InfoControlState extends State<InfoControl> {
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final size = hitTarget(context);
+    final compact = CompactForm.on(context);
     return PopScope(
       canPop: !pinned,
       onPopInvokedWithResult: (didPop, _) {
@@ -136,12 +142,17 @@ class _InfoControlState extends State<InfoControl> {
                     radius: Radii.pill,
                     child: SizedBox.square(
                       dimension: size,
-                      child: Icon(
-                        Icons.info_outline,
-                        size: isDesktop(context)
-                            ? Space.compactControlIcon
-                            : Space.lg + Space.xs,
-                        color: pinned ? c.primary : c.secondary,
+                      child: Align(
+                        alignment: compact
+                            ? Alignment.bottomCenter
+                            : Alignment.center,
+                        child: Icon(
+                          Icons.info_outline,
+                          size: compact || isDesktop(context)
+                              ? Space.compactControlIcon
+                              : Space.lg + Space.xs,
+                          color: pinned ? c.primary : c.secondary,
+                        ),
                       ),
                     ),
                   ),
@@ -249,13 +260,19 @@ class HelpField extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
-    final labelStyle = text.labelLarge!;
+    final compact = CompactForm.on(context);
+    final labelStyle = compact ? text.labelMedium! : text.labelLarge!;
     final line = MediaQuery.textScalerOf(context)
         .scale(labelStyle.fontSize! * labelStyle.height!);
     // Every label row is one hit target tall so fields with and without an
     // info control keep the same rhythm; the gap absorbs the extra height.
-    final row = line > hitTarget(context) ? line : hitTarget(context);
-    final gap = (Space.labelGap - (row - line) / 2).clamp(0.0, Space.labelGap);
+    // A compact form only makes room for the ⓘ where there is one, and the
+    // form leaves out the field gap above it (`CompactForm.gapBefore`).
+    final target = compact && info == null ? line : hitTarget(context);
+    final row = line > target ? line : target;
+    final gap = compact
+        ? CompactForm.innerGap(context)
+        : (Space.labelGap - (row - line) / 2).clamp(0.0, Space.labelGap);
     final (error, _) = c.tone(NoticeTone.error);
     final message =
         errorText ??
@@ -267,6 +284,9 @@ class HelpField extends StatelessWidget {
         ConstrainedBox(
           constraints: BoxConstraints(minHeight: row),
           child: Row(
+            crossAxisAlignment: compact
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.center,
             children: [
               Flexible(
                 child: Semantics(
@@ -297,7 +317,7 @@ class HelpField extends StatelessWidget {
         SizedBox(height: gap),
         child,
         if (message != null) ...[
-          const SizedBox(height: Space.helperGap),
+          SizedBox(height: compact ? gap : Space.helperGap),
           if (errorText != null)
             Semantics(
               container: true,
@@ -324,6 +344,172 @@ class HelpField extends StatelessWidget {
   }
 }
 
+/// What a typed field accepts (§6). Anything else is refused as it's typed,
+/// and [InputGuard] says why in a small note at the field.
+enum FieldInput {
+  amount(r'^\d*(\.\d{0,2})?$', money: true),
+  signedAmount(r'^-?\d*(\.\d{0,2})?$', money: true),
+  wholeNumber(r'^\d*$'),
+  numberList(r'^[\d,\s]*$'),
+  date(r'^\d{0,4}(-\d{0,2}(-\d{0,2})?)?$');
+
+  const FieldInput(this.pattern, {this.money = false});
+  final String pattern;
+  final bool money;
+
+  bool accepts(String text) => RegExp(pattern).hasMatch(text);
+
+  /// Pasted amounts often come with a ₱, commas or spaces.
+  String clean(String text) =>
+      money ? text.replaceAll(RegExp(r'[₱,\s]'), '') : text;
+
+  /// Why [text] was refused, in a few plain words.
+  String reason(String text) => switch (this) {
+    FieldInput.wholeNumber => 'Whole numbers only.',
+    FieldInput.numberList => 'Numbers and commas only.',
+    FieldInput.date => 'Dates only, like 2026-10-30.',
+    FieldInput.amount when text.contains('-') =>
+      'This amount can’t be negative.',
+    _ when RegExp(r'[^\d.\-]').hasMatch(text) => 'Numbers only, like 1500.00.',
+    _ when '.'.allMatches(text).length > 1 => 'Only one decimal point.',
+    _ when text.contains('.') => 'Up to two decimals.',
+    _ => 'Numbers only, like 1500.00.',
+  };
+}
+
+class _GuardFormatter extends TextInputFormatter {
+  _GuardFormatter(this.input, this.onRefused, this.onAccepted);
+  final FieldInput input;
+  final ValueChanged<String> onRefused;
+  final VoidCallback onAccepted;
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = input.clean(newValue.text);
+    if (!input.accepts(text)) {
+      onRefused(input.reason(text));
+      return oldValue;
+    }
+    onAccepted();
+    return text == newValue.text
+        ? newValue
+        : TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+  }
+}
+
+/// Keeps a field to one kind of input ([FieldInput]). [builder] gets the
+/// formatter for its `TextField`. A refused keystroke shows a small note at
+/// the field for a few seconds; the field never takes the keystroke, so
+/// there's nothing to correct later.
+class InputGuard extends StatefulWidget {
+  const InputGuard({super.key, required this.input, required this.builder});
+  final FieldInput input;
+  final Widget Function(BuildContext context, TextInputFormatter guard) builder;
+  @override
+  State<InputGuard> createState() => _InputGuardState();
+}
+
+class _InputGuardState extends State<InputGuard> {
+  final portal = OverlayPortalController();
+  final link = LayerLink();
+  late final guard = _GuardFormatter(widget.input, refused, accepted);
+  String? note;
+  Timer? timer;
+
+  void refused(String reason) {
+    timer?.cancel();
+    timer = Timer(Motion.note, accepted);
+    setState(() => note = reason);
+    portal.show();
+  }
+
+  void accepted() {
+    timer?.cancel();
+    if (note == null || !mounted) return;
+    setState(() => note = null);
+    portal.hide();
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  Widget bubble(BuildContext context) {
+    final c = CraftTheme.of(context);
+    final (ink, fill) = c.tone(NoticeTone.error);
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final target = this.context.findRenderObject() as RenderBox;
+    final top = target.localToGlobal(Offset.zero, ancestor: overlay).dy;
+    final usable =
+        overlay.size.height - MediaQuery.viewInsetsOf(context).bottom;
+    // Above the field in the lower part of the screen, clear of the keyboard.
+    final above = top + target.size.height > usable * .6;
+    return Align(
+      alignment: AlignmentDirectional.topStart,
+      child: CompositedTransformFollower(
+        link: link,
+        showWhenUnlinked: false,
+        targetAnchor: above ? Alignment.topLeft : Alignment.bottomLeft,
+        followerAnchor: above ? Alignment.bottomLeft : Alignment.topLeft,
+        offset: Offset(Space.md, above ? -Space.xs : Space.xs),
+        child: IgnorePointer(
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            child: Container(
+              key: const ValueKey('field-note'),
+              constraints: const BoxConstraints(
+                maxWidth: Space.popoverMaxWidth,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.sm,
+                vertical: Space.xs,
+              ),
+              decoration: BoxDecoration(
+                color: fill,
+                borderRadius: BorderRadius.circular(Radii.controlOf(context)),
+                border: Border.all(color: ink),
+                boxShadow: c.overlayShadow,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline, size: Space.lg, color: ink),
+                  const SizedBox(width: Space.xs),
+                  Flexible(
+                    child: Text(
+                      note ?? '',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: ink),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => CompositedTransformTarget(
+    link: link,
+    child: OverlayPortal(
+      controller: portal,
+      overlayChildBuilder: bubble,
+      child: widget.builder(context, guard),
+    ),
+  );
+}
+
 /// A text input inside a [HelpField]. `amount: true` adds tabular figures, a
 /// ₱ prefix and the decimal keyboard; parsing stays with the caller.
 class HelpTextField extends StatelessWidget {
@@ -346,6 +532,8 @@ class HelpTextField extends StatelessWidget {
     this.maxLines = 1,
     this.onChanged,
     this.onSubmitted,
+    this.suffix,
+    this.input,
   });
   final String label;
   final TextEditingController? controller;
@@ -356,14 +544,61 @@ class HelpTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final int? maxLines;
   final ValueChanged<String>? onChanged, onSubmitted;
+
+  /// A small control at the field's end, e.g. the calculator button.
+  final Widget? suffix;
+
+  /// What the field accepts; `amount: true` defaults to [FieldInput.amount].
+  final FieldInput? input;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
-    final input = Theme.of(context).inputDecorationTheme;
+    final input_ = Theme.of(context).inputDecorationTheme;
     final style = Theme.of(context).textTheme.bodyLarge!;
     final readOnlyBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(Radii.controlOf(context)),
       borderSide: BorderSide(color: c.divider),
+    );
+    final guarded = input ?? (amount ? FieldInput.amount : null);
+    Widget field(TextInputFormatter? guard) => TextField(
+      controller: controller,
+      focusNode: focusNode,
+      enabled: enabled,
+      readOnly: readOnly,
+      maxLines: maxLines,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
+      inputFormatters: guard == null ? null : [guard],
+      keyboardType:
+          keyboardType ??
+          switch (guarded) {
+            FieldInput.amount => const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            FieldInput.signedAmount => const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            FieldInput.wholeNumber => TextInputType.number,
+            _ => null,
+          },
+      style: amount
+          ? style.copyWith(fontFeatures: const [FontFeature.tabularFigures()])
+          : style,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixText: amount ? '₱ ' : null,
+        suffixIcon: suffix,
+        fillColor: readOnly ? c.subtle : null,
+        // The error text sits in HelpField; only the border changes here.
+        enabledBorder: errorText != null
+            ? input_.errorBorder
+            : readOnly
+            ? readOnlyBorder
+            : null,
+        focusedBorder: errorText != null ? input_.focusedErrorBorder : null,
+      ),
     );
     return HelpField(
       label: label,
@@ -375,41 +610,111 @@ class HelpTextField extends StatelessWidget {
       disabledReason: disabledReason,
       child: Semantics(
         label: label,
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          enabled: enabled,
-          readOnly: readOnly,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          textInputAction: textInputAction,
-          keyboardType:
-              keyboardType ??
-              (amount
-                  ? const TextInputType.numberWithOptions(decimal: true)
-                  : null),
-          style: amount
-              ? style.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                )
-              : style,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixText: amount ? '₱ ' : null,
-            fillColor: readOnly ? c.subtle : null,
-            // The error text sits in HelpField; only the border changes here.
-            enabledBorder: errorText != null
-                ? input.errorBorder
-                : readOnly
-                ? readOnlyBorder
-                : null,
-            focusedBorder: errorText != null ? input.focusedErrorBorder : null,
-          ),
-        ),
+        child: guarded == null
+            ? field(null)
+            : InputGuard(input: guarded, builder: (_, guard) => field(guard)),
       ),
     );
   }
+}
+
+/// A money field with the calculator at its end (§2 Android parity). "Use
+/// result" fills the field; a result rounded to centavos says so.
+class AmountField extends StatefulWidget {
+  const AmountField({
+    super.key,
+    required this.label,
+    required this.controller,
+    this.helper,
+    this.info,
+    this.errorText,
+    this.required = false,
+    this.signed = false,
+    this.onChanged,
+  });
+  final String label;
+  final TextEditingController controller;
+  final String? helper, info, errorText;
+  final bool required;
+
+  /// Takes a minus sign, for the few amounts that can go below zero.
+  final bool signed;
+  final ValueChanged<String>? onChanged;
+
+  static const roundedNote = 'Rounded to centavos from the calculator.';
+
+  @override
+  State<AmountField> createState() => _AmountFieldState();
+}
+
+class _AmountFieldState extends State<AmountField> {
+  final menu = MenuController();
+  bool rounded = false;
+
+  void use(String value, bool wasRounded) {
+    widget.controller.text = value;
+    setState(() => rounded = wasRounded);
+    widget.onChanged?.call(value);
+  }
+
+  Future<void> openSheet() async {
+    await showAppSheet<void>(
+      context,
+      title: 'Calculator',
+      body: Builder(
+        builder: (sheet) => CalculatorPanel(
+          onUse: (value, wasRounded) {
+            use(value, wasRounded);
+            Navigator.of(sheet).pop();
+          },
+        ),
+      ),
+      primary: null,
+      secondary: const ModalAction.cancel(label: 'Close'),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => HelpTextField(
+    label: widget.label,
+    amount: true,
+    input: widget.signed ? FieldInput.signedAmount : FieldInput.amount,
+    controller: widget.controller,
+    required: widget.required,
+    info: widget.info,
+    errorText: widget.errorText,
+    helper: rounded ? AmountField.roundedNote : widget.helper,
+    onChanged: (value) {
+      if (rounded) setState(() => rounded = false);
+      widget.onChanged?.call(value);
+    },
+    suffix: isDesktop(context)
+        ? MenuAnchor(
+            controller: menu,
+            alignmentOffset: const Offset(0, Space.xs),
+            menuChildren: [
+              CalculatorPanel(
+                onUse: (value, wasRounded) {
+                  use(value, wasRounded);
+                  menu.close();
+                },
+              ),
+            ],
+            builder: (context, controller, _) => AppIconButton(
+              key: ValueKey('calculator-${widget.label}'),
+              icon: Icons.calculate_outlined,
+              tooltip: 'Calculator',
+              onPressed: () =>
+                  controller.isOpen ? controller.close() : controller.open(),
+            ),
+          )
+        : AppIconButton(
+            key: ValueKey('calculator-${widget.label}'),
+            icon: Icons.calculate_outlined,
+            tooltip: 'Calculator',
+            onPressed: openSheet,
+          ),
+  );
 }
 
 /// A date chosen from a calendar, never typed (§6). It shows "29 Oct 2026";
@@ -448,6 +753,7 @@ class DateField extends StatefulWidget {
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
+  static String monthName(int month) => _months[month - 1];
   static String format(DateTime d) =>
       '${d.day} ${_months[d.month - 1]} ${d.year}';
 

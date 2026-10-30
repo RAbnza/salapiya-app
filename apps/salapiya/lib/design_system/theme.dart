@@ -57,6 +57,9 @@ abstract final class Space {
   /// Icons on Windows: standalone, and inside controls and rows.
   static const double compactIcon = lg + xxs, compactControlIcon = lg;
   static const double formMaxWidth = 640, reviewMaxWidth = 760;
+
+  /// What a form control looks like on touch; `target` stays its hit area.
+  static const double formControl = 40;
   static const double contentMaxWidth = 1280;
   static const double fieldGap = lg, labelGap = sm, helperGap = xs;
   static const double groupGap = xl, actionsGap = xl;
@@ -159,6 +162,9 @@ abstract final class Motion {
   static const quick = Duration(milliseconds: 100);
   static const short = Duration(milliseconds: 160);
   static const medium = Duration(milliseconds: 200);
+
+  /// How long a small field note stays up.
+  static const note = Duration(seconds: 3);
   static const Curve enter = Curves.easeOutCubic, exit = Curves.easeInCubic;
 
   /// [duration], or zero when reduced motion is on.

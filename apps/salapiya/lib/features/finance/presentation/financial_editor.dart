@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextInputFormatter;
 
 import '../../../app/demo_routes.dart';
 import '../../../design_system/editorial.dart';
+import '../../../design_system/kit/kit.dart' show FieldInput, InputGuard;
 import '../../../design_system/theme.dart';
 import '../application/financial_controller.dart';
 import '../contracts/financial_models.dart';
@@ -132,57 +134,101 @@ class _FinancialEditorState extends State<FinancialEditor> {
     super.dispose();
   }
 
-  Widget text(String key, String label, {String? helper, bool money = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: TextField(
-          key: ValueKey('field-$key'),
-          controller: fields.putIfAbsent(
-            key,
-            () => TextEditingController(text: values[key] ?? ''),
+  /// The problem in the review's list that's about this field, so the field
+  /// shows it in red as well.
+  String? problemFor(String key) => preview?.errors.where((e) {
+    final message = e.toLowerCase();
+    return switch (key) {
+      'amount' => message.startsWith('amount'),
+      'date' => message.contains(' date'),
+      'account' => message.contains('account') || message.contains('balance'),
+      _ => false,
+    };
+  }).firstOrNull;
+
+  Widget text(String key, String label, {String? helper, bool money = false}) {
+    final input = money
+        ? FieldInput.signedAmount
+        : label.contains('YYYY-MM-DD')
+        ? FieldInput.date
+        : null;
+    Widget field(TextInputFormatter? guard) => TextField(
+      key: ValueKey('field-$key'),
+      controller: fields.putIfAbsent(
+        key,
+        () => TextEditingController(text: values[key] ?? ''),
+      ),
+      inputFormatters: guard == null ? null : [guard],
+      keyboardType: money
+          ? const TextInputType.numberWithOptions(decimal: true, signed: true)
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        helperText: helper,
+        helperMaxLines: 4,
+        errorText: problemFor(key),
+        errorMaxLines: 4,
+        prefixText: money ? '₱ ' : null,
+      ),
+      onChanged: (x) => setState(() {
+        values[key] = x;
+        dirty = true;
+        retain();
+      }),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: input == null
+          ? field(null)
+          : InputGuard(input: input, builder: (_, guard) => field(guard)),
+    );
+  }
+
+  Widget select(
+    String key,
+    String label,
+    Map<String, String> choices, {
+    Map<String, String> trailing = const {},
+  }) => Padding(
+    key: ValueKey('select-$key'),
+    padding: const EdgeInsets.only(bottom: 18),
+    child: DropdownButtonFormField<String>(
+      key: ValueKey('$key-${values[key]}'),
+      initialValue: choices.containsKey(values[key]) ? values[key] : null,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: problemFor(key),
+        errorMaxLines: 4,
+      ),
+      items: [
+        for (final e in choices.entries)
+          DropdownMenuItem(
+            value: e.key,
+            child: Row(
+              children: [
+                Expanded(child: Text(e.value, overflow: TextOverflow.ellipsis)),
+                if (trailing[e.key] case final String side) ...[
+                  const SizedBox(width: Space.sm),
+                  Text(
+                    side,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: CraftTheme.of(context).secondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          keyboardType: money
-              ? const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                )
-              : TextInputType.text,
-          decoration: InputDecoration(
-            labelText: label,
-            helperText: helper,
-            helperMaxLines: 4,
-            prefixText: money ? '₱ ' : null,
-          ),
-          onChanged: (x) => setState(() {
-            values[key] = x;
-            dirty = true;
-            retain();
-          }),
-        ),
-      );
-  Widget select(String key, String label, Map<String, String> choices) =>
-      Padding(
-        key: ValueKey('select-$key'),
-        padding: const EdgeInsets.only(bottom: 18),
-        child: DropdownButtonFormField<String>(
-          key: ValueKey('$key-${values[key]}'),
-          initialValue: choices.containsKey(values[key]) ? values[key] : null,
-          isExpanded: true,
-          decoration: InputDecoration(labelText: label),
-          items: [
-            for (final e in choices.entries)
-              DropdownMenuItem(
-                value: e.key,
-                child: Text(e.value, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: (x) => setState(() {
-            values[key] = x ?? '';
-            dirty = true;
-            retain();
-          }),
-        ),
-      );
+      ],
+      onChanged: (x) => setState(() {
+        values[key] = x ?? '';
+        dirty = true;
+        retain();
+      }),
+    ),
+  );
   Widget toggle(String key, String label) => CheckboxListTile(
     contentPadding: EdgeInsets.zero,
     title: Text(label),
@@ -207,16 +253,27 @@ class _FinancialEditorState extends State<FinancialEditor> {
     String key = 'account',
     String label = 'Financial account',
     bool card = false,
-  }) => select(key, label, {
-    for (final a in c.activeAccounts) a.id: a.name,
-    if (c.production &&
-        [FinancialAction.correction, FinancialAction.reversal].contains(action))
-      for (final a in c.accounts.where(
-        (a) => a.archived && a.id == values[key],
-      ))
-        a.id: '${a.name} · archived historical account',
-    if (card && !c.production) 'card': 'Everyday credit · liability',
-  });
+  }) => select(
+    key,
+    label,
+    {
+      for (final a in c.activeAccounts) a.id: a.name,
+      if (c.production &&
+          [
+            FinancialAction.correction,
+            FinancialAction.reversal,
+          ].contains(action))
+        for (final a in c.accounts.where(
+          (a) => a.archived && a.id == values[key],
+        ))
+          a.id: '${a.name} · archived historical account',
+      if (card && !c.production) 'card': 'Everyday credit · liability',
+    },
+    trailing: {
+      for (final a in c.activeAccounts)
+        a.id: c.amountsHidden ? 'Amount hidden' : c.amount(a.balance),
+    },
+  );
   Widget amount([String label = 'Amount']) =>
       text('amount', label, money: true);
   Widget date() => text('date', 'Date · YYYY-MM-DD');

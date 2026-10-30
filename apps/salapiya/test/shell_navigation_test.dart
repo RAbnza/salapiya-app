@@ -150,7 +150,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('nav-debts')));
     await tester.pumpAndSettle();
     expect(shell.hasPages, isFalse);
-    expect(crumbs(tester), ['Debts']);
+    expect(crumbs(tester), ['Debts', 'Summary']);
     expect(tester.takeException(), isNull);
   }, variant: windows);
 

@@ -14,6 +14,7 @@ class FinancialReview extends StatelessWidget {
     this.hidden = false,
     this.commandId,
     this.details = const {},
+    this.quietNotes = false,
   });
   final LocalPlan plan;
   final LocalSnapshot snapshot;
@@ -22,17 +23,20 @@ class FinancialReview extends StatelessWidget {
   final String? commandId;
   final Map<String, String> details;
 
+  /// Keeps the rules' own notes inside the details disclosure.
+  final bool quietNotes;
+
   static const labels = {
     'cash': 'Cash movement',
-    'expense': 'Recognized expense',
-    'income': 'Recognized income',
+    'expense': 'Spending',
+    'income': 'Income',
     'card_liability': 'Card liability',
-    'debt_liability': 'Debt liability',
+    'debt_liability': 'What you owe',
     'receivable': 'Receivable',
     'shared_receivable': 'Private shared receivable',
     'shared_payable': 'Private shared payable',
     'payable': 'Payable',
-    'equity': 'Opening / adjustment equity',
+    'equity': 'Opening balance',
     'private_clearing': 'Private clearing',
   };
   static const credits = {
@@ -149,10 +153,10 @@ class FinancialReview extends StatelessWidget {
         ],
         if (hidden)
           const Text('Financial review amounts hidden.')
-        else
+        else if (!quietNotes)
           ReviewNotes(plan.effects.where((e) => !generated.contains(e))),
         FormEvidence(
-          title: 'View financial evidence',
+          title: quietNotes ? 'View details' : 'View financial evidence',
           children: [
             if (commandId != null)
               SelectableText('Original command: $commandId'),

@@ -10,6 +10,8 @@ import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/local/local_runtime.dart';
 
+import 'package:salapiya/design_system/kit/kit.dart' show DateField;
+
 import '../test/local_money_journey.dart';
 import 'p1_local_money_test.dart' show NoNetworkProof;
 
@@ -17,6 +19,12 @@ Future<void> nativeEnter(WidgetTester tester, String key, String value) async {
   final field = find.byKey(ValueKey('native-$key'));
   await tester.ensureVisible(field);
   await tester.pumpAndSettle();
+  final widget = tester.widget(field);
+  if (widget is DateField) {
+    widget.onChanged!(DateTime.parse(value));
+    await tester.pumpAndSettle();
+    return;
+  }
   final editable = find.descendant(
     of: field,
     matching: find.byType(EditableText),
@@ -116,18 +124,11 @@ void main() {
       );
       await nativeEnter(tester, 'name', 'Native repayment');
       await nativeEnter(tester, 'amount', '1500.00');
-      final cardField = find.widgetWithText(
-        DropdownButtonFormField<String>,
-        'Credit card',
-      );
-      await localTap(tester, cardField);
+      await localTap(tester, find.byKey(const ValueKey('native-select-card')));
       await localTap(tester, find.textContaining('P4 card ·').last);
       await localTap(
         tester,
-        find.widgetWithText(
-          DropdownButtonFormField<String>,
-          'Actual cash account',
-        ),
+        find.byKey(const ValueKey('native-select-account')),
       );
       await localTap(tester, find.text('P4 wallet').last);
       await nativeSave(tester);
