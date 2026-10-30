@@ -171,7 +171,10 @@ void main() {
             expect(intentsRead, isTrue);
             expect(await intents, isEmpty);
             expect(tester.takeException(), isNull);
-            await localTap(tester, find.text('Balances'));
+            await localTap(
+              tester,
+              find.widgetWithText(TextButton, 'Balances'),
+            );
             expect(
               find.textContaining('Suggestions are nonposting'),
               findsOneWidget,

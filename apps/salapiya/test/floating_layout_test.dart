@@ -45,7 +45,7 @@ void main() {
         if (dockRect != null) expect(tester.getRect(dock), dockRect);
         expect(
           tester
-              .getBottomLeft(find.textContaining('Next: interview on 23 Oct'))
+              .getBottomLeft(find.text('Tala reported a payment · example'))
               .dy,
           lessThan(dockRect?.top ?? tester.getBottomLeft(scroll).dy),
         );
