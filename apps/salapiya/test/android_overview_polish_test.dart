@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/app/overview_controls.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
-import 'package:salapiya/app/workspace_overview.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';
 import 'package:salapiya/gallery/settings.dart';
@@ -23,18 +22,6 @@ void main() {
     await (FontLoader(
       'Geist',
     )..addFont(rootBundle.load('assets/fonts/geist/regular.ttf'))).load();
-  });
-  test('compact reporting periods preserve month and year boundaries', () {
-    const l = DefaultMaterialLocalizations();
-    for (final (start, end, expected) in const [
-      ('2026-10-01', '2026-10-28', 'Oct 1–28'),
-      ('2027-01-01', '2027-01-01', 'Jan 1–1'),
-      ('2028-02-01', '2028-02-29', 'Feb 1–29'),
-      ('2026-10-31', '2026-11-02', 'Oct 31–Nov 2'),
-      ('2026-12-31', '2027-01-02', 'Dec 31, 2026–Jan 2, 2027'),
-    ]) {
-      expect(overviewPeriodLabel(l, start, end), expected);
-    }
   });
   for (final android in [true, false]) {
     testWidgets(

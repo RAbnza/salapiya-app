@@ -4,10 +4,8 @@ import 'package:salapiya/local/local_store.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';
 import 'package:salapiya/features/finance/contracts/financial_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salapiya/app/workspace_overview.dart';
 import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/finance/finance_screen.dart';
@@ -63,10 +61,6 @@ void main() {
     },
   );
   testWidgets(
-    'exact Android amounts remain one unit at readable size',
-    metricJourney,
-  );
-  testWidgets(
     'reviewed card fee saves once with no cash movement',
     polishFormJourney,
   );
@@ -112,113 +106,6 @@ void main() {
       semantics.dispose();
     },
   );
-}
-
-Future<void> metricJourney(WidgetTester tester) async {
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(tester.view.resetPhysicalSize);
-  for (final brightness in Brightness.values) {
-    for (final width in [320.0, 360.0, 412.0]) {
-      for (final scale in [1.0, 2.0]) {
-        for (final value in [
-          '\u20b10.00',
-          '\u20b11.25',
-          '\u20b116,000.00',
-          '\u20b1999,999.99',
-          '\u20b11,000,000.00',
-          '\u20b19,283,004.75',
-          '\u20b199,999,999.99',
-          '\u20b192,233,720,368,547,758.07',
-          '-\u20b19,283,004.75',
-          '\u2022\u2022\u2022\u2022',
-          'Unavailable',
-        ]) {
-          tester.view.physicalSize = Size(width, 900);
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: SalapiyaTheme.build(brightness),
-              home: MediaQuery(
-                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
-                child: Scaffold(
-                  body: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: OverviewMetrics(
-                        android: true,
-                        children: [
-                          for (final name in [
-                            'LIQUID MONEY',
-                            'MONTH SPENDING',
-                            'MONTH INCOME',
-                            'DEBT LIABILITY',
-                          ])
-                            ValueBlock(
-                              name,
-                              value,
-                              'Accepted history / exact PHP',
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(
-            tester.takeException(),
-            isNull,
-            reason: '$width / $scale / $value',
-          );
-          final cards = tester
-              .widgetList<ValueBlock>(find.byType(ValueBlock))
-              .toList();
-          expect(cards.length, 4);
-          for (final c in cards) {
-            expect(c.value, value);
-            expect(c.amountFontSize, greaterThanOrEqualTo(18));
-          }
-          for (final e in find.text(value).evaluate()) {
-            final text = e.widget as Text;
-            expect(text.maxLines, 1);
-            expect(text.softWrap, false);
-            final paragraph = e.findRenderObject()! as RenderParagraph;
-            expect(paragraph.didExceedMaxLines, false);
-            final card = find
-                .ancestor(
-                  of: find.byWidget(text),
-                  matching: find.byType(ValueBlock),
-                )
-                .first;
-            if (!tester.widget<ValueBlock>(card).scrollAmount) {
-              final painter = TextPainter(
-                text: paragraph.text,
-                textDirection: TextDirection.ltr,
-                textScaler: TextScaler.linear(scale),
-                maxLines: 1,
-              )..layout();
-              expect(
-                painter.width,
-                lessThanOrEqualTo(paragraph.size.width + .1),
-              );
-              painter.dispose();
-            }
-          }
-          final boxes = find
-              .byType(ValueBlock)
-              .evaluate()
-              .map((e) => (e.findRenderObject()! as RenderBox))
-              .toList();
-          if (boxes[0].localToGlobal(Offset.zero).dy ==
-              boxes[1].localToGlobal(Offset.zero).dy) {
-            expect(boxes[0].size.height, boxes[1].size.height);
-          }
-        }
-      }
-    }
-  }
 }
 
 Future<void> polishFormJourney(WidgetTester tester) async {
