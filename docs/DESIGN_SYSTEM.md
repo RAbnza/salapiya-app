@@ -1,6 +1,6 @@
 # Design system
 
-This is the spec for the Salapiya UI redesign (Windows and Android, one Flutter codebase). Every redesign chat follows it. When a chat needs a rule that isn't here, add it here first, then build it.
+This is the spec for the Salapiya UI redesign (Windows and Android, one Flutter codebase). Every redesign chat follows it. When a chat needs a rule that isn't here, add it here first, then build it. Every section chat builds to the [Section screen standard](#section-screen-standard-the-overviews-quality-bar): the Overview is the quality bar.
 
 The pre-redesign design system, including its research and history, is archived at [archive/DESIGN_SYSTEM_pre-redesign.md](archive/DESIGN_SYSTEM_pre-redesign.md). It is not a rule source.
 
@@ -236,6 +236,66 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
   - **Narrow cards and large text:** row amounts and pills, a card's header control and label amounts move below the text under 336 × the text scale (640 for a header with a segmented control); the donut, gauge and tables switch to stacked layouts; segmented controls and the tab row scroll sideways rather than shrink text.
 - **Demo build:** the same dashboard, filled by a sample profile replayed in memory through the real rules (`planLocal`), dated relative to today: three accounts that end today on the demo balances (₱29,300.75 in all, as Money shows), two months of spending and income, a debt due soon, one 3 days overdue, one paid off, a card statement due in 5 days and three budgets. Demo scenarios (empty, incomplete, waiting changes, review) and hidden amounts apply. Nothing is stored. The previous demo Overview layout and its files are removed.
 
+### Section screen standard (the Overview's quality bar)
+
+Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section chat from Chat 7 on. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
+
+- **Start from the user's question.** Write down the section's five-second question, e.g. "what do I owe and what's next?" for Debts. The first tab, or the top of the screen, answers it. Detail goes in the other tabs.
+- **Page anatomy.**
+  - **Windows:** a `PageHeader` (title, plus a caption with context such as the date or period). Page-level actions sit at the right end of the title row, ending at the content's edge, never floating mid-row.
+  - **Android:** no page title, because the app bar has it. The context row is one compact row, 48 tall, with an optional status pill at its end, and sits 4 above the tabs. No action buttons that repeat the + button above the dock.
+  - **Tabs** (`AppTabs`): used when a section has two or more views. Labels capitalize each main word ("Debts & Dues").
+  - **Notices:** under the tabs, only when they apply.
+- **Grid** (`DashboardGrid`, 12 columns; one column on Android, in priority order):
+  - Mix card widths with purpose: a hero card at 8 with a side card at 4; pairs at 6 + 6 or 5 + 7; tables and long lists at full width. Small tiles pair up on phones (`PairCard`).
+  - Cards in a row share one height. A card that may end up shorter uses `OverviewCard(centered: true)`.
+  - When a card is left with empty space, fill it with something useful, such as a `StatStrip` of figures or a per-item breakdown. Never fill it with decoration, and never leave a large gap.
+- **Cards** (`OverviewCard`):
+  - **Header:** a `titleSmall` title and a `bodySmall` caption.
+  - **View controls:** a small segmented control (`MiniSegmented`) at the header's end. It moves under the heading when the card is narrow.
+  - **Layout or settings choices:** an icon menu in the corner (`AppIconButton` + `MenuAnchor`, `corner:`), not a second segmented control.
+  - **Links:** small `CardLink`s, never full-size buttons, in a card header.
+  - **Accent:** at most one accent card per screen.
+  - **KPI tiles** (`KpiTile`): icon badge, label, a `MoneySize.tile` value, a `ChangeLine`, a `Sparkline` and a caption. Tiles in a set share a label height, so their values line up.
+- **Data display:**
+  - **Tables:** shown as columns at 528 × the text scale and wider, and as rows below that. The amount column has one measured width (`moneyColumnWidth`), so every column starts at the same x on every row. Headers use `labelMedium` in `secondary`, with hairline dividers.
+  - **Charts:** use the `overview_charts.dart` wrappers and follow the §5 chart rules.
+    - Put a `StatStrip` under a chart when it adds meaning.
+    - "Show values" sits 16 below the content above it.
+    - An interactive chart (hover or tap to select) shows the same detail elsewhere too, such as in its legend, by keyboard and to screen readers.
+  - **Changes:** whole basis points through `ChangeLine`, with an arrow and words, so meaning never rests on color alone.
+  - **Progress:** `SlimBar`, or `SegmentBar` (one step per payment or installment). The row carries the words in its semantics label.
+  - **States:** every card has an empty state, a "Not available yet" state (incomplete download) and a hidden-amounts state ("Amounts hidden" for charts).
+- **Sizes and touch:**
+  - **Data screens** (dashboards, lists, tables, reports) use the compact Overview sizes.
+  - **Forms, editors and dialogs** are scaled down too, but stay easy to read:
+    - Controls look about one step smaller than today's 48 on Android: buttons and segmented controls around 40, fields as tight as their label and helper text allow.
+    - Spacing between fields and groups tightens.
+    - **Readability floor:** typed values and body text never go below `bodyMedium` (14 on Android, 13 on Windows). Labels, helper and error text never go below 12. Errors and help (§6) stay fully visible.
+    - **Rollout:** the first section chat that redesigns a form applies this through the theme and kit, shows the owner a sample form before rolling it out, then records the metrics in §3 and §5.
+  - **Android:** every control keeps a 48 × 48 hit area (`TouchArea`).
+  - **Large text:** nothing is truncated at 200% text. Controls scroll sideways or wrap rather than shrink their text.
+- **Shareable views:** when users show a list to other people (dues, balances owed, statements, a group's bills), offer a List layout. It has a period heading with "as of ‹date›", the totals, and every item in one table with no row limit, so one screenshot says it all.
+- **Demo data:** the section's demo build shows populated, realistic content. It follows `overview_demo.dart`: a sample replayed through the real rules, dated relative to today, and agreeing with the demo's other screens. The owner reviews populated screens.
+- **Tests:**
+  - **Sweep test:** every tab at Android 320, 360 and 412 and Windows 720, 1200 and 1440 wide, at 100% and 200% text, in light and dark, plus hidden amounts, incomplete and empty states. The test app sets `themeAnimationDuration: Duration.zero`, so each platform really renders.
+  - **Alignment tests:** for tables, rows and tiles.
+  - **Demo sample test:** the sample replays on week, month and year edges.
+- **Reuse:**
+  - **Where the parts live:** the Overview's building blocks are in `lib/app/overview_controls.dart`, `overview_cards.dart` and `overview_charts.dart`.
+  - **Moving them to the kit:** the first section chat that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
+  - **The grid:** `DashboardGrid` moves the same way.
+- **Lessons from the Overview reviews** (check them before showing the owner):
+  - empty space beside a taller card;
+  - columns that shift with each row's amount;
+  - values pushed down by a label that wraps;
+  - controls stranded mid-row;
+  - a disclosure crowding the content above it;
+  - oversized buttons;
+  - actions that repeat the Android + button;
+  - two controls of the same kind side by side;
+  - tab labels not in title case.
+
 ## 3. Tokens
 
 All tokens live in `apps/salapiya/lib/design_system/theme.dart`. Widgets read them through the theme and never write literals:
@@ -449,6 +509,10 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 3. Every card has the same padding and no text touches a border.
 4. Rows are vertically centered, amounts are right-aligned, and nothing is truncated at 200%.
 5. Light, dark and high contrast all work.
+6. The screen meets the [Section screen standard](#section-screen-standard-the-overviews-quality-bar), and none of its "Lessons from the Overview reviews" apply.
+7. Tables keep their columns aligned, and tiles in a set keep their values aligned.
+8. The demo build shows the section populated.
+9. The section's sweep test covers both platforms, both text sizes, both themes and the hidden, incomplete and empty states.
 
 ## 5. Component rules
 
@@ -915,3 +979,4 @@ Each section chat:
 | 2026-10-30 | Android drops the Overview's quick actions; the + button above the dock already has them. Windows keeps them. | Approved |
 | 2026-10-30 | Tab names "Debts & Dues" and "Accounts & Activity" (capitalized at the owner's request). KPI tiles reserve the tallest label's height so values line up. | Approved |
 | 2026-10-30 | Android's Overview header is one compact row: the date (calendar icon, `titleSmall`) and a dues pill that opens Debts & Dues, with 4 to the tabs. | Approved |
+| 2026-10-30 | Every section chat from Chat 7 follows the Section screen standard (§2), taken from the Overview: the same page anatomy, grid, cards, data display, sizes, shareable list views, demo data and tests, with content chosen per section. Data screens use the compact Overview sizes. Forms, editors and dialogs are scaled down too (about one step), with a readability floor: values and body text at least `bodyMedium`, nothing below 12. The first chat that redesigns a form applies it through the theme and kit after the owner reviews a sample. Overview building blocks move to the kit when another section first needs them. | Approved |
