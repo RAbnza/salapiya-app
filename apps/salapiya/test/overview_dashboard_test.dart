@@ -684,7 +684,7 @@ void main() {
       for (final day in days) {
         final s = demoOverviewSnapshot(day);
         final ids = [for (final a in s.accounts) a.id];
-        expect(ids, hasLength(3), reason: day);
+        expect(ids, hasLength(4), reason: day);
         for (final id in ids) {
           for (final b in balanceByDay(s, [id], addCivilDays(day, -69), day)) {
             expect(b.$2 >= BigInt.zero, isTrue, reason: '$day $id ${b.$1}');
@@ -697,7 +697,7 @@ void main() {
         // Today the accounts hold the demo balances, as Money shows them.
         expect(
           [for (final id in ids) phpDecimal(s.balance(id, through: day))],
-          ['1250.00', '24850.50', '3200.25'],
+          ['1250.00', '24850.50', '3200.25', '0.00'],
           reason: day,
         );
         final week = OverviewDues.from(

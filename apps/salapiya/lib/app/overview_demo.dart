@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../connected/financial_contract.dart';
 import '../local/finance_domain.dart';
 import '../local/local_store.dart' show defaultLocalCategories;
+import '../finance/money_demo.dart';
 import '../prototype/fixtures.dart' show DemoMoney, demoAccounts;
 import '../prototype/scenarios.dart';
 import 'overview_cards.dart';
@@ -26,7 +27,7 @@ LocalSnapshot demoOverviewSnapshot(String today, {bool empty = false}) {
   final probe = BigInt.from(100000000);
   final measured = _replay(today, [for (final _ in demoAccounts) probe]);
   return _replay(today, [
-    for (final (i, a) in measured.accounts.indexed)
+    for (final (i, a) in measured.accounts.take(demoAccounts.length).indexed)
       BigInt.parse(demoAccounts[i].$2) -
           (measured.balance(a.id, through: today) - probe),
   ]);
@@ -80,7 +81,7 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
         'category': 'category-income',
         'incomeClass': 'earned',
       });
-  void expense(
+  String expense(
     int offset,
     String name,
     String from,
@@ -148,6 +149,75 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
   }
   expense(-9, 'Bank transfer fee', bank, 'fees', '25.00');
   expense(-6, 'Birthday gift', cash, 'other', '850.00');
+
+  // What Money's Activity shows besides everyday spending.
+  post('expense', {
+    'date': day(-11),
+    'name': 'Household run',
+    'account': bank,
+    'amount': '1450.00',
+    'category': 'category-groceries',
+    'split': 'true',
+    'splitCount': '2',
+    'splitAmount': '600.00',
+    'splitCategory': 'category-other',
+  });
+  final shoes = expense(-13, 'Work shoes', bank, 'other', '2200.00');
+  post('refund', {
+    'date': day(-3),
+    'name': '',
+    'source': shoes,
+    'sourceVersion': '1',
+    'amount': '400.00',
+    'account': bank,
+    'reason': 'Returned the insoles',
+    'refundPosting': '$shoes-p2',
+  });
+  final taxi = expense(-7, 'Taxi home', wallet, 'transport', '320.00');
+  post('correction', {
+    'date': day(-7),
+    'name': 'Taxi home',
+    'source': taxi,
+    'sourceVersion': '1',
+    'reason': 'Typed the wrong fare',
+    'amount': '230.00',
+    'account': wallet,
+    'category': 'category-transport',
+  });
+  final beans = expense(-5, 'Coffee beans', cash, 'food', '260.00');
+  post('reversal', {
+    'source': beans,
+    'sourceVersion': '1',
+    'reason': 'Logged it twice',
+  });
+  post('transfer', {
+    'date': day(-16),
+    'name': 'Move to savings',
+    'account': wallet,
+    'destination': bank,
+    'amount': '500.00',
+    'fee': '15.00',
+    'feeTreatment': 'source_additional',
+    'feeCategory': 'category-fees',
+    'feeDate': '',
+  });
+  post('adjustment', {
+    'date': day(-2),
+    'account': cash,
+    'amount': '-20.00',
+    'reason': 'Counted my wallet',
+    'mode': 'manual',
+  });
+  // Dated after today, so it isn't in any balance yet.
+  expense(3, 'Insurance premium', bank, 'bills', '1200.00');
+  // A closed account: nothing in it, so it doesn't change Available money.
+  final closed = post('account', {
+    'name': 'Old savings',
+    'kind': 'Savings',
+    'amount': '0.00',
+    'cutoff': cutoff,
+  });
+  post('archive', {'account': closed, 'reason': 'Closed this account'});
 
   // Debts: one with a payment due soon, one overdue, one paid off.
   String debt(String name, String type, String amount) => post('debtImport', {
@@ -351,6 +421,17 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
     'verified': 'true',
   });
 
+  // Fifty pesos short of what was logged, with nothing done about it yet.
+  // Last, so nothing logged afterwards changes what it compared.
+  post('reconcile', {
+    'date': day(-1),
+    'account': wallet,
+    'mode': 'compare',
+    'amount': phpDecimal(
+      s.balance(wallet, through: day(-1)) - BigInt.from(5000),
+    ),
+  });
+
   // Budgets for this month.
   final start = monthStart(today);
   final next = addCivilDays(monthEnd(today), 1);
@@ -415,7 +496,6 @@ OverviewSource demoOverviewSource(
       credit -= owed;
     }
   }
-  void openRecord(String id, String title) => open(PreviewSource.activity);
   // Newest first by date, then by when it was logged.
   final recent = [
     for (final r in s.current.reversed)
@@ -459,7 +539,7 @@ OverviewSource demoOverviewSource(
     needsReview: session.needsReview,
     syncLabel: session.syncLabel,
     onReview: () => open(PreviewSource.privateReview),
-    openRecord: openRecord,
+    openRecord: (id, _) => demoMoneySource(context, session).actions.openRecord(id),
     shared: empty
         ? const []
         : [
@@ -491,7 +571,7 @@ OverviewSource demoOverviewSource(
                       ?.category,
                 ),
           amount: session.amount(r.amount),
-          onTap: () => openRecord(r.id, r.title),
+          onTap: () => demoMoneySource(context, session).actions.openRecord(r.id),
         ),
     ],
   );

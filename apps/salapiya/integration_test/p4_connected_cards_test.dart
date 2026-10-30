@@ -171,7 +171,7 @@ void main() {
         // Genuine SDK disconnect: the ordinary purchase remains durable locally
         // and becomes accepted only through the existing connector and CDC path.
         await tester.runAsync(() => runtime.connected.pause(true));
-        await localAction(tester, 'Add expense');
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', purchaseName);
         await localEnter(tester, 'amount', '1200.00');
         await localTap(tester, find.byKey(const ValueKey('select-funding')));

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
-import 'package:salapiya/features/finance/presentation/financial_editor.dart';
+import 'package:salapiya/finance/money_editor.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
@@ -205,17 +205,17 @@ Future<void> overviewPolishJourney(
     await localSettle(tester);
     await localWait(
       tester,
-      () => find.byType(FinancialEditor).evaluate().isNotEmpty,
+      () => find.byType(MoneyEditor).evaluate().isNotEmpty,
     );
     expect(
-      find.byType(FinancialEditor),
+      find.byType(MoneyEditor),
       findsOneWidget,
       reason: tester
           .widgetList<Text>(find.byType(Text))
           .map((w) => w.data)
           .join(' | '),
     );
-    expect(find.text('Amount'), findsWidgets);
+    expect(find.byKey(const ValueKey('native-amount')), findsOneWidget);
     expect(tester.takeException(), isNull);
     // Opening the editor must not post or change any financial record.
     expect(session.finance.liquid, session.accepted);

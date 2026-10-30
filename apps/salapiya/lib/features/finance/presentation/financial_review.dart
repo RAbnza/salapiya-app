@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../design_system/form_presentation.dart';
 import '../../../design_system/editorial.dart';
+import '../../../design_system/kit/kit.dart' show DateField;
 import '../../../local/finance_domain.dart';
 
 /// Reads the validated plan. Never parses prose or recalculates a command.
@@ -15,6 +16,7 @@ class FinancialReview extends StatelessWidget {
     this.commandId,
     this.details = const {},
     this.quietNotes = false,
+    this.title,
   });
   final LocalPlan plan;
   final LocalSnapshot snapshot;
@@ -25,6 +27,9 @@ class FinancialReview extends StatelessWidget {
 
   /// Keeps the rules' own notes inside the details disclosure.
   final bool quietNotes;
+
+  /// The record's title for the eye, when it differs from the stored one.
+  final String Function(LocalRevision)? title;
 
   static const labels = {
     'cash': 'Cash movement',
@@ -48,6 +53,8 @@ class FinancialReview extends StatelessWidget {
     'equity',
   };
 
+  static String _day(String date) => DateField.format(DateTime.parse(date));
+
   String accountName(String id) => plan.account?.id == id
       ? plan.account!.name
       : snapshot.accounts.where((a) => a.id == id).firstOrNull?.name ?? id;
@@ -69,7 +76,7 @@ class FinancialReview extends StatelessWidget {
       detail: [
         if (p.account != null) accountName(p.account!),
         ?category,
-        p.date,
+        _day(p.date),
       ].join(' · '),
     );
   }
@@ -94,31 +101,33 @@ class FinancialReview extends StatelessWidget {
       children: [
         if (r != null) ...[
           ReviewRow(
-            r.title,
+            title?.call(r) ?? r.title,
             hidden
                 ? 'Amounts hidden'
                 : r.postings.isEmpty && r.amount == BigInt.zero
                 ? 'Evidence / plan'
                 : amount(r.amount),
             emphasis: true,
-            detail: 'Transaction date · ${r.date}',
+            detail: 'Date · ${_day(r.date)}',
           ),
-          for (final key in ['card', 'debt', 'destination'])
+          // A form's defaults can fill these on records they don't apply to.
+          for (final key in [
+            if (financeType(r).startsWith('card')) 'card',
+            'debt',
+            if (financeType(r) == 'transfer') 'destination',
+          ])
             if (r.values[key] case final String id when id.isNotEmpty)
               ReviewRow(
                 switch (key) {
                   'card' => 'Card',
                   'debt' => 'Debt',
-                  _ => 'Destination',
+                  _ => 'To',
                 },
-                snapshot.revisions
+                snapshot.accounts.where((x) => x.id == id).firstOrNull?.name ??
+                    snapshot.revisions
                         .where((x) => x.actionId == id || x.id == id)
                         .lastOrNull
                         ?.title ??
-                    snapshot.accounts
-                        .where((x) => x.id == id)
-                        .firstOrNull
-                        ?.name ??
                     id,
               ),
           const Divider(height: 24),

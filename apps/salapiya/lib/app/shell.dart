@@ -27,6 +27,7 @@ import '../local/local_profile_view.dart';
 import '../local/local_runtime.dart';
 import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
+import '../finance/money_editor.dart';
 import '../life/life_controller.dart';
 
 /// A create action: a fixed key (it also names the route, `action/<key>`),
@@ -439,7 +440,11 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         ),
       );
     }
-    return FinancialEditor(controller: session.finance, action: action);
+    final finance = session.finance;
+    return finance is LocalFinancialController &&
+            moneyFormActions.contains(action)
+        ? MoneyEditor(controller: finance, action: action)
+        : FinancialEditor(controller: finance, action: action);
   }
 
   /// System Back and Esc: close the top page; on Android, return to Overview
@@ -708,6 +713,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       key: ValueKey((session.finance, navigation.revisionOf(destination))),
       session: session,
       initial: navigation.tabOf(destination)!,
+      actions: [
+        for (final item in newItemsFor(AppDestination.money).take(3))
+          (label: item.$2, icon: item.$3, onSelected: () => runNew(item)),
+      ],
     ),
     AppDestination.debts => DebtsScreen(
       key: ValueKey((session.finance, navigation.revisionOf(destination))),

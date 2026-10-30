@@ -81,7 +81,7 @@ void main() {
         );
         await localTap(tester, find.byType(BackButton));
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
-        await localTap(tester, find.byTooltip('Create account'));
+        await localTap(tester, find.text('Add account'));
         await localEnter(tester, 'name', 'Synthetic fresh $role');
         await localEnter(tester, 'amount', '1.00');
         await localEnter(tester, 'cutoff', '2026-10-25');

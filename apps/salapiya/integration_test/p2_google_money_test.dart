@@ -78,7 +78,7 @@ void main() {
             (r) => r.title == 'P2 Google offline $role',
           )) {
             await localTap(tester, find.byKey(const ValueKey('nav-money')));
-            await localTap(tester, find.text('Add expense'));
+            await localAction(tester, 'Log expense');
             await localEnter(tester, 'name', 'P2 Google offline $role');
             await localEnter(
               tester,

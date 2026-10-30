@@ -398,10 +398,14 @@ class FormExitGuard extends StatefulWidget {
     required this.dirty,
     required this.busy,
     this.keepDraft,
+    this.discardDraft,
   });
   final Widget child;
   final bool dirty, busy;
   final Future<void> Function()? keepDraft;
+
+  /// Offers to drop the draft too, for forms that bring it back on reopening.
+  final Future<void> Function()? discardDraft;
   @override
   State<FormExitGuard> createState() => _FormExitGuardState();
 }
@@ -412,7 +416,7 @@ class _FormExitGuardState extends State<FormExitGuard> {
     if (leaving || widget.busy) return;
     leaving = true;
     try {
-      final yes = await showDialog<bool>(
+      final choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(
@@ -427,11 +431,16 @@ class _FormExitGuardState extends State<FormExitGuard> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(context),
               child: const Text('Keep editing'),
             ),
+            if (widget.discardDraft != null)
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'discard'),
+                child: const Text('Discard draft'),
+              ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(context, 'keep'),
               child: Text(
                 widget.keepDraft == null
                     ? 'Discard changes'
@@ -441,8 +450,12 @@ class _FormExitGuardState extends State<FormExitGuard> {
           ],
         ),
       );
-      if (yes != true) return;
-      await widget.keepDraft?.call();
+      if (choice == null) return;
+      if (choice == 'discard') {
+        await widget.discardDraft!.call();
+      } else {
+        await widget.keepDraft?.call();
+      }
       if (!mounted) return;
       setState(() => allowed = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {

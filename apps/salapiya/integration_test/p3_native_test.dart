@@ -664,14 +664,17 @@ void main() {
         // Continue a real Add Expense result into group sharing, then adopt its
         // original action. The group handoff cannot repeat the private cash.
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
-        await localTap(tester, find.text('Add expense'));
+        await localAction(tester, 'Log expense');
         final integratedTitle = 'Integrated purchase $role ${accepted.version}';
         await localEnter(tester, 'name', integratedTitle);
         await localEnter(tester, 'amount', '3.00');
-        await localTap(tester, find.byKey(const ValueKey('select-account')));
+        await localTap(
+          tester,
+          find.byKey(const ValueKey('native-select-account')),
+        );
         await p3Choice(tester, accountName);
-        await localTap(tester, find.byKey(const ValueKey('review-action')));
-        await localTap(tester, find.text('Confirm & save'));
+        await localTap(tester, find.byKey(const ValueKey('native-submit')));
+        await localTap(tester, find.byKey(const ValueKey('native-submit')));
         await localWait(
           tester,
           () => find.text('Share this purchase').evaluate().isNotEmpty,

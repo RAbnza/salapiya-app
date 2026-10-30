@@ -98,7 +98,7 @@ void main() {
         await localEnter(tester, 'amount', '25000.00');
         await capture('account-form');
         await localConfirm(tester);
-        await localTap(tester, find.text('Add expense').first);
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', 'Weekly groceries');
         await localEnter(tester, 'amount', '850.25');
         await localEnter(tester, 'date', civilToday());

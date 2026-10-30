@@ -108,7 +108,7 @@ void main() {
         await debtSelect(tester, 'rule', 'Native recurring bill ·');
         await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(100000));
-        await localAction(tester, 'Add expense');
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', 'Actual native purchase');
         await localEnter(tester, 'amount', '500.00');
         await localConfirm(tester);

@@ -68,14 +68,14 @@ void main() {
         await localTap(tester, find.text('Create local profile'));
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
-        await localTap(tester, find.byTooltip('Create account'));
+        await localTap(tester, find.text('Add account'));
         await localEnter(tester, 'name', 'Portability wallet');
         await localEnter(tester, 'amount', '1000.00');
         await localEnter(tester, 'cutoff', '2026-10-01');
         await localConfirm(tester);
         final c = runtime.session!.localFinance,
             account = c.snapshot.accounts.single.id;
-        await localTap(tester, find.text('Add expense').first);
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', 'Synthetic supporting source');
         await localEnter(tester, 'amount', '20.00');
         await localConfirm(tester);

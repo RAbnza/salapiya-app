@@ -2,6 +2,7 @@
 /// component; new screen code imports this file.
 library;
 
+export 'app_table.dart';
 export 'buttons.dart';
 export 'calculator.dart';
 export 'charts.dart';

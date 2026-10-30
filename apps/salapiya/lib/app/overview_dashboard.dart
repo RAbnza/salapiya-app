@@ -5,7 +5,8 @@ import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_editor.dart';
-import '../features/finance/presentation/money_screen.dart';
+import '../finance/money_data.dart';
+import '../finance/money_details.dart' show openMoneyRecord;
 import '../features/life/presentation/life_screen.dart';
 import '../life/life_controller.dart';
 import '../local/finance_domain.dart';
@@ -112,12 +113,8 @@ OverviewSource localOverviewSource(
           return d != 0 ? d : a.time.compareTo(b.time);
         }))
       : const [];
-  void openRecord(String id, String title) => openDemoPage<void>(
-    context,
-    TransactionDetail(session: session, id: id),
-    'money/transaction/$id',
-    title: title,
-  );
+  void openRecord(String id, String title) =>
+      openMoneyRecord(context, c, id, session: session);
   return OverviewSource(
     today: today,
     accepted: c.acceptedSnapshot,
@@ -197,24 +194,21 @@ OverviewSource localOverviewSource(
     ],
     recent: [
       for (final r
-          in session.finance.records.where((r) => !r.sharedOnly).take(10))
+          in moneyActivity(
+            c.snapshot,
+            c.categoryName,
+          ).where((r) => r.date.compareTo(today) <= 0).take(10))
         (
-          icon: _activityIcon(r.kind),
+          icon: moneyIcon(r),
           title: r.title,
           date: r.date,
-          category: r.category,
-          amount: session.amount(r.amount),
+          category: r.categoryLabel.isEmpty ? r.label : r.categoryLabel,
+          amount: r.shown(session.amount, hidden: session.hideAmounts),
           onTap: () => openRecord(r.id, r.title),
         ),
     ],
   );
 }
-
-IconData _activityIcon(String kind) => kind == 'income'
-    ? Icons.south_west
-    : kind == 'transfer'
-    ? Icons.swap_horiz
-    : Icons.north_east;
 
 /// The Overview's tabs (owner review, 2026-10-30).
 enum OverviewTab {

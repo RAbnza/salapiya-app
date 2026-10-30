@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:salapiya/app/title_bar.dart';
 import 'package:salapiya/app/window_chrome.dart';
 import 'package:salapiya/local/local_store.dart';
-import 'package:salapiya/features/finance/presentation/financial_editor.dart';
 import 'package:salapiya/features/finance/contracts/financial_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/finance/finance_screen.dart';
+import 'package:salapiya/finance/money_editor.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_finance_controller.dart';
 
@@ -250,7 +250,7 @@ Future<void> uncertainFormJourney(WidgetTester tester) async {
         theme: SalapiyaTheme.build(Brightness.dark),
         home: FinancialEnvironment(
           production: true,
-          child: FinancialEditor(
+          child: MoneyEditor(
             controller: controller!,
             action: FinancialAction.expense,
             initial: {
@@ -265,21 +265,18 @@ Future<void> uncertainFormJourney(WidgetTester tester) async {
       ),
     );
     await localSettle(tester);
-    await localTap(tester, find.byKey(const ValueKey('review-action')));
-    await localTap(tester, find.byKey(const ValueKey('simulate-action')));
+    final submit = find.byKey(const ValueKey('native-submit'));
+    await localTap(tester, submit);
+    await localTap(tester, submit);
     expect(find.text('The result is uncertain'), findsOneWidget);
-    expect(
-      find.text('Nothing was applied. Your draft is ready to retry.'),
-      findsNothing,
-    );
-    expect(find.byKey(const ValueKey('simulate-action')), findsNothing);
+    expect(submit, findsNothing);
     expect(store.submissions, 1);
     final original = store.submitted!;
     store.lost = false;
-    await localTap(tester, find.text('Check original result'));
+    await localTap(tester, find.text('Check the result'));
     await localWait(
       tester,
-      () => find.text('Saved on this device').evaluate().isNotEmpty,
+      () => find.text('Saved securely on this device.').evaluate().isNotEmpty,
     );
     expect(controller!.snapshot.balance(wallet), BigInt.from(47500));
     expect(

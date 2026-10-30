@@ -105,7 +105,7 @@ void main() {
       final card = c.snapshot.current
           .singleWhere((r) => financeType(r) == 'creditCard')
           .actionId;
-      await localAction(tester, 'Add expense');
+      await localAction(tester, 'Log expense');
       await localEnter(tester, 'name', 'Native card dinner');
       await localEnter(tester, 'amount', '1200.00');
       await localTap(tester, find.byKey(const ValueKey('select-funding')));
@@ -235,7 +235,7 @@ void main() {
         verified: true,
       );
       await localAction(tester, 'Native installment application');
-      await localAction(tester, 'Correct with reason');
+      await localAction(tester, 'Correct this record');
       await localWait(
         tester,
         () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,

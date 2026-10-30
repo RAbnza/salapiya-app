@@ -238,7 +238,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 
 ### Debts (Chat 7)
 
-`lib/finance/debt_screen.dart` (the section, its pages and the local source), `debt_cards.dart` (cards and `DebtTable`), `debt_data.dart` (display-only derivations) and `debt_demo.dart` (the demo source); tested in `test/debt_data_test.dart` and `test/debts_dashboard_test.dart`. Five-second question: "What do I owe, what's next, and is anything late?"
+`lib/finance/debt_screen.dart` (the section, its pages and the local source), `debt_cards.dart` (cards), `debt_data.dart` (display-only derivations) and `debt_demo.dart` (the demo source); tested in `test/debt_data_test.dart` and `test/debts_dashboard_test.dart`. Five-second question: "What do I owe, what's next, and is anything late?"
 
 - **Header.** Windows: a `PageHeader`, "As of ‹long date› · N debts", with the shell's three New items as chips at the right end. Android: one 48-tall row, the date and a pill ("N overdue", else "N due this week") that opens Schedule; the pill drops under the date when large text can't hold both.
 - **Tabs** (`AppTabs`): Summary · Schedule · Payments · History. They also show in the sidebar, the rail flyout and Go to, and take part in back and forward.
@@ -254,11 +254,40 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 - **History:** every debt record with its earlier versions; rows open the record page, which keeps Correct and Reverse.
 - **Debt details** (`NativeDebtDetail`, a `SectionPage`): the name, pill and "Lender · Type", then "Log a payment" and a More menu (Edit or Set schedule, Update amounts, Break down a payment, Log a lender charge or waiver, Log an early payoff, View record). Below: **Payoff** (the page's accent, 8) beside **About this debt** (4), then **Payments**, one row per scheduled payment, and **Payment history**. Closed and settled debts offer no new payment.
 - **Display states** (`DebtProgress`, also used by the Overview). Closed: a payoff is on record, with or without a schedule. Settled: nothing owed and nothing open. Schedule finished: every scheduled payment is logged but money is still owed. Otherwise the `DebtDueStatus` label.
-- **Tables** (`DebtTable`): as §2 Tables, and they also turn into rows when the fixed columns leave the flexible ones under 48 × the text scale per share.
+- **Tables** (`AppTable`): as §2 Tables, and they also turn into rows when the fixed columns leave the flexible ones under 48 × the text scale per share.
 - **States:** an incomplete download shows "Not available yet" and no ₱ anywhere. Hidden amounts show "Amount hidden", hide charts, change lines and sparklines, and stop the progress line at "4 of 6 payments logged".
 - **Dates:** the Overview's. "Next" starts today, so overdue rows are never next. Upcoming by month is this month and the next five; this month starts today and overdue stays separate.
 - **Editors:** every Debts form is on the compact scale (§3) with `DateField`, `AmountField`, errors in place and plain labels. Fields most people skip sit under "More details", and fields show only when they apply: Paid into for cash, Category for a purchase, charge and waiver fields by what happened. Negative balance consent appears only once the rules ask. Log a debt payment asks for the essentials and fills the rest of the same command from the answers; corrections keep every field. An early payoff fills the lender's amount from the payoff amount.
 - **Demo build:** the same screens from the Overview's sample (`demoSample`), so both agree. Demo scenarios and hidden amounts apply. Editors open the demo's own forms, and saving there doesn't change the sample.
+
+### Money (Chat 8)
+
+`lib/features/finance/presentation/money_screen.dart` (the section and its tabs), `lib/finance/money_dashboard.dart` (header, Accounts, Activity), `money_cards.dart` (cards), `money_details.dart` (account and record pages, Categories, Saved drafts, the local source), `money_data.dart` (display-only derivations), `money_demo.dart` (the demo source) and `money_editor.dart` (the forms); tested in `test/money_data_test.dart`, `money_dashboard_test.dart` and `money_form_test.dart`. Five-second question: "How much do I have, where is it, what changed, and does anything need me?" This covers Accounts and Activity; Cards, Planning, Reports, Import and Files keep their content until Chat 9, under the same header and tabs.
+
+- **Header.** Windows: a `PageHeader`, "As of ‹long date› · N accounts", with Log expense, Log income and Log a transfer as chips at the right end, on Accounts and Activity only. Android: the 48-tall date row, with no action buttons.
+- **Tabs** (`AppTabs`): the seven labels, unchanged. There is no third tab layer: Accounts has Active | Archived in its table, and Activity has search, type and period.
+- **Notices**, under the tabs, only when they apply: first download not finished; changes waiting to sync (balances here include them, so they can differ from the Overview until they sync); sync needs review.
+- **Balances include waiting changes,** as Debts does: something just logged moves the balance at once.
+- **Accounts:**
+  - **KPI tiles:** Available money (the one accent, with the change since last month end and a 30-day sparkline), Money in, Money out (each against the same days of last month) and Due this week ("N due · M overdue", opening Debts › Schedule). Money in and out are cash movements, so a transfer between accounts counts only its fee, card purchases aren't counted and opening balances aren't movement. Together they explain the balance's change, which is why they differ from the Overview's Income and Spending.
+  - **Where your money is** (8, or 12 with nothing needing attention): a table of Account, Share, This month and Balance, largest first, closing with a total that adds up: Archived accounts (when they hold money), Available money, then Card debt, which isn't counted. Active | Archived shows when an account is archived. `CardLink` Add account; a corner menu has Categories, Saved drafts and Imported history.
+  - **Needs your attention** (4): accounts below zero, each account's newest balance check if it's unresolved, and saved drafts, each row going where it's handled. Hidden when there's nothing.
+  - **Balance over time** (7) beside **Recent activity** (5, six rows, "See all" switches tab).
+  - **Android order:** Available money, Money in + Money out, Due this week, Needs your attention, Where your money is, Recent activity, Balance over time.
+- **Activity:**
+  - **Top band:** search, a period chip (This month, Last month, Last 90 days, All dates, Custom) and Filters (Account, Category, From, To; a dialog on Windows, a sheet on Android). Active filters are removable chips. Type sits below: All, Money out, Money in, Transfers, Cards, Debts, Adjustments.
+  - **Search looks through every date,** whatever the period says: description, notes, reference, merchant, category, account and exact amount (no amounts while hidden). The period chip says "All dates" while searching.
+  - **One row per record:** its newest version. A corrected record has a Corrected pill. A reversed one stays with a Reversed pill and is left out of totals. Earlier versions are in the record's Edit history. Budgets, schedules and other records that move no money aren't activity.
+  - **Dated list:** Later ("not in your balance yet"), Today, Yesterday, then each day, with the day's change at the end of its header. Space sets the days apart: 24 above a day's header and 4 below it, with hairlines only between the rows of a day. Amounts are signed; a transfer is unsigned with ⇄, or signed when seen from one of its accounts; a balance check reads "No money moved". 50 rows, then "Show more · N left".
+  - **Shareable list:** the corner menu picks By day or List and has "Open as a page". The List has the period, "as of", the totals and every item, oldest first, with no row limit. Filtered to one account it's a statement: starting balance, a Balance column and closing balance. Reversed records, balance checks and records dated later aren't listed.
+- **Account details** (`AccountDetailView`, a `SectionPage`): the name, a pill (Archived, or Below zero) and "Bank · BPI · Since 14 Oct 2026", then Log expense and a More menu (Log income, Log a transfer, Check balance, Adjust account balance, Archive account), all prefilled. **Balance** (the page's accent, 8) beside **About this account** (4), then **Activity**, showing this account's own effect, with the statement in its corner menu. Archived accounts offer no new records.
+- **Record details** (`RecordDetailView`): one page for every record, opened from Money, Debts History, Cards, Planning and Reports. The description, a pill and "Expense · 29 Oct 2026 · Cash wallet", then the actions. **What this did** (the accent, 8) in plain words, beside **About this record** (4), then **Edit history**: every version with its reason, related refunds and adjustments, attachments, and "View details" for technical ids. Other sections' records list their stored fields there until Chat 9 labels them.
+  - **What it offers** (`recordActions`, which reads what the rules will insist on, so nothing fails at Review): Correct transaction, Log a refund (only with a portion to refund) and Reverse transaction. A record with a refund or adjustment says to reverse that first. A Shared-linked record links to Shared Expenses. An earlier version links to the current one. A balance check offers Adjust balance to match, or Check balance when records changed since.
+- **Display states:** an incomplete download shows "Not available yet" and no ₱ anywhere. Hidden amounts show "Amount hidden", hide charts, change lines, sparklines and shares, and never add a sign. Each card has its own empty state; no accounts shows one empty state with Add account.
+- **Dates:** the Overview's. Records dated after today sit under Later and are left out of balances and totals, matching `balance(through: today)`. Balance over time is a closing balance per day for 30 days, or month ends then today for 12 months. "Last 90 days" is today and the 89 days before it. "This month" and "Last 90 days" have no end, so later records stay in view.
+- **Forms** (`MoneyEditor`, on the compact scale, §3): Log expense, Log income, Log a transfer, Add account, Add category, Check a balance, Adjust account balance, Adjust balance to match, Archive account, Log a refund, Correct transaction and Reverse transaction. Fields most people skip are under More details; the below-zero choice shows only once the rules ask, under the account it's about, including a separate fee account. Only Actual balance and Change to balance take a minus sign. Reverse asks only why. A correction of an opening balance or a linked adjustment offers no date, because the rules accept no other. Values start from `c.defaults` and every key stays in the command, shown or not, and draft keys are unchanged. If a save's answer is lost, the form checks the same command and never submits a second one.
+- **`FinancialEditor`** is the demo build's now. `openFinancialEditor` sends those forms on a real profile to `MoneyEditor`; the demo's Shared, Cards, Planning, debt and Money forms stay as they were.
+- **Demo build:** the same screens from `demoSample`, so Money agrees with the Overview and Debts. Scenarios and hidden amounts apply. The sample gained a split purchase, a refund, a correction, a reversal, a transfer with a fee, a balance check with a difference, an adjustment, a record dated later and an archived account. The demo can't show any `MoneyEditor` form, because they need the encrypted store: Log expense, income and a transfer open the demo's own forms, and the rest open a placeholder. Saving there doesn't change the sample.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -306,7 +335,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - **Alignment tests:** for tables, rows and tiles.
   - **Demo sample test:** the sample replays on week, month and year edges.
 - **Reuse:**
-  - **Where the parts live:** the shared ones are in the kit (§5 Dashboard kit). `DuesCard`, `DuesList`, `DueCalendar`, `DebtProgressCard` and `OwedCard` stay in `lib/app/overview_cards.dart` because they use finance types. The donut, gauge and account cards stay in `lib/app` until another section needs them.
+  - **Where the parts live:** the shared ones are in the kit (§5 Dashboard kit). `DuesCard`, `DuesList`, `DueCalendar`, `DebtProgressCard`, `OwedCard` and `ActivityCard` stay in `lib/app/overview_cards.dart` because they use finance types. The donut, gauge and account cards stay in `lib/app` until another section needs them.
   - **Moving more to the kit:** the first section chat that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
 - **Lessons from the Overview reviews** (check them before showing the owner):
   - empty space beside a taller card;
@@ -465,7 +494,7 @@ Forms are one step smaller than the base sizes and stay easy to read. Approved b
 | Buttons | look 40, 48 hit area | 32 |
 | Form column | full width | max 640 (`Space.formMaxWidth`), centered |
 
-- **Scope:** a theme scope, not an app-wide change. `NativeFinanceEditor` (Debts, and Money's Cards, Planning, Files and Correct/Reverse forms) and Update payment amounts use it. Log expense, income and transfer adopt it in Chat 8, and each later chat adopts it for its own forms.
+- **Scope:** a theme scope, not an app-wide change. `NativeFinanceEditor` (Debts, and Money's Cards, Planning and Files forms), `MoneyEditor` and Update payment amounts use it. Each later chat adopts it for its own forms.
 - **Hit areas:** an Android field stays 48 tall with its border drawn 4 inside, so its whole height takes taps; buttons get transparent space from `MaterialTapTargetSize.padded`.
 - **ⓘ:** a field with one keeps a label row one hit target tall, and the form leaves out the field gap above it (`CompactForm.gapBefore`).
 
@@ -781,13 +810,21 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 
 `kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
 
+### Tables (`AppTable`; moved from Debts, Chat 8)
+
+`kit/app_table.dart`: `AppTable`, `AppTableRow`, `AppTableColumn`, `dateColumn` and `ShowMore`, moved from `lib/finance/debt_cards.dart` and renamed, because a debt-named class doesn't belong in the kit. The look is unchanged. Additions, both optional: `AppTableRow.header` starts a group of rows and takes no part in the columns, so every day of a dated list shares one set of widths; `dense` is for long lists of one-line rows. A group header has `groupGap` above it (`md` under the table's own header) and `xs` below it, with no hairline around it, as columns and as rows. `ActivityCard` gained an optional `footer`.
+
+### Form exits (`FormExitGuard`)
+
+An optional `discardDraft` adds Discard draft beside Keep draft & close, for forms that bring a draft back on reopening. `MoneyEditor` passes it, and Saved drafts can discard one too. Other forms keep the two choices they had.
+
 ### Section page (`SectionPage`; Chat 7)
 
 A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
 
 ### Deferred to section chats
 
-- **Table and pager:** Chat 8 or 9.
+- **Pager:** not needed so far; lists use `ShowMore`.
 - **Tabs:** built in Chat 6's owner review (`AppTabs`, above) for the Overview. Section screens keep their existing tab controls until their own chats adopt it.
 
 ### Component gallery (debug only)
@@ -878,6 +915,19 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Unresolved payment clearing | Payment without a breakdown | |
 | Final scheduled installment | Last scheduled payment | Still labeled as not a payoff date |
 | Installment | Payment | Stored row names ("Installment 3") stay as recorded |
+| Add expense, Record income, Transfer money | Log expense, Log income, Log a transfer | |
+| Create account, Create category, Record refund | Add account, Add category, Log a refund | |
+| Reconcile account | Check balance | Title "Check a balance"; a saved one is a "Balance check" |
+| Observed balance, Calculated balance | Actual balance, Balance in Salapiya | |
+| Review explicit adjustment, Signed balance adjustment | Adjust balance to match, Change to balance | |
+| Opening cutoff | Balance as of | Helper: "The day this balance was true. Log newer activity after it." |
+| Amount arriving at destination | Amount received | |
+| Paid additionally by source, Withheld from amount sent, Paid by another account | On top, from the same account; Taken out of the amount; From another account | How a transfer fee was paid |
+| Fee-bearing account | Fee paid from | |
+| Provider posting date | Date it posted | |
+| Income classification | Type of income | |
+| Reason / correction evidence | Why you're changing this | |
+| Superseded · evidence retained, Reversed · evidence retained | Corrected, Reversed | Pills; earlier versions stay in Edit history |
 
 ### Tone rules
 
@@ -917,6 +967,12 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Per-debt payoff progress (payments logged, scheduled amount left) | `DebtDueSummary` plus the schedule rows (`DebtProgress`) | UI aggregation (approved, Chat 6) |
 | Debts: total owed (per-debt balances, equal to `debtTotal`), next payment, debts-only overdue and period totals | `DebtsSummary` (`lib/finance/debt_data.dart`) | UI aggregation (approved, Chat 7) |
 | Debts: dues by calendar month, payments per debt, paid per month, paid down, payment rows, record names, what needs the user | `dueByMonth`, `debtPaymentRows`, `paidByMonth`, `paidDownBetween`, `installmentRows`, `recordLabel`, `debtTasks` | UI aggregation (approved, Chat 7) |
+| Money: one row per record (newest version, plain label, status, signed cash effect) | `moneyActivity` (`lib/finance/money_data.dart`) | UI aggregation (approved, Chat 8) |
+| Money: money in and out from cash postings, netted per record; a transfer counts only its fee; opening balances are left out | `cashFlow` | UI aggregation (approved, Chat 8) |
+| Money: per-account balance, share of the positive total, this month's change, last balance check | `accountRows`, `lastChecked` | UI aggregation (approved, Chat 8) |
+| Money: closing balance after each row of a statement; balances at month ends | `statementFor`, `balanceByMonth` | UI aggregation (approved, Chat 8) |
+| Money: what needs attention (below zero, balance checks to resolve, saved drafts) | `moneyTasks`, `balanceCheckState` | UI aggregation (approved, Chat 8) |
+| Money: search, type, account, category and period filters | `ActivityFilter` | UI aggregation (approved, Chat 8) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -933,7 +989,7 @@ Remove this section when the redesign is finished.
 | 5 | Windows custom title bar | Done |
 | 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Done |
 | 7 | Debts | Done |
-| 8 | Money A: Accounts, Activity, transaction form | Planned |
+| 8 | Money A: Accounts, Activity, transaction form | Done |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
 | 10 | Shared Expenses A: groups, Bills, Payments | Planned |
 | 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle | Planned |
@@ -1058,3 +1114,15 @@ Each section chat:
 | 2026-10-30 | Errors after submitting go on the field they're about, in red. A table in the editor maps rules that name no field to theirs, so no rule file changes. Going below zero marks the account and says what it holds; the rest keep the rules' own wording until that's approved. | Approved |
 | 2026-10-30 | Account pickers show each account's balance, and warn before saving when the amount is more than the account holds. | Approved |
 | 2026-10-30 | Forms handle the sync rule themselves instead of showing it as an error: Save syncs first, a sync that brings new records asks for another look at Review, and a failed sync stays on Review with "Sync and save". A debt added with a schedule syncs before saving the schedule. The rule itself is unchanged. | Approved |
+| 2026-10-30 | Money (Chat 8): Accounts is KPI tiles over one table of accounts with shares and a total that adds up, beside Needs your attention. Activity has search, a period chip, Filters and day groups, one row per record. A List layout and an account statement are the shareable views. | Approved |
+| 2026-10-30 | Money's balances include waiting changes, as Debts does; a notice says they can differ from the Overview until they sync. | Approved |
+| 2026-10-30 | Needs your attention shows accounts below zero, balance checks to resolve and saved drafts. "Not checked lately" was left out, so there's no 30-day rule. | Approved |
+| 2026-10-30 | "Reconcile account" becomes Check balance (title "Check a balance", a saved one a "Balance check"). Stored titles stay; they're only reworded for the eye. | Approved |
+| 2026-10-30 | Money's forms move to a new `MoneyEditor` that shares `FinanceFormFields` with `NativeFinanceEditor`. `FinancialEditor` is the demo build's, so the demo's other 24 forms don't change. The demo build can't show the new forms. | Approved |
+| 2026-10-30 | One record page: `openFinanceDetail` opens `RecordDetailView`, so Debts History, Cards, Planning and Reports rows get it too. | Approved |
+| 2026-10-30 | The real Overview's Recent activity uses Money's rows. It listed budgets, schedules and replaced versions. | Approved |
+| 2026-10-30 | `DebtTable` moves to the kit as `AppTable`, with a group-header row and a dense option. | Done |
+| 2026-10-30 | Records dated after today sit under Later and stay out of balances and totals. "Last 90 days" is today and the 89 days before it. | Done |
+| 2026-10-30 | Search covers every date whatever the period says. One row per record: corrected records show their newest version and a pill, and reversed ones stay with a pill, out of totals. | Done |
+| 2026-10-30 | Review shows Card only on card records and To only on transfers: a form's defaults put those values on every command, so a cash expense showed "Destination". Its dates read "21 Oct 2026". | Done |
+| 2026-10-30 | Owner review of Activity: day headers were squeezed between hairlines. Space now sets the days apart: `groupGap` above a day's header, `xs` below it, hairlines only between the rows of a day, and the date in `text` with the day's change in `secondary`. Both platforms. | Approved |

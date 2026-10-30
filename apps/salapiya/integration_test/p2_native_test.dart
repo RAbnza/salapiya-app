@@ -109,7 +109,7 @@ void main() {
         if (stage == 'offline') {
           await tester.runAsync(() => runtime.connected.pause(true));
           await localTap(tester, find.byKey(const ValueKey('nav-money')));
-          await localTap(tester, find.text('Add expense'));
+          await localAction(tester, 'Log expense');
           await localEnter(tester, 'name', 'P2 offline $role');
           await localEnter(
             tester,

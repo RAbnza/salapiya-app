@@ -1627,12 +1627,13 @@ class ActivityCard extends StatelessWidget {
     required this.empty,
     this.caption,
     this.action,
+    this.footer,
   });
   final String title;
   final String? caption;
   final List<ActivityRow> rows;
   final Widget empty;
-  final Widget? action;
+  final Widget? action, footer;
 
   @override
   Widget build(BuildContext context) {
@@ -1706,17 +1707,23 @@ class ActivityCard extends StatelessWidget {
           : LayoutBuilder(
               builder: (context, box) {
                 if (narrowAt(context, box.maxWidth, tableBase)) {
-                  return ListGroup(
-                    leading: true,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final r in rows)
-                        AdaptiveRow(
-                          leading: r.icon,
-                          title: r.title,
-                          subtitle: '${civilLabel(r.date)} · ${r.category}',
-                          trailing: MoneyAmount(r.amount),
-                          onTap: r.onTap,
-                        ),
+                      ListGroup(
+                        leading: true,
+                        children: [
+                          for (final r in rows)
+                            AdaptiveRow(
+                              leading: r.icon,
+                              title: r.title,
+                              subtitle: '${civilLabel(r.date)} · ${r.category}',
+                              trailing: MoneyAmount(r.amount),
+                              onTap: r.onTap,
+                            ),
+                        ],
+                      ),
+                      ?footer,
                     ],
                   );
                 }
@@ -1762,6 +1769,7 @@ class ActivityCard extends StatelessWidget {
                       if (i > 0) Divider(height: 1, color: c.divider),
                       tableRow(r),
                     ],
+                    ?footer,
                   ],
                 );
               },

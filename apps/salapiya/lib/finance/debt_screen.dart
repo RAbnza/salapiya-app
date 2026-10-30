@@ -15,6 +15,7 @@ import '../prototype/scenarios.dart';
 import 'debt_cards.dart';
 import 'debt_data.dart';
 import 'finance_screen.dart';
+import 'form_mechanics.dart';
 
 /// The pill for one debt, as everywhere in Debts.
 class DebtStatusBadge extends StatelessWidget {

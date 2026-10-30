@@ -7,10 +7,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app/demo_routes.dart';
-import '../connected/financial_contract.dart' show dependencySensitive;
 import '../app/overview_cards.dart' show civilLabel;
 import '../app/overview_data.dart' show DebtProgress, overviewDebtProgress;
 import 'debt_data.dart' show debtPaymentRows;
+import 'form_mechanics.dart';
+import 'money_details.dart' show openMoneyRecord;
 import '../design_system/editorial.dart';
 import '../design_system/kit/kit.dart'
     show
@@ -18,33 +19,18 @@ import '../design_system/kit/kit.dart'
         AppIconButton,
         CardLink,
         CompactForm,
-        DateField,
         FieldInput,
         FormMoreDetails,
-        HelpTextField,
         InlineNotice,
         OptionPicker,
         PickerOption,
         PickerStyle,
         SectionPage,
-        SurfaceCard,
-        isDesktop;
+        SurfaceCard;
 import '../features/finance/presentation/financial_widgets.dart';
 import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../p0/exact_money.dart';
-import '../features/finance/presentation/financial_editor.dart';
-import '../features/finance/contracts/financial_models.dart';
-
-/// The sync rule's refusal: this change needs the latest records first
-/// (ARCHITECTURE §8.2). It stays a rule; these are the form's words for it.
-bool isSyncBlock(Object e) =>
-    e is LocalRuleException &&
-    e.message.startsWith('Sync now before finalizing');
-
-const syncBlockedTitle = 'Couldn’t check your latest records';
-const syncBlockedMessage =
-    'Salapiya checks your latest records before saving this, and that needs a connection. Nothing was saved, and what you entered is still here.';
 
 class FinanceInput {
   const FinanceInput(
@@ -736,6 +722,7 @@ Future<void> openNativeFinance(
   String title, {
   LocalRevision? replacing,
   Map<String, String> initial = const {},
+  String? draft,
 }) => openDemoPage<void>(
   context,
   NativeFinanceEditor(
@@ -744,6 +731,7 @@ Future<void> openNativeFinance(
     title: title,
     replacing: replacing,
     initial: initial,
+    draft: draft,
   ),
   'finance/$op',
 );
@@ -756,16 +744,21 @@ class NativeFinanceEditor extends StatefulWidget {
     required this.title,
     this.replacing,
     this.initial = const {},
+    this.draft,
   });
   final LocalFinancialController controller;
   final String operation, title;
   final LocalRevision? replacing;
   final Map<String, String> initial;
+
+  /// The saved draft to reopen, when Saved drafts opens this form.
+  final String? draft;
   @override
   State<NativeFinanceEditor> createState() => _NativeFinanceEditorState();
 }
 
-class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
+class _NativeFinanceEditorState extends State<NativeFinanceEditor>
+    with FinanceFormFields {
   late final inputs = financeInputs(
     widget.controller.snapshot,
     widget.replacing == null
@@ -773,6 +766,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
         : financeType(widget.replacing!),
     editing: widget.replacing != null,
   );
+  @override
   late final values = {
     for (final f in inputs) f.key: f.value,
     ...widget.initial,
@@ -796,30 +790,28 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       'reason': '',
     },
   };
-  final fields = <String, TextEditingController>{};
   String? schedulePreview, scheduleNote, embeddedRows;
-  String? errorField, errorMessage;
-  final anchors = <String, GlobalKey>{};
   bool scheduleFailed = false;
+  @override
   late String id = newLocalId();
   // A prefilled form keeps its own draft, so one debt's draft can't replace
   // what another debt's row proposed.
-  late final draftKey = [
-    'finance:${widget.operation}:${widget.replacing?.id ?? ''}',
-    ?widget.initial['debt'],
-    ?widget.initial['allocations'],
-    ?widget.initial['payment'],
-  ].join(':');
+  late final draftKey =
+      widget.draft ??
+      [
+        'finance:${widget.operation}:${widget.replacing?.id ?? ''}',
+        ?widget.initial['debt'],
+        ?widget.initial['allocations'],
+        ?widget.initial['payment'],
+      ].join(':');
   Future<void> writes = Future.value();
-  LocalCommand? reviewed;
-  LocalPlan? plan;
-  LocalSnapshot? reviewSnapshot;
   String? error, result;
   bool loading = true,
       busy = false,
       draftFailed = false,
       unknown = false,
       dirty = false;
+  @override
   LocalFinancialController get c => widget.controller;
   Map<String, String> get reviewDetails =>
       simplePayment ? paymentDetails : standardDetails;
@@ -866,6 +858,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     if (mounted) setState(() => loading = false);
   }
 
+  @override
   void retain() {
     setState(() => dirty = true);
     final frozen = Map<String, String>.from(values), command = id;
@@ -882,40 +875,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
             });
           }
         });
-  }
-
-  /// A sync is under way before saving.
-  bool syncing = false;
-
-  /// The rule refused the change even after trying to sync.
-  bool syncBlocked = false;
-
-  /// The sync brought new records, so the review was built again.
-  bool rechecked = false;
-
-  bool get needsLatest =>
-      c.connected && reviewed != null && dependencySensitive(reviewed!);
-
-  /// Syncs before a change that needs the latest records. If that brought
-  /// new records the reviewed command is out of date, so it's reviewed again
-  /// on them and nothing saves: returns true.
-  Future<bool> refreshBeforeSaving() async {
-    if (!needsLatest) return false;
-    setState(() => syncing = true);
-    await c.syncLatest?.call();
-    await c.reload();
-    if (mounted) setState(() => syncing = false);
-    if (c.snapshot.version == reviewed!.expectedVersion) return false;
-    reviewed = LocalCommand(
-      id: id,
-      owner: c.store.owner,
-      expectedVersion: c.snapshot.version,
-      kind: reviewed!.kind,
-      values: reviewed!.values,
-    );
-    reviewSnapshot = c.snapshot;
-    plan = planLocal(reviewSnapshot!, reviewed!);
-    return true;
   }
 
   Future<void> save() async {
@@ -1040,12 +999,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     return (null, e.message);
   }
 
-  /// An account's balance today, for the eye: hidden amounts stay hidden.
-  String shownBalance(String id) => c.amountsHidden
-      ? 'Amount hidden'
-      : c.amount(c.snapshot.balance(id, through: civilToday()));
-
-  /// Money leaving the chosen account in this form, once it's a valid amount.
+  @override
   BigInt? get leaving {
     if (!const {
       'debtPayment',
@@ -1060,40 +1014,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       return null;
     }
   }
-
-  /// Each account's balance under its name, and a warning on the chosen one
-  /// if this amount takes it below zero. Saving is still the rules' call.
-  Map<String, String> balanceLines(Map<String, String> accounts, String key) {
-    final amount = leaving;
-    return {
-      for (final id in accounts.keys)
-        if (id.isNotEmpty)
-          id: [
-            'Balance ${shownBalance(id)}',
-            if (!c.amountsHidden &&
-                amount != null &&
-                id == values[key] &&
-                amount > c.snapshot.balance(id, through: civilToday()))
-              'this takes it below zero',
-          ].join(' · '),
-    };
-  }
-
-  /// The problem shows in place (§6); this brings it into view.
-  Future<void> showProblem(String message, String? field) async {
-    final target = field == null ? null : anchors[field]?.currentContext;
-    if (target != null && target.mounted) {
-      await Scrollable.ensureVisible(
-        target,
-        alignment: .15,
-        duration: const Duration(milliseconds: 250),
-      );
-    }
-  }
-
-  String? problemFor(String key) => errorField == key ? errorMessage : null;
-
-  GlobalKey anchor(String key) => anchors.putIfAbsent(key, () => GlobalKey());
 
   static const cadenceKeys = [
     'frequency',
@@ -1165,7 +1085,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
   /// before Review.
   bool get simplePayment =>
       widget.operation == 'debtPayment' && widget.replacing == null;
-  bool needsConsent = false;
 
   static const coverageChoices = [
     PickerOption(
@@ -1312,164 +1231,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       if ((v['notes'] ?? '').isNotEmpty) 'Notes': v['notes']!,
     };
   }
-
-  TextEditingController controllerFor(String key) => fields.putIfAbsent(
-    key,
-    () => TextEditingController(text: values[key] ?? ''),
-  );
-
-  void changed(String key, String value) {
-    values[key] = value;
-    if (errorField == key) errorField = errorMessage = null;
-    retain();
-  }
-
-  Widget amountInput(
-    String key,
-    String label, {
-    String? helper,
-    String? info,
-    bool required = false,
-    bool signed = false,
-  }) => Padding(
-    key: anchor(key),
-    padding: gapAbove(info: info != null),
-    child: AmountField(
-      key: ValueKey('native-$key'),
-      label: label,
-      controller: controllerFor(key),
-      required: required,
-      signed: signed,
-      helper: helper,
-      info: info,
-      errorText: problemFor(key),
-      onChanged: (x) => changed(key, x),
-    ),
-  );
-
-  /// The space above a field; the form's first field has none.
-  EdgeInsets gapAbove({bool info = false}) {
-    final first = firstField;
-    firstField = false;
-    return EdgeInsets.only(
-      top: first ? 0 : CompactForm.gapBefore(context, info: info),
-    );
-  }
-
-  bool firstField = true;
-
-  Widget textInput(
-    String key,
-    String label, {
-    String? helper,
-    String? info,
-    bool required = false,
-    int lines = 1,
-    FieldInput? input,
-  }) => Padding(
-    key: anchor(key),
-    padding: gapAbove(info: info != null),
-    child: HelpTextField(
-      key: ValueKey('native-$key'),
-      label: label,
-      input: input,
-      controller: controllerFor(key),
-      helper: helper,
-      info: info,
-      required: required,
-      maxLines: lines,
-      errorText: problemFor(key),
-      onChanged: (x) => changed(key, x),
-    ),
-  );
-
-  Widget pickInput(
-    String key,
-    String label,
-    Map<String, String> options, {
-    bool required = false,
-    String? helper,
-    String? info,
-    String? disabledReason,
-    ValueChanged<String>? onChanged,
-    Map<String, String> descriptions = const {},
-  }) => Padding(
-    key: anchor(key),
-    padding: gapAbove(info: info != null),
-    child: OptionPicker<String>(
-      key: ValueKey('native-select-$key'),
-      label: label,
-      style: PickerStyle.dropdown,
-      required: required,
-      helper: helper,
-      info: info,
-      disabledReason: disabledReason,
-      errorText: problemFor(key),
-      value: values[key],
-      options: [
-        for (final e in options.entries)
-          PickerOption(
-            value: e.key,
-            label: e.value,
-            description: descriptions[e.key],
-          ),
-      ],
-      onChanged: disabledReason != null
-          ? null
-          : (x) {
-              changed(key, x);
-              onChanged?.call(x);
-            },
-    ),
-  );
-
-  Widget dateInput(
-    String key,
-    String label, {
-    String? helper,
-    bool required = false,
-  }) => Padding(
-    key: anchor(key),
-    padding: gapAbove(),
-    child: DateField(
-      key: ValueKey('native-$key'),
-      label: label,
-      required: required,
-      helper: helper,
-      value: DateTime.tryParse(answer(key)),
-      errorText: problemFor(key),
-      onChanged: (d) =>
-          changed(key, d == null ? '' : d.toIso8601String().substring(0, 10)),
-    ),
-  );
-
-  /// Shown only once the rules ask for it.
-  Widget consentInput() => Padding(
-    key: anchor('acknowledge'),
-    padding: gapAbove(),
-    child: OptionPicker<String>(
-      key: const ValueKey('native-select-acknowledge'),
-      label: 'This takes the account below zero',
-      style: PickerStyle.radio,
-      value: answer('acknowledge'),
-      options: const [
-        PickerOption(
-          value: 'true',
-          label: 'That is right',
-          description: 'Save it with a negative balance.',
-        ),
-        PickerOption(
-          value: 'false',
-          label: 'Let me check',
-          description: 'Keep the balance as it is for now.',
-        ),
-      ],
-      onChanged: (x) {
-        if (errorField == 'account') errorField = errorMessage = null;
-        changed('acknowledge', x);
-      },
-    ),
-  );
 
   static const dateKeys = {
     'date',
@@ -1894,8 +1655,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
       }
     }
   }
-
-  String answer(String key) => (values[key] ?? '').trim();
 
   List<String> get payments => (values['paymentAmounts'] ?? '').split('\n');
 
@@ -2326,23 +2085,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
     );
   }
 
-  /// Windows: end-aligned, the primary rightmost. Android: full width.
-  Widget actions(Widget primary, [Widget? secondary]) => isDesktop(context)
-      ? Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            if (secondary != null) ...[
-              secondary,
-              const SizedBox(width: Space.sm),
-            ],
-            primary,
-          ],
-        )
-      : Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [primary, ?secondary],
-        );
-
   Widget body() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -2421,32 +2163,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor> {
               'Payment schedule to save: $schedulePreview.\nCheck these dates and amounts match your loan agreement or lender statement. A payment only counts toward a due date when you log it against that date.',
             ),
           ],
-          if (c.connected) ...[
-            SizedBox(height: CompactForm.fieldGap(context)),
-            const InlineNotice(
-              'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
-            ),
-          ],
-          if (syncBlocked || rechecked || needsLatest)
-            SizedBox(height: CompactForm.fieldGap(context)),
-          if (syncBlocked)
-            const InlineNotice(
-              syncBlockedMessage,
-              title: syncBlockedTitle,
-              tone: NoticeTone.warning,
-              live: true,
-            )
-          else if (rechecked)
-            const InlineNotice(
-              'Syncing brought in newer records, so this review was updated. Check it again, then save.',
-              title: 'Your records changed',
-              tone: NoticeTone.warning,
-              live: true,
-            )
-          else if (needsLatest)
-            const InlineNotice(
-              'Saving this checks your latest records first, so it needs a connection.',
-            ),
+          ...syncNotices(),
         ],
         SizedBox(height: CompactForm.groupGap(context)),
         actions(
@@ -2648,146 +2365,13 @@ class _NativeCardsScreenState extends State<NativeCardsScreen> {
   );
 }
 
+/// One record's page: the same page for Money, Debts, Cards, Planning and
+/// Reports (§2 Money).
 Future<void> openFinanceDetail(
   BuildContext context,
   LocalFinancialController c,
   String id,
-) => openDemoPage<void>(
-  context,
-  FinancePage(
-    title: 'Financial source & history',
-    child: ListenableBuilder(
-      listenable: c,
-      builder: (context, _) {
-        final r = c.snapshot.revision(id);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionHeading(r.title),
-            FinanceNotice(
-              '${financeType(r)} · ${r.date} · revision ${r.number}\nOriginal action ${r.actionId}\n'
-              '${c.connected ? c.synchronizationStates[r.id] ?? 'Downloaded accepted evidence' : 'Saved locally'}',
-            ),
-            WorkspacePanel(
-              title: 'Recorded details',
-              child: Column(
-                children: [
-                  for (final item in r.values.entries)
-                    if (!['financeContract', 'financeType'].contains(item.key))
-                      FinancialLine(
-                        item.key
-                            .replaceAllMapped(
-                              RegExp(r'([a-z])([A-Z])'),
-                              (m) => '${m[1]} ${m[2]}',
-                            )
-                            .replaceAll('_', ' '),
-                        c.amountsHidden ? 'Hidden' : item.value,
-                        icon: Icons.notes_outlined,
-                      ),
-                ],
-              ),
-            ),
-            if (r.postings.isNotEmpty)
-              WorkspacePanel(
-                title: 'Ledger effects',
-                child: Column(
-                  children: [
-                    for (final p in r.postings)
-                      FinancialLine(
-                        p.ledger.replaceAll('_', ' '),
-                        p.date,
-                        value: '${c.decimal(p.amount)} PHP',
-                      ),
-                  ],
-                ),
-              ),
-            if (c.snapshot.current.contains(r) &&
-                !r.values.containsKey('financeType') &&
-                !r.values.containsKey('sharedGroup') &&
-                [
-                  'expense',
-                  'income',
-                  'transfer',
-                  'refund',
-                  'adjustment',
-                  'opening',
-                ].contains(r.kind))
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final action in [
-                    FinancialAction.correction,
-                    FinancialAction.reversal,
-                  ])
-                    TextButton(
-                      onPressed: () => openFinancialEditor(
-                        context,
-                        c,
-                        action,
-                        sourceId: r.id,
-                      ),
-                      child: Text(action.label),
-                    ),
-                ],
-              ),
-            const SectionHeading('Private supporting-file evidence'),
-            for (final file in c.snapshot.revisions.where(
-              (f) =>
-                  financeType(f) == 'financialFile' &&
-                  f.values['sourceRevision'] == r.id,
-            ))
-              FinancialLine(
-                file.title,
-                '${file.values['mime']} · ${financialFileDetached(c.snapshot, file.id) ? 'Archived link' : 'Attached'} · original revision retained. Open Money / Files to verify or retrieve device-local bytes.',
-                icon: Icons.attach_file,
-              ),
-            if (c.snapshot.current.contains(r) &&
-                nativeFinanceCommands.contains(financeType(r)) &&
-                !r.values.containsKey('sharedGroup'))
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: () => openNativeFinance(
-                      context,
-                      c,
-                      'financeCorrection',
-                      'Correct source',
-                      replacing: r,
-                    ),
-                    child: const Text('Correct with reason'),
-                  ),
-                  TextButton(
-                    onPressed: () => openNativeFinance(
-                      context,
-                      c,
-                      'financeReversal',
-                      'Reverse source',
-                      replacing: r,
-                    ),
-                    child: const Text('Reverse with reason'),
-                  ),
-                ],
-              ),
-            const SectionHeading('Action history'),
-            for (final h in c.snapshot.revisions.where(
-              (h) => h.actionId == r.actionId,
-            ))
-              FinancialLine(
-                h.title,
-                'Revision ${h.number} · ${h.change} · ${h.values['reason'] ?? ''}',
-                icon: Icons.history,
-                onTap: h.id == id
-                    ? null
-                    : () => openFinanceDetail(context, c, h.id),
-              ),
-          ],
-        );
-      },
-    ),
-  ),
-  'finance/source/$id',
-);
+) => openMoneyRecord(context, c, id);
 
 class NativeWorkflowGroups extends StatelessWidget {
   const NativeWorkflowGroups({

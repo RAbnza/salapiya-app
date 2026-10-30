@@ -69,206 +69,6 @@ Widget logPaymentLink(String id, VoidCallback onPressed) => CardLink(
 
 const _logLabel = 'Log payment';
 
-/// The width of the small action column: "Log payment" and its chevron.
-double _actionWidth(BuildContext context, String label) {
-  final painter = TextPainter(
-    text: TextSpan(text: label, style: Theme.of(context).textTheme.labelMedium),
-    textDirection: Directionality.of(context),
-    textScaler: MediaQuery.textScalerOf(context),
-    maxLines: 1,
-  )..layout();
-  final width = painter.width;
-  painter.dispose();
-  return (width + Space.lg + Space.sm + Space.xxs).ceilToDouble();
-}
-
-/// One column of a [DebtTable]: a fixed [width], or a [flex] share of what's
-/// left.
-typedef DebtColumn = ({String label, int flex, double? width});
-
-/// The date column's width.
-const dateColumn = Space.xxxl * 2 + Space.lg;
-
-class DebtTableRow {
-  const DebtTableRow({
-    required this.id,
-    required this.cells,
-    required this.money,
-    required this.spoken,
-    required this.narrow,
-    this.onTap,
-    this.action,
-  });
-  final String id;
-
-  /// One widget per [DebtTable.columns].
-  final List<Widget> cells;
-
-  /// One amount per [DebtTable.moneyColumns].
-  final List<String?> money;
-
-  /// What a screen reader hears for the row.
-  final String spoken;
-
-  /// The same row in a narrow card.
-  final Widget narrow;
-  final VoidCallback? onTap;
-
-  /// Sits outside the row's own target, so it stays its own control.
-  final Widget? action;
-}
-
-/// A table (§2 Data display): columns at 528 × the text scale and wider, rows
-/// below that. Each amount column has one measured width, so every column
-/// starts at the same x on every row.
-class DebtTable extends StatelessWidget {
-  const DebtTable({
-    super.key,
-    required this.columns,
-    required this.rows,
-    this.moneyColumns = const [],
-    this.actionLabel,
-  });
-  final List<DebtColumn> columns;
-  final List<String> moneyColumns;
-  final List<DebtTableRow> rows;
-
-  /// Reserves a column as wide as this label for each row's action.
-  final String? actionLabel;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) {
-      final scale = MediaQuery.textScalerOf(context).scale(1);
-      final widths = [
-        for (final (i, label) in moneyColumns.indexed)
-          moneyColumnWidth(context, [label, for (final r in rows) r.money[i]]),
-      ];
-      final actionWidth = actionLabel == null
-          ? null
-          : _actionWidth(context, actionLabel!);
-      // Fixed widths grow with the text; what's left must still hold the
-      // flexible columns, or the table turns into rows.
-      final fixed =
-          [
-            for (final column in columns) (column.width ?? 0) * scale,
-            ...widths,
-          ].fold<double>(0, (a, b) => a + b) +
-          Space.md * (columns.length + moneyColumns.length - 1) +
-          Space.sm * 2 +
-          (actionWidth == null ? 0 : actionWidth + Space.sm);
-      final shares = columns.fold(0, (n, column) => n + column.flex);
-      if (narrowAt(context, box.maxWidth, tableBase) ||
-          box.maxWidth - fixed < shares * Space.xxxl * scale) {
-        return ListGroup(children: [for (final r in rows) r.narrow]);
-      }
-      final c = CraftTheme.of(context);
-      final text = Theme.of(context).textTheme;
-      final head = text.labelMedium?.copyWith(color: c.secondary);
-      final minHeight = isDesktop(context)
-          ? Space.compactTwoLineRow
-          : Space.target + Space.sm;
-      Widget cells(List<Widget> children, List<Widget> money) => Row(
-        children: [
-          for (final (i, column) in columns.indexed) ...[
-            if (i > 0) const SizedBox(width: Space.md),
-            if (column.width != null)
-              SizedBox(width: column.width! * scale, child: children[i])
-            else
-              Expanded(flex: column.flex, child: children[i]),
-          ],
-          for (final (i, m) in money.indexed) ...[
-            const SizedBox(width: Space.md),
-            SizedBox(
-              width: widths[i],
-              child: Align(alignment: AlignmentDirectional.centerEnd, child: m),
-            ),
-          ],
-        ],
-      );
-      Widget action(Widget? child) => actionWidth == null
-          ? const SizedBox.shrink()
-          : Padding(
-              padding: const EdgeInsetsDirectional.only(start: Space.sm),
-              child: SizedBox(
-                width: actionWidth,
-                child: Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: child,
-                ),
-              ),
-            );
-      const padding = EdgeInsets.symmetric(
-        horizontal: Space.sm,
-        vertical: Space.xs,
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ExcludeSemantics(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: padding,
-                    child: cells(
-                      [for (final col in columns) Text(col.label, style: head)],
-                      [for (final m in moneyColumns) Text(m, style: head)],
-                    ),
-                  ),
-                ),
-                action(null),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: c.divider),
-          for (final (n, r) in rows.indexed) ...[
-            if (n > 0) Divider(height: 1, color: c.divider),
-            Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    button: r.onTap != null,
-                    label: r.spoken,
-                    excludeSemantics: true,
-                    child: Pressable(
-                      key: ValueKey('row-${r.id}'),
-                      onTap: r.onTap,
-                      padding: padding,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: minHeight),
-                        child: cells(r.cells, [
-                          for (final m in r.money) MoneyAmount(m),
-                        ]),
-                      ),
-                    ),
-                  ),
-                ),
-                action(r.action),
-              ],
-            ),
-          ],
-        ],
-      );
-    },
-  );
-}
-
-/// "Show more": lists grow by a page rather than paging (§2 Tables).
-class _ShowMore extends StatelessWidget {
-  const _ShowMore({required this.left, required this.onPressed});
-  final int left;
-  final VoidCallback onPressed;
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: AlignmentDirectional.centerStart,
-    child: CardLink(
-      'Show more · $left left',
-      icon: Icons.expand_more,
-      onPressed: onPressed,
-    ),
-  );
-}
-
 /// Every debt, most urgent first, with its payoff progress.
 class YourDebtsCard extends StatefulWidget {
   const YourDebtsCard({
@@ -326,7 +126,7 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
     'What you owe ${widget.amount(d.outstanding)}',
   ].where((s) => s.isNotEmpty).join(', ');
 
-  DebtTableRow row(DebtProgress d) {
+  AppTableRow row(DebtProgress d) {
     final text = Theme.of(context).textTheme;
     final c = CraftTheme.of(context);
     final lender = d.debt.values['lender'] ?? '';
@@ -346,7 +146,7 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
       widget.amount(d.outstanding),
       kind: MoneyKind.owed,
     );
-    return DebtTableRow(
+    return AppTableRow(
       id: 'debt-${d.debt.actionId}',
       spoken: spoken(d),
       onTap: () => widget.onOpen(d),
@@ -441,7 +241,7 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
               title: 'No debts match this filter',
               message: 'Choose All to see every debt.',
             )
-          : DebtTable(
+          : AppTable(
               key: const ValueKey('debts-table'),
               columns: const [
                 (label: 'Debt', flex: 4, width: null),
@@ -768,12 +568,12 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
   String applied(DebtPaymentRow p) =>
       p.appliedTo.isEmpty ? 'Not tied to a due date' : p.appliedTo.join(', ');
 
-  DebtTableRow row(DebtPaymentRow p) {
+  AppTableRow row(DebtPaymentRow p) {
     final text = Theme.of(context).textTheme;
     final c = CraftTheme.of(context);
     final muted = text.bodySmall?.copyWith(color: c.secondary);
     final money = widget.amount(p.amount);
-    return DebtTableRow(
+    return AppTableRow(
       id: 'payment-${p.record.id}',
       money: [money],
       spoken: [
@@ -826,7 +626,7 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DebtTable(
+                AppTable(
                   key: const ValueKey('payments-table'),
                   columns: [
                     (label: 'Date', flex: 0, width: dateColumn),
@@ -839,7 +639,7 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
                   rows: [for (final p in rows.take(shown)) row(p)],
                 ),
                 if (shown < rows.length)
-                  _ShowMore(
+                  ShowMore(
                     left: rows.length - shown,
                     onPressed: () => setState(() => shown += widget.page),
                   ),
@@ -893,13 +693,13 @@ class _RecordsCardState extends State<RecordsCard> {
     if (!widget.snapshot.current.contains(r)) 'earlier',
   ].join(', ');
 
-  DebtTableRow row(LocalRevision r) {
+  AppTableRow row(LocalRevision r) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodySmall?.copyWith(
       color: CraftTheme.of(context).secondary,
     );
     final money = widget.amount(r.amount);
-    return DebtTableRow(
+    return AppTableRow(
       id: 'record-${r.id}',
       money: [money],
       spoken: [
@@ -949,7 +749,7 @@ class _RecordsCardState extends State<RecordsCard> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DebtTable(
+                AppTable(
                   key: const ValueKey('records-table'),
                   columns: [
                     (label: 'Date', flex: 0, width: dateColumn),
@@ -962,7 +762,7 @@ class _RecordsCardState extends State<RecordsCard> {
                   rows: [for (final r in records.take(shown)) row(r)],
                 ),
                 if (shown < records.length)
-                  _ShowMore(
+                  ShowMore(
                     left: records.length - shown,
                     onPressed: () => setState(() => shown += widget.page),
                   ),
@@ -1187,7 +987,7 @@ class InstallmentsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
-    DebtTableRow row(InstallmentRow r) {
+    AppTableRow row(InstallmentRow r) {
       final id = r.row.id;
       final late = r.open && r.days < 0;
       final log = r.open
@@ -1198,7 +998,7 @@ class InstallmentsCard extends StatelessWidget {
           : null;
       final when = civilDay(r.row.date);
       final overdueBy = late ? dueWhen(r.days) : null;
-      return DebtTableRow(
+      return AppTableRow(
         id: 'installment-$id',
         money: [amount(r.paid), amount(r.left)],
         spoken: [
@@ -1256,7 +1056,7 @@ class InstallmentsCard extends StatelessWidget {
                   ? null
                   : AppButton.secondary('Set schedule', onPressed: onSchedule),
             )
-          : DebtTable(
+          : AppTable(
               key: const ValueKey('installments-table'),
               columns: const [
                 (label: 'Payment', flex: 3, width: null),
