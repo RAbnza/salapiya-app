@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:salapiya/app/title_bar.dart';
 import 'package:salapiya/app/window_chrome.dart';
 import 'package:salapiya/local/local_store.dart';
 import 'package:salapiya/features/finance/presentation/financial_editor.dart';
@@ -34,6 +35,8 @@ void main() {
         calls.add(call);
         return true;
       });
+      // The root navigator's popup tracker, as the app passes it.
+      final popups = PopupRouteTracker();
       try {
         for (final brightness in [
           Brightness.light,
@@ -43,14 +46,29 @@ void main() {
           await tester.pumpWidget(
             MaterialApp(
               theme: SalapiyaTheme.build(brightness),
-              home: const WindowChrome(child: SizedBox.shrink()),
+              navigatorObservers: [popups],
+              home: WindowChrome(
+                popups: popups,
+                child: const SizedBox.shrink(),
+              ),
             ),
           );
           await tester.pumpAndSettle();
         }
+        // The bridge sends the theme's title bar, text and divider colors,
+        // once per change (the repeated dark theme sends nothing).
+        List<Object> caption(bool dark) {
+          final c = CraftTheme(dark: dark);
+          return [
+            dark,
+            for (final color in [c.titleBar, c.text, c.divider])
+              color.toARGB32() & 0xffffff,
+          ];
+        }
+
         expect(calls.length, 2);
-        expect(calls[0].arguments, [false, 0xF3F4F6, 0x222126, 0xE3E4E9]);
-        expect(calls[1].arguments, [true, 0x14151A, 0xF3F2F0, 0x3B3C41]);
+        expect(calls[0].arguments, caption(false));
+        expect(calls[1].arguments, caption(true));
       } finally {
         tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
           channel,
