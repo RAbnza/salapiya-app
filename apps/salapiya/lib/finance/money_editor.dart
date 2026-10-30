@@ -13,6 +13,7 @@ import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../p0/exact_money.dart';
 import '../shared/shared_screen.dart' show sharePrivatePurchase;
+import 'card_data.dart' show pendingCharges;
 import 'form_mechanics.dart';
 import 'money_data.dart';
 
@@ -36,23 +37,24 @@ const moneyFormActions = {
 const moneyRuleFields = [
   ('You already have an account with this name', 'name'),
   ('You already have a category with this name', 'name'),
-  ('Choose a supported account type', 'kind'),
-  ('Choose income or expense classification', 'classification'),
-  ('Choose an income classification', 'incomeClass'),
-  ('Choose an appropriate', 'category'),
-  ('Choose an account in this profile', 'account'),
-  ('New activity requires an active account', 'account'),
+  ('Choose an account type', 'kind'),
+  ('Choose whether this is for spending or income', 'classification'),
+  ('Choose the type of income', 'incomeClass'),
+  ('Choose a spending category', 'category'),
+  ('Choose an income category', 'category'),
+  ('Choose one of your accounts', 'account'),
+  ('Choose an active account', 'account'),
   ('balance starts from that day', 'date'),
-  ('opening cutoff', 'date'),
-  ('A refund cannot precede', 'date'),
-  ('Choose different source and destination', 'destination'),
+  ('the day this account’s balance starts', 'date'),
+  ('A refund can’t be dated before', 'date'),
+  ('Choose two different accounts', 'destination'),
   ('A fee taken out of the amount', 'feeDate'),
   ('Each split must be more than zero', 'splitAmount'),
   ('more than is left to refund', 'refundPosting'),
-  ('Choose an eligible original', 'refundPosting'),
-  ('Allocate each original', 'refundPosting'),
-  ('Refund allocations must equal', 'amount'),
-  ('Transfer principal plus', 'amount'),
+  ('Choose a part of this purchase', 'refundPosting'),
+  ('Apply the refund to each part', 'refundPosting'),
+  ('The parts must add up', 'amount'),
+  ('The amount plus fees', 'amount'),
 ];
 
 /// Log expense, income and a transfer, the account and category forms, and
@@ -247,6 +249,12 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
       pickInput(key, label, c.categoryChoices(classification), required: true);
 
   /// The fields of an expense or income, which a correction shows too.
+  /// The chosen card's pending charges no purchase has used yet.
+  Map<String, String> pendingChoices() => {
+    for (final r in pendingCharges(c.snapshot, answer('card')))
+      r.id: c.amountsHidden ? r.title : '${r.title} · ${c.amount(r.amount)}',
+  };
+
   List<Widget> entry(String kind, List<Widget> extra) {
     final local = c.snapshot;
     final cards = {
@@ -266,13 +274,29 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
             'card': 'Credit card',
           }, onChanged: (_) => setState(() {})),
         if (card) ...[
-          pickInput('card', 'Credit card', cards, required: true),
+          pickInput(
+            'card',
+            'Credit card',
+            cards,
+            required: true,
+            onChanged: (_) => setState(() => values['authorization'] = ''),
+          ),
           dateInput(
             'postingDate',
             'Date it posted',
             required: true,
             helper: 'When it appeared on your card.',
           ),
+          if (pendingChoices().isNotEmpty)
+            more(
+              [
+                pickInput('authorization', 'Pending charge this came from', {
+                  '': 'None',
+                  ...pendingChoices(),
+                }),
+              ],
+              const {'authorization'},
+            ),
         ] else
           accountInput('Paid from'),
       ] else

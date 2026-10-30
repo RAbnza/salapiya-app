@@ -113,30 +113,6 @@ List<Widget> moneyNotices(MoneySource source) => [
     ),
 ];
 
-/// A small menu in a card's corner.
-class CardMenu extends StatelessWidget {
-  const CardMenu({
-    super.key,
-    required this.tooltip,
-    required this.items,
-    this.icon = Icons.more_horiz,
-  });
-  final String tooltip;
-  final IconData icon;
-  final List<Widget> items;
-  @override
-  Widget build(BuildContext context) => MenuAnchor(
-    alignmentOffset: const Offset(0, Space.xs),
-    menuChildren: items,
-    builder: (context, controller, _) => AppIconButton(
-      icon: icon,
-      tooltip: tooltip,
-      onPressed: () =>
-          controller.isOpen ? controller.close() : controller.open(),
-    ),
-  );
-}
-
 /// "How much do I have, where is it, what changed, and does anything need
 /// me?" (§2 Money).
 class AccountsTab extends StatelessWidget {
@@ -356,6 +332,7 @@ class AccountsTab extends StatelessWidget {
       hidden: hidden,
       empty: rows.isEmpty,
     );
+    final logged = rows.where((r) => r.date.compareTo(today) <= 0).toList();
     final recent = ActivityCard(
       key: const ValueKey('money-recent'),
       title: 'Recent activity',
@@ -366,7 +343,7 @@ class AccountsTab extends StatelessWidget {
         onPressed: () => onTab('Activity'),
       ),
       rows: [
-        for (final r in rows.where((r) => r.date.compareTo(today) <= 0).take(6))
+        for (final r in logged.take(6))
           (
             icon: moneyIcon(r),
             title: r.title,
@@ -376,7 +353,13 @@ class AccountsTab extends StatelessWidget {
             onTap: () => actions.openRecord(r.id),
           ),
       ],
-      footer: const ListEnd(key: ValueKey('money-recent-end')),
+      footer: ListEnd(
+        key: const ValueKey('money-recent-end'),
+        label: logged.length > 6
+            ? '${logged.length - 6} more in Activity'
+            : 'That’s everything',
+        onPressed: logged.length > 6 ? () => onTab('Activity') : null,
+      ),
       empty: !complete
           ? const NotAvailable('Activity shows once your records are complete.')
           : const EmptyState(
@@ -421,14 +404,21 @@ enum ActivityLayout {
 /// Find a record, and see what changed. Search looks through every date;
 /// everything else narrows the period's records.
 class ActivityTab extends StatefulWidget {
-  const ActivityTab({super.key, required this.source});
+  const ActivityTab({
+    super.key,
+    required this.source,
+    this.filter = const ActivityFilter(),
+  });
   final MoneySource source;
+
+  /// What it opens on.
+  final ActivityFilter filter;
   @override
   State<ActivityTab> createState() => _ActivityTabState();
 }
 
 class _ActivityTabState extends State<ActivityTab> {
-  ActivityFilter filter = const ActivityFilter();
+  late ActivityFilter filter = widget.filter;
   ActivityLayout layout = ActivityLayout.timeline;
   final search = TextEditingController();
 

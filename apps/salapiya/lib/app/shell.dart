@@ -327,6 +327,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           'Log a debt payment',
           Icons.event_note_outlined,
         ),
+        if (destination == AppDestination.money)
+          ('Pay credit card', 'Log a card payment', Icons.credit_card_outlined),
         ('Add shared expense', 'Add shared expense', Icons.people_outline),
         ('Add task', 'Add task', Icons.check_circle_outline),
       ],
@@ -359,6 +361,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               'Record debt payment',
               'Add existing debt',
               'Record borrowing',
+              'Pay credit card',
               'Add task',
               'Add event',
             ].contains(item.$1))
@@ -409,12 +412,14 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           'Record debt payment',
           'Add existing debt',
           'Record borrowing',
+          'Pay credit card',
         ].contains(key)) {
       return NativeFinanceEditor(
         controller: session.finance as LocalFinancialController,
         operation: switch (key) {
           'Add existing debt' => 'debtImport',
           'Record borrowing' => 'borrowing',
+          'Pay credit card' => 'cardPayment',
           _ => 'debtPayment',
         },
         title: label,
@@ -427,6 +432,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       'Record payment' || 'Record debt payment' => FinancialAction.debtPayment,
       'Add existing debt' => FinancialAction.debtImport,
       'Record borrowing' => FinancialAction.borrowing,
+      'Pay credit card' => FinancialAction.cardPayment,
       'Add shared expense' => FinancialAction.sharedBill,
       'Report payment' => FinancialAction.settlement,
       _ => null,

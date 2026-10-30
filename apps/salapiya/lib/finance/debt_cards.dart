@@ -345,6 +345,7 @@ class DueNextCard extends StatelessWidget {
                 if (upcoming.isNotEmpty) group(context, 'Next', upcoming),
                 ListEnd(
                   key: const ValueKey('due-next-end'),
+                  onPressed: more == 0 ? null : onSchedule,
                   label: more == 0
                       ? 'That’s everything'
                       : '$more more on Schedule',

@@ -4,6 +4,7 @@ import '../app/overview_cards.dart' show civilLabel, overviewSpan;
 import '../app/overview_data.dart';
 import '../design_system/kit/fields.dart' show DateField;
 import '../local/finance_domain.dart';
+import 'files_data.dart' show FileAccess;
 
 /// Display-only derivations for Money (DESIGN_SYSTEM §8, Chat 8). They group,
 /// filter and add up exact values the domain already returns, and no money
@@ -56,12 +57,30 @@ String moneyLabel(LocalRevision r) {
     'debtImport' => 'Debt',
     'debtSchedule' => 'Payment schedule',
     'creditCard' => 'Credit card',
+    'cardAuthorization' => 'Pending charge',
     'statement' => 'Card statement',
+    'statementLink' => 'Activity matched to a statement',
+    'cardAllocation' => 'Payment matched to a statement',
+    'installment' => 'Installment plan',
+    'installmentApplication' => 'Payment matched to an installment',
     'budget' => 'Budget',
     'savingsGoal' => 'Savings goal',
     'reservation' => 'Money set aside',
+    'savingsReallocation' => 'Money moved between goals',
     'recurrence' => 'Recurring item',
+    'recurrenceGenerate' => 'Dates added to Upcoming',
+    'occurrenceOverride' => 'Recurring date changed',
+    'recurrenceLink' => 'Record linked to a recurring date',
+    'recurrenceUnlink' => 'Link removed',
     'financialFile' => 'Attachment',
+    'fileDetach' => 'Attachment link archived',
+    'cashImport' ||
+    'cashImportChunk' ||
+    'cashImportPreview' ||
+    'cashImportDecision' ||
+    'cashImportProcess' ||
+    'cashImportCancel' ||
+    'cashOpeningRebase' => 'Import',
     _ => 'Record',
   };
 }
@@ -745,7 +764,42 @@ RecordActions recordActions(LocalSnapshot s, LocalRevision r) {
     );
   }
   if (nativeFinanceCommands.contains(type)) {
-    return const RecordActions(correct: true, reverse: true);
+    // The rules keep these to the item they belong to.
+    const owned = {
+      'reservation',
+      'savingsReallocation',
+      'recurrenceGenerate',
+      'occurrenceOverride',
+      'recurrenceLink',
+      'recurrenceUnlink',
+    };
+    if (owned.contains(type)) {
+      return const RecordActions(
+        blocked:
+            'This is changed from the goal or recurring item it belongs to.',
+      );
+    }
+    final depended = s.current.any(
+      (x) =>
+          x.id != r.id &&
+          financeType(x) != 'financialFile' &&
+          financeDependsOn(x, r),
+    );
+    // A schedule or recurring item can be replaced with records on it, but
+    // only a budget, goal or item can't be reversed: they're archived.
+    final replaceable = const {'debtSchedule', 'recurrence'}.contains(type);
+    final permanent = const {
+      'budget',
+      'savingsGoal',
+      'recurrence',
+    }.contains(type);
+    return RecordActions(
+      correct: !depended || replaceable,
+      reverse: !depended && !permanent,
+      blocked: depended && !replaceable
+          ? 'Other records depend on this one. Reverse those first.'
+          : null,
+    );
   }
   const money = {
     'expense',
@@ -827,6 +881,15 @@ List<RecordEffect> recordEffects(
   ];
 }
 
+/// Opens a records form: a real one, or the demo's placeholder.
+typedef MoneyForm = void Function(
+  String operation,
+  String title, {
+  Map<String, String> initial,
+  LocalRevision? replacing,
+  Map<String, String> overrides,
+});
+
 /// Everything the Money screens can do; the local and demo sources fill it.
 class MoneyActions {
   const MoneyActions({
@@ -846,6 +909,16 @@ class MoneyActions {
     required this.reverse,
     required this.refund,
     required this.adjustToMatch,
+    required this.form,
+    required this.openItem,
+    required this.openForecast,
+    required this.openCardDues,
+    required this.exportCsv,
+    required this.importFile,
+    required this.continueImport,
+    required this.openImport,
+    required this.attachFile,
+    required this.openFile,
   });
   final void Function(String? account) logExpense, logIncome, logTransfer;
   final void Function() addAccount, addCategory, openCategories, openDrafts;
@@ -856,6 +929,32 @@ class MoneyActions {
   final void Function(String id) openRecord;
   final void Function(LocalRevision record) correct, reverse, refund;
   final void Function(LocalRevision check) adjustToMatch;
+  final MoneyForm form;
+
+  /// Opens a card, statement, plan, budget, goal or recurring item on its own
+  /// page, by revision or action id; anything else on the record page.
+  final void Function(String id) openItem;
+  final void Function() openForecast;
+
+  /// Every open statement and installment.
+  final void Function() openCardDues;
+
+  /// Saves a report's postings: [from] through [to], narrowed by ids.
+  final void Function(String from, String to, String? account, String? category)
+  exportCsv;
+
+  /// Picks a file and opens its review. These end when the page closes.
+  final Future<void> Function() importFile;
+
+  /// Picks up an import: [batch] from the records, or the saved draft.
+  final Future<void> Function(String? batch) continueImport;
+
+  /// One import's page.
+  final Future<void> Function(String batch) openImport;
+  final Future<void> Function() attachFile;
+
+  /// One file's page.
+  final Future<void> Function(String id) openFile;
 }
 
 /// Everything the Money screens read. A real profile fills it from its
@@ -878,6 +977,8 @@ class MoneySource {
     this.syncLabel = '',
     this.onReview,
     this.draftCount,
+    this.importDraft,
+    this.files,
   });
   final String today;
 
@@ -897,4 +998,10 @@ class MoneySource {
 
   /// Reads how many drafts are saved.
   final Future<int> Function()? draftCount;
+
+  /// Reads the file chosen for import and not finished, if any.
+  final Future<Map<String, String>?> Function()? importDraft;
+
+  /// Null with no store to read, as on a page opened outside Money.
+  final FileAccess? files;
 }

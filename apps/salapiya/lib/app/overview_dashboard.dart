@@ -6,7 +6,8 @@ import '../design_system/theme.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_editor.dart';
 import '../finance/money_data.dart';
-import '../finance/money_details.dart' show openMoneyRecord;
+import '../finance/money_details.dart' show localMoneySource, openMoneyRecord;
+import '../finance/planning_cards.dart';
 import '../features/life/presentation/life_screen.dart';
 import '../life/life_controller.dart';
 import '../local/finance_domain.dart';
@@ -56,6 +57,7 @@ class OverviewSource {
     required this.life,
     required this.recent,
     required this.openRecord,
+    required this.openItem,
     this.cards,
     this.pending = false,
     this.pendingCount = 0,
@@ -86,6 +88,9 @@ class OverviewSource {
 
   /// Opens one record by its revision id.
   final void Function(String id, String title) openRecord;
+
+  /// A card statement, plan or recurring item on its own page.
+  final void Function(String id) openItem;
   final VoidCallback? onReview, onAddAccount;
 }
 
@@ -138,6 +143,8 @@ OverviewSource localOverviewSource(
     onAddAccount: () =>
         openFinancialEditor(context, c, FinancialAction.account),
     openRecord: openRecord,
+    openItem: (id) =>
+        localMoneySource(context, c, session).actions.openItem(id),
     shared: [
       for (final (count, one, many, source) in [
         (
@@ -245,11 +252,8 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
 
   ValueChanged<PreviewSource> get open => widget.open;
 
-  void _openDue(FinancialReminderSource s) => open(switch (s.kind) {
-    'Debt due' => PreviewSource.debt,
-    'Recurring expectation' => PreviewSource.planning,
-    _ => PreviewSource.cards,
-  });
+  void _openDue(OverviewSource source, FinancialReminderSource s) =>
+      s.kind == 'Debt due' ? open(PreviewSource.debt) : source.openItem(s.source);
 
   Future<void> _calendar(BuildContext context, String today) async {
     final go = await showAppSheet<bool>(
@@ -719,7 +723,7 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
       week: week,
       month: month,
       amount: amount,
-      onOpen: _openDue,
+      onOpen: (due) => _openDue(source, due),
       available: complete,
       shown: tab == OverviewTab.summary ? 4 : 6,
     );

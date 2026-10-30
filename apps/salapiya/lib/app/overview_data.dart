@@ -274,28 +274,45 @@ List<DebtProgress> overviewDebtProgress(LocalSnapshot s, String today) {
   return result..sort(compareDebtProgress);
 }
 
-Iterable<LocalPosting> _expenses(LocalSnapshot s, String from, String to) => s
-    .current
+Iterable<LocalPosting> _expenses(
+  LocalSnapshot s,
+  String from,
+  String to, {
+  String? category,
+}) => s.current
     .expand((r) => r.postings)
     .where(
       (p) =>
           p.ledger == 'expense' &&
           p.date.compareTo(from) >= 0 &&
-          p.date.compareTo(to) <= 0,
+          p.date.compareTo(to) <= 0 &&
+          (category == null || p.category == category),
     );
 
-BigInt spendingBetween(LocalSnapshot s, String from, String to) =>
-    sumMinor(_expenses(s, from, to).map((p) => p.amount));
+BigInt spendingBetween(
+  LocalSnapshot s,
+  String from,
+  String to, {
+  String? category,
+}) => sumMinor(
+  _expenses(s, from, to, category: category).map((p) => p.amount),
+);
 
 /// Income in the range; borrowed money posts to debt, so it isn't income.
-BigInt incomeBetween(LocalSnapshot s, String from, String to) => -sumMinor(
+BigInt incomeBetween(
+  LocalSnapshot s,
+  String from,
+  String to, {
+  String? category,
+}) => -sumMinor(
   s.current
       .expand((r) => r.postings)
       .where(
         (p) =>
             p.ledger == 'income' &&
             p.date.compareTo(from) >= 0 &&
-            p.date.compareTo(to) <= 0,
+            p.date.compareTo(to) <= 0 &&
+            (category == null || p.category == category),
       )
       .map((p) => p.amount),
 );
@@ -317,9 +334,14 @@ List<(String, BigInt)> spendingByCategory(
 }
 
 /// O4: each day's net spending from [from] to [to], every day present.
-List<(String, BigInt)> dailySpending(LocalSnapshot s, String from, String to) {
+List<(String, BigInt)> dailySpending(
+  LocalSnapshot s,
+  String from,
+  String to, {
+  String? category,
+}) {
   final totals = <String, BigInt>{};
-  for (final p in _expenses(s, from, to)) {
+  for (final p in _expenses(s, from, to, category: category)) {
     totals[p.date] = (totals[p.date] ?? BigInt.zero) + p.amount;
   }
   return [

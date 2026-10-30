@@ -167,7 +167,7 @@ Future<void> polishFormJourney(WidgetTester tester) async {
     await localSettle(tester);
     await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
     expect(
-      find.text('Card liability'),
+      find.text('Card debt'),
       findsOneWidget,
       reason: tester
           .widgetList<FormStatus>(find.byType(FormStatus))
@@ -178,10 +178,10 @@ Future<void> polishFormJourney(WidgetTester tester) async {
     expect(find.text('Cash movement'), findsOneWidget);
     expect(find.text('None'), findsOneWidget);
     expect(find.textContaining('card liability: -25.00'), findsNothing);
-    await localTap(tester, find.text('View financial evidence'));
+    await localTap(tester, find.text('View details'));
     expect(find.textContaining('card liability: -25.00 PHP'), findsOneWidget);
     expect(find.text('Original command: $id'), findsOneWidget);
-    await localTap(tester, find.text('View financial evidence'));
+    await localTap(tester, find.text('View details'));
     await localTap(tester, find.text('Edit'));
     expect(find.byKey(const ValueKey('native-amount')), findsOneWidget);
     expect(controller!.snapshot.balance(wallet), BigInt.from(50000));

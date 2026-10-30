@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/finance/finance_screen.dart' show recordChoice;
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
@@ -153,10 +154,10 @@ void main() {
         final cashBefore = c.liquid;
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Cards').first);
-        await localTap(tester, find.text('Add credit card'));
+        await localTap(tester, find.byKey(const ValueKey('cards-add')).first);
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', cardName);
         await nativeEnter(tester, 'issuer', 'Synthetic provider');
@@ -289,25 +290,19 @@ void main() {
         expect(adopted.actionId, purchase);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Cards').first);
-        await localAction(tester, 'Card refund');
+        await localTap(tester, find.text(cardName).first);
+        await localTap(tester, find.byKey(const ValueKey('card-more')));
+        await localTap(tester, find.byKey(const ValueKey('card-log-refund')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Actual credit $suffix');
         await localTap(
           tester,
-          find.byKey(const ValueKey('native-select-card')),
-        );
-        await p3Choice(tester, '$cardName · ${civilToday()} · v1');
-        await localTap(
-          tester,
           find.byKey(const ValueKey('native-select-purchase')),
         );
-        await p3Choice(
-          tester,
-          '${adopted.title} · ${adopted.date} · v${adopted.number}',
-        );
+        await p3Choice(tester, recordChoice(adopted));
         await nativeEnter(tester, 'amount', '90.00');
         await nativeEnter(tester, 'reason', 'Actual provider card credit');
         await connectedFinanceSave(tester);

@@ -3,10 +3,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app/overview_cards.dart';
-import 'package:salapiya/app/overview_charts.dart';
 import 'package:salapiya/app/overview_controls.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app/overview_data.dart';
+import 'package:salapiya/finance/card_data.dart';
+import 'package:salapiya/finance/planning_cards.dart';
+import 'package:salapiya/finance/planning_data.dart';
 import 'package:salapiya/app/overview_demo.dart';
 import 'package:salapiya/prototype/scenarios.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
@@ -356,7 +358,7 @@ void main() {
       );
       expect(find.text('Overdue'), findsWidgets);
       expect(find.text('Due this week'), findsWidgets);
-      expect(find.textContaining('1 day overdue'), findsOneWidget);
+      expect(find.textContaining('1 day overdue'), findsOneWidget);
       expect(pill('Due today'), findsOneWidget);
       final overdueRow = tester.getTopLeft(find.text('Item 2026-10-27'));
       final todayRow = tester.getTopLeft(find.text('Item $today'));
@@ -709,7 +711,19 @@ void main() {
         final progress = overviewDebtProgress(s, day);
         expect(progress.map((p) => p.statusLabel), contains('Settled'));
         expect(progress.map((p) => p.statusLabel), contains('Overdue'));
-        expect(activeBudgets(s, day), hasLength(3));
+        expect(activeBudgets(s, day), hasLength(5));
+        final cards = CardsSummary(cardRows(s, day));
+        expect(cards.cards, hasLength(3));
+        expect(cards.cards.any((c) => c.over > BigInt.zero), isTrue);
+        expect(cards.credit, BigInt.from(30000));
+        expect(cardDues(s, day).any((d) => d.statement), isTrue);
+        expect(cardDues(s, day).any((d) => !d.statement), isTrue);
+        final goals = goalRows(s, day).map((g) => g.funding).toSet();
+        expect(goals, contains(GoalFunding.funded));
+        expect(goals, contains(GoalFunding.shared));
+        expect(goals, contains(GoalFunding.partly));
+        expect(recurringRows(s, day), hasLength(5));
+        expect(upcomingRows(s, day).any((r) => r.expected), isTrue);
         expect(spendingBetween(s, monthStart(day), day) > BigInt.zero, isTrue);
       }
       expect(demoOverviewSnapshot(today, empty: true).accounts, isEmpty);
@@ -818,7 +832,7 @@ void main() {
       await tester.pump();
       expect(find.byType(SegmentBar), findsNWidgets(5));
       expect(pill('Settled'), findsOneWidget);
-      expect(find.textContaining('3 days overdue'), findsWidgets);
+      expect(find.textContaining('3 days overdue'), findsWidgets);
       // Bar steps are drawn 8 tall, not collapsed to nothing.
       final steps = find.descendant(
         of: find.byType(SegmentBar),

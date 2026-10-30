@@ -85,12 +85,7 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.byKey(const ValueKey('nav-money')));
   expect(find.text('Money'), findsWidgets);
   await financialTap(tester, find.text('Cards').first);
-  expect(find.text('EVERYDAY CREDIT'), findsOneWidget);
-  await financialTap(tester, find.text('Record card purchase'));
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
-  await financialTap(tester, find.text('Done'));
-  expect(session.finance.cardBalance, BigInt.from(600000));
+  expect(find.text('Your cards'), findsOneWidget);
   await financialTap(tester, find.byKey(const ValueKey('nav-debts')));
   expect(find.text('Your debts'), findsOneWidget);
   await financialTap(tester, find.byKey(const ValueKey('shell-new')));

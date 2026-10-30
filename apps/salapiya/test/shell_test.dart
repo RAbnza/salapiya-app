@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
@@ -128,6 +129,28 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('New offers Log a card payment in Money only', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1280, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = PrototypeSession();
+    addTearDown(session.dispose);
+    await tester.pumpWidget(SalapiyaApp(session: session));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('shell-new')));
+    await tester.pumpAndSettle();
+    expect(find.text('Log a debt payment'), findsWidgets);
+    expect(find.text('Log a card payment'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('nav-money')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('shell-new')));
+    await tester.pumpAndSettle();
+    expect(find.text('Log a card payment'), findsOneWidget);
+  });
 
   testWidgets(
     'utilities, all scenarios, enlarged text and keyboard-safe task',

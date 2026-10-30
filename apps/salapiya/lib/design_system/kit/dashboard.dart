@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../theme.dart';
+import 'buttons.dart';
 import 'charts.dart';
 import 'focus_ring.dart';
 import 'money.dart';
@@ -15,9 +17,15 @@ import 'surfaces.dart';
 /// On touch, extends [child]'s hit area to 48 × 48 around it. Taps on the
 /// child itself go to the child; taps on the extra space call [onTap].
 class TouchArea extends StatelessWidget {
-  const TouchArea({super.key, required this.onTap, required this.child});
+  const TouchArea({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.alignment = Alignment.center,
+  });
   final VoidCallback? onTap;
   final Widget child;
+  final AlignmentGeometry alignment;
   @override
   Widget build(BuildContext context) => isDesktop(context)
       ? child
@@ -30,31 +38,49 @@ class TouchArea extends StatelessWidget {
               minHeight: Space.target,
               minWidth: Space.target,
             ),
-            child: Align(widthFactor: 1, heightFactor: 1, child: child),
+            child: Align(
+              alignment: alignment,
+              widthFactor: 1,
+              heightFactor: 1,
+              child: child,
+            ),
           ),
         );
 }
 
 /// A small text action in a card header, e.g. "View all ›".
 class CardLink extends StatelessWidget {
-  const CardLink(this.label, {super.key, required this.onPressed, this.icon});
+  const CardLink(
+    this.label, {
+    super.key,
+    required this.onPressed,
+    this.icon,
+    this.chevron = true,
+  });
   final String label;
   final VoidCallback onPressed;
   final IconData? icon;
+
+  /// Off inside a row that already ends in its own chevron. The link then
+  /// ends flush with its text, so it lines up with an amount above it.
+  final bool chevron;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     return TouchArea(
       onTap: onPressed,
+      alignment: chevron ? Alignment.center : AlignmentDirectional.centerEnd,
       child: Semantics(
         button: true,
         label: label,
         excludeSemantics: true,
         child: Pressable(
           onTap: onPressed,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.xs,
-            vertical: Space.xs,
+          padding: EdgeInsetsDirectional.only(
+            start: Space.xs,
+            top: Space.xs,
+            end: chevron ? Space.xs : 0,
+            bottom: Space.xs,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -70,7 +96,7 @@ class CardLink extends StatelessWidget {
                       ?.copyWith(color: c.primary),
                 ),
               ),
-              if (icon == null)
+              if (icon == null && chevron)
                 Icon(Icons.chevron_right, size: Space.lg, color: c.primary),
             ],
           ),
@@ -572,11 +598,16 @@ double moneyColumnWidth(BuildContext context, Iterable<String?> amounts) {
 /// Closes a list that may sit in a taller card, so the space below reads as
 /// the end of the list rather than as rows that didn't load (§2).
 class ListEnd extends StatelessWidget {
-  const ListEnd({super.key, this.label = 'That’s everything'});
+  const ListEnd({super.key, this.label = 'That’s everything', this.onPressed});
   final String label;
+
+  /// For a list cut short: the words become a link to the whole list.
+  final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
+    final style = Theme.of(context).textTheme.bodySmall;
+    final open = onPressed;
     // The hairline runs the card's width, with the words set on it.
     return Padding(
       padding: const EdgeInsets.only(top: Space.md),
@@ -590,12 +621,13 @@ class ListEnd extends StatelessWidget {
             color: c.surface,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: c.secondary),
-              ),
+              child: open == null
+                  ? Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: style?.copyWith(color: c.secondary),
+                    )
+                  : CardLink(label, onPressed: open),
             ),
           ),
         ],
@@ -603,6 +635,11 @@ class ListEnd extends StatelessWidget {
     );
   }
 }
+
+/// A row's details, joined with dots. Each detail stays whole, so a long line
+/// breaks between details and never inside one, as in "in 72 days".
+String detailLine(Iterable<String> details) =>
+    details.map((d) => d.replaceAll(' ', '\u00A0')).join('\u00A0· ');
 
 /// One figure in a [StatStrip]: a label, its value and an optional detail.
 typedef Stat = ({String label, String value, String? detail});
@@ -792,6 +829,7 @@ class OverviewCard extends StatelessWidget {
     this.stackBelow = rowBase,
     this.accent = false,
     this.centered = false,
+    this.fill = false,
   });
   final String title;
   final String? caption;
@@ -799,6 +837,10 @@ class OverviewCard extends StatelessWidget {
   final Widget child;
   final double stackBelow;
   final bool accent;
+
+  /// Gives [child] the height left under the header as its minimum, so it can
+  /// place things in a card the grid row made taller.
+  final bool fill;
 
   /// When the grid row makes the card taller than its content, center the
   /// content in the space under the header instead of leaving a gap below.
@@ -859,7 +901,7 @@ class OverviewCard extends StatelessWidget {
         final inset =
             EdgeInsets.all(Space.cardPaddingOf(context)).vertical +
             Border.all(color: c.divider).dimensions.vertical;
-        final minimum = centered && box.minHeight > inset
+        final minimum = (centered || fill) && box.minHeight > inset
             ? box.minHeight - inset
             : 0.0;
         return SurfaceCard(
@@ -868,14 +910,20 @@ class OverviewCard extends StatelessWidget {
             constraints: BoxConstraints(minHeight: minimum),
             // Header at the top, content centered in the rest: spaceBetween
             // with an empty last child puts equal space above and below it.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: centered
-                  ? MainAxisAlignment.spaceBetween
-                  : MainAxisAlignment.start,
-              children: [header, child, if (centered) const SizedBox.shrink()],
-            ),
+            child: fill
+                ? _HeaderOverRest(children: [header, child])
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: centered
+                        ? MainAxisAlignment.spaceBetween
+                        : MainAxisAlignment.start,
+                    children: [
+                      header,
+                      child,
+                      if (centered) const SizedBox.shrink(),
+                    ],
+                  ),
           ),
         );
       },
@@ -883,13 +931,72 @@ class OverviewCard extends StatelessWidget {
   }
 }
 
+/// A header over one child, which takes the height left as its minimum. A
+/// Column can't: a card's height reaches it only as a minimum, so it has
+/// nothing to share out.
+class _HeaderOverRest extends MultiChildRenderObjectWidget {
+  const _HeaderOverRest({required super.children});
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderHeaderOverRest();
+}
+
+class _RestParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderHeaderOverRest extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _RestParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _RestParentData> {
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _RestParentData) {
+      child.parentData = _RestParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final width = constraints.maxWidth;
+    final header = firstChild!, rest = childAfter(header)!;
+    header.layout(BoxConstraints.tightFor(width: width), parentUsesSize: true);
+    final top = header.size.height;
+    final left = constraints.minHeight - top;
+    rest.layout(
+      BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        minHeight: left > 0 ? left : 0,
+      ),
+      parentUsesSize: true,
+    );
+    (rest.parentData! as _RestParentData).offset = Offset(0, top);
+    size = constraints.constrain(Size(width, top + rest.size.height));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+}
+
 /// A label with its amount at the end, or the amount under it when narrow.
 class LabelAmount extends StatelessWidget {
-  const LabelAmount({super.key, required this.label, required this.amount});
+  const LabelAmount({
+    super.key,
+    required this.label,
+    required this.amount,
+    this.stackBelow = rowBase,
+  });
   final Widget label, amount;
+
+  /// The width, at 100% text, below which the amount moves under the label.
+  final double stackBelow;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => narrowAt(context, box.maxWidth)
+    builder: (context, box) => narrowAt(context, box.maxWidth, stackBelow)
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -928,4 +1035,69 @@ class AmountsHidden extends StatelessWidget {
     title: 'Amounts hidden',
     message: 'Show amounts to see this chart.',
   );
+}
+
+/// A small menu in a card's corner.
+class CardMenu extends StatelessWidget {
+  const CardMenu({
+    super.key,
+    required this.tooltip,
+    required this.items,
+    this.icon = Icons.more_horiz,
+  });
+  final String tooltip;
+  final IconData icon;
+  final List<Widget> items;
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(0, Space.xs),
+    menuChildren: items,
+    builder: (context, controller, _) => AppIconButton(
+      icon: icon,
+      tooltip: tooltip,
+      onPressed: () =>
+          controller.isOpen ? controller.close() : controller.open(),
+    ),
+  );
+}
+
+/// One fact on a details card: its label, then its value on the same line,
+/// or under it when the card is narrow.
+class FactRow extends StatelessWidget {
+  const FactRow(this.label, this.value, {super.key});
+  final String label, value;
+  @override
+  Widget build(BuildContext context) {
+    final c = CraftTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      label: '$label: $value',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.xs),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final name = Text(
+              label,
+              style: text.bodySmall?.copyWith(color: c.secondary),
+            );
+            final shown = Text(value, style: text.bodyMedium);
+            return narrowAt(context, box.maxWidth, Space.xxxl * 5)
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [name, shown],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: name),
+                      const SizedBox(width: Space.md),
+                      Expanded(flex: 3, child: shown),
+                    ],
+                  );
+          },
+        ),
+      ),
+    );
+  }
 }

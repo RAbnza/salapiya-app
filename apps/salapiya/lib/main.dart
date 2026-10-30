@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'app/title_bar.dart';
 import 'design_system/kit/component_gallery.dart';
+import 'finance/file_access.dart' show clearOpenedCopies;
 
 Future<void> main() async {
   // Debug-only component gallery: kDebugMode is a constant false in release
@@ -17,4 +20,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WindowFrame.enable();
   runApp(const SalapiyaApp(production: !bool.fromEnvironment('SALAPIYA_DEMO')));
+  // Copies opened in another app don't outlive a crash.
+  unawaited(clearOpenedCopies());
 }

@@ -661,6 +661,215 @@ class _ActivityListCardState extends State<ActivityListCard> {
   }
 }
 
+/// Records in date order, one line each, for a page about one thing: a card
+/// or a budget, where day headers and an account column would add nothing.
+class RecordListCard extends StatefulWidget {
+  const RecordListCard({
+    super.key,
+    required this.title,
+    required this.rows,
+    required this.amount,
+    required this.hidden,
+    required this.onOpen,
+    required this.empty,
+    this.caption,
+    this.corner,
+    this.pageSize = 25,
+  });
+  final String title;
+  final String? caption;
+  final List<MoneyRow> rows;
+  final Amount amount;
+  final bool hidden;
+  final ValueChanged<String> onOpen;
+  final Widget empty;
+  final Widget? corner;
+  final int pageSize;
+  @override
+  State<RecordListCard> createState() => _RecordListCardState();
+}
+
+class _RecordListCardState extends State<RecordListCard> {
+  late int shown = widget.pageSize;
+
+  @override
+  void didUpdateWidget(RecordListCard old) {
+    super.didUpdateWidget(old);
+    if (old.rows.length != widget.rows.length) shown = widget.pageSize;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final c = CraftTheme.of(context);
+    final muted = text.bodySmall?.copyWith(color: c.secondary);
+    final rows = widget.rows, amount = widget.amount;
+    return OverviewCard(
+      title: widget.title,
+      caption: widget.caption,
+      corner: widget.corner,
+      child: rows.isEmpty
+          ? widget.empty
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppTable(
+                  key: const ValueKey('record-list-table'),
+                  dense: true,
+                  columns: const [
+                    (label: 'Date', flex: 0, width: dateColumn),
+                    (label: 'Description', flex: 3, width: null),
+                    (label: 'Category', flex: 2, width: null),
+                  ],
+                  moneyColumns: const ['Amount'],
+                  rows: [
+                    for (final r in rows.take(shown))
+                      () {
+                        final money = r.shown(amount, hidden: widget.hidden);
+                        final kind = r.categoryLabel.isEmpty
+                            ? r.label
+                            : r.categoryLabel;
+                        return AppTableRow(
+                          id: 'record-${r.id}',
+                          spoken: [
+                            civilLabel(r.date),
+                            r.title,
+                            kind,
+                            money,
+                          ].join(', '),
+                          onTap: () => widget.onOpen(r.id),
+                          cells: [
+                            Text(civilDay(r.date), style: text.bodyMedium),
+                            Text(r.title, style: text.bodyMedium),
+                            Text(kind, style: muted),
+                          ],
+                          money: [money],
+                          narrow: KeyedSubtree(
+                            key: ValueKey('row-record-${r.id}'),
+                            child: AdaptiveRow(
+                              title: r.title,
+                              subtitle: [civilDay(r.date), kind].join(' · '),
+                              trailing: MoneyAmount(money),
+                              onTap: () => widget.onOpen(r.id),
+                            ),
+                          ),
+                        );
+                      }(),
+                  ],
+                ),
+                if (rows.length > shown) ...[
+                  const SizedBox(height: Space.sm),
+                  ShowMore(
+                    left: rows.length - shown,
+                    onPressed: () => setState(() => shown += widget.pageSize),
+                  ),
+                ] else
+                  const ListEnd(key: ValueKey('record-list-end')),
+              ],
+            ),
+    );
+  }
+}
+
+/// Every record of some kinds and its earlier versions, newest first. Keeps
+/// records no list shows, such as a match, within reach.
+class RecordHistoryPage extends StatefulWidget {
+  const RecordHistoryPage({
+    super.key,
+    required this.source,
+    required this.title,
+    required this.empty,
+    required this.types,
+  });
+  final MoneySource source;
+  final String title, empty;
+  final Set<String> types;
+  @override
+  State<RecordHistoryPage> createState() => _RecordHistoryPageState();
+}
+
+class _RecordHistoryPageState extends State<RecordHistoryPage> {
+  int shown = 25;
+
+  @override
+  Widget build(BuildContext context) {
+    final source = widget.source;
+    final s = source.snapshot;
+    final text = Theme.of(context).textTheme;
+    final records = s.revisions.reversed
+        .where((r) => widget.types.contains(financeType(r)))
+        .toList();
+    final current = s.current.map((r) => r.id).toSet();
+    return SectionPage(
+      title: widget.title,
+      caption: 'Earlier versions stay here',
+      child: SurfaceCard(
+        child: records.isEmpty
+            ? EmptyState(
+                icon: Icons.history,
+                title: 'No history yet',
+                message: widget.empty,
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppTable(
+                    key: const ValueKey('history-table'),
+                    dense: true,
+                    columns: const [
+                      (label: 'Date', flex: 0, width: dateColumn),
+                      (label: 'Record', flex: 3, width: null),
+                      (label: 'Type', flex: 2, width: null),
+                    ],
+                    moneyColumns: const ['Amount'],
+                    rows: [
+                      for (final r in records.take(shown))
+                        AppTableRow(
+                          id: 'history-${r.id}',
+                          spoken: [
+                            civilDay(r.date),
+                            recordTitle(r),
+                            moneyLabel(r),
+                          ].join(', '),
+                          onTap: () => source.actions.openRecord(r.id),
+                          cells: [
+                            Text(civilDay(r.date), style: text.bodyMedium),
+                            Text(recordTitle(r), style: text.bodyMedium),
+                            Text(
+                              current.contains(r.id)
+                                  ? moneyLabel(r)
+                                  : '${moneyLabel(r)} · Earlier version',
+                              style: text.bodySmall,
+                            ),
+                          ],
+                          money: [source.amount(r.amount)],
+                          narrow: AdaptiveRow(
+                            title: recordTitle(r),
+                            subtitle: [
+                              civilDay(r.date),
+                              moneyLabel(r),
+                            ].join(' · '),
+                            trailing: MoneyAmount(source.amount(r.amount)),
+                            onTap: () => source.actions.openRecord(r.id),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (records.length > shown) ...[
+                    const SizedBox(height: Space.sm),
+                    ShowMore(
+                      left: records.length - shown,
+                      onPressed: () => setState(() => shown += 25),
+                    ),
+                  ] else
+                    const ListEnd(key: ValueKey('history-end')),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
 /// The shareable list: the period, its totals and every item, with no row
 /// limit, so one screenshot says it all (§2 Shareable views).
 class StatementList extends StatelessWidget {
@@ -793,45 +1002,4 @@ class StatementPage extends StatelessWidget {
     title: title,
     child: SurfaceCard(child: list),
   );
-}
-
-/// One fact on a details card: its label, then its value on the same line,
-/// or under it when the card is narrow.
-class FactRow extends StatelessWidget {
-  const FactRow(this.label, this.value, {super.key});
-  final String label, value;
-  @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      label: '$label: $value',
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: Space.xs),
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final name = Text(
-              label,
-              style: text.bodySmall?.copyWith(color: c.secondary),
-            );
-            final shown = Text(value, style: text.bodyMedium);
-            return narrowAt(context, box.maxWidth, Space.xxxl * 5)
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [name, shown],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 2, child: name),
-                      const SizedBox(width: Space.md),
-                      Expanded(flex: 3, child: shown),
-                    ],
-                  );
-          },
-        ),
-      ),
-    );
-  }
 }

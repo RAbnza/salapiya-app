@@ -35,7 +35,7 @@ class FinancialReview extends StatelessWidget {
     'cash': 'Cash movement',
     'expense': 'Spending',
     'income': 'Income',
-    'card_liability': 'Card liability',
+    'card_liability': 'Card debt',
     'debt_liability': 'What you owe',
     'receivable': 'Receivable',
     'shared_receivable': 'Private shared receivable',

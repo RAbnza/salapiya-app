@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
 import '../local/finance_domain.dart';
-import 'overview_charts.dart';
 import 'overview_data.dart';
 import 'title_bar_tools.dart';
 
@@ -100,11 +99,11 @@ Widget dueRow(
     key: ValueKey('due-${item.source.id}'),
     leading: icon,
     title: item.source.title,
-    subtitle: [
+    subtitle: detailLine([
       kind,
       civilLabel(item.date),
       if (item.days < 0) '${_plural(-item.days, 'day')} overdue',
-    ].join(' · '),
+    ]),
     trailing: Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -132,18 +131,35 @@ class DuesList extends StatelessWidget {
   final Amount amount;
   final ValueChanged<FinancialReminderSource> onOpen;
 
+  /// A card's statement usually includes its installments.
+  bool get _overlap {
+    final kinds = {
+      for (final i in [...dues.overdue, ...dues.upcoming]) i.source.kind,
+    };
+    return kinds.contains('Card statement due') &&
+        kinds.contains('Card installment due');
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
         '${dues.period.label} · ${overviewSpan(dues.start, dues.end)} · as of ${civilLabel(dues.today)}',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: CraftTheme.of(context).secondary,
-        ),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: CraftTheme.of(context).secondary),
       ),
       const SizedBox(height: Space.sm),
       DueFigures(dues: dues, amount: amount, list: true),
+      if (_overlap) ...[
+        const SizedBox(height: Space.sm),
+        Text(
+          'Card statement and installment amounts can overlap.',
+          key: const ValueKey('dues-overlap'),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: CraftTheme.of(context).secondary),
+        ),
+      ],
       const SizedBox(height: Space.md),
       _table(context),
     ],
@@ -456,42 +472,42 @@ class _DuesCardState extends State<DuesCard> {
               children: [
                 DueFigures(dues: dues, amount: widget.amount),
                 const SizedBox(height: Space.md),
-                  DueCalendar(
-                    dues: dues,
-                    selected: day,
-                    onSelected: (d) => setState(() {
-                      day = day == d ? null : d;
-                      all = false;
-                    }),
+                DueCalendar(
+                  dues: dues,
+                  selected: day,
+                  onSelected: (d) => setState(() {
+                    day = day == d ? null : d;
+                    all = false;
+                  }),
+                ),
+                const SizedBox(height: Space.sm),
+                if (day != null)
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: CardLink(
+                      'Show the whole $periodLabel',
+                      icon: Icons.close,
+                      onPressed: () => setState(() => day = null),
+                    ),
                   ),
+                if (overdue.isNotEmpty)
+                  group('Overdue', overdue, overdue: true),
+                if (overdue.isNotEmpty && upcoming.isNotEmpty)
                   const SizedBox(height: Space.sm),
-                  if (day != null)
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: CardLink(
-                        'Show the whole $periodLabel',
-                        icon: Icons.close,
-                        onPressed: () => setState(() => day = null),
-                      ),
+                if (upcoming.isNotEmpty)
+                  group(
+                    day == null ? 'Due this $periodLabel' : civilLabel(day!),
+                    upcoming,
+                  ),
+                if (overdue.isEmpty && upcoming.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(Space.md),
+                    child: Text(
+                      'Nothing due on ${civilLabel(day!)}.',
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: CraftTheme.of(context).secondary),
                     ),
-                  if (overdue.isNotEmpty)
-                    group('Overdue', overdue, overdue: true),
-                  if (overdue.isNotEmpty && upcoming.isNotEmpty)
-                    const SizedBox(height: Space.sm),
-                  if (upcoming.isNotEmpty)
-                    group(
-                      day == null ? 'Due this $periodLabel' : civilLabel(day!),
-                      upcoming,
-                    ),
-                  if (overdue.isEmpty && upcoming.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(Space.md),
-                      child: Text(
-                        'Nothing due on ${civilLabel(day!)}.',
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: CraftTheme.of(context).secondary),
-                      ),
-                    ),
+                  ),
               ],
             ),
     );
@@ -859,15 +875,22 @@ class CategoryCard extends StatefulWidget {
     required this.categories,
     required this.amount,
     required this.caption,
-    required this.onOpen,
+    this.onOpen,
     this.available = true,
     this.hidden = false,
+    this.title = 'Spending by category',
+    this.emptyTitle = 'No spending this month',
+    this.emptyMessage = 'Expenses you log this month show here by category.',
+    this.unavailable,
   });
   final List<(String, BigInt)> categories;
   final Amount amount;
-  final String caption;
-  final VoidCallback onOpen;
+  final String caption, title, emptyTitle, emptyMessage;
+  final VoidCallback? onOpen;
   final bool available, hidden;
+
+  /// Replaces the chart, saying why it can't be drawn.
+  final Widget? unavailable;
 
   @override
   State<CategoryCard> createState() => _CategoryCardState();
@@ -899,6 +922,12 @@ class _CategoryCardState extends State<CategoryCard> {
       final bp = shareBasisPoints(shares[i].$2, total);
       return bp == null ? '' : percentLabel(bp);
     }
+
+    // One width for every row, so the shares line up whatever each amount's
+    // length.
+    final moneyWidth = moneyColumnWidth(context, [
+      for (final s in shares) amount(s.$2),
+    ]);
 
     Widget legendRow(int i) {
       final (name, value) = shares[i];
@@ -957,7 +986,13 @@ class _CategoryCardState extends State<CategoryCard> {
               if (wide) ...[
                 percent,
                 const SizedBox(width: Space.md),
-                money,
+                SizedBox(
+                  width: moneyWidth,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: money,
+                  ),
+                ),
               ] else
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -1029,20 +1064,23 @@ class _CategoryCardState extends State<CategoryCard> {
             ],
           );
 
+    final open = widget.onOpen;
     return OverviewCard(
-      title: 'Spending by category',
+      title: widget.title,
       centered: true,
       caption: widget.caption,
-      trailing: CardLink('View report', onPressed: widget.onOpen),
+      trailing: open == null ? null : CardLink('View report', onPressed: open),
       child: !widget.available
           ? const NotAvailable('Spending shows once your records are complete.')
+          : widget.unavailable != null
+          ? widget.unavailable!
           : widget.hidden
           ? const AmountsHidden()
           : shares.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.pie_chart_outline,
-              title: 'No spending this month',
-              message: 'Expenses you log this month show here by category.',
+              title: widget.emptyTitle,
+              message: widget.emptyMessage,
             )
           : LayoutBuilder(
               builder: (context, box) {
@@ -1081,143 +1119,6 @@ class _CategoryCardState extends State<CategoryCard> {
                         ],
                       );
               },
-            ),
-    );
-  }
-}
-
-/// O8: active budgets against their limits, in exact basis points, with a
-/// gauge of the total used across the budgets that have a limit.
-class BudgetsCard extends StatelessWidget {
-  const BudgetsCard({
-    super.key,
-    required this.budgets,
-    required this.amount,
-    required this.onOpen,
-  });
-  final List<BudgetProgress> budgets;
-  final Amount amount;
-  final VoidCallback onOpen;
-
-  static String percent(int basisPoints) =>
-      '${basisPoints ~/ 100}.${(basisPoints % 100).toString().padLeft(2, '0')}%';
-
-  static String line(BudgetProgress b, Amount amount) => b.basisPoints == null
-      ? '${amount(b.spent)} spent · zero-limit budget'
-      : b.over > BigInt.zero
-      ? '${amount(b.spent)} of ${amount(b.limit)} · ${amount(b.over)} over'
-      : '${amount(b.spent)} of ${amount(b.limit)} · ${percent(b.basisPoints!)} used';
-
-  @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    final text = Theme.of(context).textTheme;
-    final totals = budgetTotals(budgets);
-    final bp = totals.basisPoints;
-    final over = totals.spent > totals.limit;
-    final gauge = bp == null
-        ? null
-        : Semantics(
-            label:
-                'All budgets with a limit: ${percent(bp)} used, ${amount(totals.spent)} of ${amount(totals.limit)}',
-            excludeSemantics: true,
-            child: BudgetGauge(
-              key: const ValueKey('budget-gauge'),
-              fraction: bp / 10000,
-              over: over,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    percent(bp),
-                    style: text.headlineSmall?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  Text(
-                    over ? 'over the limit' : 'used',
-                    style: text.bodySmall?.copyWith(color: c.secondary),
-                  ),
-                ],
-              ),
-            ),
-          );
-    final list = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final (i, b) in budgets.indexed) ...[
-          if (i > 0) const SizedBox(height: Space.md),
-          Semantics(
-            label: '${b.budget.title}: ${line(b, amount)}',
-            excludeSemantics: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
-                  spacing: Space.sm,
-                  runSpacing: Space.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(b.budget.title, style: text.titleSmall),
-                    if (b.over > BigInt.zero)
-                      const StatusPill(
-                        'Over the limit',
-                        icon: Icons.warning_amber_rounded,
-                        tone: PillTone.warning,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: Space.xs),
-                if (b.basisPoints != null)
-                  SlimBar(
-                    fraction: b.basisPoints! / 10000,
-                    color: b.over > BigInt.zero
-                        ? c.tone(NoticeTone.warning).$1
-                        : null,
-                  ),
-                const SizedBox(height: Space.xs),
-                Text(
-                  line(b, amount),
-                  style: text.bodySmall?.copyWith(color: c.secondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-    return OverviewCard(
-      title: 'Budgets',
-      centered: true,
-      caption: 'Active budgets covering today',
-      trailing: CardLink('View budgets', onPressed: onOpen),
-      child: budgets.isEmpty
-          ? EmptyState(
-              icon: Icons.savings_outlined,
-              title: 'No active budgets',
-              message: 'Budgets you set in Money show their progress here.',
-              action: AppButton.secondary('Open budgets', onPressed: onOpen),
-            )
-          : LayoutBuilder(
-              builder: (context, box) => gauge == null
-                  ? list
-                  : narrowAt(context, box.maxWidth, tableBase)
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(child: gauge),
-                        const SizedBox(height: Space.lg),
-                        list,
-                      ],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        gauge,
-                        const SizedBox(width: Space.xl),
-                        Expanded(child: list),
-                      ],
-                    ),
             ),
     );
   }

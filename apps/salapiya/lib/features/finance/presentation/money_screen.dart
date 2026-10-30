@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/demo_routes.dart';
@@ -5,31 +7,28 @@ import '../../../app/shell_navigation.dart';
 import '../../../design_system/editorial.dart';
 import '../../../design_system/kit/kit.dart';
 import '../../../design_system/theme.dart';
-import '../../../finance/files_screen.dart';
-import '../../../finance/finance_screen.dart';
-import '../../../finance/import_screen.dart';
+import '../../../finance/card_tab.dart';
+import '../../../finance/files_tab.dart';
+import '../../../finance/finance_screen.dart' show formTitles;
+import '../../../finance/import_tab.dart';
 import '../../../finance/money_dashboard.dart';
 import '../../../finance/money_data.dart';
 import '../../../finance/money_demo.dart';
 import '../../../finance/money_details.dart';
-import '../../../finance/planning_screen.dart';
-import '../../../finance/reports_screen.dart';
+import '../../../finance/planning_tab.dart';
+import '../../../finance/report_data.dart';
+import '../../../finance/report_tab.dart';
+import '../../../local/finance_domain.dart' show financeType;
 import '../../../local/local_finance_controller.dart';
-import '../../../local/local_profile_view.dart';
-import '../../../local/local_runtime.dart';
 import '../../../prototype/scenarios.dart';
-import '../../planning/presentation/planning_screen.dart';
-import '../../planning/presentation/reports_screen.dart';
-import '../../supporting/presentation/files_screen.dart';
+import '../../supporting/presentation/files_screen.dart'
+    show SupportingFilesLink;
 import '../application/financial_controller.dart';
 import '../contracts/financial_models.dart';
-import 'credit_screen.dart';
 import 'financial_editor.dart';
 import 'financial_widgets.dart';
-import 'import_screen.dart';
 
-/// Money's tabs. Accounts and Activity are this section's own (§2 Money);
-/// the others keep their content until Chat 9.
+/// Money's tabs (§2 Money).
 const moneyTabs = [
   'Accounts',
   'Activity',
@@ -60,11 +59,96 @@ class MoneyScreen extends StatefulWidget {
 class _MoneyScreenState extends State<MoneyScreen> {
   late String tab = widget.initial;
   int drafts = 0;
+
+  /// What Activity opens on, when another tab sends the user there.
+  ActivityFilter activity = const ActivityFilter();
+
+  /// Kept here, so the header's Export CSV saves what the tab shows.
+  ReportFilter report = const ReportFilter();
   FinancialController get c => widget.session.finance;
 
-  void select(String next) {
+  void select(String next, {ActivityFilter filter = const ActivityFilter()}) {
     ShellNavigation.reportTab(context, next);
-    setState(() => tab = next);
+    setState(() {
+      tab = next;
+      activity = filter;
+    });
+  }
+
+  /// What follows the date in the header, per tab.
+  String? caption(MoneySource money) {
+    if (!money.complete) return null;
+    final s = money.snapshot;
+    int count(String type) =>
+        s.current.where((r) => financeType(r) == type).length;
+    String of(int n, String one) => '$n ${n == 1 ? one : '${one}s'}';
+    return switch (tab) {
+      'Accounts' ||
+      'Activity' => of(s.accounts.where((a) => !a.archived).length, 'account'),
+      'Cards' => of(count('creditCard'), 'card'),
+      'Planning' =>
+        '${of(count('budget'), 'budget')} · ${of(count('savingsGoal'), 'goal')}',
+      'Reports' when report.problem(money.today) == null => periodHeading(
+        report.range(money.today).$1,
+        report.range(money.today).$2,
+      ),
+      'Files' => of(count('financialFile'), 'file'),
+      _ => null,
+    };
+  }
+
+  /// The header's actions, per tab. Windows only: on Android they sit in
+  /// the cards, and the + button has the ones it repeats.
+  List<QuickAction> headerActions(MoneySource money) {
+    QuickAction form(String op, IconData icon) => (
+      label: formTitles[op]!,
+      icon: icon,
+      onSelected: () => money.actions.form(op, formTitles[op]!),
+    );
+    return switch (tab) {
+      'Accounts' || 'Activity' => widget.actions,
+      'Cards' => [
+        form('cardPayment', Icons.payments_outlined),
+        form('statement', Icons.receipt_long_outlined),
+        form('creditCard', Icons.add_card_outlined),
+      ],
+      'Planning' => [
+        form('budget', Icons.pie_chart_outline),
+        form('savingsGoal', Icons.savings_outlined),
+        form('recurrence', Icons.repeat),
+      ],
+      'Reports' when money.complete && report.problem(money.today) == null => [
+        (
+          label: 'Export CSV',
+          icon: Icons.download_outlined,
+          onSelected: () => exportReport(report, money),
+        ),
+      ],
+      'Import' when money.complete => [
+        (
+          label: 'Import a file',
+          icon: Icons.upload_file_outlined,
+          onSelected: () => unawaited(
+            money.actions.importFile().then((_) {
+              if (mounted) setState(() {});
+            }),
+          ),
+        ),
+      ],
+      'Files' when money.complete => [
+        (
+          label: 'Attach a file',
+          icon: Icons.attach_file,
+          onSelected: () => unawaited(money.actions.attachFile()),
+        ),
+      ],
+      _ => const [],
+    };
+  }
+
+  void exportReport(ReportFilter filter, MoneySource money) {
+    final (from, to) = filter.range(money.today);
+    money.actions.exportCsv(from, to, filter.account, filter.category);
   }
 
   MoneySource source(BuildContext context) => switch (c) {
@@ -97,17 +181,13 @@ class _MoneyScreenState extends State<MoneyScreen> {
     listenable: Listenable.merge([c, widget.session]),
     builder: (context, _) {
       final money = source(context);
-      final own = tab == 'Accounts' || tab == 'Activity';
-      final count = money.snapshot.accounts.where((a) => !a.archived).length;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           MoneyHeader(
             today: money.today,
-            caption: own && money.complete
-                ? '$count ${count == 1 ? 'account' : 'accounts'}'
-                : null,
-            actions: own ? widget.actions : const [],
+            caption: caption(money),
+            actions: headerActions(money),
           ),
           // Android's header row is already a 48 target; keep the tabs close.
           SizedBox(height: isDesktop(context) ? Space.lg : Space.xs),
@@ -118,11 +198,10 @@ class _MoneyScreenState extends State<MoneyScreen> {
             onSelected: select,
           ),
           SizedBox(height: Space.cardGapOf(context) + Space.xs),
-          if (own || !money.complete)
-            for (final n in moneyNotices(money)) ...[
-              n,
-              SizedBox(height: Space.cardGapOf(context)),
-            ],
+          for (final n in moneyNotices(money)) ...[
+            n,
+            SizedBox(height: Space.cardGapOf(context)),
+          ],
           if (tab == 'Accounts')
             AccountsTab(
               key: const ValueKey('money-accounts-tab'),
@@ -135,41 +214,38 @@ class _MoneyScreenState extends State<MoneyScreen> {
             ActivityTab(
               key: const ValueKey('money-activity-tab'),
               source: money,
+              filter: activity,
             )
-          else if (money.complete)
-            other(),
+          else if (tab == 'Cards')
+            CardsTab(
+              key: const ValueKey('money-cards-tab'),
+              source: money,
+              onActivity: () => select(
+                'Activity',
+                filter: const ActivityFilter(type: ActivityType.cards),
+              ),
+            )
+          else if (tab == 'Planning')
+            PlanningTab(
+              key: const ValueKey('money-planning-tab'),
+              source: money,
+            )
+          else if (tab == 'Reports')
+            ReportsTab(
+              key: const ValueKey('money-reports-tab'),
+              source: money,
+              filter: report,
+              onFilter: (f) => setState(() => report = f),
+              onExport: (f) => exportReport(f, money),
+            )
+          else if (tab == 'Import')
+            ImportTab(key: const ValueKey('money-import-tab'), source: money)
+          else
+            FilesTab(key: const ValueKey('money-files-tab'), source: money),
         ],
       );
     },
   );
-
-  /// Chat 9's tabs, as they were.
-  Widget other() {
-    final session = widget.session;
-    final local = c is LocalFinancialController
-        ? c as LocalFinancialController
-        : null;
-    return switch (tab) {
-      'Cards' when local != null => NativeCardsScreen(controller: local),
-      'Planning' when local != null => NativePlanningScreen(controller: local),
-      'Reports' when local != null => NativeReportsScreen(controller: local),
-      'Import' when local != null => NativeImportScreen(
-        controller: local,
-        synchronize: session is LocalSession
-            ? session.runtime.connected.syncNow
-            : null,
-      ),
-      'Files' when session is LocalSession => NativeFilesScreen(
-        session: session,
-      ),
-      'Files' => FilesScreen(session: session),
-      'Planning' => PlanningScreen(session: session),
-      'Reports' => ReportsScreen(session: session),
-      'Cards' => CreditScreen(session: session),
-      'Import' => ImportScreen(controller: c),
-      _ => UpcomingView(tab),
-    };
-  }
 }
 
 /// The demo's record page, for the demo's Cards, Planning and Reports.

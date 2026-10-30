@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../app/demo_routes.dart';
@@ -16,12 +18,21 @@ import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../local/local_runtime.dart';
 import '../prototype/scenarios.dart';
+import 'card_pages.dart';
+import 'file_access.dart';
+import 'file_pages.dart';
 import 'debt_cards.dart' show civilDay;
 import 'finance_screen.dart';
+import 'forecast_page.dart';
+import 'import_flow.dart';
+import 'import_review.dart';
 import 'money_cards.dart';
 import 'money_dashboard.dart';
 import 'money_data.dart';
 import 'money_editor.dart';
+import 'planning_pages.dart';
+import 'record_facts.dart';
+import 'report_data.dart';
 
 /// What the Money screens read for a real profile. Without a [session], as on
 /// a record page opened from another section's list, the records count as
@@ -75,6 +86,13 @@ MoneySource localMoneySource(
           )
         : null,
     draftCount: () async => (await c.store.drafts()).length,
+    importDraft: () async {
+      final saved = await c.store.draft(ImportFlow.operation);
+      return saved == null
+          ? null
+          : Map<String, String>.from(saved['values'] as Map);
+    },
+    files: session is LocalSession ? LocalFileAccess(session) : null,
     actions: MoneyActions(
       logExpense: (a) => edit(
         FinancialAction.expense,
@@ -120,9 +138,12 @@ MoneySource localMoneySource(
         context,
         SavedDraftsPage(
           controller: c,
-          onImport: () => ShellNavigation.maybeOf(
-            context,
-          )?.select(AppDestination.money, tab: 'Import'),
+          onImport: () =>
+              ShellNavigation.maybeOf(context)
+                  ?.select(AppDestination.money, tab: 'Import'),
+          onFiles: () =>
+              ShellNavigation.maybeOf(context)
+                  ?.select(AppDestination.money, tab: 'Files'),
         ),
         'money/drafts',
       ),
@@ -146,7 +167,263 @@ MoneySource localMoneySource(
           : edit(FinancialAction.reversal, sourceId: r.id),
       refund: (r) => edit(FinancialAction.refund, sourceId: r.id),
       adjustToMatch: (r) => edit(FinancialAction.reconcile, sourceId: r.id),
+      form:
+          (op, title, {initial = const {}, replacing, overrides = const {}}) =>
+              openNativeFinance(
+                context,
+                c,
+                replacing == null ? op : 'financeCorrection',
+                title,
+                replacing: replacing,
+                initial: initial,
+                overrides: overrides,
+              ),
+      openItem: (id) => openMoneyItem(
+        context,
+        snapshot: c.snapshot,
+        listenable: _listening(c, session),
+        source: (context) => localMoneySource(context, c, session),
+        id: id,
+        record: (id) => openMoneyRecord(context, c, id, session: session),
+      ),
+      openForecast: () => openDemoPage<void>(
+        context,
+        ForecastPage(
+          listenable: _listening(c, session),
+          source: (context) => localMoneySource(context, c, session),
+        ),
+        'money/forecast',
+        title: 'Cash forecast',
+      ),
+      openCardDues: () => openDemoPage<void>(
+        context,
+        CardDuesPage(
+          listenable: _listening(c, session),
+          source: (context) => localMoneySource(context, c, session),
+        ),
+        'money/card-dues',
+        title: 'Due on your cards',
+      ),
+      exportCsv: (from, to, account, category) => _exportCsv(
+        context,
+        c.snapshot,
+        from,
+        to,
+        account: account,
+        category: category,
+      ),
+      importFile: () => _importFile(context, c, session),
+      continueImport: (batch) => _continueImport(context, c, session, batch),
+      openImport: (batch) => openDemoPage<void>(
+        context,
+        ImportDetailView(
+          listenable: _listening(c, session),
+          source: (context) => localMoneySource(context, c, session),
+          id: batch,
+        ),
+        'money/import/$batch',
+        title: 'Import',
+      ),
+      attachFile: () => openDemoPage<void>(
+        context,
+        AttachFilePage(
+          listenable: _listening(c, session),
+          source: (context) => localMoneySource(context, c, session),
+        ),
+        'money/attach',
+        title: 'Attach a file',
+      ),
+      openFile: (id) => openDemoPage<void>(
+        context,
+        FileDetailView(
+          listenable: _listening(c, session),
+          source: (context) => localMoneySource(context, c, session),
+          id: id,
+        ),
+        'money/file/$id',
+        title: 'File',
+      ),
     ),
+  );
+}
+
+ImportFlow _importFlow(LocalFinancialController c, PrototypeSession? session) =>
+    ImportFlow(
+      c,
+      session is LocalSession ? session.runtime.connected.syncNow : null,
+    );
+
+Future<void> _openReview(
+  BuildContext context,
+  LocalFinancialController c,
+  PrototypeSession? session,
+  ImportFlow flow,
+) => openDemoPage<void>(
+  context,
+  ImportReviewPage(
+    flow: flow,
+    source: (context) => localMoneySource(context, c, session),
+  ),
+  'money/import-review',
+  title: 'Review import',
+);
+
+/// Picks a file for a new import. A review under way is replaced only if the
+/// user says so; rows already imported stay.
+Future<void> _importFile(
+  BuildContext context,
+  LocalFinancialController c,
+  PrototypeSession? session,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final flow = _importFlow(c, session);
+  try {
+    await flow.restore();
+    if (flow.draft.isNotEmpty) {
+      if (!context.mounted) return;
+      final yes = await showAppDialog<bool>(
+        context,
+        title: 'Start a new import?',
+        body: const Text(
+          'This replaces the review you haven’t finished. Rows already imported stay in your records.',
+        ),
+        primary: const ModalAction('Start a new import', value: true),
+        secondary: const ModalAction('Keep this review'),
+      );
+      if (yes != true) {
+        flow.dispose();
+        return;
+      }
+    }
+    if (!await flow.pick()) {
+      flow.dispose();
+      return;
+    }
+  } catch (e) {
+    flow.dispose();
+    messenger.showSnackBar(SnackBar(content: Text(importProblem(e))));
+    return;
+  }
+  if (context.mounted) await _openReview(context, c, session, flow);
+}
+
+Future<void> _continueImport(
+  BuildContext context,
+  LocalFinancialController c,
+  PrototypeSession? session,
+  String? batch,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final flow = _importFlow(c, session);
+  try {
+    await flow.restore();
+    if (batch != null && flow.draft['batch'] != batch) {
+      await flow.resume(c.snapshot.revision(batch));
+    }
+  } catch (e) {
+    flow.dispose();
+    messenger.showSnackBar(SnackBar(content: Text(importProblem(e))));
+    return;
+  }
+  if (context.mounted) await _openReview(context, c, session, flow);
+}
+
+/// Saves a report's postings with the file dialog. The same filters as the
+/// screen, and only a real save is called saved.
+Future<void> _exportCsv(
+  BuildContext context,
+  LocalSnapshot s,
+  String from,
+  String to, {
+  String? account,
+  String? category,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  void tell(String message) =>
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+  try {
+    final bytes = Uint8List.fromList(
+      utf8.encode(
+        financialCsv(
+          s,
+          from,
+          addCivilDays(to, 1),
+          account: account,
+          category: category,
+        ),
+      ),
+    );
+    final saved = await FilePicker.saveFile(
+      fileName: 'salapiya-report-$from-$to.csv',
+      bytes: bytes,
+    );
+    tell(saved == null ? 'Export cancelled.' : 'CSV saved.');
+  } catch (_) {
+    tell('The CSV wasn’t saved. Try again.');
+  }
+}
+
+/// One item's own page, or the record page for anything without one.
+void openMoneyItem(
+  BuildContext context, {
+  required LocalSnapshot snapshot,
+  required Listenable listenable,
+  required MoneySource Function(BuildContext context) source,
+  required String id,
+  required ValueChanged<String> record,
+}) {
+  final r = snapshot.current
+      .where((r) => r.id == id || r.actionId == id)
+      .firstOrNull;
+  final page = r == null
+      ? null
+      : switch (financeType(r)) {
+          'creditCard' => CardDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'statement' => StatementDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'installment' => PlanDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'budget' => BudgetDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'savingsGoal' => GoalDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'recurrence' => RecurringDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.actionId,
+          ),
+          'financialFile' => FileDetailView(
+            listenable: listenable,
+            source: source,
+            id: r.id,
+          ),
+          _ => null,
+        };
+  if (page == null) {
+    record(id);
+    return;
+  }
+  openDemoPage<void>(
+    context,
+    page,
+    'money/item/${r!.actionId}',
+    title: r.title,
   );
 }
 
@@ -479,12 +756,13 @@ class RecordDetailView extends StatelessWidget {
             onPressed: () => actions.refund(r),
             child: const Text('Log a refund'),
           ),
-        MenuItemButton(
-          key: const ValueKey('record-reverse'),
-          leadingIcon: const Icon(Icons.remove_circle_outline),
-          onPressed: can.blocked == null ? () => actions.reverse(r) : null,
-          child: const Text('Reverse transaction'),
-        ),
+        if (can.reverse)
+          MenuItemButton(
+            key: const ValueKey('record-reverse'),
+            leadingIcon: const Icon(Icons.remove_circle_outline),
+            onPressed: can.blocked == null ? () => actions.reverse(r) : null,
+            child: const Text('Reverse transaction'),
+          ),
       ],
     );
   }
@@ -590,6 +868,7 @@ class RecordDetailView extends StatelessWidget {
       String? value(String key) => (effect.values[key] ?? '').trim().isEmpty
           ? null
           : effect.values[key]!.trim();
+      final own = recordFacts(s, effect, amount, source.categoryName);
       final facts = <(String, String?)>[
         ('Type', moneyLabel(r)),
         ('Date', civilDay(r.date)),
@@ -612,6 +891,7 @@ class RecordDetailView extends StatelessWidget {
         ('Reference', value('reference')),
         ('Notes', value('notes')),
         if (check) ('Status', state!.label),
+        ...own,
         (
           'Saved',
           waiting
@@ -700,9 +980,11 @@ class RecordDetailView extends StatelessWidget {
                   ),
                 for (final f in files)
                   AdaptiveRow(
+                    key: ValueKey('attachment-${f.id}'),
                     leading: Icons.attach_file,
                     title: f.title,
-                    subtitle: 'Attachment · Open Money › Files to view it',
+                    subtitle: 'Attachment',
+                    onTap: () => actions.openItem(f.id),
                   ),
               ],
             ),
@@ -712,7 +994,8 @@ class RecordDetailView extends StatelessWidget {
               children: [
                 FactRow('Record', r.id),
                 FactRow('Original', r.actionId),
-                if (nativeFinanceCommands.contains(financeType(r)))
+                if (own.isEmpty &&
+                    nativeFinanceCommands.contains(financeType(r)))
                   for (final e in detail.entries) FactRow(e.key, e.value),
               ],
             ),
@@ -794,7 +1077,7 @@ class RecordDetailView extends StatelessWidget {
                     : null,
               ),
             ),
-            more(source, r, can),
+            if (can.refund || can.reverse) more(source, r, can),
           ],
         ],
         child: Column(
@@ -915,11 +1198,14 @@ class _Draft {
   List<String> get parts => operation.split(':');
   bool get native => parts.first == 'finance';
   bool get import => parts.first == 'cash-import';
+  bool get files => parts.first == 'files';
   FinancialAction? get action =>
       FinancialAction.values.where((a) => a.name == parts.first).firstOrNull;
 
   String get title => import
       ? 'Imported history'
+      : files
+      ? 'Attach a file'
       : native
       ? switch (parts[1]) {
           'debtPayment' => 'Log a debt payment',
@@ -931,7 +1217,7 @@ class _Draft {
           'debtSchedule' => 'Set schedule',
           'financeCorrection' => 'Correct this record',
           'financeReversal' => 'Reverse this record',
-          _ => 'Finish this draft',
+          final op => formTitles[op] ?? 'Finish this draft',
         }
       : action == null
       ? 'Finish this draft'
@@ -947,11 +1233,16 @@ class _Draft {
 /// Unfinished entries, encrypted on this device. Each opens its form; none
 /// of them is in the user's records.
 class SavedDraftsPage extends StatefulWidget {
-  const SavedDraftsPage({super.key, required this.controller, this.onImport});
+  const SavedDraftsPage({
+    super.key,
+    required this.controller,
+    this.onImport,
+    this.onFiles,
+  });
   final LocalFinancialController controller;
 
-  /// Import keeps its own draft; this goes there.
-  final VoidCallback? onImport;
+  /// Import and Files keep their own drafts; these go there.
+  final VoidCallback? onImport, onFiles;
   @override
   State<SavedDraftsPage> createState() => _SavedDraftsPageState();
 }
@@ -975,6 +1266,10 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
   Future<void> open(_Draft d) async {
     if (d.import) {
       widget.onImport?.call();
+      return;
+    }
+    if (d.files) {
+      widget.onFiles?.call();
       return;
     }
     if (d.native) {
@@ -1051,7 +1346,9 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
                         key: ValueKey('draft-${d.operation}'),
                         title: d.title,
                         subtitle: d.subtitle,
-                        onTap: d.import && widget.onImport == null
+                        onTap:
+                            (d.import && widget.onImport == null) ||
+                                (d.files && widget.onFiles == null)
                             ? null
                             : () => unawaited(open(d)),
                       ),

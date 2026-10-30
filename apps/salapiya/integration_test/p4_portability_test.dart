@@ -81,65 +81,63 @@ void main() {
         await localConfirm(tester);
         expect(c.snapshot.balance(account), BigInt.from(98000));
         await localTap(tester, find.text('Files').first);
-        await localTap(
-          tester,
-          find.byType(DropdownButtonFormField<String>).first,
-        );
-        await localTap(
-          tester,
-          find.textContaining('Synthetic supporting source ·').last,
-        );
-        await localTap(tester, find.text('Choose private supporting file'));
+        await localTap(tester, find.byKey(const ValueKey('files-attach')));
+        await localTap(tester, find.text('Synthetic supporting source'));
         await waitForNativePicker(
           tester,
-          () =>
-              find.text('Review private supporting file').evaluate().isNotEmpty,
+          () => find.text('Attach this file?').evaluate().isNotEmpty,
           'select test/fixtures/p4_receipt.png',
         );
-        await localTap(tester, find.text('Attach private file'));
+        await localTap(tester, find.text('Attach file'));
         await localWait(
           tester,
           () =>
               c.snapshot.current.any((r) => financeType(r) == 'financialFile'),
         );
         expect(c.snapshot.balance(account), BigInt.from(98000));
-        await localTap(tester, find.text('Preview unscanned image'));
+        await localTap(tester, find.textContaining('p4_receipt').first);
+        await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
           () => find
               .text(
-                'Unscanned private image. Integrity verification is not a safety scan.',
+                'Not virus-scanned. The check only shows the file hasn’t changed.',
               )
               .evaluate()
               .isNotEmpty,
         );
         expect(find.byType(Image), findsWidgets);
         await localTap(tester, find.text('Close'));
+        await tester.pageBack();
+        await localSettle(tester);
         await localTap(tester, find.text('Import').first);
-        await localTap(
-          tester,
-          find.text('Choose supported cash CSV / start a new review'),
-        );
+        await localTap(tester, find.text('Import a file').first);
         await waitForNativePicker(
           tester,
           () => find
-              .text('Stage & generate immutable preview')
+              .byKey(const ValueKey('import-check-rows'))
               .evaluate()
               .isNotEmpty,
           'select test/fixtures/p4_cash.csv',
         );
-        await localTap(tester, find.text('Stage & generate immutable preview'));
+        await localTap(tester, find.byKey(const ValueKey('import-check-rows')));
         await localWait(
           tester,
-          () => find.text('Confirm exact row decisions').evaluate().isNotEmpty,
+          () => find
+              .byKey(const ValueKey('import-confirm'))
+              .evaluate()
+              .isNotEmpty,
         );
         expect(c.snapshot.balance(account), BigInt.from(98000));
-        await localTap(tester, find.text('Confirm exact row decisions'));
+        await localTap(tester, find.byKey(const ValueKey('import-confirm')));
         await localWait(
           tester,
-          () => find.text('Process next reviewed chunk').evaluate().isNotEmpty,
+          () => find
+              .byKey(const ValueKey('import-run-all'))
+              .evaluate()
+              .isNotEmpty,
         );
-        await localTap(tester, find.text('Process next reviewed chunk'));
+        await localTap(tester, find.byKey(const ValueKey('import-run-all')));
         await localWait(
           tester,
           () => c.snapshot.balance(account) == BigInt.from(105500),
@@ -150,14 +148,12 @@ void main() {
               .length,
           2,
         );
+        await localTap(tester, find.byKey(const ValueKey('import-done')));
         await localTap(tester, find.text('Reports').first);
-        await localTap(tester, find.text('Export filtered financial CSV'));
+        await localTap(tester, find.text('Export CSV').first);
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Financial CSV saved with the displayed filters')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('CSV saved.').evaluate().isNotEmpty,
           'save synthetic financial CSV to a temporary test destination',
         );
         await tester.runAsync(c.store.integrity);
@@ -236,31 +232,24 @@ void main() {
         await localTap(tester, find.text('Files').first);
         await localWait(
           tester,
-          () => find
-              .textContaining('Actual bytes absent on this device.')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Missing').evaluate().isNotEmpty,
         );
         final recoveredVersion = recovered.snapshot.version;
-        await localTap(
-          tester,
-          find.text('Restore local bytes from identical original'),
-        );
+        await localTap(tester, find.textContaining('p4_receipt').first);
+        await localTap(tester, find.byKey(const ValueKey('file-menu')));
+        await localTap(tester, find.byKey(const ValueKey('file-restore')));
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Original bytes match the immutable checksum')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Restored from your original.').evaluate().isNotEmpty,
           'select the same test/fixtures/p4_receipt.png to restore local bytes',
         );
         expect(recovered.snapshot.version, recoveredVersion);
-        await localTap(tester, find.text('Preview unscanned image'));
+        await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
           () => find
               .text(
-                'Unscanned private image. Integrity verification is not a safety scan.',
+                'Not virus-scanned. The check only shows the file hasn’t changed.',
               )
               .evaluate()
               .isNotEmpty,

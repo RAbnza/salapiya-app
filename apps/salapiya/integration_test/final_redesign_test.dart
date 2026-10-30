@@ -105,7 +105,7 @@ void main() {
         await localConfirm(tester);
         expect(runtime.session!.finance.liquid, BigInt.from(2414975));
         await localTap(tester, find.text('Cards').first);
-        await localTap(tester, find.text('Add credit card'));
+        await localTap(tester, find.byKey(const ValueKey('cards-add')).first);
         await nativeEnter(tester, 'name', 'Everyday card');
         await nativeEnter(tester, 'issuer', 'Synthetic provider');
         await nativeEnter(tester, 'limit', '50000.00');

@@ -36,7 +36,7 @@ String importStableId(String owner, String batch, Object row) {
 
 void validateCashCsvSyntax(List<int> bytes) {
   if (bytes.isEmpty || bytes.length > 1024 * 1024) {
-    reject('Choose UTF-8 cash CSV up to 1 MiB.');
+    reject('Choose a CSV file saved as UTF-8, up to 1 MB.');
   }
   var state = 0, size = 0; // start, unquoted, quoted, after quote
   var start =
@@ -45,8 +45,14 @@ void validateCashCsvSyntax(List<int> bytes) {
       : 0;
   for (var i = start; i < bytes.length; i++) {
     final b = bytes[i];
-    if (b == 0) reject('CSV cannot contain NUL bytes.');
-    if (++size > 16 * 1024) reject('A CSV record exceeds 16 KiB.');
+    if (b == 0) {
+      reject(
+        'This file has characters a CSV can’t hold. Save it as CSV again and retry.',
+      );
+    }
+    if (++size > 16 * 1024) {
+      reject('One row is longer than 16 KB. Check the file.');
+    }
     if (state != 2 && (b == 10 || b == 13)) {
       if (b == 13 && i + 1 < bytes.length && bytes[i + 1] == 10) i++;
       state = 0;
@@ -60,7 +66,9 @@ void validateCashCsvSyntax(List<int> bytes) {
         state = 1;
       }
     } else if (state == 1) {
-      if (b == 34) reject('Unexpected quote in an unquoted CSV field.');
+      if (b == 34) {
+        reject('A quotation mark is in the wrong place. Check the file.');
+      }
       if (b == 44) state = 0;
     } else if (state == 2) {
       if (b == 34) state = 3;
@@ -70,11 +78,11 @@ void validateCashCsvSyntax(List<int> bytes) {
       } else if (b == 44) {
         state = 0;
       } else {
-        reject('Unexpected characters after a quoted CSV field.');
+        reject('There’s extra text after a quoted value. Check the file.');
       }
     }
   }
-  if (state == 2) reject('CSV has an unterminated quoted field.');
+  if (state == 2) reject('A quoted value never closes. Check the file.');
 }
 
 List<List<String>> parseCashCsv(List<int> bytes) {
@@ -93,7 +101,7 @@ List<List<String>> parseCashCsv(List<int> bytes) {
       rows.first.toSet().length != 6 ||
       rows.any((r) => r.length != 6)) {
     reject(
-      'The version-1 cash contract requires six distinct mapped columns and 1–500 rows.',
+      'The file needs six columns with different names, and 1 to 500 rows.',
     );
   }
   return rows;
@@ -138,7 +146,7 @@ String cashRowDate(String raw, String interpretation) {
   if (interpretation == 'YYYY-MM-DD') return civilDate(raw);
   final match = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(raw);
   if (match == null || !['DD/MM/YYYY', 'MM/DD/YYYY'].contains(interpretation)) {
-    reject('CSV date interpretation mismatch.');
+    reject('A date doesn’t match the date format you chose.');
   }
   return civilDate(
     '${match[3]}-${interpretation == 'DD/MM/YYYY' ? match[2] : match[1]}-${interpretation == 'DD/MM/YYYY' ? match[1] : match[2]}',
@@ -280,7 +288,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
           'MM/DD/YYYY',
         ].contains(a['dateInterpretation']) ||
         !['after_opening', 'rebase_history'].contains(a['cutoffStrategy'])) {
-      reject('Use the explicit pmp-cash-activity version-1 PHP contract.');
+      reject('This import uses a format Salapiya doesn’t support.');
     }
     final account = s.account(a['account'] as String);
     if (account.archived) reject('Choose an active cash account.');
@@ -305,13 +313,13 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
         }) ||
         mapping.values.toSet().length != 6 ||
         mapping.values.any((x) => !header.contains(x))) {
-      reject('Map all six distinct CSV columns explicitly.');
+      reject('Match all six columns, each to a different one in your file.');
     }
     final count = int.tryParse(v['rowCount'] ?? '') ?? 0;
     if (count < 1 ||
         count > 500 ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(v['checksum'] ?? '')) {
-      reject('Invalid bounded CSV identity or row count.');
+      reject('This file’s details don’t look right. Choose it again.');
     }
     if (a['cutoffStrategy'] == 'rebase_history') {
       if (civilDate(a['earlierDate'] as String).compareTo(account.cutoff) >=
@@ -319,11 +327,11 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
           parseMinor(a['earlierMinor'] as String) < BigInt.zero ||
           parseMinor(a['earlierMinor'] as String) > maxComponent) {
         reject(
-          'Supply an exact earlier opening date and nonnegative baseline.',
+          'Enter a date before this account’s start, and a balance of zero or more.',
         );
       }
     } else if (a['earlierDate'] != null || a['earlierMinor'] != null) {
-      reject('An after-opening import cannot change its opening.');
+      reject('This import can’t change the account’s starting balance.');
     }
     v['cutoff'] = account.cutoff;
   } else if (op == 'cashImportChunk') {
@@ -349,7 +357,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
     for (var i = 0; i < count; i++) {
       final cells = (jsonDecode(v['row$i'] ?? '') as List).cast<String>();
       if (cells.length != 6) {
-        reject('A staged row requires exactly six string cells.');
+        reject('A row doesn’t have six values. Check the file.');
       }
     }
   } else if (op == 'cashImportPreview') {
@@ -358,7 +366,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
     final a = cashImportAssumptions(head),
         account = s.account(a['account'] as String);
     if (account.archived || account.cutoff != head.values['cutoff']) {
-      reject('The account opening changed; review a new CSV batch.');
+      reject('This account’s starting balance changed. Start a new import.');
     }
     final header = (jsonDecode(head.values['header']!) as List).cast<String>(),
         count = int.parse(head.values['rowCount']!);
@@ -375,7 +383,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
     }
     if (staged.length != count ||
         List.generate(count, (i) => i).any((i) => !staged.containsKey(i))) {
-      reject('The CSV batch is not completely staged.');
+      reject('Not all rows are saved yet. Continue the import to finish.');
     }
     final seen = <String>{}, refs = <String>{};
     for (final r in s.current.where(
@@ -469,13 +477,13 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
     if (op == 'cashImportDecision') {
       if (cashImportSourceStamp(s, account.id) !=
           preview.values['sourceStamp']) {
-        reject('Cash sources changed after preview; generate a fresh preview.');
+        reject('This account changed after the review. Check the rows again.');
       }
       if (v['rowCount'] != preview.values['rowCount'] ||
           s.current.any(
             (r) => financeType(r) == op && r.values['preview'] == preview.id,
           )) {
-        reject('Freeze one complete set of row decisions for this preview.');
+        reject('These choices were already confirmed.');
       }
       for (var i = 0; i < rows.length; i++) {
         final choice = Map<String, dynamic>.from(
@@ -489,16 +497,14 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
             choice['include'] is! bool ||
             choice['acknowledgeDuplicates'] is! bool ||
             choice['category'] is! String) {
-          reject(
-            'Review an explicit inclusion and category decision for every row.',
-          );
+          reject('Choose whether to include each row, and its category.');
         }
         if (choice['include'] == true) {
           if ((rows[i]['errors'] as List).isNotEmpty ||
               ((rows[i]['warnings'] as List).isNotEmpty &&
                   choice['acknowledgeDuplicates'] != true)) {
             reject(
-              'Fix invalid rows or acknowledge duplicate warnings before including them.',
+              'Leave out rows with a problem, and confirm any possible duplicates you include.',
             );
           }
           s.category(
@@ -514,7 +520,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
       if (s.current.any(
         (r) => financeType(r) == op && r.values['decision'] == decision!.id,
       )) {
-        reject('This import is already cancelled.');
+        reject('This import was already stopped.');
       }
     } else {
       if (s.current.any(
@@ -523,7 +529,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
             r.values['decision'] == decision!.id,
       )) {
         reject(
-          'This import was cancelled; committed prior batches remain retained.',
+          'This import was stopped. Rows already imported stay in your records.',
         );
       }
       final choices = cashImportDecisions(decision!),
@@ -542,7 +548,9 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
             .single;
         if (old.id != preview.values['openingSource'] ||
             account.cutoff != preview.values['cutoff']) {
-          reject('Opening evidence changed before rebase.');
+          reject(
+            'This account’s starting balance changed. Start a new import.',
+          );
         }
         total = parseMinor(a['earlierMinor'] as String);
         final historical = selected.where(
@@ -557,7 +565,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
         );
         if (total + net != old.amount) {
           reject(
-            'Earlier opening plus selected historical net movement must equal the original opening exactly.',
+            'The earlier balance plus the rows you chose must equal the account’s starting balance exactly.',
           );
         }
         final earlier = civilDate(a['earlierDate'] as String);
@@ -575,9 +583,7 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
         final numbers = (jsonDecode(v['rowNumbers'] ?? '') as List).cast<int>(),
             expected = nextCashImportRows(s, decision);
         if (jsonEncode(numbers) != jsonEncode(expected)) {
-          reject(
-            'Review the next original bounded import chunk without changing its row identities.',
-          );
+          reject('The next rows changed. Go back and check them.');
         }
         final started = s.current.any(
           (r) => financeType(r) == op && r.values['decision'] == decision.id,
@@ -585,7 +591,9 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
         if (!started &&
             cashImportSourceStamp(s, account.id) !=
                 preview.values['sourceStamp']) {
-          reject('Initial cash import preview is stale.');
+          reject(
+            'This account changed after the review. Check the rows again.',
+          );
         }
         final rebase =
             a['cutoffStrategy'] == 'rebase_history' &&
@@ -609,11 +617,11 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
           if (parseMinor(a['earlierMinor'] as String) + net !=
               parseMinor(preview.values['openingMinor']!)) {
             reject(
-              'The exact historical opening coverage equation does not reconcile.',
+              'The earlier balance plus the rows you chose must equal the account’s starting balance exactly.',
             );
           }
         } else if (numbers.isEmpty) {
-          reject('All selected rows are already committed.');
+          reject('All the rows you chose are already imported.');
         }
         final dates = {
           ...s.current
@@ -643,12 +651,14 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
           );
           if (balance < BigInt.zero &&
               decision.values['acknowledge'] != 'true') {
-            reject('Reviewed import would produce a negative cash balance.');
+            reject(
+              'This import would take the account to a negative balance. Confirm that’s right to go on.',
+            );
           }
         }
         for (final i in numbers) {
           if (choices[i]['include'] != true) {
-            reject('The process contains an unconfirmed row.');
+            reject('A row here wasn’t confirmed. Go back and check the rows.');
           }
         }
       } else {
@@ -674,9 +684,9 @@ LocalPlan planCashImport(LocalSnapshot s, LocalCommand cmd) {
     ),
     effects: [
       if (cutoffUpdate != null)
-        'Rebase the opening to ${cutoffUpdate['to']}; commit every selected historical row in the same transaction.'
+        'The starting balance moves to ${cutoffUpdate['to']}, and the chosen rows are added together.'
       else
-        'Reviewed import evidence only. Rows post only in the atomic bounded processing command.',
+        'Nothing is in your records until the Import step.',
     ],
   );
 }

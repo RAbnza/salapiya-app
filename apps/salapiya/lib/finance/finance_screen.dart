@@ -1,4 +1,3 @@
-import 'source_list.dart';
 import '../design_system/theme.dart';
 import '../features/finance/presentation/financial_review.dart';
 
@@ -8,17 +7,19 @@ import 'package:flutter/material.dart';
 
 import '../app/demo_routes.dart';
 import '../app/overview_cards.dart' show civilLabel;
-import '../app/overview_data.dart' show DebtProgress, overviewDebtProgress;
+import '../app/overview_data.dart'
+    show DebtProgress, addCivilDays, monthEnd, monthStart, overviewDebtProgress;
+import 'card_data.dart';
 import 'debt_data.dart' show debtPaymentRows;
 import 'form_mechanics.dart';
 import 'money_details.dart' show openMoneyRecord;
-import '../design_system/editorial.dart';
 import '../design_system/kit/kit.dart'
     show
         AmountField,
         AppIconButton,
         CardLink,
         CompactForm,
+        DateField,
         FieldInput,
         FormMoreDetails,
         InlineNotice,
@@ -27,6 +28,7 @@ import '../design_system/kit/kit.dart'
         PickerStyle,
         SectionPage,
         SurfaceCard;
+import 'planning_data.dart' show lastDay;
 import '../features/finance/presentation/financial_widgets.dart';
 import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
@@ -36,6 +38,7 @@ import '../p0/exact_money.dart';
 /// shows there in red. A test holds these to the rules' own words.
 const nativeRuleFields = [
   ('Choose an active account', 'account'),
+  ('on this payment or still due', 'amount'),
   ('more than is left on this payment', 'paymentRow'),
   ('Choose a payment in the current schedule', 'paymentRow'),
   ('applied to due dates', 'paymentRow'),
@@ -55,7 +58,60 @@ const nativeRuleFields = [
   ('Choose an unpaid charge on this debt', 'chargeSource'),
   ('This waiver needs', 'waiver'),
   ('isn’t supported here', 'debt'),
+  ('You already have a card with this name', 'name'),
+  ('the day this card starts in Salapiya', 'date'),
+  ('The date it posted can’t be before', 'postingDate'),
+  ('more than is left to refund in this category', 'amount'),
+  ('the period ends by the statement date', 'end'),
+  ('The minimum due can’t be more', 'minimum'),
+  ('Confirm this matches your statement', 'verified'),
+  ('isn’t already matched to a statement', 'activity'),
+  ('Confirm this is on the statement', 'verified'),
+  ('Choose a statement and a payment on this card', 'date'),
+  ('Confirm your card issuer applied it', 'verified'),
+  ('Choose a purchase on this card', 'purchase'),
+  ('Enter principal, interest and fee together', 'principal'),
+  ('must add up to the plan’s total', 'principal'),
+  ('This purchase already has an installment plan', 'purchase'),
+  ('Choose a plan and a matched payment', 'plan'),
+  ('Choose a payment in this plan', 'row'),
+  ('on this installment or on the matched payment', 'amount'),
+  ('Enter 1 to 120 payments', 'schedule'),
+  ('Put each payment on its own line', 'schedule'),
+  ('List the payments in date order', 'schedule'),
+  ('What’s already paid can’t be more', 'schedule'),
+  ('A budget covers 1 to 366 days', 'lastDay'),
+  ('Choose what counts as spending', 'basis'),
+  ('already has a budget for some of these dates', 'start'),
+  ('Choose this goal’s status', 'status'),
+  ('Release the money set aside', 'status'),
+  ('Enter an amount to move', 'amount'),
+  ('Choose two different places', 'amount'),
+  ('You can set aside more only', 'amount'),
+  ('Choose a time zone from the list', 'timezone'),
+  ('Choose dates up to 366 days apart', 'through'),
+  ('Enter how often it repeats', 'interval'),
+  ('Choose at least one day of the week', 'weekdays'),
+  ('Choose a day of the month', 'monthDay'),
+  ('The end date can’t be before', 'end'),
+  ('Enter 1 to 10,000 times', 'count'),
+  ('This start date is too far back', 'start'),
+  ('That’s more than 500 dates', 'through'),
+  ('Choose a recurring item', 'rule'),
+  ('Choose the type of item', 'recurringKind'),
+  ('A change starts on a future date', 'start'),
+  ('This link was already removed', 'link'),
+  ('Only an active recurring item can add dates', 'rule'),
+  ('Add this date to Upcoming first', 'logicalDate'),
+  ('so it can’t change', 'logicalDate'),
+  ('Remove the records linked to this date first', 'amount'),
+  ('so it can’t take a record', 'logicalDate'),
+  ('Choose income for an income item', 'actual'),
+  ('more than this date expects', 'amount'),
 ];
+
+/// Where a rule's field shows on a form that asks for it differently.
+const _shownFields = {'endExclusive': 'lastDay'};
 
 class FinanceInput {
   const FinanceInput(
@@ -68,6 +124,8 @@ class FinanceInput {
     this.info,
     this.required = false,
     this.money = false,
+    this.signed = false,
+    this.optional = false,
     this.more = false,
   });
   final String key, label, value;
@@ -82,21 +140,31 @@ class FinanceInput {
   /// An amount field, whatever its label says.
   final bool money;
 
+  /// An amount that may have a minus sign.
+  final bool signed;
+
+  /// A date that can stay empty.
+  final bool optional;
+
   /// Goes under "More details".
   final bool more;
 
   /// The same input under another label, e.g. a shared account field.
-  FinanceInput as(String label, {bool required = false, bool more = false}) =>
-      FinanceInput(
-        key,
-        label,
-        value: value,
-        options: options,
-        lines: lines,
-        help: help,
-        required: required,
-        more: more,
-      );
+  FinanceInput as(
+    String label, {
+    bool required = false,
+    bool more = false,
+    String? value,
+  }) => FinanceInput(
+    key,
+    label,
+    value: value ?? this.value,
+    options: options,
+    lines: lines,
+    help: help,
+    required: required,
+    more: more,
+  );
 }
 
 /// Plain-language payment schedule questions. [editing] revises the dates of
@@ -143,19 +211,79 @@ List<FinanceInput> debtCadenceInputs({
   ],
 ];
 
+/// A record in a picker: its name and date.
+String recordChoice(LocalRevision r) =>
+    '${r.title} · ${DateField.format(DateTime.parse(r.date))}';
+
 Map<String, String> financeChoices(LocalSnapshot s, Set<String> types) => {
   for (final r in s.current.where((r) => types.contains(financeType(r))))
-    r.id: '${r.title} · ${r.date} · v${r.number}',
+    r.id: recordChoice(r),
 };
+
+/// Each form's title, where Money, Saved drafts and the pages open it.
+const formTitles = {
+  'creditCard': 'Add a card',
+  'cardPayment': 'Log a card payment',
+  'cardFee': 'Log a card fee',
+  'cardInterest': 'Log card interest',
+  'cardRefund': 'Log a card refund',
+  'cardAuthorization': 'Log a pending charge',
+  'statement': 'Add a statement',
+  'statementLink': 'Match activity to a statement',
+  'cardAllocation': 'Match a payment to a statement',
+  'installment': 'Add an installment plan',
+  'installmentApplication': 'Match a payment to an installment',
+  'budget': 'Add a budget',
+  'savingsGoal': 'Add a goal',
+  'reservation': 'Set money aside',
+  'savingsReallocation': 'Move to another goal',
+  'recurrence': 'Add a recurring item',
+  'recurrenceGenerate': 'Add to Upcoming',
+  'occurrenceOverride': 'Change or skip a date',
+  'recurrenceLink': 'Link a record',
+  'recurrenceUnlink': 'Remove a link',
+  'fileDetach': 'Archive file link',
+};
+
+/// Time zones a recurring item can use.
+const recurringTimeZones = [
+  'Asia/Manila',
+  'Asia/Singapore',
+  'Asia/Hong_Kong',
+  'Asia/Tokyo',
+  'Asia/Dubai',
+  'Australia/Sydney',
+  'Europe/London',
+  'America/New_York',
+  'America/Los_Angeles',
+  'UTC',
+];
 
 List<FinanceInput> financeInputs(
   LocalSnapshot s,
   String op, {
   bool editing = false,
 }) {
-  FinanceInput ref(String key, String label, Set<String> types) =>
-      FinanceInput(key, label, options: financeChoices(s, types));
-  final card = ref('card', 'Credit card', {'creditCard'});
+  FinanceInput ref(
+    String key,
+    String label,
+    Set<String> types, {
+    bool required = false,
+  }) => FinanceInput(
+    key,
+    label,
+    required: required,
+    options: financeChoices(s, types),
+  );
+  final card = FinanceInput(
+    'card',
+    'Card',
+    required: true,
+    options: {
+      for (final r in s.current.where((r) => financeType(r) == 'creditCard'))
+        r.id: r.title,
+    },
+  );
   final debt = FinanceInput(
     'debt',
     'Debt',
@@ -167,16 +295,17 @@ List<FinanceInput> financeInputs(
         r.id: r.title,
     },
   );
-  final goal = ref('goal', 'Savings goal', {'savingsGoal'});
+  final goal = ref('goal', 'Goal', {'savingsGoal'}, required: true);
   final rule = FinanceInput(
     'rule',
-    'Immutable recurring rule',
+    'Recurring item',
+    required: true,
     options: {
       for (final r in s.revisions.where((r) => financeType(r) == 'recurrence'))
-        r.id: '${r.title} · v${r.number} · ${r.values['start']}',
+        r.id: r.title,
     },
   );
-  const amount = FinanceInput('amount', 'Amount PHP');
+  const amount = FinanceInput('amount', 'Amount', required: true, money: true);
   final category = FinanceInput(
     'category',
     'Expense category',
@@ -199,188 +328,211 @@ List<FinanceInput> financeInputs(
     value: 'false',
     options: {'false': 'Not yet', 'true': 'I confirmed this with my lender'},
   );
-  const verified = FinanceInput(
+  FinanceInput confirmed(String label) => FinanceInput(
     'verified',
-    'Provider evidence confirmation',
+    label,
     value: 'false',
-    options: {
-      'false': 'Not yet confirmed',
-      'true': 'I confirm these provider facts',
-    },
+    options: const {'false': 'Not yet', 'true': 'Yes'},
   );
   final fields = switch (op) {
     'fileDetach' => [
-      ref('file', 'Private attachment link', {'financialFile'}),
-      const FinanceInput('reason', 'Reason for archiving this link'),
+      ref('file', 'File', {'financialFile'}, required: true),
+      const FinanceInput('reason', 'Why you’re archiving this link'),
     ],
     'budget' => [
-      amount,
-      category,
-      const FinanceInput('start', 'Period start · YYYY-MM-DD'),
-      const FinanceInput('endExclusive', 'Exclusive period end · YYYY-MM-DD'),
+      category.as('Category', required: true, value: ''),
+      const FinanceInput('amount', 'Limit', required: true, money: true),
+      FinanceInput(
+        'start',
+        'First day',
+        value: monthStart(civilToday()),
+        required: true,
+      ),
+      FinanceInput(
+        'lastDay',
+        'Last day',
+        value: monthEnd(civilToday()),
+        required: true,
+      ),
       const FinanceInput(
         'basis',
-        'Recognized spending basis',
+        'What counts',
         value: 'net',
+        more: true,
+        info:
+            'Refunds lower your spending in the first choice, not the second.',
         options: {
-          'net': 'Net spending after actual offsets',
-          'gross': 'Gross recognized spending',
+          'net': 'Spending after refunds',
+          'gross': 'Spending before refunds',
         },
       ),
       const FinanceInput(
         'status',
-        'Budget lifecycle',
+        'Status',
         value: 'active',
-        options: {
-          'active': 'Active',
-          'archived': 'Archived; period remains reserved',
-        },
+        options: {'active': 'Active', 'archived': 'Archived'},
       ),
     ],
     'savingsGoal' => [
-      const FinanceInput('amount', 'Target PHP'),
-      const FinanceInput('targetDate', 'Target date (optional) · YYYY-MM-DD'),
+      const FinanceInput(
+        'amount',
+        'Target amount',
+        required: true,
+        money: true,
+      ),
+      const FinanceInput('targetDate', 'Target date', optional: true),
       const FinanceInput(
         'status',
-        'Goal state',
+        'Status',
         value: 'active',
         options: {
           'active': 'Active',
-          'completed': 'Completed; reservations retained',
-          'archived': 'Archived after explicit release',
+          'completed': 'Completed',
+          'archived': 'Archived',
         },
       ),
     ],
     'reservation' => [
       goal,
-      account,
+      account.as('Account', required: true),
       const FinanceInput(
         'amount',
-        'New absolute reserved amount PHP (zero releases)',
+        'Total set aside from this account',
+        required: true,
+        money: true,
+        info:
+            'The money stays in the account. Enter 0.00 to release all of it.',
       ),
     ],
     'savingsReallocation' => [
-      ref('fromGoal', 'Source savings goal', {'savingsGoal'}),
+      ref('fromGoal', 'From goal', {'savingsGoal'}, required: true),
       FinanceInput(
         'fromAccount',
-        'Source reserved account',
+        'From account',
+        required: true,
         options: {for (final a in s.accounts) a.id: a.name},
       ),
-      goal,
-      account,
+      goal.as('To goal', required: true),
+      account.as('To account', required: true),
       amount,
     ],
     'recurrence' => [
-      amount,
       const FinanceInput(
         'recurringKind',
-        'Expected activity',
+        'Type',
         value: 'bill',
         options: {
-          'income': 'Expected income',
           'bill': 'Bill',
           'subscription': 'Subscription',
+          'income': 'Expected income',
         },
+      ),
+      const FinanceInput(
+        'amount',
+        'Expected amount',
+        required: true,
+        money: true,
       ),
       const FinanceInput(
         'frequency',
-        'Recurrence',
+        'How often',
         value: 'monthly',
         options: {
-          'daily': 'Daily',
-          'weekly': 'Selected weekdays',
-          'monthly': 'Monthly',
+          'daily': 'Every day',
+          'weekly': 'Every week',
+          'monthly': 'Every month',
         },
       ),
-      const FinanceInput('interval', 'Interval', value: '1'),
-      const FinanceInput(
-        'weekdays',
-        'ISO weekdays (Monday=1): e.g. 1,3,5',
-        value: '1',
-      ),
-      const FinanceInput('monthDay', 'Monthly day 1–31', value: '1'),
+      const FinanceInput('weekdays', 'On these days', value: '1'),
+      const FinanceInput('monthDay', 'Day of the month', value: '1'),
       const FinanceInput(
         'monthPolicy',
-        'Short month policy',
+        'In shorter months',
         value: 'last_valid_day',
         options: {
-          'last_valid_day': 'Last valid day',
-          'skip': 'Skip short months',
+          'last_valid_day': 'Use the last day',
+          'skip': 'Skip that month',
         },
       ),
-      FinanceInput(
-        'start',
-        'Effective start · YYYY-MM-DD',
-        value: civilToday(),
-      ),
-      const FinanceInput('end', 'Inclusive end (optional) · YYYY-MM-DD'),
-      const FinanceInput('count', 'Emitted occurrence count (optional)'),
+      FinanceInput('start', 'Starts', value: civilToday(), required: true),
       const FinanceInput(
-        'timezone',
-        'Named IANA timezone',
-        value: 'Asia/Manila',
+        'interval',
+        'Repeat every',
+        value: '1',
+        more: true,
+        help: 'For example, 2 means every second day, week or month.',
+      ),
+      const FinanceInput('end', 'Ends on', optional: true, more: true),
+      const FinanceInput(
+        'count',
+        'How many times',
+        more: true,
+        help: 'Leave this blank if it keeps going.',
       ),
       FinanceInput(
         'account',
-        'Suggested actual cash account (optional)',
-        options: {'': 'Unassigned', ...?account.options},
+        'Usual account',
+        more: true,
+        help: 'Forecasts use it. You still choose an account when you log it.',
+        options: {'': 'Not set', ...?account.options},
+      ),
+      FinanceInput(
+        'timezone',
+        'Time zone',
+        value: 'Asia/Manila',
+        more: true,
+        options: {for (final z in recurringTimeZones) z: z},
       ),
       const FinanceInput(
         'status',
-        'Definition state',
+        'Status',
         value: 'active',
-        options: {
-          'active': 'Active',
-          'archived': 'Archived; retained commitments remain visible',
-        },
+        options: {'active': 'Active', 'archived': 'Archived'},
       ),
     ],
     'recurrenceGenerate' => [
       rule,
-      FinanceInput(
-        'from',
-        'Generation start · YYYY-MM-DD',
-        value: civilToday(),
-      ),
+      FinanceInput('from', 'From', value: civilToday(), required: true),
       FinanceInput(
         'through',
-        'Inclusive generation end · YYYY-MM-DD',
-        value: DateTime.parse('${civilToday()}T00:00:00Z')
-            .add(const Duration(days: 89))
-            .toIso8601String()
-            .substring(0, 10),
+        'Through',
+        value: addCivilDays(civilToday(), 89),
+        required: true,
       ),
     ],
     'occurrenceOverride' || 'recurrenceLink' => [
       rule,
       const FinanceInput(
         'logicalDate',
-        'Original logical occurrence date · YYYY-MM-DD',
+        'Which date',
+        required: true,
+        options: {},
       ),
-      amount,
-      if (op == 'occurrenceOverride') ...[
-        const FinanceInput('due', 'Override due date · YYYY-MM-DD'),
+      if (op == 'occurrenceOverride')
         const FinanceInput(
           'state',
-          'Occurrence decision',
+          'What happened',
           value: 'planned',
           options: {
-            'planned': 'Expected / partial',
-            'skipped': 'Skipped',
-            'cancelled': 'Cancelled',
+            'planned': 'It’s still expected',
+            'skipped': 'Skip this date',
+            'cancelled': 'Cancel this date',
           },
         ),
-        const FinanceInput('reason', 'Occurrence change reason'),
+      amount,
+      if (op == 'occurrenceOverride') ...[
+        const FinanceInput('due', 'New due date'),
+        const FinanceInput('reason', 'Why'),
       ] else
-        ref('actual', 'Existing actual income or purchase', {
+        ref('actual', 'Record', {
           'income',
           'expense',
           'cardPurchase',
-        }),
+        }, required: true),
     ],
     'recurrenceUnlink' => [
-      ref('link', 'Exact actual link to reverse', {'recurrenceLink'}),
-      const FinanceInput('reason', 'Link reversal reason'),
+      ref('link', 'Link', {'recurrenceLink'}, required: true),
+      const FinanceInput('reason', 'Why'),
     ],
     'debtImport' || 'borrowing' => [
       const FinanceInput('lender', 'Lender', required: true),
@@ -621,85 +773,148 @@ List<FinanceInput> financeInputs(
       lenderConfirmed,
     ],
     'creditCard' => [
-      const FinanceInput('issuer', 'Issuer'),
-      const FinanceInput('limit', 'Credit limit PHP (optional)'),
+      const FinanceInput('issuer', 'Card issuer', required: true),
+      const FinanceInput(
+        'limit',
+        'Credit limit',
+        money: true,
+        help: 'Leave this blank if you don’t know it.',
+      ),
       const FinanceInput(
         'amount',
-        'Signed opening posted liability PHP',
+        'What you owe on it now',
         value: '0.00',
+        required: true,
+        money: true,
+        signed: true,
+        help: 'Use a minus sign if you have a card credit.',
       ),
     ],
     'cardAuthorization' => [card, amount],
     'cardPurchase' || 'cardFee' || 'cardInterest' => [
       card,
       amount,
-      category,
+      category.as(
+        'Category',
+        required: true,
+        value: op == 'cardPurchase' ? null : 'category-fees',
+      ),
       FinanceInput(
         'postingDate',
-        'Provider posting date · YYYY-MM-DD',
+        'Date it posted',
         value: civilToday(),
+        more: true,
       ),
     ],
-    'cardPayment' => [card, account, amount],
+    'cardPayment' => [card, amount, account.as('Paid from', required: true)],
     'cardRefund' => [
       card,
-      ref('purchase', 'Original purchase', {'cardPurchase'}),
+      ref('purchase', 'Purchase', {'cardPurchase'}, required: true),
       amount,
-      category,
-      const FinanceInput('reason', 'Refund reason'),
+      const FinanceInput('reason', 'Why'),
+      category.as('Category', more: true),
     ],
     'statement' => [
       card,
-      const FinanceInput('start', 'Cycle start · YYYY-MM-DD'),
-      const FinanceInput('end', 'Cycle end · YYYY-MM-DD'),
-      const FinanceInput('issued', 'Statement date · YYYY-MM-DD'),
-      const FinanceInput('due', 'Due date · YYYY-MM-DD'),
-      amount,
-      const FinanceInput('minimum', 'Minimum due PHP (optional)'),
-      verified,
+      const FinanceInput(
+        'amount',
+        'Statement balance',
+        required: true,
+        money: true,
+        signed: true,
+      ),
+      const FinanceInput(
+        'minimum',
+        'Minimum due',
+        money: true,
+        help: 'Leave this blank if your statement doesn’t say.',
+      ),
+      const FinanceInput('start', 'Period from', required: true),
+      const FinanceInput('end', 'Period to', required: true),
+      const FinanceInput('issued', 'Statement date', required: true),
+      const FinanceInput('due', 'Due date', required: true),
+      confirmed('Does this match your statement?'),
     ],
     'statementLink' => [
       card,
-      ref('statement', 'Statement', {'statement'}),
-      ref('activity', 'Provider-confirmed activity', {
+      ref('statement', 'Statement', {'statement'}, required: true),
+      ref('activity', 'Activity', {
         'cardPurchase',
         'cardPayment',
         'cardRefund',
         'cardFee',
         'cardInterest',
-      }),
-      verified,
+      }, required: true),
+      confirmed('Is this on the statement?'),
     ],
     'cardAllocation' => [
       card,
-      ref('statement', 'Statement', {'statement'}),
-      ref('payment', 'Actual payment or credit', {'cardPayment', 'cardRefund'}),
+      ref('statement', 'Statement', {'statement'}, required: true),
+      ref('payment', 'Payment', {'cardPayment', 'cardRefund'}, required: true),
       amount,
-      verified,
+      confirmed('Did your card issuer apply it this way?'),
     ],
     'installment' => [
       card,
-      ref('purchase', 'Already recognized purchase', {'cardPurchase'}),
+      ref('purchase', 'Purchase', {'cardPurchase'}, required: true),
+      if (!editing) ...[
+        const FinanceInput(
+          'splitMode',
+          'How much is each payment?',
+          value: 'same',
+          options: {
+            'same': 'The same each time',
+            'varied': 'Different amounts',
+          },
+        ),
+        const FinanceInput(
+          'installmentAmount',
+          'Each payment',
+          required: true,
+          money: true,
+        ),
+        const FinanceInput(
+          'frequency',
+          'How often',
+          value: 'monthly',
+          options: {
+            'weekly': 'Weekly',
+            'monthly': 'Monthly',
+            'yearly': 'Yearly',
+            'custom': 'Custom',
+          },
+        ),
+        const FinanceInput(
+          'intervalDays',
+          'Every how many days?',
+          help: 'For example, type 14 for every two weeks.',
+        ),
+        const FinanceInput('firstDue', 'First payment', required: true),
+        const FinanceInput(
+          'installmentCount',
+          'How many payments?',
+          required: true,
+          help: 'Up to 120.',
+        ),
+      ],
       const FinanceInput(
         'schedule',
-        'Provider schedule: label,YYYY-MM-DD,PHP amount (one per line)',
+        'Payment dates',
         lines: 5,
+        help: 'One per line: name, date, amount and, if any, already paid.',
       ),
-      const FinanceInput(
-        'principal',
-        'Confirmed total principal PHP (optional)',
-      ),
-      const FinanceInput('interest', 'Confirmed total interest PHP (optional)'),
-      const FinanceInput('fee', 'Confirmed total fee PHP (optional)'),
-      verified,
+      confirmed('Do these match your card issuer’s plan?'),
+      const FinanceInput('principal', 'Principal', money: true, more: true),
+      const FinanceInput('interest', 'Interest', money: true, more: true),
+      const FinanceInput('fee', 'Fee', money: true, more: true),
     ],
     'installmentApplication' => [
       card,
-      ref('plan', 'Installment plan', {'installment'}),
-      const FinanceInput('row', 'Exact installment label'),
-      ref('payment', 'Actual statement allocation', {'cardAllocation'}),
+      ref('plan', 'Installment plan', {'installment'}, required: true),
+      const FinanceInput('row', 'Which payment', required: true, options: {}),
+      ref('payment', 'Matched payment', {'cardAllocation'}, required: true),
       amount,
-      verified,
+      confirmed('Did your card issuer apply it this way?'),
     ],
     _ => <FinanceInput>[],
   };
@@ -715,22 +930,37 @@ List<FinanceInput> financeInputs(
       switch (op) {
         'debtImport' => 'Debt name',
         'borrowing' => 'Loan name',
+        'creditCard' => 'Card name',
+        'budget' => 'Budget name',
+        'savingsGoal' => 'Goal name',
+        'recurrence' => 'Name',
         _ => 'Description',
       },
-      required: const {'debtImport', 'borrowing'}.contains(op),
-      more: const {'debtClassification', 'debtPayoff'}.contains(op),
+      required: namedForms.contains(op),
+      more:
+          const {'debtClassification', 'debtPayoff'}.contains(op) ||
+          (!debtOp && !namedForms.contains(op)),
+      help: !debtOp && !namedForms.contains(op)
+          ? 'Leave this blank to name it for you.'
+          : null,
     ),
     ...fields,
-    FinanceInput('date', 'Date', value: civilToday()),
+    FinanceInput(
+      'date',
+      op == 'creditCard' ? 'Balance as of' : 'Date',
+      value: civilToday(),
+    ),
     FinanceInput(
       'reference',
       debtOp ? 'Lender reference' : 'Reference',
       help: debtOp
           ? null
+          : const {'statement', 'installment', 'cardAuthorization'}.contains(op)
+          ? 'Leave this blank to use "Entered by me".'
           : 'Needed when your bank or issuer gave you a document.',
-      more: quiet,
+      more: quiet || !debtOp,
     ),
-    FinanceInput('notes', 'Notes', lines: 3, more: debtOp),
+    FinanceInput('notes', 'Notes', lines: 3, more: true),
     const FinanceInput(
       'acknowledge',
       'This takes the account below zero',
@@ -740,6 +970,16 @@ List<FinanceInput> financeInputs(
   ];
 }
 
+/// Forms where the user names the thing; the others are named for them.
+const namedForms = {
+  'debtImport',
+  'borrowing',
+  'creditCard',
+  'budget',
+  'savingsGoal',
+  'recurrence',
+};
+
 Future<void> openNativeFinance(
   BuildContext context,
   LocalFinancialController controller,
@@ -747,6 +987,7 @@ Future<void> openNativeFinance(
   String title, {
   LocalRevision? replacing,
   Map<String, String> initial = const {},
+  Map<String, String> overrides = const {},
   String? draft,
 }) => openDemoPage<void>(
   context,
@@ -756,6 +997,7 @@ Future<void> openNativeFinance(
     title: title,
     replacing: replacing,
     initial: initial,
+    overrides: overrides,
     draft: draft,
   ),
   'finance/$op',
@@ -769,12 +1011,16 @@ class NativeFinanceEditor extends StatefulWidget {
     required this.title,
     this.replacing,
     this.initial = const {},
+    this.overrides = const {},
     this.draft,
   });
   final LocalFinancialController controller;
   final String operation, title;
   final LocalRevision? replacing;
   final Map<String, String> initial;
+
+  /// Beats the replaced record's own values, e.g. archiving sets the status.
+  final Map<String, String> overrides;
 
   /// The saved draft to reopen, when Saved drafts opens this form.
   final String? draft;
@@ -796,6 +1042,9 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
     for (final f in inputs) f.key: f.value,
     ...widget.initial,
     ...?widget.replacing?.values,
+    if (widget.replacing?.values['endExclusive'] case final end?)
+      'lastDay': lastDay(end),
+    ...widget.overrides,
     if (nativeDebtCommands.contains(
       widget.replacing == null
           ? widget.operation
@@ -848,9 +1097,10 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
   Map<String, String> get standardDetails => {
     for (final input in inputs)
       if (!['name', 'amount', 'date', 'acknowledge'].contains(input.key) &&
+          (nativeDebtCommands.contains(recordType) || visible(input)) &&
           (values[input.key] ?? '').isNotEmpty)
-        plainLabel(input):
-            input.options?[values[input.key]] ?? values[input.key]!,
+        input.label:
+            optionsFor(input)?[values[input.key]] ?? values[input.key]!,
     if ((values['reason'] ?? '').isNotEmpty) 'Reason': values['reason']!,
   };
   @override
@@ -916,7 +1166,11 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       if (reviewed == null) {
         await c.reload();
         schedulePreview = embeddedRows = null;
-        final rows = simpleSchedule || embeddedSchedule ? cadenceRows() : null;
+        final rows = simpleSchedule || embeddedSchedule
+            ? cadenceRows()
+            : builtPlan
+            ? installmentRows()
+            : null;
         if (rows != null) schedulePreview = previewRows(rows);
         if (embeddedSchedule) embeddedRows = rows;
         reviewed = LocalCommand(
@@ -935,6 +1189,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         await c.reload();
         await c.store.discardDraft(draftKey);
         await saveEmbeddedSchedule();
+        await saveRecurringDates();
         result = c.connected
             ? 'Saved on this device. Server acceptance and downloaded reconciliation are still required.'
             : 'Saved locally.';
@@ -981,7 +1236,9 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
   /// Where a rule's problem belongs, and what to say there. Going below zero
   /// is said in terms of the chosen account, with what it holds.
   (String?, String) locateProblem(LocalRuleException e) {
-    if (e.field != null) return (e.field, e.message);
+    if (e.field != null) {
+      return (_shownFields[e.field] ?? e.field, e.message);
+    }
     if (e.message.contains('negative')) {
       final account = c.snapshot.accounts
           .where((a) => a.id == values['account'])
@@ -1059,7 +1316,23 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
     const waivers = {'recognized_waiver', 'rounding_waiver'};
     final kind = values['adjustmentKind'];
     final type = recordType;
+    if (input.key == 'date' && _noDate.contains(type)) return false;
+    if (input.key == 'reference' && _noReference.contains(type)) return false;
+    final varied = values['splitMode'] == 'varied';
     return switch (input.key) {
+      'status' => widget.replacing != null,
+      'weekdays' => values['frequency'] == 'weekly',
+      'monthDay' || 'monthPolicy' => values['frequency'] == 'monthly',
+      'due' || 'amount' when type == 'occurrenceOverride' =>
+        values['state'] == 'planned',
+      'schedule' when type == 'installment' =>
+        widget.replacing != null || varied,
+      'installmentAmount' ||
+      'frequency' ||
+      'firstDue' ||
+      'installmentCount' when type == 'installment' => !varied,
+      'intervalDays' when type == 'installment' =>
+        !varied && values['frequency'] == 'custom',
       'intervalDays' => values['frequency'] == 'custom',
       'firstDue' ||
       'installmentCount' ||
@@ -1078,6 +1351,46 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       _ => true,
     };
   }
+
+  /// Forms whose date stays today: their own dates say what matters.
+  static const _noDate = {
+    'budget',
+    'savingsGoal',
+    'reservation',
+    'savingsReallocation',
+    'recurrence',
+    'recurrenceGenerate',
+    'occurrenceOverride',
+    'recurrenceLink',
+    'recurrenceUnlink',
+    'statement',
+    'statementLink',
+    'installment',
+    'installmentApplication',
+    'fileDetach',
+  };
+
+  static const _noReference = {
+    'budget',
+    'savingsGoal',
+    'reservation',
+    'savingsReallocation',
+    'recurrence',
+    'recurrenceGenerate',
+    'occurrenceOverride',
+    'recurrenceLink',
+    'recurrenceUnlink',
+    'statementLink',
+    'cardAllocation',
+    'installmentApplication',
+    'fileDetach',
+  };
+
+  /// An installment plan built from a few answers, as a debt's schedule is.
+  bool get builtPlan =>
+      widget.operation == 'installment' &&
+      widget.replacing == null &&
+      values['splitMode'] != 'varied';
 
   /// Log a debt payment asks for the essentials; the rest of the record
   /// comes from its answers (DESIGN_SYSTEM §2 Debts). Corrections keep every
@@ -1242,7 +1555,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
     'due',
     'postingDate',
     'targetDate',
-    'logicalDate',
+    'lastDay',
     'from',
     'through',
   };
@@ -1258,15 +1571,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
 
   /// Inputs that choose a money account.
   static const accountKeys = {'account', 'fromAccount'};
-
-  bool isAmount(FinanceInput input) =>
-      input.options == null &&
-      (input.money || (input.lines == 1 && input.label.contains(' PHP')));
-
-  /// A date picker needs no format, and a ₱ field no currency.
-  String plainLabel(FinanceInput input) => input.label
-      .replaceAll(' · YYYY-MM-DD', '')
-      .replaceAll(isAmount(input) ? ' PHP' : '\u0000', '');
 
   void frequencyChanged(String _) {
     if (values['frequency'] == '') {
@@ -1309,47 +1613,357 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         return 'What you owe now: ${c.amount(owed)}';
       }
     }
+    if (input.key == 'amount' && recordType == 'reservation') {
+      final goal = c.snapshot.current
+          .where((r) => r.id == values['goal'])
+          .firstOrNull;
+      final account = values['account'] ?? '';
+      if (goal != null && account.isNotEmpty) {
+        final held = savingsReserved(
+          c.snapshot,
+          goal: goal.actionId,
+          account: account,
+        );
+        final all = savingsReserved(c.snapshot, account: account);
+        final free = eligibleSavings(c.snapshot, account, civilToday()) - all;
+        return c.amountsHidden
+            ? null
+            : 'Set aside here now: ${c.amount(held)}. Not set aside yet: ${c.amount(free < BigInt.zero ? BigInt.zero : free)}.';
+      }
+    }
     return input.help;
   }
 
+  /// The chosen card's action id: every record on a card stores that.
+  String? get chosenCard => debtFor(values['card'])?.actionId;
+
+  /// What a picker offers, given the answers so far (DESIGN_SYSTEM §2): only
+  /// records the rules would accept on this card or item, in plain names. A
+  /// value already chosen stays listed, so a correction keeps showing it.
+  Map<String, String>? optionsFor(FinanceInput input) {
+    final all = input.options;
+    if (all == null) return null;
+    final s = c.snapshot, today = civilToday();
+    final card = chosenCard;
+    bool onCard(LocalRevision r) => card != null && r.values['card'] == card;
+    final limited = switch ((recordType, input.key)) {
+      ('statementLink' || 'cardAllocation', 'statement') => {
+        for (final r in s.current)
+          if (financeType(r) == 'statement' && onCard(r)) r.id: r.title,
+      },
+      ('statementLink', 'activity') => {
+        for (final r in s.current)
+          if (const {
+                'cardPurchase',
+                'cardPayment',
+                'cardRefund',
+                'cardFee',
+                'cardInterest',
+              }.contains(financeType(r)) &&
+              onCard(r) &&
+              !s.current.any(
+                (l) =>
+                    financeType(l) == 'statementLink' &&
+                    l.values['activity'] == r.id,
+              ))
+            r.id: recordChoice(r),
+      },
+      ('cardAllocation', 'payment') => {
+        for (final r in s.current)
+          if (const {'cardPayment', 'cardRefund'}.contains(financeType(r)) &&
+              onCard(r) &&
+              unmatchedCredit(s, r) > BigInt.zero)
+            r.id: c.amountsHidden
+                ? recordChoice(r)
+                : '${recordChoice(r)} · ${c.amount(unmatchedCredit(s, r))} left',
+      },
+      ('cardRefund', 'purchase') => {
+        for (final r in s.current)
+          if (financeType(r) == 'cardPurchase' && onCard(r))
+            r.id: recordChoice(r),
+      },
+      ('installment', 'purchase') => {
+        for (final r in s.current)
+          if (financeType(r) == 'cardPurchase' &&
+              onCard(r) &&
+              !s.current.any(
+                (p) =>
+                    financeType(p) == 'installment' &&
+                    p.values['purchase'] == r.id,
+              ))
+            r.id: recordChoice(r),
+      },
+      ('installmentApplication', 'plan') => {
+        for (final r in s.current)
+          if (financeType(r) == 'installment' && onCard(r)) r.id: r.title,
+      },
+      ('installmentApplication', 'row') => {
+        if (card != null)
+          for (final plan in planRows(s, card, today))
+            if (plan.id == values['plan'])
+              for (final p in plan.payments)
+                if (!p.done)
+                  p.row.id: c.amountsHidden
+                      ? '${p.row.id} · ${civilLabel(p.row.date)}'
+                      : '${p.row.id} · ${civilLabel(p.row.date)} · ${c.amount(p.left)} left',
+      },
+      ('installmentApplication', 'payment') => {
+        for (final r in s.current)
+          if (financeType(r) == 'cardAllocation' && onCard(r))
+            r.id: recordChoice(r),
+      },
+      ('recurrenceGenerate', 'rule') => {
+        for (final r in s.current)
+          if (financeType(r) == 'recurrence' && r.values['status'] == 'active')
+            r.id: r.title,
+      },
+      ('occurrenceOverride' || 'recurrenceLink', 'rule') => {
+        for (final o in recurringOccurrences(s, '1900-01-01', '2199-12-31'))
+          if (const {'planned', 'linked'}.contains(o.state))
+            o.rule.id: o.rule.title,
+      },
+      ('occurrenceOverride' || 'recurrenceLink', 'logicalDate') => {
+        for (final o in recurringOccurrences(s, '1900-01-01', '2199-12-31'))
+          if (o.rule.id == values['rule'] &&
+              const {'planned', 'linked'}.contains(o.state))
+            o.logicalDate: civilLabel(o.due),
+      },
+      ('recurrenceLink', 'actual') => () {
+        final rule = s.revisions
+            .where((r) => r.id == values['rule'])
+            .firstOrNull;
+        final income = rule?.values['recurringKind'] == 'income';
+        return {
+          for (final r in s.current)
+            if (income
+                ? r.kind == 'income'
+                : const {'expense', 'cardPurchase'}.contains(financeType(r)))
+              r.id: recordChoice(r),
+        };
+      }(),
+      ('recurrenceUnlink', 'link') => {
+        for (final r in s.current)
+          if (financeType(r) == 'recurrenceLink' &&
+              !s.current.any(
+                (u) =>
+                    financeType(u) == 'recurrenceUnlink' &&
+                    u.values['link'] == r.id,
+              ))
+            r.id: r.title,
+      },
+      ('fileDetach', 'file') => {
+        for (final r in s.current)
+          if (financeType(r) == 'financialFile' &&
+              !financialFileDetached(s, r.id))
+            r.id: r.title,
+      },
+      ('budget', 'category') => all,
+      _ => null,
+    };
+    if (limited == null) return all;
+    final kept = values[input.key];
+    return {
+      ...limited,
+      if (kept != null && kept.isNotEmpty && !limited.containsKey(kept))
+        kept: all[kept] ?? kept,
+    };
+  }
+
+  /// The picker to fill first, when one depends on another.
+  String? waitingOn(FinanceInput input) => switch ((recordType, input.key)) {
+    (
+      'statementLink' || 'cardAllocation',
+      'statement' || 'activity' || 'payment',
+    ) ||
+    ('cardRefund' || 'installment', 'purchase') ||
+    (
+      'installmentApplication',
+      'plan' || 'payment',
+    ) when (values['card'] ?? '').isEmpty => 'Choose the card first.',
+    ('installmentApplication', 'row') when (values['plan'] ?? '').isEmpty =>
+      'Choose the plan first.',
+    ('occurrenceOverride' || 'recurrenceLink', 'logicalDate')
+        when (values['rule'] ?? '').isEmpty =>
+      'Choose the item first.',
+    _ => null,
+  };
+
+  void fill(String key, String value) {
+    values[key] = value;
+    fields[key]?.text = value;
+  }
+
+  /// A choice can fill what follows from it, and clears what no longer fits.
+  void picked(String key) {
+    final s = c.snapshot, today = civilToday();
+    final type = recordType;
+    if (key == 'card') {
+      for (final k in const [
+        'statement',
+        'activity',
+        'purchase',
+        'plan',
+        'payment',
+        'row',
+      ]) {
+        if (values.containsKey(k)) values[k] = '';
+      }
+    }
+    if (key == 'plan') values['row'] = '';
+    if (key == 'rule') values['logicalDate'] = '';
+    if (type == 'cardRefund' && key == 'purchase') {
+      final bought = s.current
+          .where((r) => r.id == values['purchase'])
+          .firstOrNull
+          ?.postings
+          .where((p) => p.ledger == 'expense')
+          .firstOrNull;
+      if (bought?.category != null) values['category'] = bought!.category!;
+    }
+    if (type == 'cardAllocation' &&
+        answer('amount').isEmpty &&
+        const {'statement', 'payment'}.contains(key)) {
+      final credit = s.current
+          .where((r) => r.id == values['payment'])
+          .firstOrNull;
+      final rows = chosenCard == null
+          ? const <StatementRow>[]
+          : statementRows(s, chosenCard!, today);
+      final statement = rows
+          .where((r) => r.id == values['statement'])
+          .firstOrNull;
+      if (credit != null && statement != null) {
+        fill('amount', phpDecimal(matchableAmount(s, credit, statement)));
+      }
+    }
+    if (type == 'installmentApplication' && key == 'row') {
+      final plan = chosenCard == null
+          ? null
+          : planRows(
+              s,
+              chosenCard!,
+              today,
+            ).where((p) => p.id == values['plan']).firstOrNull;
+      final row = plan?.payments
+          .where((p) => p.row.id == values['row'])
+          .firstOrNull;
+      if (row != null) fill('amount', phpDecimal(row.left));
+    }
+    if (const {'occurrenceOverride', 'recurrenceLink'}.contains(type) &&
+        key == 'logicalDate') {
+      final date = recurringOccurrences(s, '1900-01-01', '2199-12-31')
+          .where(
+            (o) =>
+                o.rule.id == values['rule'] &&
+                o.logicalDate == values['logicalDate'],
+          )
+          .firstOrNull;
+      if (date != null) {
+        fill(
+          'amount',
+          phpDecimal(type == 'recurrenceLink' ? date.remaining : date.expected),
+        );
+        if (type == 'occurrenceOverride') values['due'] = date.due;
+      }
+    }
+    setState(() {});
+  }
+
+  /// One toggle per weekday, stored as ISO numbers, Monday first.
+  Widget weekdayInput() {
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final text = Theme.of(context).textTheme;
+    final chosen = answer('weekdays').split(',').toSet();
+    final problem = problemFor('weekdays');
+    return Padding(
+      key: anchor('weekdays'),
+      padding: gapAbove(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('On these days', style: text.labelMedium),
+          const SizedBox(height: Space.xs),
+          Wrap(
+            spacing: Space.xs,
+            runSpacing: Space.xs,
+            children: [
+              for (final (i, name) in names.indexed)
+                FilterChip(
+                  key: ValueKey('native-weekday-${i + 1}'),
+                  label: Text(name),
+                  selected: chosen.contains('${i + 1}'),
+                  onSelected: (on) {
+                    final next = {...chosen}..remove('');
+                    on ? next.add('${i + 1}') : next.remove('${i + 1}');
+                    setState(
+                      () => changed(
+                        'weekdays',
+                        (next.toList()..sort()).join(','),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+          if (problem != null) ...[
+            const SizedBox(height: Space.xs),
+            Text(
+              problem,
+              style: text.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget fieldFor(FinanceInput input) {
-    final key = input.key, label = plainLabel(input);
+    final key = input.key, label = input.label;
     if (key == 'acknowledge') return consentInput();
+    if (key == 'weekdays') return weekdayInput();
     if (dateKeys.contains(key)) {
       return dateInput(
         key,
         label,
         helper: input.help,
-        required: !label.contains('optional'),
+        required: !input.optional,
       );
     }
     if (input.options != null) {
       final classifying =
           key == 'payment' && recordType == 'debtClassification';
+      final options = classifying ? breakdownChoices() : optionsFor(input)!;
       return pickInput(
         key,
         label,
-        classifying ? breakdownChoices() : input.options!,
+        options,
         required: input.required,
         helper: input.help,
         info: input.info,
-        disabledReason: key == 'splitMode' && paymentCount == null
+        disabledReason:
+            key == 'splitMode' &&
+                recordType != 'installment' &&
+                paymentCount == null
             ? 'Enter how many payments are left first.'
-            : null,
-        onChanged: key == 'frequency' ? frequencyChanged : null,
+            : waitingOn(input),
+        onChanged: key == 'frequency' && recordType != 'recurrence'
+            ? frequencyChanged
+            : (_) => picked(key),
         descriptions: accountKeys.contains(key)
-            ? balanceLines(input.options!, key)
+            ? balanceLines(options, key)
             : const {},
       );
     }
-    if (isAmount(input)) {
+    if (input.money) {
       return amountInput(
         key,
         label,
         helper: helpFor(input),
         info: input.info,
         required: input.required,
-        signed: input.label.contains('Signed'),
+        signed: input.signed,
       );
     }
     return textInput(
@@ -1359,11 +1973,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       info: input.info,
       required: input.required,
       lines: input.lines,
-      input: wholeNumberKeys.contains(key)
-          ? FieldInput.wholeNumber
-          : key == 'weekdays'
-          ? FieldInput.numberList
-          : null,
+      input: wholeNumberKeys.contains(key) ? FieldInput.wholeNumber : null,
     );
   }
 
@@ -1395,6 +2005,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         fieldFor(input),
         if (input.key == 'account' && needsConsent) consentInput(),
         if (input.key == 'splitMode' &&
+            recordType != 'installment' &&
             answer('frequency').isNotEmpty &&
             paymentCount != null)
           answer('splitMode') == 'varied'
@@ -1822,6 +2433,68 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
     };
   }
 
+  /// An installment plan's rows from the plain answers.
+  String installmentRows() {
+    if (answer('installmentAmount').isEmpty) {
+      reject('Enter the amount of each payment.', field: 'installmentAmount');
+    }
+    if (answer('firstDue').isEmpty) {
+      reject('Enter the date of the first payment.', field: 'firstDue');
+    }
+    final count = int.tryParse(answer('installmentCount'));
+    if (count == null || count < 1 || count > 120) {
+      reject(
+        'Enter how many payments, a whole number from 1 to 120.',
+        field: 'installmentCount',
+      );
+    }
+    try {
+      return debtCadenceRows(
+        firstDue: answer('firstDue'),
+        frequency: answer('frequency'),
+        installmentAmount: answer('installmentAmount'),
+        count: count,
+        intervalDays: answer('intervalDays'),
+      );
+    } on FormatException catch (e) {
+      reject(e.message, field: 'firstDue');
+    } on LocalRuleException catch (e) {
+      reject(e.message, field: e.field ?? 'installmentAmount');
+    }
+  }
+
+  String _record(String key) =>
+      c.snapshot.revisions
+          .where((r) => r.id == values[key])
+          .lastOrNull
+          ?.title ??
+      '';
+
+  /// What a form names its record when the user leaves Description blank.
+  String? get automaticName {
+    final card = _record('card');
+    return switch (recordType) {
+      'cardPayment' => 'Payment · $card',
+      'cardFee' => 'Fee · $card',
+      'cardInterest' => 'Interest · $card',
+      'cardRefund' => 'Refund · ${_record('purchase')}',
+      'cardAuthorization' => 'Pending charge · $card',
+      'statement' => '$card statement',
+      'statementLink' => 'Matched · ${_record('activity')}',
+      'cardAllocation' => 'Matched payment · ${_record('statement')}',
+      'installment' => '${_record('purchase')} installment plan',
+      'installmentApplication' => 'Matched payment · ${_record('plan')}',
+      'reservation' => 'Set aside · ${_record('goal')}',
+      'savingsReallocation' => 'Moved to ${_record('goal')}',
+      'recurrenceGenerate' => '${_record('rule')} dates',
+      'occurrenceOverride' => '${_record('rule')} date changed',
+      'recurrenceLink' => '${_record('rule')} linked',
+      'recurrenceUnlink' => 'Link removed · ${_record('link')}',
+      'fileDetach' => 'Archived link · ${_record('file')}',
+      _ => null,
+    };
+  }
+
   Map<String, String> commandValues(String? rows) {
     final v = Map<String, String>.from(values)
       ..remove('installmentCount')
@@ -1830,6 +2503,36 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       ..remove('paymentRow')
       ..remove('extraRows');
     if (simplePayment) paymentValues(v);
+    if (widget.replacing == null && answer('name').isEmpty) {
+      final name = automaticName;
+      if (name != null) v['name'] = name;
+    }
+    if (widget.replacing == null &&
+        answer('reference').isEmpty &&
+        const {
+          'statement',
+          'installment',
+          'cardAuthorization',
+        }.contains(widget.operation)) {
+      v['reference'] = 'Entered by me';
+    }
+    if (recordType == 'budget') {
+      final last = answer('lastDay');
+      v['endExclusive'] = last.isEmpty ? '' : addCivilDays(last, 1);
+      v.remove('lastDay');
+    }
+    if (recordType == 'installment') {
+      if (builtPlan) v['schedule'] = rows!;
+      v.removeWhere(
+        (k, _) => const {
+          'frequency',
+          'intervalDays',
+          'firstDue',
+          'splitMode',
+          'installmentAmount',
+        }.contains(k),
+      );
+    }
     if (recordType == 'debtPayoff') v['providerPayoff'] = answer('amount');
     if (widget.replacing == null && answer('name').isEmpty) {
       final debt = debtFor(values['debt']);
@@ -1855,7 +2558,8 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       v['date'] = debt.date.compareTo(today) > 0 ? debt.date : today;
       v['acknowledge'] = 'false';
       v.addAll(cadenceStored(rows));
-    } else if (answer('frequency').isNotEmpty &&
+    } else if (recordType != 'installment' &&
+        answer('frequency').isNotEmpty &&
         answer('splitMode').isNotEmpty &&
         answer('splitMode') != 'equal') {
       v['installmentAmount'] = '';
@@ -1908,6 +2612,58 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
       scheduleNote =
           'The debt was saved, but its payment schedule was not: $why '
           'Open the debt in Debts and choose Set schedule.';
+    }
+  }
+
+  /// A new recurring item adds its next 90 days, so it shows in Upcoming and
+  /// dues at once. It's its own record, saved right after the item.
+  bool get addsDates =>
+      widget.operation == 'recurrence' &&
+      widget.replacing == null &&
+      answer('status') != 'archived';
+
+  Future<void> saveRecurringDates() async {
+    if (!addsDates) return;
+    scheduleFailed = false;
+    try {
+      if (c.connected) {
+        await c.syncLatest?.call();
+        await c.reload();
+      }
+      final today = civilToday();
+      final from = answer('start').compareTo(today) > 0
+          ? answer('start')
+          : today;
+      final dates = LocalCommand(
+        id: newLocalId(),
+        owner: c.store.owner,
+        expectedVersion: c.snapshot.version,
+        kind: 'recurrenceGenerate',
+        values: {
+          'name': '${values['name']} dates',
+          'rule': id,
+          'from': from,
+          'through': addCivilDays(from, 89),
+          'date': today,
+          'reference': '',
+          'notes': '',
+          'acknowledge': 'false',
+        },
+      );
+      planLocal(c.snapshot, dates);
+      await c.store.commit(dates);
+      await c.reload();
+      scheduleNote = 'The next 90 days are in Upcoming.';
+    } catch (e) {
+      scheduleFailed = true;
+      final why = isSyncBlock(e)
+          ? 'it needs a connection to check your latest records.'
+          : e is LocalRuleException
+          ? e.message
+          : 'it could not be verified.';
+      scheduleNote =
+          'The item was saved, but its dates were not: $why '
+          'Open it in Planning and choose Add to Upcoming.';
     }
   }
 
@@ -2098,7 +2854,9 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         ),
         if (scheduleNote != null)
           FormStatus(
-            title: scheduleFailed ? 'Schedule not saved' : 'Schedule saved',
+            title: addsDates
+                ? (scheduleFailed ? 'Dates not added' : 'Dates added')
+                : (scheduleFailed ? 'Schedule not saved' : 'Schedule saved'),
             message: scheduleNote!,
             tone: scheduleFailed ? NoticeTone.warning : NoticeTone.success,
           ),
@@ -2111,7 +2869,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
             hidden: c.amountsHidden,
             commandId: id,
             details: reviewDetails,
-            quietNotes: nativeDebtCommands.contains(recordType),
+            quietNotes: true,
           ),
         if (plan == null)
           FormEvidence(children: [SelectableText('Original command: $id')]),
@@ -2155,12 +2913,20 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
             hidden: c.amountsHidden,
             commandId: id,
             details: reviewDetails,
-            quietNotes: nativeDebtCommands.contains(recordType),
+            quietNotes: true,
           ),
           if (schedulePreview != null) ...[
             SizedBox(height: CompactForm.fieldGap(context)),
             InlineNotice(
-              'Payment schedule to save: $schedulePreview.\nCheck these dates and amounts match your loan agreement or lender statement. A payment only counts toward a due date when you log it against that date.',
+              recordType == 'installment'
+                  ? 'Installment plan to save: $schedulePreview.\nCheck these dates and amounts match your card issuer’s plan.'
+                  : 'Payment schedule to save: $schedulePreview.\nCheck these dates and amounts match your loan agreement or lender statement. A payment only counts toward a due date when you log it against that date.',
+            ),
+          ],
+          if (addsDates) ...[
+            SizedBox(height: CompactForm.fieldGap(context)),
+            const InlineNotice(
+              'Saving also adds the next 90 days to Upcoming. Nothing is logged when a date arrives.',
             ),
           ],
           ...syncNotices(),
@@ -2199,172 +2965,6 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
   );
 }
 
-class NativeCardsScreen extends StatefulWidget {
-  const NativeCardsScreen({super.key, required this.controller});
-  final LocalFinancialController controller;
-  @override
-  State<NativeCardsScreen> createState() => _NativeCardsScreenState();
-}
-
-class _NativeCardsScreenState extends State<NativeCardsScreen> {
-  LocalFinancialController get controller => widget.controller;
-  int page = 0;
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
-    builder: (context, _) {
-      final s = controller.snapshot;
-      final records = s.current
-          .where((r) => financeType(r) == 'creditCard')
-          .toList();
-      final currentPage = page.clamp(
-        0,
-        ((records.length + 11) ~/ 12 - 1).clamp(0, 100000),
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SectionHeading('Credit cards'),
-          const Text(
-            'Keep purchases, payments and provider statements together.',
-          ),
-          const SizedBox(height: 20),
-          NativeWorkflowGroups(
-            controller: controller,
-            groups: const [
-              (
-                'Cards & payments',
-                'Manage a card and record money paid to its provider.',
-                Icons.credit_card_outlined,
-                {
-                  'creditCard': 'Add credit card',
-                  'cardPayment': 'Pay credit card',
-                  'cardAuthorization': 'Pending authorization',
-                  'cardRefund': 'Card refund',
-                  'cardFee': 'Card fee',
-                  'cardInterest': 'Card interest',
-                },
-              ),
-              (
-                'Statements',
-                'Compare provider evidence with recorded activity.',
-                Icons.description_outlined,
-                {
-                  'statement': 'Record statement',
-                  'statementLink': 'Link statement activity',
-                  'cardAllocation': 'Allocate payment / credit',
-                },
-              ),
-              (
-                'Installments',
-                'Keep scheduled amounts separate from actual payments.',
-                Icons.calendar_month_outlined,
-                {
-                  'installment': 'Installment plan',
-                  'installmentApplication': 'Apply installment payment',
-                },
-              ),
-            ],
-          ),
-          const WorkspaceHelp(
-            title: 'How card balances work',
-            text: 'Posted liability, provider statements and cash payments have separate meanings. Card credit and available credit are not liquid money.',
-          ),
-          if (!s.current.any((r) => financeType(r) == 'creditCard'))
-            const WorkspaceEmpty(
-              title: 'Your cards, clearly accounted for',
-              message: 'Add a credit card above to track its outstanding balance, statements and payments.',
-              icon: Icons.credit_card_outlined,
-            ),
-          for (final card in records.skip(currentPage * 12).take(12)) ...[
-            SectionHeading(card.title),
-            Builder(
-              builder: (context) {
-                final liability = -financeBalance(
-                  s,
-                  'card_liability',
-                  'card',
-                  card.actionId,
-                  through: civilToday(),
-                );
-                final limit = card.values['limit']!.isEmpty
-                    ? null
-                    : signedPhp(card.values['limit']!);
-                final used = liability > BigInt.zero ? liability : BigInt.zero;
-                return WorkspacePanel(
-                  title: card.values['issuer'],
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      WorkspaceGrid(
-                        children: [
-                          ValueBlock(
-                            liability < BigInt.zero
-                                ? 'CARD CREDIT'
-                                : 'POSTED OUTSTANDING',
-                            '${controller.decimal(liability.abs())} PHP',
-                            'Through today - separate from liquid money',
-                          ),
-                          ValueBlock(
-                            'AVAILABLE CREDIT',
-                            limit == null
-                                ? 'Not recorded'
-                                : '${controller.decimal(limit - liability)} PHP',
-                            'Estimate based on recorded limit and liability',
-                          ),
-                        ],
-                      ),
-                      WorkspaceHelp(
-                        title: 'Credit utilization',
-                        text: limit == null
-                            ? 'No credit limit recorded.'
-                            : 'Utilization: ${limit == BigInt.zero ? 'undefined for zero limit' : '${controller.amountsHidden ? 'hidden' : used * BigInt.from(10000) ~/ limit} basis points'}. Available credit is not cash.',
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            for (final statement in s.current.where(
-              (r) =>
-                  financeType(r) == 'statement' &&
-                  r.values['card'] == card.actionId,
-            ))
-              FinancialLine(
-                statement.title,
-                'Due ${statement.values['due']} · historical balance ${controller.decimal(statement.amount)} PHP · minimum ${statement.values['minimum']?.isNotEmpty == true ? '${controller.decimal(signedPhp(statement.values['minimum']!))} PHP' : 'unknown'}\n'
-                'Remaining due ${controller.decimal(statement.amount - sumMinor(s.current.where((r) => financeType(r) == 'cardAllocation' && r.date.compareTo(civilToday()) <= 0 && r.values['statement'] == statement.id).map((r) => r.amount)))} PHP. Minimum satisfaction / allocation order not inferred.\n'
-                'Recorded balance by provider posting date through ${statement.values['end']}: ${controller.decimal(statementRecordedBalance(s, statement))} PHP; provider difference ${controller.decimal(statement.amount - statementRecordedBalance(s, statement))} PHP. '
-                '${s.current.where((r) => financeType(r) == 'statementLink' && r.values['statement'] == statement.id).length} explicitly confirmed activity links; dates do not infer membership. Differences require reviewed source evidence.',
-                icon: Icons.description_outlined,
-                onTap: () =>
-                    openFinanceDetail(context, controller, statement.id),
-              ),
-          ],
-          WorkspacePager(
-            count: records.length,
-            page: currentPage,
-            onPage: (p) => setState(() => page = p),
-          ),
-          const SectionHeading('Source detail & immutable history'),
-          FinancialSourceList(
-            controller: controller,
-            records: s.revisions.reversed
-                .where(
-                  (r) =>
-                      nativeFinanceCommands.contains(financeType(r)) &&
-                      !nativeDebtCommands.contains(financeType(r)) &&
-                      !nativePlanningCommands.contains(financeType(r)) &&
-                      !nativeRecurrenceCommands.contains(financeType(r)),
-                )
-                .toList(),
-          ),
-        ],
-      );
-    },
-  );
-}
-
 /// One record's page: the same page for Money, Debts, Cards, Planning and
 /// Reports (§2 Money).
 Future<void> openFinanceDetail(
@@ -2372,27 +2972,3 @@ Future<void> openFinanceDetail(
   LocalFinancialController c,
   String id,
 ) => openMoneyRecord(context, c, id);
-
-class NativeWorkflowGroups extends StatelessWidget {
-  const NativeWorkflowGroups({
-    super.key,
-    required this.controller,
-    required this.groups,
-  });
-  final LocalFinancialController controller;
-  final List<(String, String, IconData, Map<String, String>)> groups;
-  @override
-  Widget build(BuildContext context) => WorkspaceGrid(
-    children: [
-      for (final group in groups)
-        WorkspaceActionGroup(
-          title: group.$1,
-          description: group.$2,
-          icon: group.$3,
-          actions: group.$4,
-          onSelected: (key) =>
-              openNativeFinance(context, controller, key, group.$4[key]!),
-        ),
-    ],
-  );
-}

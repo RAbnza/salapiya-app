@@ -16,7 +16,7 @@ tz.Location financeZone(String name) {
   try {
     return tz.getLocation(name);
   } catch (_) {
-    reject('Choose a supported named IANA timezone.');
+    reject('Choose a time zone from the list.');
   }
 }
 
@@ -44,7 +44,7 @@ List<String> recurringDates(
   final to = DateTime.parse('${through}T00:00:00Z'),
       windowStart = DateTime.parse('${from}T00:00:00Z');
   if (to.isBefore(windowStart) || to.difference(windowStart).inDays > 365) {
-    reject('Generate an inclusive window of at most 366 days.');
+    reject('Choose dates up to 366 days apart.');
   }
   financeZone(v['timezone'] ?? '');
   final frequency = v['frequency'],
@@ -57,7 +57,9 @@ List<String> recurringDates(
               ? 52
               : 120) ||
       !['daily', 'weekly', 'monthly'].contains(frequency)) {
-    reject('Choose a supported recurrence interval.');
+    reject(
+      'Enter how often it repeats: up to every 365 days, 52 weeks or 120 months.',
+    );
   }
   final weekdays = (v['weekdays'] ?? '')
       .split(',')
@@ -68,24 +70,24 @@ List<String> recurringDates(
       (weekdays.isEmpty ||
           weekdays.any((d) => d == null || d < 1 || d > 7) ||
           weekdays.toSet().length != weekdays.length)) {
-    reject('Select distinct ISO weekdays 1–7.');
+    reject('Choose at least one day of the week.');
   }
   final monthDay = int.tryParse(v['monthDay'] ?? '') ?? 0;
   if (frequency == 'monthly' &&
       (monthDay < 1 ||
           monthDay > 31 ||
           !['last_valid_day', 'skip'].contains(v['monthPolicy']))) {
-    reject('Choose a monthly day and explicit short-month policy.');
+    reject('Choose a day of the month, and what happens in shorter months.');
   }
   final end = (v['end'] ?? '').isEmpty ? null : planningDate(v['end']!);
   if (end != null && end.compareTo(v['start']!) < 0) {
-    reject('Recurrence end cannot precede its start.');
+    reject('The end date can’t be before the start date.');
   }
   final limit = (v['count'] ?? '').isEmpty
       ? null
       : int.tryParse(v['count']!) ?? 0;
   if (limit != null && (limit < 1 || limit > 10000)) {
-    reject('Bound a rule to 1–10,000 emitted occurrences.');
+    reject('Enter 1 to 10,000 times, or leave this blank.');
   }
   final result = <String>[];
   var emitted = 0, work = 0;
@@ -96,7 +98,9 @@ List<String> recurringDates(
     day = day.add(const Duration(days: 1))
   ) {
     if (++work > 100000) {
-      reject('Calendar history exceeds the supported work bound.');
+      reject(
+        'This start date is too far back to work out. Choose a later one.',
+      );
     }
     final label = day.toIso8601String().substring(0, 10);
     if (end != null && label.compareTo(end) > 0) break;
@@ -123,7 +127,7 @@ List<String> recurringDates(
     if (!day.isBefore(windowStart)) {
       result.add(label);
       if (result.length > 500) {
-        reject('At most 500 emitted dates per generation.');
+        reject('That’s more than 500 dates. Choose a shorter period.');
       }
     }
   }
@@ -148,7 +152,7 @@ List<LocalRevision> effectiveRecurringLinks(
 LocalRevision recurrenceRule(LocalSnapshot s, String id) {
   final r = s.revision(id);
   if (financeType(r) != 'recurrence') {
-    reject('Choose an owned immutable recurring rule.');
+    reject('Choose a recurring item.');
   }
   return r;
 }
@@ -163,7 +167,7 @@ void planRecurrence(FinanceRuleContext c) {
           'subscription',
         ].contains(c.value('recurringKind')) ||
         !['active', 'archived'].contains(c.value('status'))) {
-      reject('Choose recurring kind and lifecycle.');
+      reject('Choose the type of item and whether it’s active.');
     }
     final start = planningDate(c.text('start'));
     recurringDates(v, start, start);
@@ -177,22 +181,24 @@ void planRecurrence(FinanceRuleContext c) {
     if (c.old != null &&
         start.compareTo(c.date) <= 0 &&
         c.value('status') != 'archived') {
-      reject('Future rule replacement requires an explicitly future boundary.');
+      reject(
+        'A change starts on a future date. Choose a start date after today.',
+      );
     }
     c.effects.add(
-      'Expected activity only. Reaching a date never posts money or proves payment.',
+      'This is what you expect. A date arriving doesn’t log a payment.',
     );
     return;
   }
   if (op == 'recurrenceUnlink') {
     if (c.old != null) {
-      reject('Link reversals cannot be corrected or reversed.');
+      reject('This can’t be changed. Link the record again if you need to.');
     }
     final link = c.ref('link', {'recurrenceLink'});
     if (s.current.any(
       (r) => financeType(r) == op && r.values['link'] == link.id,
     )) {
-      reject('This link is already reversed.');
+      reject('This link was already removed.');
     }
     c.text('reason');
     c.source = link.id;
@@ -201,13 +207,15 @@ void planRecurrence(FinanceRuleContext c) {
   }
   if (c.old != null) {
     reject(
-      'Use a new occurrence decision or exact link reversal. Preserve earlier evidence.',
+      'To change this, change or skip the date again, or remove the link.',
     );
   }
   final rule = recurrenceRule(s, c.text('rule'));
   if (op == 'recurrenceGenerate') {
     if (!s.current.contains(rule) || rule.values['status'] != 'active') {
-      reject('Generate only the current active rule.');
+      reject(
+        'Only an active recurring item can add dates. Open its current version.',
+      );
     }
     final dates = recurringDates(
       rule.values,
@@ -227,7 +235,7 @@ void planRecurrence(FinanceRuleContext c) {
             r.values['rule'] == rule.id &&
             (jsonDecode(r.values['dates']!) as List).contains(logical),
       )) {
-    reject('Generate this logical occurrence explicitly first.');
+    reject('Add this date to Upcoming first.');
   }
   final occurrence = occurrenceIdentity(rule, logical);
   v['occurrence'] = occurrence;
@@ -246,7 +254,7 @@ void planRecurrence(FinanceRuleContext c) {
   final terminal = ['skipped', 'cancelled'].contains(override?.values['state']);
   if (op == 'occurrenceOverride') {
     if (terminal) {
-      reject('Skipped/cancelled generations remain terminal history.');
+      reject('This date was skipped or cancelled, so it can’t change.');
     }
     c.total = c.money('amount');
     planningDate(c.text('due'));
@@ -254,7 +262,7 @@ void planRecurrence(FinanceRuleContext c) {
         c.total < linked ||
         (c.value('state') != 'planned' && linked != BigInt.zero)) {
       reject(
-        'Resolve actual links before cancelling, skipping or reducing this expectation.',
+        'Remove the records linked to this date first, or keep the amount at or above them.',
       );
     }
     c.text('reason');
@@ -262,14 +270,16 @@ void planRecurrence(FinanceRuleContext c) {
     return;
   }
   if (op != 'recurrenceLink' || terminal) {
-    reject('This occurrence cannot accept actual links.');
+    reject('This date was skipped or cancelled, so it can’t take a record.');
   }
   final actual = s.revision(c.text('actual'));
   if (!s.current.contains(actual) ||
       (rule.values['recurringKind'] == 'income'
           ? actual.kind != 'income'
           : !['expense', 'cardPurchase'].contains(financeType(actual)))) {
-    reject('Choose eligible current actual income or purchase evidence.');
+    reject(
+      'Choose income for an income item, or an expense or card purchase for a bill.',
+    );
   }
   c.total = c.money('amount');
   final used = sumMinor(
@@ -287,10 +297,12 @@ void planRecurrence(FinanceRuleContext c) {
         .map((r) => r.amount),
   );
   if (linked + c.total > expected || used + c.total > actual.amount) {
-    reject('Actual links exceed expected or remaining actual capacity.');
+    reject(
+      'That’s more than this date expects, or more than is left on the record.',
+    );
   }
   c.source = actual.id;
   c.effects.add(
-    'Link existing actual evidence only. No extra cash, income, expense or payment is created.',
+    'This links a record you already logged. Nothing new is added.',
   );
 }

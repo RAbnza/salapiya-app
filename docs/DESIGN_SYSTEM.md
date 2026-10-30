@@ -289,6 +289,41 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 - **`FinancialEditor`** is the demo build's now. `openFinancialEditor` sends those forms on a real profile to `MoneyEditor`; the demo's Shared, Cards, Planning, debt and Money forms stay as they were.
 - **Demo build:** the same screens from `demoSample`, so Money agrees with the Overview and Debts. Scenarios and hidden amounts apply. The sample gained a split purchase, a refund, a correction, a reversal, a transfer with a fee, a balance check with a difference, an adjustment, a record dated later and an archived account. The demo can't show any `MoneyEditor` form, because they need the encrypted store: Log expense, income and a transfer open the demo's own forms, and the rest open a placeholder. Saving there doesn't change the sample.
 
+### Money B: Cards, Planning, Reports, Import, Files (Chat 9)
+
+`lib/finance/card_*.dart`, `planning_*.dart`, `report_data.dart`, `report_tab.dart`, `forecast_page.dart`, `import_data.dart`, `import_flow.dart`, `import_tab.dart`, `import_review.dart`, `files_data.dart`, `file_access.dart`, `files_tab.dart`, `file_pages.dart`, `record_facts.dart`. No third tab layer: Planning's old tabs are gone, and each tab is one page of cards.
+
+- **Header.** Windows: `PageHeader`, "As of ‹date› · ‹context›", with the tab's actions as chips: Cards (Log a card payment, Add a statement, Add a card), Planning (Add a budget, Add a goal, Add a recurring item), Reports (Export CSV), Import (Import a file), Files (Attach a file). Android: the 48-tall date row, with actions on their cards. The three notices show on every tab.
+- **Cards** answers what's owed, what's due and what credit is left, and never reads as money you have.
+  - **Tiles:** Card debt (accent, change since last month end, sparkline), Due next, Still due on statements (each card's newest, because a newer one usually includes the last), Available credit ("Not money you have").
+  - **Cards:** Your cards (table, closing with a total; credit used is sum used ÷ sum limits, never an average), Due next (with Log payment; never adds a statement to an installment), Card debt over time, Needs your attention, Recent card activity.
+  - **Pages:** card, statement (with a shareable list), installment plan, Due on your cards.
+- **Planning** answers within budget, on track, what's coming up.
+  - **Tiles:** Budgets, Set aside, Coming up (a count, no total, because amounts can overlap), Cash forecast.
+  - **Cards:** Budgets, Coming up (30 days), Savings goals, Cash forecast, Recurring items. Archived budgets and goals sit in a corner menu.
+  - **Pages:** budget, goal, recurring item, Coming up.
+  - **Budget gauge:** only when all budgets share a period and basis. It centers in the card's height and the list keeps to the top.
+- **Reports** answers where money went and how it compares.
+  - **Band:** a period chip (This month, Last month, Last 90 days, This year, Custom, up to 366 days) and Filters (Account, Category, From, To). This month runs to today against the same days of last month, as on the Overview; other periods compare with the same number of days just before.
+  - **Honest filters:** a figure a filter can't work out says which filter it needs ("All accounts only", "All categories only"), never ₱0.00. A card in that position names the filter, not "Not available yet".
+  - **Cards:** Spending (accent), Income, Money in, Money out; Where it went beside By category; Spending over time (by day to 62 days, then by month, or Running against the earlier period, dashed) beside Debts and cards; Budgets in this period (each with its whole period, never cut or added up); Records (25 rows, then Show more). Reversed records stay in Activity only. A corner menu opens the shareable report.
+- **Cash forecast** (`ForecastPage`, read-only and always labelled an estimate): the chart full width, What to count beside What if, then What's included (Leave out, except what you've logged) beside What's left out (Put back). Card payments are one radio group per card, so the forecast's two refusals can't happen.
+- **Import** answers what's waiting and whether the last one worked.
+  - **Tab:** Waiting for you (the open import, or Import a file), Last import, Import history, What can be imported. The tab only reports; the review is a page.
+  - **Review page:** Match columns, Check rows, Import. Same commands in the same order as before. Check rows has Needs a look | All; a row with a problem starts left out and can't be included; a possible duplicate asks for a tick; the below-zero consent shows only once it's needed.
+  - **Import step:** one button sends each group of up to 50 rows in turn, with progress and Stop. Every id is kept in the draft first, so a lost response sends the same command again and a closed page picks up where it stopped. When it ends, the draft goes.
+  - **Import page:** a pill, each row's result, and the file's fingerprint under View details.
+  - **Stored row notes** stay in the records and the server's SQL as they are; `importRowNote` changes them on screen only.
+- **Files** answers what's attached and whether anything is missing or unverified.
+  - **Tiles:** Attached files (accent, total size), On this device, Missing, Checked (tap to read each file through; read-only, with progress). They count linked files only.
+  - **Cards:** Your files (All | Missing | Archived links), Needs your attention (missing, failed a check, a file picked and not attached, leftovers), What's in your backups ("N files listed, 0 files included. Keep your originals.").
+  - **Preview** (`ImagePreview`, images only): most of the window on Windows, the dialog's full width on Android. Zoom by pinch, wheel or buttons, from fitted to 800%, about the middle of the view. **Open in another app** is in the preview, and on the page for a PDF, which has no preview.
+  - **File page:** what it offers depends on where the file stands. "Not virus-scanned" stays visible, because it's true. **Attach a file** is a page: find the record, pick the file, review in a dialog.
+  - **`FileAccess`** is what the screens ask of a profile's files. `LocalFileAccess` reads the encrypted store; the demo's answers are fixed.
+- **Record page:** `recordFacts` gives Cards, Planning and Files records plain labels, with ids resolved to names and hidden amounts hidden. View details keeps only the technical ids.
+- **Forms:** every Cards and Planning form on `NativeFinanceEditor`, on the compact scale, with plain labels, More details, pickers limited to what applies and automatic names. Adding a recurring item also adds its next 90 days, as a second command. If that fails, the item stays saved and offers Add to Upcoming.
+- **Demo build:** `demoSample` gained three cards' worth of activity, recurring items, goals, budgets, two imports (one done, one waiting) and three files (on this device, missing, archived link), all replayed through the rules. It shows every tab and detail page, including the forecast. It can't show the Cards and Planning forms, the Import review, Attach a file, or real file preview, check and restore, which need the encrypted store.
+
 ### Section screen standard (the Overview's quality bar)
 
 Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section chat from Chat 7 on. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
@@ -808,6 +843,8 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 
 ### Dashboard kit (moved from the Overview, Chat 7)
 
+Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same look. New: `CardLink(chevron: false)` for a link in a row with its own chevron, which then ends flush with its text; `ListEnd(onPressed:)` for a list cut short; `detailLine`, whose details break between themselves and never inside one; `LabelAmount(stackBelow:)`; `OverviewCard(fill: true)`, which hands its child the height left under the header.
+
 `kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
 
 ### Tables (`AppTable`; moved from Debts, Chat 8)
@@ -888,6 +925,17 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Record debt payment / Record payment | Log a debt payment | |
 | Pay credit card | Log a card payment | |
 | Pay from | Paid from | Field label |
+| Hypothetical | What-if | Cash forecast |
+| Reservation | Money set aside | Goals |
+| Stage, preview, decision, process | Save rows, Check rows, Confirm, Import | Import |
+| Batch | Import | Import |
+| Cancel remaining chunks | Stop remaining rows | Import |
+| Checksum | Fingerprint | Under View details only |
+| Private supporting file, bytes | File | Files |
+| Unscanned | Not virus-scanned | Files |
+| Detach | Archive link | Files |
+| Orphan | Leftover file | Files |
+| Posting, posting detail | Record, Records | Reports |
 | Transfer money | Log a transfer | "Between your own accounts" in helper text |
 | Report payment / Settlement | Log a payment between members | Shared Expenses |
 | Settle together / Settle up | Track who owes whom | |
@@ -928,6 +976,21 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Income classification | Type of income | |
 | Reason / correction evidence | Why you're changing this | |
 | Superseded · evidence retained, Reversed · evidence retained | Corrected, Reversed | Pills; earlier versions stay in Edit history |
+| Provider (card context) | Card issuer | |
+| Posted outstanding, Posted liability | What you owe on this card | |
+| Remaining due | Still due | |
+| Card credit | Card credit | Always with "not money you have" |
+| Allocate payment / credit | Match a payment to a statement | |
+| Link statement activity | Match activity to a statement | |
+| Apply installment payment | Match a payment to an installment | |
+| Card installment plan | Installment plan | Kept, because card issuers use it. Its rows are payments |
+| Pending authorization | Pending charge | "Log a pending charge" as the action |
+| Reservation, Reserve | Money set aside, Set money aside | Money stays in its account |
+| Reallocate | Move to another goal | |
+| Generate occurrences | Add to Upcoming | |
+| Occurrence | Date | "Recurring date" where it needs context |
+| Recurring expectation, Recurring activity | Recurring item | |
+| Basis (net / gross) | What counts | Net subtracts refunds; gross doesn't |
 
 ### Tone rules
 
@@ -973,6 +1036,20 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Money: closing balance after each row of a statement; balances at month ends | `statementFor`, `balanceByMonth` | UI aggregation (approved, Chat 8) |
 | Money: what needs attention (below zero, balance checks to resolve, saved drafts) | `moneyTasks`, `balanceCheckState` | UI aggregation (approved, Chat 8) |
 | Money: search, type, account, category and period filters | `ActivityFilter` | UI aggregation (approved, Chat 8) |
+| Cards: per-card balance, what you owe, card credit, limit, available credit, credit used; totals across cards with a limit (sum used ÷ sum limits, never an average) | `CardRow`, `CardsSummary` (`lib/finance/card_data.dart`) | UI aggregation (approved, Chat 9) |
+| Cards: what you owe at month ends, each card's positive balance | `cardDebtByMonth` | UI aggregation (approved, Chat 9) |
+| Cards: paid, still due, status and difference from your records per statement; each card's newest statement | `StatementRow`, `newestStatements` | UI aggregation (approved, Chat 9) |
+| Cards: payments per installment plan; unused pending charges; what needs the user; activity matched to a statement and activity posted in its period | `PlanRow`, `pendingCharges`, `cardTasks`, `matchedActivity`, `unmatchedActivity` | UI aggregation (approved, Chat 9) |
+| Planning: budgets by when they apply, period labels, whether they share a period and basis | `BudgetRow`, `budgetPeriodLabel`, `lastDay`, `sameBudgetTerms` (`lib/finance/planning_data.dart`) | UI aggregation (approved, Chat 9) |
+| Planning: funding per goal and per account, from `supportedSavings` | `GoalRow`, `goalAccounts` | UI aggregation (approved, Chat 9) |
+| Planning: per item next date, dates and states; what's coming up in 30 days, with recurring dates not added yet | `RecurringRow`, `recurringDatesFor`, `upcomingRows` | UI aggregation (approved, Chat 9) |
+| Reports: the dates a period covers, what it's compared with, and what a filter can't answer | `ReportFilter`, `reportSpan` (`lib/finance/report_data.dart`) | UI aggregation (approved, Chat 9) |
+| Reports: spending and income for one category; spending by calendar month; each category against the earlier period | `spendingBetween`, `incomeBetween`, `dailySpending` (optional category), `monthlySpending`, `categoryChanges` | UI aggregation (approved, Chat 9) |
+| Reports: card purchases, payments, fees and interest, refunds; movement in group balances; payments without a breakdown | `cardSummary` | UI aggregation (approved, Chat 9) |
+| Reports: budgets touching a period, each with its whole period's spending, never cut or added up; one row per record, reversed ones left out | `reportBudgets`, `reportRecords` | UI aggregation (approved, Chat 9) |
+| Import: where each import stands, each row's result, whether a choice of rows would go below zero | `ImportBatch`, `importBatches`, `ImportRow`, `importGoesBelowZero` (`lib/finance/import_data.dart`) | UI aggregation (approved, Chat 9) |
+| Files: where each file stands, what it's attached to, what the tiles count | `FileRow`, `fileRows`, `FilesSummary` (`lib/finance/files_data.dart`) | UI aggregation (approved, Chat 9) |
+| Record page: plain labels for Cards, Planning and Files records | `recordFacts` (`lib/finance/record_facts.dart`) | UI aggregation (approved, Chat 9) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -990,8 +1067,8 @@ Remove this section when the redesign is finished.
 | 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Done |
 | 7 | Debts | Done |
 | 8 | Money A: Accounts, Activity, transaction form | Done |
-| 9 | Money B: Cards, Planning, Reports, Import, Files | Planned |
-| 10 | Shared Expenses A: groups, Bills, Payments | Planned |
+| 9 | Money B: Cards, Planning, Reports, Import, Files | Done |
+| 10 | Shared Expenses A: groups, Bills, Payments | Next |
 | 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle | Planned |
 | 12 | Life A: Calendar, Tasks, reminders | Planned |
 | 13 | Life B: Learning, Books, Career | Planned |
@@ -1012,20 +1089,15 @@ Each section chat:
 
 ### Rule messages to reword, by chat
 
-Error messages written in rule files stay as they are until the chat that works on their screens. Debts' messages and six Money ones are done (Chat 8). In each chat:
+Error messages written in rule files stay as they are until the chat that works on their screens. Debts' and Money's messages are done (Chats 8 and 9), including `planning_queries.dart`, `cash_import_rules.dart`, `file_rules.dart`, `file_store.dart` and the review notes. The six import row notes stay as stored, because the server writes them too; `importRowNote` shows them plainly. In each chat:
 
 - Propose the wording in the plan, in the glossary's terms (§7), and reword only what the owner approves. What the rules allow doesn't change.
-- Rules that name no field are matched by their words, so update the form's table with them (`nativeRuleFields`, `moneyRuleFields`, or that section's own). `test/rule_messages_test.dart` holds the tables to the rule files; add the chat's rule files to its jargon check.
+- Rules that name no field are matched by their words, first match first, so update the form's table with them (`nativeRuleFields`, `moneyRuleFields`, `importRuleFields`, or that section's own), and check a new phrase can't be caught by an older one. `test/rule_messages_test.dart` holds the tables to the rule files; add the chat's rule files to its jargon check.
 - Keep the word "negative" in the below-zero refusals, or update the forms that look for it. `isSyncBlock` reads the start of the sync rule's message, so change them together.
 - Messages only a developer can reach, such as a wrong command id or an unsupported version, need no plain wording unless a person can really see them.
 
 | Chat | Rule files | Messages left | Examples |
 | --- | --- | --- | --- |
-| 9 | `card_rules.dart` | 30 | "Card activity cannot precede its opening evidence.", "Authorization already used or belongs to another card." |
-| 9 | `planning_rules.dart`, `recurrence_rules.dart`, `planning_queries.dart` | 43 | "Choose budget spending basis and lifecycle.", "Choose a supported named IANA timezone.", "Select distinct ISO weekdays 1–7." |
-| 9 | `cash_import_rules.dart` | 40 | "Choose UTF-8 cash CSV up to 1 MiB.", "Unexpected quote in an unquoted CSV field." |
-| 9 | `file_rules.dart` | 7 | "Choose a bounded PDF, JPEG or PNG with exact checksum metadata." |
-| 9 | Money's remaining messages in `finance_domain.dart`, and `finance_rules.dart` | About 35 | "A comparison cannot precede the opening cutoff.", "Reconciliation sources changed. Record a fresh comparison.", "Opening corrections retain their original account and cutoff. Coverage changes require rebaselining.", "Use the explicit management, occurrence decision or link-reversal workflow. Preserve its history." |
 | 10 | `shared_domain.dart`, `shared_repository.dart` | 15 | "Each allocation axis must independently equal the total.", "Connect and synchronize before reviewing this operation." |
 | 11 | `shared_private_domain.dart` | 26 | "Group settlement payments require actual cash evidence.", "Explain the private source reconciliation." |
 | 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages | About 35, with Chat 15 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup." |
@@ -1154,3 +1226,21 @@ Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks th
 | 2026-10-31 | Debts' rule messages are reworded in the glossary's words, with the shared rule messages Debts forms show and the duplicate category message. What the rules allow is unchanged. Review notes under "View details" are reworded too. The forms' field tables are public, and a test holds them to the rules' words and keeps old jargon out of Debts' messages. | Approved |
 | 2026-10-31 | `OverviewCard`'s trailing control and corner menu center on each other; they aligned to the top, so a link sat 4 px above the menu's center. | Done |
 | 2026-10-31 | The remaining rule messages are reworded by the chat that works on their screens, with the owner approving the wording there. §9 lists them by chat. | Approved |
+| 2026-10-31 | Chat 9's Cards and Planning forms are approved on the real build, with Add a card, statements, installment plans, budgets, goals and recurring items on the compact scale. | Approved |
+| 2026-10-31 | Owner review of Cards: a link inside a row that ends in its own chevron drops its chevron (`CardLink(chevron: false)`). | Approved |
+| 2026-10-31 | Owner review of Cards: a row's details stay whole (`detailLine`), so a line breaks between them and never inside one. "In N days" shows only for what's within 7 days or overdue, so later rows stay on one line. | Approved |
+| 2026-10-31 | Reports: a figure a filter can't work out says which filter it needs ("All accounts only", "All categories only") and never reads ₱0.00. A card in the same position names the filter instead of "Not available yet", which would suggest it's still loading. | Approved |
+| 2026-10-31 | Reports: This month runs to today against the same days of last month, as on the Overview. Other periods compare with the same number of days just before. A chart draws by day up to 62 days and by month past that. Nothing in either period shows no change line, not "New". | Approved |
+| 2026-10-31 | Cash forecast: a page of cards, with the chart full width, What to count beside What if, then What's included beside What's left out. Card payments are one radio group per card, so the forecast's two refusals can't happen. The forecast's messages and left-out notes are reworded in this stage, because this page shows them. | Done |
+| 2026-10-31 | Owner review of Reports: a list of figures stays at the top of its card and closes with `ListEnd`, as every list does, so a taller card's extra space reads as the end. `centered` stays for charts. | Approved |
+| 2026-10-31 | Owner review of Reports: the category legend's amounts share one measured width, so the shares line up whatever each amount's length. Applies on the Overview too. | Approved |
+| 2026-10-31 | Owner review of Planning: in a taller card, the budget gauge centers in the space under the header and the list keeps to the top. `OverviewCard(fill: true)` hands its child the height left. | Approved |
+| 2026-10-31 | Import: the review is a page and the tab only reports. One button runs every group of rows, with Stop, and the draft goes when it ends. | Approved |
+| 2026-10-31 | Import: an import keeps its file's name as its title. The field was already free text, and the server treats it as one. Older imports read "Cash activity file". | Done |
+| 2026-10-31 | Import: the below-zero consent shows before the choices are confirmed, worked out group by group as the rule checks them, because it can't be added afterwards. | Done |
+| 2026-10-31 | Files: a tab of tiles, a list and what needs attention. Check files reads each file on request; whether a file is on this device is looked up on opening. Attach a file is a page. | Approved |
+| 2026-10-31 | The remaining Money rule messages are reworded as approved in the plan. `Enter $key` and `$key must be` now name their field, so they land on it. | Approved |
+| 2026-10-31 | Owner review of Files: image previews zoom and fill most of the window on Windows, and a file can be opened in another app. | Approved |
+| 2026-10-31 | Opening a file in another app needs a plain copy outside the encrypted store, which ARCHITECTURE asks to protect. The owner asked for it, and Save a copy already writes one. Each copy goes in a private temporary folder and is removed after 10 minutes, or at the next start. Its extension comes from the checked file type, so a stored name never decides what runs. | Approved |
+| 2026-10-31 | Android opens that copy through a small platform channel and `FileProvider`, limited to the one folder and read-only, rather than a new package. | Done |
+| 2026-10-31 | Owner review of Cards: a list cut short closes with a link to the whole list (`ListEnd(onPressed:)`), on every card that has one: Due next and Coming up open a page, Debts' Due next opens Schedule, Recent activity opens Activity. A list that shows everything keeps "That's everything", which Recent activity used to say even when it showed only the newest rows. | Approved |
