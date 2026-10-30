@@ -867,7 +867,7 @@ class _BudgetsInPeriod extends StatelessWidget {
                   () {
                     final period = budgetPeriodLabel(b.budget);
                     final zero = b.basisPoints == null;
-                    final over = !zero && b.over > BigInt.zero;
+                    final over = b.overLimit;
                     final state = zero
                         ? 'Zero-limit budget'
                         : over

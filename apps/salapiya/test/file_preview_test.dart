@@ -32,7 +32,6 @@ void main() {
             bytes: png,
             decodeWidth: 1,
             height: height,
-            note: 'Not virus-scanned.',
             problem: problem,
           ),
         ),
@@ -178,6 +177,13 @@ void main() {
         expect(tester.takeException(), isNull, reason: '$platform $window');
       }
     });
+  });
+
+  testWidgets('the note about scanning stays on the file’s page alone', (
+    tester,
+  ) async {
+    await show(tester);
+    expect(find.textContaining('virus-scanned'), findsNothing);
   });
 
   testWidgets('a problem opening it shows on the preview', (tester) async {

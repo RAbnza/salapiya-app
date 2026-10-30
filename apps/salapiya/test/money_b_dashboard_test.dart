@@ -781,6 +781,49 @@ void main() {
       );
     });
 
+    testWidgets('a zero-limit budget reads the same everywhere', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      await show(
+        tester,
+        session,
+        tab: 'Planning',
+        platform: windows,
+        width: 1440,
+      );
+      final row = find.ancestor(
+        of: find.text('Bills held at zero'),
+        matching: find.byType(Wrap),
+      );
+      expect(
+        find.descendant(of: row, matching: find.text('Zero-limit budget')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: row, matching: find.text('Over the limit')),
+        findsNothing,
+      );
+      expect(find.text('2 of 4'), findsOneWidget);
+      expect(find.text('Within limit · 2 over'), findsOneWidget);
+      final id = sample().current
+          .firstWhere((r) => r.title == 'Bills held at zero')
+          .actionId;
+      await app(
+        tester,
+        BudgetDetailView(
+          listenable: session,
+          source: (c) => demoMoneySource(c, session),
+          id: id,
+        ),
+        platform: windows,
+        width: 1440,
+      );
+      expect(find.text('Zero-limit budget'), findsOneWidget);
+      expect(find.text('Over the limit'), findsNothing);
+    });
+
     testWidgets('old words are gone', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);

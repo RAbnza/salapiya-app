@@ -59,7 +59,7 @@ class BudgetDetailView extends StatelessWidget {
       final last = lastDay(record.values['endExclusive']!);
       final net = record.values['basis'] != 'gross';
       final category = source.categoryName(record.values['category']);
-      final over = b.over > BigInt.zero;
+      final over = b.overLimit;
       final days = dailySpending(s, start, last);
       final rows =
           moneyActivity(s, source.categoryName, waiting: source.waiting)

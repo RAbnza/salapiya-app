@@ -183,6 +183,34 @@ void main() {
   group('budget amounts', () {
     BudgetProgress single(Book book) => budgetRows(book.s, today).single.$2;
 
+    test('a zero-limit budget isn’t counted as within or over a limit', () {
+      final book = Book();
+      final account = book.account('Bank', '5000.00');
+      book.budget(amount: '0.00');
+      book.budget(amount: '100.00', category: 'transport');
+      book.budget(amount: '100.00', category: 'groceries');
+      book.expense(account, '50.00', '2026-10-02');
+      book.post('expense', {
+        'date': '2026-10-02',
+        'name': 'Train',
+        'account': account,
+        'amount': '500.00',
+        'category': 'category-transport',
+      });
+      final budgets = [
+        for (final (period, b) in budgetRows(book.s, '2026-10-15'))
+          if (period == BudgetWhen.current) b,
+      ];
+      expect(budgets.length, 3);
+      final zero = budgets.firstWhere((b) => b.limit == BigInt.zero);
+      expect(zero.over, php(50), reason: 'The rule’s own figure stays.');
+      expect(zero.overLimit, isFalse);
+      final summary = PlanningSummary(budgets, const [], const []);
+      expect(summary.limited.length, 2);
+      expect(summary.overLimit, 1);
+      expect(summary.withinLimit, 1);
+    });
+
     test('over the limit', () {
       final book = Book();
       final bank = book.account('Bank', '5000.00');

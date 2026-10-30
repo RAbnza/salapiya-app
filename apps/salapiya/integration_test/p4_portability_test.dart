@@ -99,12 +99,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
-          () => find
-              .text(
-                'Not virus-scanned. The check only shows the file hasn’t changed.',
-              )
-              .evaluate()
-              .isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('preview-image')).evaluate().isNotEmpty,
         );
         expect(find.byType(Image), findsWidgets);
         await localTap(tester, find.text('Close'));
@@ -247,12 +243,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
-          () => find
-              .text(
-                'Not virus-scanned. The check only shows the file hasn’t changed.',
-              )
-              .evaluate()
-              .isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('preview-image')).evaluate().isNotEmpty,
         );
         await localTap(tester, find.text('Close'));
         await tester.runAsync(recovered.store.integrity);

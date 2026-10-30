@@ -302,6 +302,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
   - **Tiles:** Budgets, Set aside, Coming up (a count, no total, because amounts can overlap), Cash forecast.
   - **Cards:** Budgets, Coming up (30 days), Savings goals, Cash forecast, Recurring items. Archived budgets and goals sit in a corner menu.
   - **Pages:** budget, goal, recurring item, Coming up.
+  - **Zero-limit budgets** read "Zero-limit budget" everywhere: on the card, its page, Reports and the Overview's insight. They have no limit to be within or over, so the tile doesn't count them (`BudgetProgress.overLimit`). The rule's own `over` figure is unchanged.
   - **Budget gauge:** only when all budgets share a period and basis. It centers in the card's height and the list keeps to the top.
 - **Reports** answers where money went and how it compares.
   - **Band:** a period chip (This month, Last month, Last 90 days, This year, Custom, up to 366 days) and Filters (Account, Category, From, To). This month runs to today against the same days of last month, as on the Overview; other periods compare with the same number of days just before.
@@ -317,7 +318,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 - **Files** answers what's attached and whether anything is missing or unverified.
   - **Tiles:** Attached files (accent, total size), On this device, Missing, Checked (tap to read each file through; read-only, with progress). They count linked files only.
   - **Cards:** Your files (All | Missing | Archived links), Needs your attention (missing, failed a check, a file picked and not attached, leftovers), What's in your backups ("N files listed, 0 files included. Keep your originals.").
-  - **Preview** (`ImagePreview`, images only): most of the window on Windows, the dialog's full width on Android. Zoom by pinch, wheel or buttons, from fitted to 800%, about the middle of the view. **Open in another app** is in the preview, and on the page for a PDF, which has no preview.
+  - **Preview** (`ImagePreview`, images only; "Not virus-scanned" stays on the file's page, shown before Preview, so it isn't repeated here): most of the window on Windows, the dialog's full width on Android. Zoom by pinch, wheel or buttons, from fitted to 800%, about the middle of the view. **Open in another app** is in the preview, and on the page for a PDF, which has no preview.
   - **File page:** what it offers depends on where the file stands. "Not virus-scanned" stays visible, because it's true. **Attach a file** is a page: find the record, pick the file, review in a dialog.
   - **`FileAccess`** is what the screens ask of a profile's files. `LocalFileAccess` reads the encrypted store; the demo's answers are fixed.
 - **Record page:** `recordFacts` gives Cards, Planning and Files records plain labels, with ids resolved to names and hidden amounts hidden. View details keeps only the technical ids.
@@ -1240,6 +1241,8 @@ Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks th
 | 2026-10-31 | Import: the below-zero consent shows before the choices are confirmed, worked out group by group as the rule checks them, because it can't be added afterwards. | Done |
 | 2026-10-31 | Files: a tab of tiles, a list and what needs attention. Check files reads each file on request; whether a file is on this device is looked up on opening. Attach a file is a page. | Approved |
 | 2026-10-31 | The remaining Money rule messages are reworded as approved in the plan. `Enter $key` and `$key must be` now name their field, so they land on it. | Approved |
+| 2026-10-31 | A zero-limit budget reads "Zero-limit budget" everywhere and isn't counted as within or over a limit. Display only: the rule's `over` figure is unchanged. | Approved |
+| 2026-10-31 | "Not virus-scanned" shows on a file's page and not again in its preview window. | Approved |
 | 2026-10-31 | Owner review of Files: image previews zoom and fill most of the window on Windows, and a file can be opened in another app. | Approved |
 | 2026-10-31 | Opening a file in another app needs a plain copy outside the encrypted store, which ARCHITECTURE asks to protect. The owner asked for it, and Save a copy already writes one. Each copy goes in a private temporary folder and is removed after 10 minutes, or at the next start. Its extension comes from the checked file type, so a stored name never decides what runs. | Approved |
 | 2026-10-31 | Android opens that copy through a small platform channel and `FileProvider`, limited to the one folder and read-only, rather than a new package. | Done |

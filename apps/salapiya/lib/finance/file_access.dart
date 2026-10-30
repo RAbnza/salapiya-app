@@ -328,8 +328,6 @@ class LocalFileAccess implements FileAccess {
         decodeWidth: width > previewDecodeWidth ? previewDecodeWidth : width,
         height: size.height,
         problem: problem,
-        note:
-            'Not virus-scanned. The check only shows the file hasn’t changed.',
       ),
     );
     problem.dispose();

@@ -27,7 +27,6 @@ class ImagePreview extends StatefulWidget {
     required this.bytes,
     required this.decodeWidth,
     required this.height,
-    required this.note,
     this.problem,
   });
   final Uint8List bytes;
@@ -35,7 +34,6 @@ class ImagePreview extends StatefulWidget {
   /// Decoded no wider than this, so a huge image can't exhaust memory.
   final int decodeWidth;
   final double height;
-  final String note;
 
   /// What went wrong opening it elsewhere, shown here over the dimmed page.
   final ValueListenable<String?>? problem;
@@ -80,14 +78,13 @@ class _ImagePreviewState extends State<ImagePreview> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(widget.note),
         if (widget.problem case final problem?)
           ValueListenableBuilder<String?>(
             valueListenable: problem,
             builder: (context, words, _) => words == null
                 ? const SizedBox.shrink()
                 : Padding(
-                    padding: const EdgeInsets.only(top: Space.sm),
+                    padding: const EdgeInsets.only(bottom: Space.sm),
                     child: InlineNotice(
                       words,
                       key: const ValueKey('preview-problem'),
@@ -95,7 +92,6 @@ class _ImagePreviewState extends State<ImagePreview> {
                     ),
                   ),
           ),
-        const SizedBox(height: Space.sm),
         SizedBox(
           height: widget.height,
           child: ClipRRect(

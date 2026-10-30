@@ -379,8 +379,11 @@ class PlanningSummary {
   final List<GoalRow> goals;
   final List<UpcomingRow> upcoming;
 
-  int get withinLimit => budgets.where((b) => b.over == BigInt.zero).length;
-  int get overLimit => budgets.length - withinLimit;
+  /// Budgets with a limit to be within: zero-limit ones aren't counted.
+  List<BudgetProgress> get limited =>
+      budgets.where((b) => b.limit != BigInt.zero).toList();
+  int get overLimit => budgets.where((b) => b.overLimit).length;
+  int get withinLimit => limited.length - overLimit;
   List<GoalRow> get activeGoals =>
       goals.where((g) => g.status == 'active').toList();
 }

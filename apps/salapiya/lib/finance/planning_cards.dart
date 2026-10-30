@@ -98,12 +98,14 @@ class BudgetsCard extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(b.budget.title, style: text.titleSmall),
-                if (b.over > BigInt.zero)
+                if (b.overLimit)
                   const StatusPill(
                     'Over the limit',
                     icon: Icons.warning_amber_rounded,
                     tone: PillTone.warning,
                   ),
+                if (b.basisPoints == null)
+                  const StatusPill('Zero-limit budget', icon: Icons.block),
               ],
             ),
             if (!hidden) ...[
@@ -111,13 +113,14 @@ class BudgetsCard extends StatelessWidget {
               if (b.basisPoints != null)
                 SlimBar(
                   fraction: b.basisPoints! / 10000,
-                  color: b.over > BigInt.zero
-                      ? c.tone(NoticeTone.warning).$1
-                      : null,
+                  color: b.overLimit ? c.tone(NoticeTone.warning).$1 : null,
                 ),
               const SizedBox(height: Space.xs),
+              // Its pill already says what kind of budget it is.
               Text(
-                line(b, amount),
+                b.basisPoints == null
+                    ? '${amount(b.spent)} spent'
+                    : line(b, amount),
                 style: text.bodySmall?.copyWith(color: c.secondary),
               ),
             ],

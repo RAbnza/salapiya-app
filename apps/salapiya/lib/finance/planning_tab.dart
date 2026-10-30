@@ -63,12 +63,16 @@ class PlanningTab extends StatelessWidget {
             : words(
                 current.isEmpty
                     ? 'None yet'
-                    : '${summary.withinLimit} of ${current.length}',
+                    : summary.limited.isEmpty
+                    ? '${current.length}'
+                    : '${summary.withinLimit} of ${summary.limited.length}',
               ),
         caption: !complete
             ? null
             : current.isEmpty
             ? 'No budgets covering today'
+            : summary.limited.isEmpty
+            ? 'Zero-limit budgets'
             : summary.overLimit == 0
             ? 'Within limit'
             : 'Within limit · ${summary.overLimit} over',

@@ -294,9 +294,7 @@ BigInt spendingBetween(
   String from,
   String to, {
   String? category,
-}) => sumMinor(
-  _expenses(s, from, to, category: category).map((p) => p.amount),
-);
+}) => sumMinor(_expenses(s, from, to, category: category).map((p) => p.amount));
 
 /// Income in the range; borrowed money posts to debt, so it isn't income.
 BigInt incomeBetween(
@@ -415,6 +413,10 @@ class BudgetProgress {
   BigInt get limit => budget.amount;
   BigInt get remaining => limit - spent;
   BigInt get over => spent > limit ? spent - limit : BigInt.zero;
+
+  /// A zero-limit budget tracks spending with no limit to go over, so it reads
+  /// as what it is, whatever [over] says.
+  bool get overLimit => limit != BigInt.zero && over > BigInt.zero;
 
   /// Exact integer basis points (DOMAIN_RULES planning); null for a zero
   /// limit, which has no percentage denominator.
@@ -546,7 +548,7 @@ List<String> overviewInsights({
   required String Function(BigInt) amount,
 }) {
   String count(int n, String one, String many) => n == 1 ? one : many;
-  final overBudget = budgets.where((b) => b.over > BigInt.zero).length;
+  final overBudget = budgets.where((b) => b.overLimit).length;
   final top = categories.where((c) => c.$2 > BigInt.zero).firstOrNull;
   return [
     if (week.overdue.isNotEmpty)
