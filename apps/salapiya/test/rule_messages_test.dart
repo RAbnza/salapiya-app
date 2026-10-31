@@ -6,6 +6,7 @@ import 'package:salapiya/finance/import_data.dart';
 import 'package:salapiya/finance/import_flow.dart';
 import 'package:salapiya/finance/money_editor.dart';
 import 'package:salapiya/shared/shared_data.dart';
+import 'package:salapiya/shared/shared_private_form.dart';
 
 /// The forms put a rule's message on its field by matching its words, and
 /// people read those words, so these hold both to the rule files.
@@ -18,6 +19,7 @@ void main() {
     'lib/finance/planning_rules.dart',
     'lib/finance/recurrence_rules.dart',
     'lib/finance/cash_import_rules.dart',
+    'lib/shared/shared_private_domain.dart',
   ];
   final rules = files.map((f) => File(f).readAsStringSync()).join('\n');
 
@@ -30,6 +32,7 @@ void main() {
       ...nativeRuleFields,
       ...moneyRuleFields,
       ...importRuleFields,
+      ...privateRuleFields,
     ]) {
       expect(rules, contains(text), reason: '$text, on $field');
     }
@@ -158,6 +161,43 @@ void main() {
             reason: '$file: $message',
           );
         }
+      }
+    }
+  });
+
+  test('the private forms’ messages use the glossary (§7)', () {
+    const jargon = [
+      'adopt',
+      'allocation',
+      'clearing',
+      'coverage',
+      'cutoff',
+      'evidence',
+      'funding',
+      'immutable',
+      'liability',
+      'linkage',
+      'noncash',
+      'private',
+      'reclassification',
+      'reconcil',
+      'revision',
+    ];
+    // Only a developer reaches these: the forms set what they're about.
+    const internal = {
+      'A versioned group source is required.',
+      'Unsupported private group effect.',
+      'Choose actual payment direction.',
+      'Payment/refund cash corrections require their separate retained-evidence review.',
+      'Unbalanced private group effect.',
+    };
+    final found = messages(
+      File('lib/shared/shared_private_domain.dart').readAsStringSync(),
+    ).toList();
+    expect(found.toSet().length, 26);
+    for (final message in found.where((m) => !internal.contains(m))) {
+      for (final word in jargon) {
+        expect(message.toLowerCase(), isNot(contains(word)), reason: message);
       }
     }
   });

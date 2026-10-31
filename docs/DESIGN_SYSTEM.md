@@ -327,7 +327,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 
 ### Shared Expenses A: groups, Bills, Payments (Chat 10)
 
-`lib/shared/shared_hub.dart` (what the section shows, kept outside its screen), `shared_data.dart` (the source and display-only derivations), `shared_header.dart` (header and switcher), `shared_cards.dart`, `shared_bills_tab.dart`, `shared_payments_tab.dart`, `shared_pages.dart` (pages and flows), `shared_bill_form.dart`, `shared_payment_form.dart`, `shared_group_forms.dart`, `shared_demo.dart`; tested in `test/shared_data_test.dart`, `shared_dashboard_test.dart` and `shared_form_test.dart`. `lib/features/finance/presentation/shared_screen.dart` is the frame on both builds. Balances, People, Private review, History and Lifecycle keep their content for Chat 11.
+`lib/shared/shared_hub.dart` (what the section shows, kept outside its screen), `shared_data.dart` (the source and display-only derivations), `shared_header.dart` (header and switcher), `shared_cards.dart`, `shared_bills_tab.dart`, `shared_payments_tab.dart`, `shared_pages.dart` (pages and flows), `shared_bill_form.dart`, `shared_payment_form.dart`, `shared_group_forms.dart`, `shared_demo.dart`; tested in `test/shared_data_test.dart`, `shared_dashboard_test.dart` and `shared_form_test.dart`. `lib/features/finance/presentation/shared_screen.dart` is the frame on both builds. Balances, People, My Records, History and Manage Group are in Shared Expenses B, below.
 
 Five-second questions. Groups: which group am I looking at, and where do I stand in it? Bills: what's been shared, what's my part, and does anything need me? Payments: who paid whom, and what's waiting to be confirmed?
 
@@ -346,7 +346,7 @@ Five-second questions. Groups: which group am I looking at, and where do I stand
 - **Android order (Payments):** To confirm, Waiting + Confirmed, If all are confirmed, Waiting to be confirmed, Needs your attention, Between you and others, Payments.
 - **What a payment offers** (`paymentChoices`, which mirrors the server): the recipient, or the owner for someone who isn't registered, can confirm or dispute one that's waiting, and undo one that's confirmed. The sender can cancel one that's waiting or disputed. Anyone else only reads it. Nothing is offered and then refused.
 - **Pages** (`SectionPage`). Bill: How it was split (the accent, 8) beside About this bill (4), then Payments on this bill, Refunds and Edit history. Correct and Log a refund show for the bill's creator, off with a reason when offline. The More menu holds only the private actions that apply. Group: Where everyone stands (Confirmed | If confirmed, also at the top of Balances) beside About this group, then Recent activity. Payment: What this does (the accent, 8), with what's owed now and if it's confirmed, always labelled, beside About this payment (4), then Applied to and History (each event, with its reason). Its More menu holds only the private actions that apply: Add to my Money, then Count it in my group balance once it's confirmed, then Take it out of my group balance if that's undone.
-- **Shareable lists** (opened from each card's corner menu, or a bill's More menu): a group's bills and a group's payments, each with This month, Last month or All dates, "as of", the totals and every item, oldest first, with no row limit; and one bill's split. They have no tabs or actions, so one screenshot says it all. Between you and one person is Chat 11's.
+- **Shareable lists** (opened from each card's corner menu, or a bill's More menu): a group's bills and a group's payments, each with This month, Last month or All dates, "as of", the totals and every item, oldest first, with no row limit; and one bill's split. They have no tabs or actions, so one screenshot says it all. Between you and one person is in Shared Expenses B.
 - **Landing.** A count of payments to confirm covers every group, so the bell and the Overview open the group that has one. A record in Money linked to Shared Expenses opens its group, tab and bill or payment.
 - **States.** Not connected: Connect. Loading: a skeleton, never the empty state. No groups: Create a group and Join with a code. Offline with no groups: a connect message, and drafts stay listed. One member: Add someone. A group the user left is a partial copy: totals read "Not available yet", and their earlier records stay listed. An incomplete download shows no ₱. Hidden amounts hide charts and every figure.
 - **You owe** is `text` with ↗, and Owed to you is teal with ↙, always with the words.
@@ -354,7 +354,55 @@ Five-second questions. Groups: which group am I looking at, and where do I stand
 - **Ids** are made once per form and frozen after a lost answer, so "Check again" asks about the same command, and the server answers from its receipt. A refusal gets a new id. A form that would send a stale group version stops at Review, because a refused command stays on record.
 - **Dates.** Bills and payments count by their own date. Group balances have no date, so a bill dated later still counts in standing and sits in its month, with no Later section. A bill's refunds subtract from that bill wherever they fall. "N days waiting" runs from when the payment was logged, on the Asia/Manila calendar.
 - **Saved drafts.** Drafts get real titles from what was typed, and opening one never fails: if its group or bill is gone, it says so and offers Discard draft. A shared purchase's link row isn't a draft, so Money's Saved drafts leaves it out.
-- **Demo build:** `shared_demo.dart` builds five groups dated relative to today with the real split and payment rules: Household (the Overview's "1 payment to confirm"), Boracay trip (you owe), Reunion 2025 (archived), Old apartment (left), New group (one member). Scenarios and hidden amounts apply. The new forms work there, and saving doesn't change the sample. One bill the user paid is linked to a record in `demoSample`, so the record page's link works. The demo can't show the private forms or a real join. Its five Chat 11 tabs keep their old fixture, so their figures don't match the sample.
+- **Demo build:** `shared_demo.dart` builds five groups dated relative to today with the real split and payment rules: Household (the Overview's "1 payment to confirm"), Boracay trip (you owe), Reunion 2025 (archived), Old apartment (left), New group (one member). Scenarios and hidden amounts apply. The new forms work there, and saving doesn't change the sample. One bill the user paid is linked to a record in `demoSample`, so the record page's link works. The demo can't show the private forms or a real join.
+
+### Shared Expenses B: Balances (Chat 11, stage 11a)
+
+`lib/shared/shared_people_data.dart` (display-only derivations), `shared_balances_tab.dart`, `shared_person_pages.dart`; tested in `test/shared_b_data_test.dart` and `shared_b_dashboard_test.dart`. People, My Records, History and Manage Group follow in 11b and 11c. Two tab labels changed: Private review is **My Records** and Lifecycle is **Manage Group**.
+
+Five-second question: who owes whom, and why?
+
+- **Balances.** Tiles: Where you stand (the accent, shared with Bills), You owe, Owed to you, Waiting. Who owes whom (7): every pair after netting, the user's own first, each row opening the pair page, with Log payment for whoever can log it. Where everyone stands (5), whose rows open a person's page. Suggested payments (7) beside What these balances count (5): bills, refunds and confirmed payments, then waiting and disputed as not counted.
+- **Android order:** Where you stand, You owe + Owed to you, Waiting, Who owes whom, Suggested payments, Where everyone stands, What these balances count.
+- **Suggested payments** read "A proposal. Nothing changes until someone logs a payment." They never claim to be the fewest payments (DOMAIN_RULES §21), and a dispute pauses them with a link to Payments. Each row says what it asks: "Nico owes Tala at least this", or, past what's owed directly, "More than the ₱X Nico owes Tala directly. Everyone involved needs to agree first." or "doesn't owe directly" (§22). Only a row within what's owed offers Log payment, to its sender or to the owner for someone who isn't registered.
+- **Between two people** (`SharedPairPage`, DOMAIN_RULES §17–18): the net (the accent) with what it'd be if waiting payments are confirmed, then every bill and payment by date, with bills before payments on a day, a Change and a running So far. The list ends exactly on `due(a, b)`. Payments that aren't counted sit apart: waiting, disputed, cancelled, reversed. Refunds sit inside their bill. Opens from Who owes whom, Payments' Between you and others and a person's page.
+- **A person** (`SharedPersonPage`, §47): how their balance adds up to `positions()[person]`, what they can do, their bills, their payments and their history in the group.
+- **Shareable lists** (a corner menu's "Open as a list" or "Open as a page"): between two people, a person's breakdown and Who owes whom. Each has "as of" and every item, with no tabs or actions. A running net needs every row, so they have no period control.
+- **States.** A group the user left, and an unfinished download, read "Not available yet" with no ₱. An archived group shows its balances with nothing to log. A group of one offers Add someone. Someone who left keeps their balance, with "Left" on their row. A deleted account reads "Deleted account", and the server's stored name stays as it is.
+- **Demo build.** Every event names who did it, and people have membership history. Household has a member who left with a balance, a person who isn't registered and invitations; the user is a member, not the owner, in Boracay trip, which has a deleted account; Reunion 2025 has a change of owner.
+
+### Shared Expenses B: My Records (Chat 11, stage 11b)
+
+`lib/shared/shared_private_data.dart` (display-only derivations and what a private form works from), `shared_records_tab.dart`, `shared_record_page.dart`, `shared_private_form.dart`; tested in `test/shared_b_form_test.dart`, `shared_b_data_test.dart` and `shared_b_dashboard_test.dart`.
+
+Five-second question: what do my own records say about this group, and does anything need me?
+
+- **Privacy.** The tab reads only the profile's own store and the user's own reviews. Group documents hold no private fields, so nothing here can reach another member. The account on a record page comes from the user's own source. My Records has no shareable list.
+- **Tiles:** Needs a look (the accent), In my Money, Not in my Money, My records say.
+- **Cards:** Needs a look (7) beside This group and me (5), then **Check against my records** (12) with All, Needs a look, Not added, Added, 25 rows then Show more. Earlier checks (12) shows reviews that came back from a backup, which don't count.
+- **Android order:** Needs a look, In my Money + Not in my Money, My records say, Needs a look, This group and me, Check against my records, Earlier checks.
+- **What's listed:** bills, refunds and payments the user is part of, each with a state: Not in my Money, In my Money, Needs a look, Kept as it is, To count, Counted, To take out, Taken out. Bills the user isn't on are never offered. A group the user left lists only records already linked. A record whose source is gone stays listed. `paymentLinks` decides what a payment offers, so the tab and the payment page can't disagree.
+- **This group and me:** "The group says" and "My records say", with no difference, and a line saying they can differ while something isn't in Money or isn't counted.
+- **Record page** (`SharedRecordPage`): the group's figures beside the user's record (the accent, 8), About my record (4), and What you've checked. Actions show only what applies: Add to my Money, Review my record, Count it in my group balance, Take it out of my group balance, Keep my record as it is, and links to the bill or payment.
+- **Forms** (`SharedPrivateForm`, compact scale, one Review with `FinancialReview`). They sync first, so they start from the latest records; offline they still open, and saving says it needs a connection. Only what applies shows: Is this already in Money? offers only what the rules accept and locks amount, date and account once chosen; Paid from only with an amount above zero; Category only with a part; Why you're changing this only with an existing record; below-zero and changed-funding consent only once the rules ask. Count it and Take it out show a fixed amount from the user's record. A refusal goes on its field through `privateRuleFields`. A refusal before the form can open shows on the form's page, not a dialog. Each form has one command id, and a lost save looks up the same command. These forms keep no drafts, as before. `PrivateContext.command` builds the same values as before, every key kept.
+- **Keep my record as it is** is a modal with a required reason and one id per form. It needs a connection, because reviews follow the user to their other devices.
+- **Demo build.** The tab and record pages show the sample: a bill to look at, a bill kept as it is, a payment to count, one counted, a refund not added and a check from a backup, replayed through the rules. Accounts still end on ₱29,300.75. It can't show the private forms or Keep my record, which need the encrypted store, so they open a placeholder.
+
+### Shared Expenses B: People, History, Manage Group (Chat 11, stage 11c)
+
+`lib/shared/shared_people_tab.dart`, `shared_history_tab.dart`, `shared_lifecycle_tab.dart` and `shared_change_forms.dart`; the derivations are in `shared_people_data.dart`; tested in `test/shared_b_people_test.dart`. `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are gone. `shared_screen.dart` holds only `sharePrivatePurchase` and the private forms' entry points. Every tab is the same on both builds.
+
+Five-second questions. People: who's in this group, and what can each of them do? History: what happened in this group, and when? Manage Group: what can I do to this group as a whole, and what will that do?
+
+- **What's offered** (`groupChoices`, `memberChoices`, which mirror the server's `apply`; it still decides). An archived group takes only leave, transfer and restore. The owner can't leave or be removed, so a group can't lose its owner by accident. Transfer lists active registered members, Remove lists active people but the owner. Someone who left has nothing to do here. Nothing is offered and then refused, except the one case under Invitations.
+- **People.** Everyone in this group (8): a row per person with their role pill, joined or left date and where they stand, opening their page; Add a person and Invite someone at the header's end for the owner. What each can do (4), for the kinds of people in this group. Invitations and Waiting or refused below, when they apply. **Android order:** Waiting or refused, Everyone in this group, What each can do, Invitations.
+- **A person's page** gains a More menu: Invite them to take this place, Make them the owner, Remove from group, each only when it applies.
+- **Invitations** (`openInvitations`). The server keeps invitations to itself, so the app rules out only those past their seven days and those this device revoked; the email shows only on the device that sent it. One that was used elsewhere still lists, and revoking it is refused and stays in Needs review, which is under Needs approval until the server can report an invitation's state.
+- **History** (`historyRows`): full width, because a side card would leave empty space beside a long list. By month, newest first, on the day it happened, with who did what ("Tala added Groceries"), the reason and the amount; rows open their bill or payment. Filters for All, Bills, Payments, People, Group; 25 rows, then Show more. The corner menu opens the shareable page (This month, Last month, All dates) and copies the group's history, which is off while amounts are hidden, because the copy holds them. A group the user left has no history here and says so.
+- **Manage Group.** What you can do (7): only what's allowed, each with a line on what it does, and a note saying why the owner can't leave, or that the owner's account was deleted. This group (5): status, owner, the user's role, people, when it started. Waiting or refused below, when it applies. A group the user left says how to come back.
+- **Forms** (compact scale, modals). Add a person; Invite someone; Invite them to take this place, which says it stops working if the group changes first; Revoke; Leave; Remove; Make the owner; Archive; Restore. Consequential ones say what changes and what stays, with amounts that respect Hide amounts: leaving or being removed doesn't forgive a balance, and archiving doesn't clear one. Reasons are required, and say everyone in the group can see them. Each form has one command id, one person id and one token, frozen after a lost answer; a refusal gets a new id; a stale group stops before anything is sent; offline, the form says so before it opens. The invitation code shows once, with Copy. If a lost invitation is sent later from saved work, its code can't be shown again, and the app says so.
+- **Saved work** shows on its own tab: bills on Bills, payments on Payments, people changes on People, group changes on Manage Group, and only the open group's.
+- **Demo build.** All three tabs show the sample. The group forms work there, and saving doesn't change it. Boracay trip shows a member's view, Reunion 2025 an archived group and Old apartment a group the user left.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -989,7 +1037,16 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | LOCAL ONLY | On this device only | |
 | Synchronization | Sync | |
 | Provider (debt context) | Lender | The user's real-world lender, never Salapiya |
-| Private review | Check against my records | Shared Expenses reconciliation |
+| Private review | Check against my records | Shared Expenses reconciliation. The tab is **My Records** |
+| Lifecycle (group) | Manage Group | The tab's label |
+| Add manual person, Manual participant | Add a person, Not registered | |
+| Nominate a verified claim | Invite them to take this place | |
+| Transfer ownership | Make someone else the owner | |
+| Remove participant | Remove someone | |
+| Retain accepted private evidence | Keep my record as it is | |
+| Clearing, clear, unclear | Count it in my group balance, Take it out of my group balance | |
+| Deleted participant | Deleted account | The server's stored name stays; `personName` changes it on screen |
+| Settlement suggestion, Suggested settlements | Suggested payments | Always "a proposal" |
 | Unavailable (unknown value) | Not available yet | Never `₱0.00` for an unknown value |
 | Provider schedule | Payment schedule | Debts |
 | Early settlement | Log an early payoff | "Early payoff" as a noun |
@@ -1111,6 +1168,17 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Shared: who the user owes and who owes them | `pairsWithMe`, from `reciprocalPairs` | UI aggregation (approved, Chat 10) |
 | Shared: payments still open, filters, totals, what each is applied to; what's owed between two people now and if waiting payments are confirmed | `openPayments`, `PaymentFilter`, `paymentTotal`, `appliedLine`, `owedBetween`, `paymentProjection` | UI aggregation (approved, Chat 10) |
 | Shared: what needs the user, and drafts and saved work in plain words | `sharedTasks`, `draftTitle`, `intentTitle`, `intentState`, `sharedReason` | UI aggregation (approved, Chat 10) |
+| Shared: every bill and payment between two people, with a running net ending on `due(a, b)`; what isn't counted; the net if waiting payments are confirmed | `pairBreakdown`, `pairNet` (`lib/shared/shared_people_data.dart`), from `edges()` | UI aggregation (Chat 11) |
+| Shared: every pair after netting, the user's first; how many bills and payments stand behind each | `whoOwesRows`, `pairSources`, from `reciprocalPairs` and `edges()` | UI aggregation (Chat 11) |
+| Shared: what the user owes and is owed; together they are the user's position | `pairTotals`, from `pairsWithMe` | UI aggregation (Chat 11) |
+| Shared: suggested payments, with what the sender owes the recipient directly; paused, none or unavailable | `sharedSuggestions`, from `suggestions` and `due` | UI aggregation (Chat 11) |
+| Shared: totals of bills, refunds and confirmed, waiting and disputed payments | `balanceCounts` | UI aggregation (Chat 11) |
+| Shared: how a person's position adds up; their bills; role, dates and membership history | `personBreakdown`, `personBills`, `sharedMember`, `sharedMembers`, `memberHistory` | UI aggregation (Chat 11) |
+| Shared: each bill, payment and refund the user is part of, against their own record, with its state; what a payment's records allow; how many need the user | `privateRows`, `PrivateRow`, `PrivateState`, `paymentLinks`, `privateCounts` (`lib/shared/shared_private_data.dart`) | UI aggregation (Chat 11) |
+| Shared: what the user's own records say about a group: the sum of their `shared_receivable` and `shared_payable` postings, as Reports' group lines read. Never compared with the group's figure | `myGroupBalance` | UI aggregation (Chat 11) |
+| Shared: what the user can do to a group and to one person; who can be removed; who can become the owner | `groupChoices`, `memberChoices`, `removableMembers`, `ownerCandidates` | UI aggregation (Chat 11) |
+| Shared: invitations that may still be open: sent in the last seven days and not revoked on this device. Whether one was used isn't readable | `openInvitations` | UI aggregation (Chat 11) |
+| Shared: the group's history in plain words, with who did it, what it's about and its amount | `historyRows`, `HistoryFilter` | UI aggregation (Chat 11) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1130,8 +1198,8 @@ Remove this section when the redesign is finished.
 | 8 | Money A: Accounts, Activity, transaction form | Done |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Done |
 | 10 | Shared Expenses A: groups, Bills, Payments | Done |
-| 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog | Next |
-| 12 | Life A: Calendar, Tasks, reminders | Planned |
+| 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog. **All three stages built and approved** (Balances, a person, two people, My Records, the private forms and their rule messages, People, History, Manage Group and the group forms) | Done |
+| 12 | Life A: Calendar, Tasks, reminders | Next |
 | 13 | Life B: Learning, Books, Career | Planned |
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Planned |
 | 15 | Onboarding: welcome, local setup, Google, restore | Planned |
@@ -1160,7 +1228,7 @@ Error messages written in rule files stay as they are until the chat that works 
 | Chat | Rule files | Messages left | Examples |
 | --- | --- | --- | --- |
 | 10 | `shared_domain.dart`, `shared_repository.dart`, `shared_store.dart` | Done: 15, plus the connected-identity message | The server's reasons stay as they are; `sharedReason` shows them plainly, and a test holds that table to the SQL |
-| 11 | `shared_private_domain.dart` | 26 | "Group settlement payments require actual cash evidence.", "Explain the private source reconciliation." |
+| 11 | `shared_private_domain.dart` | Done: 21, plus 2 review notes. 5 only a developer can reach stay as they are | `privateRuleFields` puts them on their fields, and a test holds that table to the rules |
 | 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages | About 35, with Chat 15 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup." |
 | 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
 
@@ -1325,3 +1393,20 @@ Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks th
 | 2026-10-31 | The Your groups page is replaced by the chooser. The breadcrumb reads Shared Expenses › Group › Tab with several groups, and its first segment goes back to choosing. | Done |
 | 2026-10-31 | Owner review of the bill form: with several payers, a person's part alone read as what they owe. Who's in now shows what the bill leaves each person with (paid minus part, as `billPositions` does), with the part and what they paid beneath it. | Approved |
 | 2026-10-31 | Owner left the open Chat 10 calls to the recommendation: Correct keeps the bill's date; `SharedBillDetail` stays removed; Choose bills sends the sum of its bills; and on Bills, Who paid, whose part sits under Needs your attention so a long list has no empty space beside it. | Approved |
+| 2026-10-31 | Chat 11: the Private review tab is My Records and the Lifecycle tab is Manage Group. Visible labels only. | Approved |
+| 2026-10-31 | Balances: tiles, then Who owes whom 7 beside Where everyone stands 5, then Suggested payments 7 beside What these balances count 5. | Approved |
+| 2026-10-31 | Suggestions: Log payment only on a row within what the sender owes directly. Past that, the row says everyone involved needs to agree first, and has no link. | Approved |
+| 2026-10-31 | The pair and person pages and Who owes whom have shareable lists. A running net needs every row, so they have no period control. My Records never has one. | Approved |
+| 2026-10-31 | The server's stored "Deleted participant" reads "Deleted account" on screen. | Approved |
+| 2026-10-31 | My Records: tiles, then Needs a look 7 beside This group and me 5, then every item with filters. The group's figure and the user's records' figure sit side by side, with no difference: no rule defines one, and they differ for as long as something isn't in Money. | Approved |
+| 2026-10-31 | The private forms are one compact page with one Review. Picking a saved purchase fills and locks its amount, date and account, because the rules insist on them. Count it and Take it out fix the amount from the user's own record. The command is unchanged. | Done |
+| 2026-10-31 | `shared_private_domain.dart`'s 21 messages and 2 review notes are reworded as approved. What the rules allow is unchanged. | Approved |
+| 2026-10-31 | Stored titles such as "Shared clear · Household" read "Counted in group balance · Household" on screen in Money. Stored values don't change. | Approved |
+| 2026-10-31 | Owner review: stages 11a and 11b look good, including the private form's new structure, shown as a sample. | Approved |
+| 2026-10-31 | People: Everyone in this group 8 beside What each can do 4, then Invitations and Waiting or refused. Remove and Make owner are on a person's page and on Manage Group. Invitations and Revoke are on People. | Approved |
+| 2026-10-31 | Manage Group lists only what the server allows now, each with what it does. Confirmations say what changes and what stays. The owner can't leave, and the tab says why. | Done |
+| 2026-10-31 | Invitations list those sent in the last seven days and not revoked on this device. A used one can still be refused, because the server doesn't report it. | Approved |
+| 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
+| 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
+| 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-01 | Owner review: stage 11c looks good, which finishes Chat 11. | Approved |

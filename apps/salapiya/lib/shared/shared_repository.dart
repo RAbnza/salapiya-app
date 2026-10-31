@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../local/finance_domain.dart';
 import '../local/local_runtime.dart';
@@ -223,6 +224,36 @@ class SharedRepository extends ChangeNotifier implements SharedWriter {
           DateTime.now().toUtc().toIso8601String(),
         ],
       );
+
+  @override
+  Future<void> keepRecord({
+    required String id,
+    required String group,
+    required String bill,
+    required String record,
+    required String stamp,
+    required String reason,
+  }) async {
+    if (!online) reject('This needs a connection. Connect, then try again.');
+    try {
+      await runtime.connected.flow!.client.rpc(
+        'p3_retain_private_evidence',
+        params: {
+          'command_id': id,
+          'profile_id': store.owner,
+          'group_id': group,
+          'bill_id': bill,
+          'private_revision': record,
+          'source_stamp': stamp,
+          'reason': reason,
+        },
+      );
+    } on PostgrestException catch (e) {
+      // The server's own refusal. Anything else is a lost answer.
+      if (e.code == '22023') reject(e.message);
+      rethrow;
+    }
+  }
 
   /// Keeps the link to the user's own purchase before the bill is sent. A
   /// refusal can never undo that spending, so the intent is saved first.

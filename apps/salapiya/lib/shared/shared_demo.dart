@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../app/overview_data.dart' show addCivilDays;
+import '../app/overview_demo.dart' show demoSample;
 import '../local/finance_domain.dart';
 import '../p0/exact_money.dart';
 import '../prototype/scenarios.dart';
@@ -17,6 +18,8 @@ const _nico = '10000000-0000-4000-8000-000000000002';
 const _tala = '10000000-0000-4000-8000-000000000003';
 const _lola = '10000000-0000-4000-8000-000000000004';
 const _marco = '10000000-0000-4000-8000-000000000005';
+const _rosa = '10000000-0000-4000-8000-000000000006';
+const _jun = '10000000-0000-4000-8000-000000000007';
 
 /// The group the shell's "1 payment to confirm" sits in.
 const demoHouseholdId = '20000000-0000-4000-8000-000000000001';
@@ -29,10 +32,12 @@ class _Group {
     String name,
     Map<String, (String, String)> people, {
     bool archived = false,
+    this.owner = _amihan,
+    int started = -240,
   }) : data = {
          'id': id,
          'name': name,
-         'owner': _amihan,
+         'owner': owner,
          'version': 1,
          'complete': true,
          'archived': archived,
@@ -40,24 +45,46 @@ class _Group {
            for (final p in people.entries)
              p.key: {
                'name': p.value.$1,
-               'user': p.value.$2 == 'manual'
-                   ? null
-                   : p.key == _amihan
-                   ? demoActor
-                   : '${p.key}-user',
+               'user': _user(p.key, p.value.$2),
                'kind': p.value.$2,
                'active': true,
-               'intervals': const [],
+               'intervals': <SharedJson>[],
                'entitled': const [],
              },
          },
          'bills': <String, dynamic>{},
          'settlements': <String, dynamic>{},
          'activity': <Map<String, dynamic>>[],
-       };
-  final String today, id;
+       } {
+    log('create', started, nextId, by: owner);
+    _interval(owner, {'joined': at(started), 'role': 'owner'});
+    for (final p in people.entries) {
+      if (p.key == owner) continue;
+      if (p.value.$2 == 'manual') {
+        log('manual', started + 1, nextId, by: owner);
+      } else {
+        log('invite', started, nextId, by: owner);
+        log('accept', started + 1, nextId, by: p.key);
+        _interval(p.key, {
+          'joined': at(started + 1),
+          'role': 'member',
+          'historyPolicy': 1,
+        });
+      }
+    }
+  }
+  final String today, id, owner;
   final SharedJson data;
   var n = 0;
+
+  static String? _user(String person, String kind) => kind == 'manual'
+      ? null
+      : person == _amihan
+      ? demoActor
+      : '$person-user';
+
+  void _interval(String person, SharedJson entry) =>
+      ((data['people'] as Map)[person]['intervals'] as List).add(entry);
 
   String get nextId =>
       '${id.substring(0, 24)}${(++n).toRadixString(16).padLeft(12, '0')}';
@@ -65,15 +92,78 @@ class _Group {
   String at(int offset) => '${day(offset)} 09:00:00+08';
   SharedGroup get group => SharedGroup(data);
 
-  void log(String op, int offset, String id, [String? reason]) {
+  /// One line of the group's history, by the person who did it.
+  void log(String op, int offset, String id, {String? reason, String? by}) {
     (data['activity'] as List).add({
       'id': id,
       'op': op,
-      'actor': demoActor,
+      'actor': (data['people'] as Map)[by ?? owner]?['user'],
       'at': at(offset),
       'reason': reason,
     });
     data['version'] = (data['version'] as int) + 1;
+  }
+
+  /// [person] leaves. Their history and balance stay (DOMAIN_RULES §51).
+  void leave(String person, int offset, String reason) {
+    final p = (data['people'] as Map)[person] as Map;
+    p['active'] = false;
+    p['entitled'] = (data['bills'] as Map).keys.toList();
+    _interval(person, {
+      'left': at(offset),
+      'actor': p['user'],
+      'reason': reason,
+    });
+    log('leave', offset, nextId, reason: reason, by: person);
+  }
+
+  /// The account behind [person] was deleted, as the server records it: the
+  /// bills and the balance stay, and only the name and access change.
+  void deleteAccount(String person, int offset) {
+    final p = (data['people'] as Map)[person] as Map;
+    p
+      ..['name'] = 'Deleted participant'
+      ..['user'] = null
+      ..['kind'] = 'deleted'
+      ..['active'] = false
+      ..['entitled'] = (data['bills'] as Map).keys.toList();
+    _interval(person, {
+      'left': at(offset),
+      'reason': 'Provider identity deleted',
+    });
+    log(
+      'identity_deleted',
+      offset,
+      nextId,
+      reason: 'Shared evidence retained; ownerless administration archived',
+    );
+  }
+
+  /// [next] becomes the owner, and the owner before them a member.
+  void transfer(String next, int offset, String reason) {
+    final was = data['owner'] as String;
+    data['owner'] = next;
+    final actor = (data['people'] as Map)[was]['user'];
+    _interval(was, {
+      'role': 'member',
+      'changedAt': at(offset),
+      'actor': actor,
+      'reason': reason,
+    });
+    _interval(next, {
+      'role': 'owner',
+      'changedAt': at(offset),
+      'actor': actor,
+      'reason': reason,
+    });
+    log('transfer', offset, nextId, reason: reason, by: was);
+  }
+
+  /// Puts the history in order: each line was added as the sample was built.
+  void finish() {
+    (data['activity'] as List).sort(
+      (a, b) => (a['at'] as String).compareTo(b['at'] as String),
+    );
   }
 
   /// One revision through the rules: both axes must equal the total, and an
@@ -134,13 +224,19 @@ class _Group {
       'revisions': [first],
       'refunds': <SharedJson>[],
     };
-    log('bill', offset, id);
+    log('bill', offset, id, by: creator);
     return id;
   }
 
-  void correct(String bill, SharedJson next) {
+  void correct(String bill, SharedJson next, int offset, {String? by}) {
     ((data['bills'] as Map)[bill]['revisions'] as List).add(next);
-    log('correct', 0, next['id'] as String, next['reason'] as String?);
+    log(
+      'correct',
+      offset,
+      next['id'] as String,
+      reason: next['reason'] as String?,
+      by: by,
+    );
   }
 
   void refund(
@@ -171,7 +267,7 @@ class _Group {
       'actor': demoActor,
       'at': at(offset),
     });
-    log('refund', offset, id, reason);
+    log('refund', offset, id, reason: reason);
   }
 
   /// A logged payment, applied by the rule, then taken through [states].
@@ -186,18 +282,38 @@ class _Group {
     final minor = parsePhp(amount);
     final applied = group.settlementAllocation(sender, recipient, minor);
     final id = nextId;
+    final people = data['people'] as Map;
+    // The owner logs and answers for someone who isn't registered.
+    String? user(String person) => people[person]['kind'] == 'registered'
+        ? people[person]['user'] as String?
+        : people[owner]['user'] as String?;
     final events = <SharedJson>[
-      {'state': 'pending', 'actor': demoActor, 'at': at(offset)},
+      {'state': 'pending', 'actor': user(sender), 'at': at(offset)},
     ];
+    log(
+      'report',
+      offset,
+      id,
+      by: people[sender]['kind'] == 'registered' ? sender : owner,
+    );
     for (final (state, reason) in states) {
+      final by = state == 'cancelled' ? sender : recipient;
+      final event = nextId;
       events.add({
-        'id': nextId,
+        'id': event,
         'state': state,
-        'actor': demoActor,
+        'actor': user(by),
         'reason': reason,
         'at': at(offset),
         'manual': manual,
       });
+      log(
+        'resolve',
+        offset,
+        event,
+        reason: reason,
+        by: people[by]['kind'] == 'registered' ? by : owner,
+      );
     }
     (data['settlements'] as Map)[id] = {
       'id': id,
@@ -212,7 +328,6 @@ class _Group {
       'manual': manual,
       'events': events,
     };
-    log('report', offset, id);
     return id;
   }
 }
@@ -226,9 +341,19 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
     _nico: ('Nico', 'registered'),
     _tala: ('Tala', 'registered'),
     _lola: ('Lola Ines', 'manual'),
+    _rosa: ('Rosa', 'registered'),
   });
   const adults = [_amihan, _nico, _tala];
   const everyone = [_amihan, _nico, _tala, _lola];
+  // Rosa left with a balance: leaving doesn't forgive it.
+  home.bill(
+    'Moving truck',
+    -44,
+    '1500.00',
+    {_amihan: '1500.00'},
+    equal: const [_amihan, _rosa],
+  );
+  home.leave(_rosa, -42, 'Moved out in September');
   home.bill('Electricity', -40, '3100.00', {
     _amihan: '3100.00',
   }, equal: everyone);
@@ -294,6 +419,7 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
       equal: adults,
       reason: 'Typed the wrong amount',
     ),
+    -11,
   );
   final party = home.bill('Party supplies', -9, '1800.00', {
     _amihan: '1800.00',
@@ -306,25 +432,40 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
     {_amihan: '100.00', _nico: '100.00', _tala: '100.00'},
     'Returned the balloons',
   );
-  home.bill(
-    'Weekly market',
-    -3,
-    '1000.00',
-    {_nico: '1000.00'},
-    equal: adults,
-    creator: _nico,
-  );
-  home.bill(
-    'Car repair',
-    -3,
-    '6000.00',
-    {_nico: '6000.00'},
-    equal: adults,
-    creator: _nico,
-  );
+  // Corrected after the user added them to Money, so My Records has one to
+  // look at and one the user decided to keep. The amounts stay the same.
+  for (final (name, total, reason) in const [
+    ('Weekly market', '1000.00', 'Added the store’s name'),
+    ('Car repair', '6000.00', 'Added the shop’s receipt'),
+  ]) {
+    final id = home.bill(
+      name,
+      -3,
+      total,
+      {_nico: total},
+      equal: adults,
+      creator: _nico,
+    );
+    home.correct(
+      id,
+      home.revision(
+        name,
+        -3,
+        total,
+        {_nico: total},
+        equal: adults,
+        reason: reason,
+      ),
+      -2,
+      by: _nico,
+    );
+  }
   // The Overview's "Tala reported a payment".
   home.payment(_tala, _amihan, -2, '500.00');
   home.payment(_amihan, _nico, -1, '150.00');
+  // One invitation still open, one long past its seven days.
+  home.log('invite', -2, home.nextId);
+  home.log('invite', -30, home.nextId);
 
   final trip = _Group(
     today,
@@ -334,7 +475,10 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
       _amihan: ('Amihan', 'registered'),
       _tala: ('Tala', 'registered'),
       _marco: ('Marco', 'registered'),
+      _jun: ('Jun', 'registered'),
     },
+    // The user is a member here, not the owner.
+    owner: _marco,
   );
   const friends = [_amihan, _tala, _marco];
   trip.bill(
@@ -356,6 +500,16 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
   trip.bill('Dinner by the beach', -58, '2760.00', {
     _amihan: '2760.00',
   }, equal: friends);
+  trip.bill(
+    'Van rental',
+    -57,
+    '1200.00',
+    {_tala: '1200.00'},
+    equal: const [_amihan, _tala, _jun],
+    creator: _tala,
+  );
+  // Jun's account was deleted later. The bill and his balance stay.
+  trip.deleteAccount(_jun, -40);
 
   final reunion = _Group(
     today,
@@ -363,7 +517,9 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
     'Reunion 2025',
     {_amihan: ('Amihan', 'registered'), _nico: ('Nico', 'registered')},
     archived: true,
+    owner: _nico,
   );
+  reunion.transfer(_amihan, -210, 'Amihan is keeping the records now');
   reunion.bill(
     'Venue',
     -200,
@@ -378,6 +534,7 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
     '2500.00',
     states: [('confirmed', null)],
   );
+  reunion.log('archive', -180, reunion.nextId, reason: 'Reunion is over');
 
   // Left: a partial copy, as the server keeps it for a former member.
   final left = _Group(
@@ -404,10 +561,15 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
   final fresh = _Group(today, demoNewGroupId, 'New group', {
     _amihan: ('Amihan', 'registered'),
   });
+  home.finish();
+  trip.finish();
+  reunion.finish();
+  fresh.finish();
   return [
     for (final g in [home, trip, reunion, left, fresh]) g.group,
   ];
 }
+
 
 /// The bill a queued or refused sample command adds.
 String _demoCommand(String group, String name, String today) => jsonEncode({
@@ -428,9 +590,18 @@ String _demoCommand(String group, String name, String today) => jsonEncode({
 SharedSource demoSharedSource(PrototypeSession session) {
   final today = civilToday();
   final empty = session.empty;
+  final sample = demoSample(today, empty: empty);
+  final current = [
+    for (final r in sample.current)
+      if (r.values.containsKey('sharedGroup')) r,
+  ];
   return SharedSource(
     today: today,
     groups: demoSharedGroups(today, empty: empty),
+    current: current,
+    reviews: empty ? const [] : _demoReviews(today, current),
+    accountName: (id) =>
+        sample.accounts.where((a) => a.id == id).firstOrNull?.name,
     loaded: true,
     connected: true,
     online: session.scenario != OverviewScenario.waiting,
@@ -509,6 +680,15 @@ class DemoSharedWriter implements SharedWriter {
       : null;
   @override
   Future<void> discardDraft(String id) async {}
+  @override
+  Future<void> keepRecord({
+    required String id,
+    required String group,
+    required String bill,
+    required String record,
+    required String stamp,
+    required String reason,
+  }) async {}
 }
 
 /// The bill the sample's own record is linked to: the user paid it from the
@@ -540,6 +720,89 @@ typedef SharedDemoLink = ({
   String paid,
   String part,
 });
+
+/// The user's own record of a bill, as it was when they added it: the first
+/// version, so a later correction shows in My Records.
+Map<String, String> demoPrivateBill(String today, String name) {
+  final g = demoSharedGroups(today).first;
+  final me = g.participant(demoActor)!;
+  final id = g.bills.keys.firstWhere((b) => g.revision(b)['name'] == name);
+  final first = object((g.bills[id]['revisions'] as List).first);
+  return {
+    'name': 'Shared bill · $name',
+    'date': first['date'] as String,
+    'sharedMode': 'bill',
+    'sharedAccounting': '2',
+    'sharedGroup': g.id,
+    'sharedKey': id,
+    'sharedRevision': first['id'] as String,
+    'fundingAmount': phpDecimal(sharedMinor(first['paid'][me])),
+    'shareAmount': phpDecimal(sharedMinor(first['shares'][me])),
+    'account': '',
+    'category': 'category-food',
+    'reason': '',
+    'funding': 'cash',
+    'acknowledgeFunding': 'false',
+  };
+}
+
+/// The user's own record of a confirmed payment they received.
+Map<String, String> demoPrivatePayment(String today, String amount) {
+  final g = demoSharedGroups(today).first;
+  final minor = '${parsePhp(amount)}';
+  final s = object(
+    g.settlements.values.firstWhere(
+      (p) => p['amount'] == minor && p['state'] == 'confirmed',
+    ),
+  );
+  return {
+    'name': 'Shared payment · ${g.name}',
+    'date': s['date'] as String,
+    'sharedMode': 'payment',
+    'sharedAccounting': '2',
+    'sharedGroup': g.id,
+    'sharedKey': s['id'] as String,
+    'sharedRevision': s['id'] as String,
+    'fundingAmount': amount,
+    'shareAmount': '0.00',
+    'category': 'category-food',
+    'reason': '',
+    'funding': 'cash',
+    'acknowledgeFunding': 'false',
+    'direction': 'in',
+  };
+}
+
+/// The checks the user made in the sample: one that still holds, and one
+/// that came back from a backup.
+List<SharedJson> _demoReviews(String today, List<LocalRevision> current) {
+  final g = demoSharedGroups(today).first;
+  String bill(String name) =>
+      g.bills.keys.firstWhere((b) => g.revision(b)['name'] == name);
+  final repair = bill('Car repair');
+  final record = current.firstWhere((r) => r.values['sharedKey'] == repair);
+  return [
+    {
+      'id': 'demo-review',
+      'group_id': g.id,
+      'bill_id': repair,
+      'private_revision': record.id,
+      'source_stamp': sharedSourceStamp(object(g.bills[repair])),
+      'reason': 'The amount didn’t change, so my record is right',
+      'recorded_at': '${addCivilDays(today, -1)} 01:00:00+00',
+    },
+    {
+      'id': 'demo-review-backup',
+      'group_id': g.id,
+      'bill_id': bill('Water bill'),
+      'private_revision': 'earlier',
+      'source_stamp': 'earlier',
+      'reason': 'Checked before I restored a backup',
+      'recorded_at': '${addCivilDays(today, -20)} 01:00:00+00',
+      'historicalOnly': true,
+    },
+  ];
+}
 
 /// The Overview's Shared row, from the same payment Payments lists.
 String demoToConfirmLine(String today, String Function(BigInt) amount) {

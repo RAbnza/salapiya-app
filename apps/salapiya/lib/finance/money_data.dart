@@ -4,6 +4,7 @@ import '../app/overview_cards.dart' show civilLabel, overviewSpan;
 import '../app/overview_data.dart';
 import '../design_system/kit/fields.dart' show DateField;
 import '../local/finance_domain.dart';
+import '../shared/shared_private_data.dart' show sharedRecordTitle;
 import 'files_data.dart' show FileAccess;
 
 /// Display-only derivations for Money (DESIGN_SYSTEM §8, Chat 8). They group,
@@ -88,7 +89,7 @@ String moneyLabel(LocalRevision r) {
 /// A record's title for the eye. Stored titles stay as they were saved.
 String recordTitle(LocalRevision r) => r.title.startsWith('Reconciliation · ')
     ? r.title.replaceFirst('Reconciliation', 'Balance check')
-    : r.title;
+    : sharedRecordTitle(r.title);
 
 IconData moneyIcon(MoneyRow r) {
   if (r.isTransfer) return Icons.swap_horiz;
@@ -855,6 +856,7 @@ List<RecordEffect> recordEffects(
     'receivable': 'Owed to you',
     'shared_receivable': 'Owed to you in a group',
     'shared_payable': 'You owe in a group',
+    'shared_clearing': 'Group payments not counted yet',
     'payable': 'You owe',
     'private_clearing': 'Waiting to be linked',
     'equity': 'Opening balance',

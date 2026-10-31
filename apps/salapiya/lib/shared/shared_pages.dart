@@ -11,23 +11,28 @@ import '../finance/debt_cards.dart' show civilDay;
 import '../finance/money_data.dart' show lastMonthEnd;
 import '../local/finance_domain.dart';
 import '../prototype/scenarios.dart' show AppDestination;
+import 'shared_balances_tab.dart' show balancesUnavailable;
 import 'shared_bill_form.dart';
 import 'shared_cards.dart';
+import 'shared_change_forms.dart';
 import 'shared_data.dart';
 import 'shared_domain.dart';
 import 'shared_group_forms.dart';
+import 'shared_history_tab.dart' show SharedHistoryPage;
 import 'shared_header.dart';
 import 'shared_hub.dart';
 import 'shared_payment_form.dart';
+import 'shared_people_data.dart';
+import 'shared_person_pages.dart';
+import 'shared_private_data.dart';
+import 'shared_record_page.dart';
 
 /// The pages and forms Shared Expenses opens. Each page reads the hub again
 /// when it changes, so what's saved in a form shows as soon as it closes.
 
-/// What only a real profile can do. These forms stay as they are until Chat
-/// 11; the demo opens a placeholder instead.
+/// What only a real profile can do, because these forms need the encrypted
+/// store. The demo opens a placeholder instead.
 abstract class SharedPrivateActions {
-  /// Runs one of these and shows what it refused.
-  Future<void> run(BuildContext context, Future<void> Function() action);
   Future<void> privateBill(BuildContext context, SharedGroup g, String bill);
   Future<void> retainEvidence(BuildContext context, SharedGroup g, String bill);
   Future<void> privateEffect(
@@ -69,6 +74,29 @@ class SharedFlows {
       await showJoinGroup(context, hub);
     }
   }
+
+  /// Opens a group change, or says it needs a connection.
+  Future<void> change(
+    BuildContext context,
+    Future<void> Function() open,
+  ) async {
+    if (await _online(context) && context.mounted) await open();
+  }
+
+  void addPerson(BuildContext context, SharedGroup g) =>
+      change(context, () => showAddPerson(context, hub, g));
+  void invite(BuildContext context, SharedGroup g, {String? person}) =>
+      change(context, () => showInvite(context, hub, g, person: person));
+  void revoke(BuildContext context, SharedGroup g, OpenInvitation i) =>
+      change(context, () => showRevoke(context, hub, g, i));
+  void transfer(BuildContext context, SharedGroup g, {String? person}) =>
+      change(context, () => showTransfer(context, hub, g, person: person));
+  void remove(BuildContext context, SharedGroup g, {String? person}) =>
+      change(context, () => showRemove(context, hub, g, person: person));
+  void archive(BuildContext context, SharedGroup g) =>
+      change(context, () => showArchive(context, hub, g));
+  void leave(BuildContext context, SharedGroup g, String me) =>
+      change(context, () => showLeave(context, hub, g, me));
 
   /// Says so before a form opens that couldn't finish.
   Future<bool> _online(BuildContext context) async {
@@ -189,6 +217,7 @@ class SharedFlows {
   Future<void> logPayment(
     BuildContext context,
     SharedGroup g, {
+    String? sender,
     String? recipient,
     String? draftId,
   }) => openDemoPage<void>(
@@ -196,6 +225,7 @@ class SharedFlows {
     SharedPaymentForm(
       hub: hub,
       group: g,
+      sender: sender,
       recipient: recipient,
       draftId: draftId,
     ),
@@ -251,6 +281,51 @@ class SharedFlows {
         SharedPaymentsPage(hub: hub, group: g.id),
         'shared/payments',
         title: 'Payments',
+      );
+  void openPerson(
+    BuildContext context,
+    SharedGroup g,
+    String person, {
+    bool list = false,
+  }) => openDemoPage<void>(
+    context,
+    SharedPersonPage(hub: hub, group: g.id, person: person, list: list),
+    'shared/person/$person',
+    title: g.personName(person),
+  );
+
+  /// Between two people. [a] is the side the figures read from.
+  void openPair(
+    BuildContext context,
+    SharedGroup g,
+    String a,
+    String b, {
+    bool list = false,
+  }) => openDemoPage<void>(
+    context,
+    SharedPairPage(hub: hub, group: g.id, a: a, b: b, list: list),
+    'shared/pair/$a/$b',
+    title: 'Between two people',
+  );
+  void openHistoryList(BuildContext context, SharedGroup g) =>
+      openDemoPage<void>(
+        context,
+        SharedHistoryPage(hub: hub, group: g.id),
+        'shared/history',
+        title: 'History',
+      );
+  void openWhoOwes(BuildContext context, SharedGroup g) => openDemoPage<void>(
+    context,
+    SharedWhoOwesPage(hub: hub, group: g.id),
+    'shared/who-owes',
+    title: 'Who owes whom',
+  );
+  void openRecord(BuildContext context, SharedGroup g, PrivateRow r) =>
+      openDemoPage<void>(
+        context,
+        SharedRecordPage(hub: hub, group: g.id, kind: r.kind, id: r.id),
+        'shared/record/${r.id}',
+        title: r.title,
       );
   void openSplit(BuildContext context, SharedGroup g, String bill) =>
       openDemoPage<void>(
@@ -324,7 +399,7 @@ class SharedFlows {
     if (forms == null) {
       _placeholder(context, 'Add to my Money');
     } else {
-      await forms.run(context, () => run(forms));
+      await run(forms);
     }
   }
 
@@ -435,6 +510,8 @@ class SharedFlows {
                   ? canDraft
                         ? 'Fix it starts a new draft from today’s group. This one stays on record.'
                         : 'This stays on record. Check the group and start again if you need to.'
+                  : op == 'invite'
+                  ? 'It’s kept on this device and won’t be sent twice. Its code can’t be shown again, so send a new invitation too.'
                   : 'It’s kept on this device and won’t be sent twice.',
             ),
           ],
@@ -575,7 +652,7 @@ class _IntentFacts extends StatelessWidget {
   }
 }
 
-Widget _gone(String title, String where) => SectionPage(
+Widget sharedGonePage(String title, String where) => SectionPage(
   title: title,
   child: SurfaceCard(
     child: EmptyState(
@@ -631,7 +708,7 @@ class SharedBillPage extends StatelessWidget {
       final source = hub.source();
       final g = source.groups.where((x) => x.id == group).firstOrNull;
       if (g == null || !g.bills.containsKey(bill)) {
-        return _gone('Bill', 'Bills');
+        return sharedGonePage('Bill', 'Bills');
       }
       return _BillPage(hub: hub, source: source, g: g, bill: bill);
     },
@@ -916,10 +993,14 @@ class SharedPositionsCard extends StatefulWidget {
     required this.source,
     required this.group,
     this.accent = false,
+    this.onOpen,
   });
   final SharedSource source;
   final SharedGroup group;
   final bool accent;
+
+  /// Opens a person's page from their row.
+  final ValueChanged<String>? onOpen;
   @override
   State<SharedPositionsCard> createState() => _SharedPositionsCardState();
 }
@@ -932,7 +1013,7 @@ class _SharedPositionsCardState extends State<SharedPositionsCard> {
     final g = widget.group, a = widget.source.amount;
     final me = g.participant(widget.source.actor ?? '');
     Map<String, BigInt>? positions;
-    if (g.complete) {
+    if (g.complete && widget.source.complete) {
       try {
         positions = g.positions(projected: projected);
       } catch (_) {
@@ -954,24 +1035,25 @@ class _SharedPositionsCardState extends State<SharedPositionsCard> {
         onSelected: (v) => setState(() => projected = v),
       ),
       child: positions == null
-          ? const NotAvailable(
-              'You’ve left this group, so these figures aren’t complete.',
-            )
+          ? balancesUnavailable(widget.source)
           : ListGroup(
               children: [
                 for (final p in positions.entries)
                   AdaptiveRow(
                     key: ValueKey('position-${p.key}'),
                     title: personLabel(g, p.key, me),
-                    subtitle: p.value == BigInt.zero
-                        ? 'All square'
-                        : p.key == me
-                        ? (p.value > BigInt.zero
-                              ? 'Owed to you'
-                              : 'You owe the group')
-                        : p.value > BigInt.zero
-                        ? 'Owed to them'
-                        : 'Owes the group',
+                    subtitle: detailLine([
+                      if (!g.active(p.key)) 'Left',
+                      p.value == BigInt.zero
+                          ? 'All square'
+                          : p.key == me
+                          ? (p.value > BigInt.zero
+                                ? 'Owed to you'
+                                : 'You owe the group')
+                          : p.value > BigInt.zero
+                          ? 'Owed to them'
+                          : 'Owes the group',
+                    ]),
                     trailing: MoneyAmount(
                       a(p.value.abs()),
                       kind: p.value > BigInt.zero
@@ -980,6 +1062,9 @@ class _SharedPositionsCardState extends State<SharedPositionsCard> {
                           ? MoneyKind.owed
                           : MoneyKind.neutral,
                     ),
+                    onTap: widget.onOpen == null
+                        ? null
+                        : () => widget.onOpen!(p.key),
                   ),
               ],
             ),
@@ -1021,7 +1106,7 @@ class SharedGroupPage extends StatelessWidget {
     builder: (context, _) {
       final source = hub.source();
       final g = source.groups.where((x) => x.id == group).firstOrNull;
-      if (g == null) return _gone('Group', 'Bills');
+      if (g == null) return sharedGonePage('Group', 'Bills');
       final me = g.participant(source.actor ?? '');
       final flows = SharedFlows(hub);
       final left = !g.active(me);
@@ -1096,6 +1181,7 @@ class SharedGroupPage extends StatelessWidget {
         source: source,
         group: g,
         accent: true,
+        onOpen: (person) => flows.openPerson(context, g, person),
       );
       return SectionPage(
         title: g.name,
@@ -1149,7 +1235,7 @@ class SharedGroupPage extends StatelessWidget {
                 ),
                 MenuItemButton(
                   leadingIcon: const Icon(Icons.inventory_2_outlined),
-                  onPressed: () => tab('Lifecycle'),
+                  onPressed: () => tab('Manage Group'),
                   child: const Text('Archive or leave'),
                 ),
               ],
@@ -1194,7 +1280,7 @@ class SharedPaymentPage extends StatelessWidget {
       final source = hub.source();
       final g = source.groups.where((x) => x.id == group).firstOrNull;
       if (g == null || !g.settlements.containsKey(payment)) {
-        return _gone('Payment', 'Payments');
+        return sharedGonePage('Payment', 'Payments');
       }
       return _PaymentPage(hub: hub, source: source, g: g, id: payment);
     },
@@ -1340,48 +1426,27 @@ class _PaymentPage extends StatelessWidget {
       ),
     );
     final party = p.role != PaymentRole.other;
-    bool has(String mode) => source.current.any(
-      (r) =>
-          r.values['sharedGroup'] == g.id &&
-          r.values['sharedKey'] == id &&
-          r.values['sharedMode'] == mode,
-    );
-    final clearing = source.current
-        .where(
-          (r) =>
-              r.values['sharedGroup'] == g.id &&
-              r.values['sharedKey'] == id &&
-              r.values['sharedMode'] == 'clear',
-        )
-        .firstOrNull;
-    final restored =
-        clearing != null && source.current.any((r) => r.source == clearing.id);
+    final links = paymentLinks(source.current, g.id, id);
     void private(String mode) => flows.private(
       context,
       (forms) => forms.privateEffect(context, g, id, mode),
     );
     final menu = [
-      if (party && p.status != PaymentStatus.cancelled)
+      if (party && links.canAdd(p.status))
         MenuItemButton(
           key: ValueKey('private-payment-$id'),
           leadingIcon: const Icon(Icons.account_balance_wallet_outlined),
           onPressed: () => private('payment'),
-          child: Text(has('payment') ? 'Review my record' : 'Add to my Money'),
+          child: Text(links.added ? 'Review my record' : 'Add to my Money'),
         ),
-      if (party &&
-          p.status == PaymentStatus.confirmed &&
-          has('payment') &&
-          clearing == null)
+      if (party && links.canCount(p.status))
         MenuItemButton(
           key: ValueKey('private-clear-$id'),
           leadingIcon: const Icon(Icons.rule_outlined),
           onPressed: () => private('clear'),
           child: const Text('Count it in my group balance'),
         ),
-      if (party &&
-          p.status == PaymentStatus.reversed &&
-          clearing != null &&
-          !restored)
+      if (party && links.canTakeOut(p.status))
         MenuItemButton(
           key: ValueKey('private-unclear-$id'),
           leadingIcon: const Icon(Icons.undo),
@@ -1452,8 +1517,9 @@ enum SharedPeriod {
 
 /// A list to show other people: one heading, the totals and every item, so
 /// one screenshot says it all (§2 Shareable views).
-class _ShareablePage extends StatelessWidget {
-  const _ShareablePage({
+class ShareablePage extends StatelessWidget {
+  const ShareablePage({
+    super.key,
     required this.title,
     required this.group,
     required this.period,
@@ -1528,14 +1594,14 @@ class _SharedBillsPageState extends State<SharedBillsPage> {
     builder: (context, _) {
       final source = widget.hub.source();
       final g = source.groups.where((x) => x.id == widget.group).firstOrNull;
-      if (g == null) return _gone('Bills', 'Bills');
+      if (g == null) return sharedGonePage('Bills', 'Bills');
       final a = source.amount, me = g.participant(source.actor ?? '');
       final text = Theme.of(context).textTheme;
       final rows = [
         for (final r in sharedBillRows(g, me))
           if (period.holds(r.date, source.today)) r,
       ].reversed.toList();
-      return _ShareablePage(
+      return ShareablePage(
         title: 'Bills',
         group: g.name,
         period: period,
@@ -1609,7 +1675,7 @@ class _SharedPaymentsPageState extends State<SharedPaymentsPage> {
     builder: (context, _) {
       final source = widget.hub.source();
       final g = source.groups.where((x) => x.id == widget.group).firstOrNull;
-      if (g == null) return _gone('Payments', 'Payments');
+      if (g == null) return sharedGonePage('Payments', 'Payments');
       final a = source.amount, me = g.participant(source.actor ?? '');
       final rows = [
         for (final p in sharedPaymentRows(g, me, source.today))
@@ -1625,7 +1691,7 @@ class _SharedPaymentsPageState extends State<SharedPaymentsPage> {
               p.status == PaymentStatus.waiting,
         ),
       );
-      return _ShareablePage(
+      return ShareablePage(
         title: 'Payments',
         group: g.name,
         period: period,
@@ -1660,7 +1726,7 @@ class SharedSplitPage extends StatelessWidget {
       final source = hub.source();
       final g = source.groups.where((x) => x.id == group).firstOrNull;
       if (g == null || !g.bills.containsKey(bill)) {
-        return _gone('Bill', 'Bills');
+        return sharedGonePage('Bill', 'Bills');
       }
       final a = source.amount, me = g.participant(source.actor ?? '');
       final r = g.revision(bill), refunds = g.bills[bill]['refunds'] as List;

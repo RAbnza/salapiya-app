@@ -163,7 +163,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         PreviewSource.debt || PreviewSource.debtHistory => null,
         PreviewSource.group => 'Bills',
         PreviewSource.settlement => 'Payments',
-        PreviewSource.privateReview => 'Private review',
+        PreviewSource.privateReview => 'My Records',
         PreviewSource.task => 'Tasks',
         PreviewSource.learning => 'Learning',
         PreviewSource.books => 'Books',
@@ -227,9 +227,9 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         'Payments',
         'Balances',
         'People',
-        'Private review',
+        'My Records',
         'History',
-        'Lifecycle',
+        'Manage Group',
       ],
       AppDestination.life: [
         for (final tab in const [

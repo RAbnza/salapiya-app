@@ -6,7 +6,12 @@ import '../connected/financial_contract.dart';
 import '../local/finance_domain.dart';
 import '../local/local_store.dart' show defaultLocalCategories;
 import '../finance/money_demo.dart';
-import '../shared/shared_demo.dart' show demoLinkedBill, demoToConfirmLine;
+import '../shared/shared_demo.dart'
+    show
+        demoLinkedBill,
+        demoPrivateBill,
+        demoPrivatePayment,
+        demoToConfirmLine;
 import '../prototype/fixtures.dart' show DemoMoney, demoAccounts;
 import '../prototype/scenarios.dart';
 import 'overview_cards.dart';
@@ -230,6 +235,20 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
     'reason': '',
     'funding': 'cash',
     'acknowledgeFunding': 'false',
+  });
+  // The rest of My Records: two bills added before they were corrected, a
+  // payment still to count and one already counted.
+  post('shared', demoPrivateBill(today, 'Weekly market'));
+  post('shared', demoPrivateBill(today, 'Car repair'));
+  post('shared', {...demoPrivatePayment(today, '400.00'), 'account': bank});
+  final counted = demoPrivatePayment(today, '775.00');
+  final payment = post('shared', {...counted, 'account': bank});
+  post('shared', {
+    ...counted,
+    'name': 'Shared clear · Household',
+    'sharedMode': 'clear',
+    'account': '',
+    'paymentSource': payment,
   });
   // Dated after today, so it isn't in any balance yet.
   expense(3, 'Insurance premium', bank, 'bills', '1200.00');

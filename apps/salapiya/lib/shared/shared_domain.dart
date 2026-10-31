@@ -149,8 +149,12 @@ class SharedGroup {
       people.entries.where((p) => p.value['user'] == user).firstOrNull?.key;
   bool active(String? person) =>
       person != null && people[person]?['active'] == true;
-  String personName(String id) =>
-      people[id]?['name'] as String? ?? 'Historical participant';
+
+  /// The server stores a deleted account's name as "Deleted participant".
+  /// That stays as stored; only what people read changes.
+  String personName(String id) => people[id]?['kind'] == 'deleted'
+      ? 'Deleted account'
+      : people[id]?['name'] as String? ?? 'Earlier member';
   SharedJson revision(String bill) =>
       object((bills[bill]['revisions'] as List).last);
   Map<String, BigInt> billPositions(String bill) {

@@ -4,7 +4,6 @@ import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/prototype/scenarios.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
-import 'package:salapiya/features/finance/presentation/group_lifecycle.dart';
 import 'package:salapiya/features/life/presentation/life_screen.dart';
 import 'package:salapiya/features/planning/presentation/planning_screen.dart';
 import 'package:salapiya/features/planning/presentation/reports_screen.dart';
@@ -31,7 +30,6 @@ void main() {
         CreditScreen(session: s),
         for (final tab in ['Calendar', 'Tasks', 'Learning', 'Books', 'Career'])
           LifeScreen(session: s, initial: tab),
-        GroupLifecycle(session: s),
         FilesScreen(session: s),
       ];
       for (final screen in screens) {

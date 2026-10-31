@@ -19,6 +19,7 @@ class SharedPaymentsTab extends StatelessWidget {
     required this.onTask,
     required this.onBalances,
     required this.onPage,
+    this.onPair,
   });
   final SharedSource source;
   final SharedGroup group;
@@ -31,6 +32,9 @@ class SharedPaymentsTab extends StatelessWidget {
   final ValueChanged<String>? onLog;
   final ValueChanged<SharedTask> onTask;
   final VoidCallback onBalances, onPage;
+
+  /// Opens everything between the user and one person.
+  final ValueChanged<String>? onPair;
 
   @override
   Widget build(BuildContext context) {
@@ -156,9 +160,10 @@ class SharedPaymentsTab extends StatelessWidget {
       available: whole,
       onLog: onLog,
       onBalances: onBalances,
+      onOpen: onPair,
     );
     final tasks = loaded
-        ? sharedTasks(source, g, payments: true)
+        ? sharedTasks(source, g, scope: SharedTaskScope.payments)
         : const <SharedTask>[];
     final attention = tasks.isEmpty
         ? null

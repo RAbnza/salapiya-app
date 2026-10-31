@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/design_system/kit/kit.dart' show OptionPicker;
 import 'package:salapiya/finance/finance_screen.dart' show recordChoice;
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
@@ -18,7 +19,7 @@ import 'package:salapiya/shared/shared_domain.dart';
 
 import '../test/local_money_journey.dart';
 import 'p3_native_test.dart'
-    show p3Wait, p3Enter, p3Select, p3Choice, p3Save, p3TapSource;
+    show p3Wait, p3Enter, p3Choice, p3Save, p3TapSource;
 import 'p4_cards_test.dart' show nativeEnter;
 
 Future<void> connectedFinanceSave(WidgetTester tester) async {
@@ -60,6 +61,15 @@ Future<void> p3Submit(WidgetTester tester) async {
   await localTap(tester, submit);
   await localTap(tester, submit);
   await localTap(tester, find.byKey(const ValueKey('shared-done')));
+}
+
+/// Picks a saved record in a private form. Its label holds a date and a
+/// formatted amount, so this goes by the record.
+Future<void> p4Pick(WidgetTester tester, String key, String id) async {
+  final field = find.byKey(ValueKey('native-select-$key'));
+  await p3Wait(tester, () => field.evaluate().isNotEmpty);
+  tester.widget<OptionPicker<String>>(field).onChanged!(id);
+  await localSettle(tester);
 }
 
 void main() {
@@ -277,10 +287,10 @@ void main() {
             .key;
         await p3OpenBill(tester, purchaseName);
         await p3BillMenu(tester, 'private-bill-$bill');
-        await p3Select(tester, 'existing', '$purchaseName · 1200.00 PHP');
-        await p3Enter(
+        await p4Pick(tester, 'existing', purchase);
+        await localEnter(
           tester,
-          'Reason / source review',
+          'reason',
           'Adopt genuine native card purchase',
         );
         await p3Save(tester, private: true);
@@ -306,9 +316,9 @@ void main() {
         );
         await p3OpenBill(tester, purchaseName);
         await p3BillMenu(tester, 'private-bill-$bill');
-        await p3Enter(
+        await localEnter(
           tester,
-          'Reason / source review',
+          'reason',
           'Review corrected source without replaying card funding',
         );
         await p3Save(tester, private: true);
@@ -379,14 +389,10 @@ void main() {
             ((await group()).bills[bill]['refunds'] as List).last['id']
                 as String;
         await p3TapSource(tester, 'Bills', 'private-refund-$refund');
-        await p3Select(
+        await p4Pick(tester, 'existingCardRefund', credit.id);
+        await localEnter(
           tester,
-          'existingCardRefund',
-          '${credit.title} · 90.00 PHP · ${credit.date}',
-        );
-        await p3Enter(
-          tester,
-          'Reason / source review',
+          'reason',
           'Adopt actual card credit without another liability movement',
         );
         await p3Save(tester, private: true);

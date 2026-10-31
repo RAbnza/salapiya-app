@@ -9,7 +9,6 @@ import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/features/life/presentation/life_screen.dart';
 import 'package:salapiya/features/profile/presentation/profile_experience.dart';
 import 'package:salapiya/gallery/settings.dart';
-import 'package:salapiya/features/finance/presentation/group_lifecycle.dart';
 import 'package:salapiya/features/supporting/presentation/files_screen.dart';
 import 'package:salapiya/features/finance/presentation/credit_screen.dart';
 import 'package:salapiya/features/finance/application/financial_controller.dart';
@@ -209,42 +208,6 @@ Future<void> d4ProfileJourney(WidgetTester tester) async {
 
 Future<void> d4SupportingJourney(WidgetTester tester) async {
   final s = PrototypeSession();
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: SalapiyaTheme.build(Brightness.light),
-      home: FinancePage(
-        title: 'Group lifecycle',
-        child: ListenableBuilder(
-          listenable: s,
-          builder: (_, _) => GroupLifecycle(session: s),
-        ),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text('Transfer ownership'));
-  await tester.tap(find.text('Transfer ownership'));
-  await tester.pumpAndSettle();
-  final field = find.widgetWithText(TextField, 'Reason');
-  await tester.ensureVisible(field);
-  tester
-      .state<EditableTextState>(
-        find.descendant(of: field, matching: find.byType(EditableText)),
-      )
-      .updateEditingValue(
-        const TextEditingValue(text: 'Tala will administer the household.'),
-      );
-  FocusManager.instance.primaryFocus?.unfocus();
-  await tester.ensureVisible(find.text('Review changes'));
-  await tester.tap(find.text('Review changes'));
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text('Apply simulation'));
-  await tester.tap(find.text('Apply simulation'));
-  await tester.pumpAndSettle();
-  expect(s.finance.groupOwners['household'], 'Tala');
-  expect(s.finance.isGroupOwner, isFalse);
-  await tester.tap(find.text('Done'));
-  await tester.pumpAndSettle();
   await tester.pumpWidget(
     MaterialApp(
       theme: SalapiyaTheme.build(Brightness.light),

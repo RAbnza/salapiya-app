@@ -737,7 +737,7 @@ void taskTests() {
         ],
       ),
       g,
-      payments: false,
+      scope: SharedTaskScope.bills,
     );
     expect(tasks.map((t) => t.title), [
       'Rent',
@@ -761,7 +761,7 @@ void taskTests() {
         ],
       ),
       g,
-      payments: true,
+      scope: SharedTaskScope.payments,
     );
     expect(payments.single.title, 'Payment to Ben');
   });

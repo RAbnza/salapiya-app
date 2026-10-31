@@ -2,28 +2,26 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import '../../../local/local_runtime.dart';
+import '../../../shared/shared_balances_tab.dart';
 import '../../../shared/shared_bills_tab.dart';
 import '../../../shared/shared_chooser.dart';
 import '../../../shared/shared_data.dart';
 import '../../../shared/shared_domain.dart';
 import '../../../shared/shared_header.dart';
+import '../../../shared/shared_history_tab.dart';
 import '../../../shared/shared_hub.dart';
+import '../../../shared/shared_lifecycle_tab.dart';
 import '../../../shared/shared_pages.dart';
 import '../../../shared/shared_payment_form.dart';
 import '../../../shared/shared_payments_tab.dart';
-import '../../../shared/shared_screen.dart';
+import '../../../shared/shared_people_tab.dart';
+import '../../../shared/shared_records_tab.dart';
 
 import '../../../app/shell_navigation.dart';
-import '../../../design_system/editorial.dart';
 import '../../../design_system/kit/kit.dart';
 import '../../../design_system/theme.dart';
 import '../../../prototype/scenarios.dart';
 import '../application/financial_controller.dart';
-import '../contracts/financial_models.dart';
-import 'financial_editor.dart';
-import 'financial_widgets.dart';
-import 'group_lifecycle.dart';
 
 /// Shared Expenses' tabs, as the shell lists them.
 const sharedTabs = [
@@ -31,14 +29,13 @@ const sharedTabs = [
   'Payments',
   'Balances',
   'People',
-  'Private review',
+  'My Records',
   'History',
-  'Lifecycle',
+  'Manage Group',
 ];
 
 /// The section's frame, on both builds: the header, the tabs and the notices.
-/// Bills is the same on both. The tabs that wait for later stages keep their
-/// old content, from the real group or the demo's own fixture.
+/// Every tab is the same on both; only the private forms need a real profile.
 class SharedScreen extends StatefulWidget {
   const SharedScreen({
     super.key,
@@ -62,8 +59,6 @@ class _SharedScreenState extends State<SharedScreen> {
   SharedFlows get flows => SharedFlows(hub);
   FinancialController get c => widget.session.finance;
   String money(BigInt v) => widget.session.amount(v);
-  void edit(FinancialAction a, {String? source}) =>
-      openFinancialEditor(context, c, a, sourceId: source);
 
   @override
   void dispose() {
@@ -235,7 +230,6 @@ class _SharedScreenState extends State<SharedScreen> {
   }
 
   Widget body(SharedSource source, SharedGroup g) {
-    final session = widget.session;
     if (tab == 'Bills') {
       return SharedBillsTab(
         key: ValueKey('shared-bills-tab-${g.id}'),
@@ -269,38 +263,80 @@ class _SharedScreenState extends State<SharedScreen> {
         onTask: (t) => flows.openTask(context, g, t),
         onBalances: () => select('Balances'),
         onPage: () => flows.openPaymentsList(context, g),
+        onPair: (person) {
+          final me = g.participant(source.actor ?? '');
+          if (me != null) flows.openPair(context, g, me, person);
+        },
       );
     }
-    if (session is LocalSession) {
-      return NativeSharedScreen(
-        key: ValueKey('shared-tab-$tab'),
-        session: session,
-        hub: hub,
+    if (tab == 'Balances') {
+      final open = cantAdd(source, g) == null && g.people.length > 1;
+      return SharedBalancesTab(
+        key: ValueKey('shared-balances-tab-${g.id}'),
+        source: source,
         group: g,
-        tab: tab,
+        onPair: (a, b) => flows.openPair(context, g, a, b),
+        onPerson: (person) => flows.openPerson(context, g, person),
+        onLog: open
+            ? (sender, recipient) => flows.logPayment(
+                context,
+                g,
+                sender: sender,
+                recipient: recipient,
+              )
+            : null,
+        onPayments: () => select('Payments'),
+        onPeople: () => select('People'),
+        onPage: () => flows.openWhoOwes(context, g),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: switch (tab) {
-        'Balances' => [
-          SharedPositionsCard(source: source, group: g),
-          const SizedBox(height: Space.lg),
-          ...balances(),
-        ],
-        'People' => people(),
-        'Private review' => privateReview(),
-        'Lifecycle' => [GroupLifecycle(session: session)],
-        _ => [
-          const SectionHeading('Group history'),
-          for (final h in c.visibleGroupHistory)
-            FinancialLine('Immutable demo event', h, icon: Icons.history),
-          if (c.groupHistory.isEmpty)
-            const FinanceNotice(
-              'Opening dinner and pending payment are independent synthetic fixtures. New actions appear here.',
-            ),
-        ],
+    if (tab == 'My Records') {
+      return SharedRecordsTab(
+        key: ValueKey('shared-records-tab-${g.id}'),
+        source: source,
+        group: g,
+        onOpen: (r) => flows.openRecord(context, g, r),
+      );
+    }
+    if (tab == 'People') {
+      return SharedPeopleTab(
+        key: ValueKey('shared-people-tab-${g.id}'),
+        source: source,
+        group: g,
+        onPerson: (person) => flows.openPerson(context, g, person),
+        onAdd: () => flows.addPerson(context, g),
+        onInvite: () => flows.invite(context, g),
+        onRevoke: (i) => flows.revoke(context, g, i),
+        onTask: (t) => flows.openTask(context, g, t),
+      );
+    }
+    if (tab == 'History') {
+      return SharedHistoryTab(
+        key: ValueKey('shared-history-tab-${g.id}'),
+        source: source,
+        group: g,
+        onRow: (r) {
+          if (r.bill != null) {
+            flows.openBill(context, g, r.bill!);
+          } else if (r.payment != null) {
+            flows.openPayment(context, g, r.payment!);
+          }
+        },
+        onPage: () => flows.openHistoryList(context, g),
+      );
+    }
+    return SharedLifecycleTab(
+      key: ValueKey('shared-lifecycle-tab-${g.id}'),
+      source: source,
+      group: g,
+      onTransfer: () => flows.transfer(context, g),
+      onRemove: () => flows.remove(context, g),
+      onArchive: () => flows.archive(context, g),
+      onLeave: () {
+        final me = g.participant(source.actor ?? '');
+        if (me != null) flows.leave(context, g, me);
       },
+      onTask: (t) => flows.openTask(context, g, t),
     );
   }
 
@@ -370,151 +406,4 @@ class _SharedScreenState extends State<SharedScreen> {
       );
     },
   );
-
-  List<Widget> balances() {
-    final names = c.members.keys.toList()..sort();
-    final disputed = c.groupSettlements.any(
-      (s) => s.status == SettlementStatus.disputed,
-    );
-    return [
-      const SectionHeading('Where each position comes from'),
-      const FinanceNotice(
-        'Pairwise sources offset reciprocal obligations. Suggestions are explanations requiring agreement; they never post money or redirect original bills.',
-      ),
-      for (var i = 0; i < names.length; i++)
-        for (var j = i + 1; j < names.length; j++)
-          Builder(
-            builder: (context) {
-              final left = names[i], right = names[j];
-              final forward = ExactFinance.sum(
-                c.groupBills.map((b) => c.billObligation(b, left, right)),
-              );
-              final backward = ExactFinance.sum(
-                c.groupBills.map((b) => c.billObligation(b, right, left)),
-              );
-              final net = forward - backward;
-              return ExpansionTile(
-                key: PageStorageKey(
-                  'shared-pair-${c.activeGroup}-$left-$right',
-                ),
-                title: Text('$left ↔ $right'),
-                subtitle: Text(
-                  'Reciprocal net ${money(net.abs())} · ${net >= BigInt.zero ? '$left owes $right' : '$right owes $left'}',
-                ),
-                children: [
-                  for (final b in c.groupBills)
-                    FinancialLine(
-                      b.title,
-                      'v${b.revision} · source attribution retained',
-                      value:
-                          '${money(c.billObligation(b, left, right))} / ${money(c.billObligation(b, right, left))}',
-                    ),
-                ],
-              );
-            },
-          ),
-      const SizedBox(height: 24),
-      SectionHeading(disputed ? 'Suggestions paused' : 'A suggested next step'),
-      if (disputed)
-        const FinanceNotice(
-          'Resolve the disputed payment before using group settlement suggestions.',
-          warning: true,
-        )
-      else ...[
-        for (final p in c.groupPositions().entries.where(
-          (p) => p.value < BigInt.zero,
-        ))
-          FinancialLine(
-            '${p.key} can review a payment',
-            'Net payable ${money(-p.value)}. Inspect the original bills and recipient before reporting.',
-            icon: Icons.lightbulb_outline,
-            color: Palette.mint,
-            onTap: () => openFinancialEditor(
-              context,
-              c,
-              FinancialAction.settlement,
-              initial: {'sender': p.key},
-            ),
-          ),
-      ],
-    ];
-  }
-
-  List<Widget> people() => [
-    const SectionHeading('People & membership'),
-    Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        OutlinedButton(
-          onPressed: () => edit(FinancialAction.member),
-          child: const Text('Add participant'),
-        ),
-        OutlinedButton(
-          onPressed: () => edit(FinancialAction.invitation),
-          child: const Text('Review invitation / claim'),
-        ),
-      ],
-    ),
-    const SizedBox(height: 16),
-    for (final m in c.members.entries)
-      FinancialLine(
-        m.key,
-        m.value,
-        icon: Icons.person_outline,
-        color: Palette.peach,
-      ),
-    const FinanceNotice(
-      'Group owners administer membership; they cannot inspect private funding. Former-member access retains entitled history only. Open Lifecycle for ownership, removal, recovery and export.',
-    ),
-  ];
-
-  List<Widget> privateReview() => c.actor != 'Amihan'
-      ? [
-          const FinanceNotice(
-            'This identity cannot view Amihan’s private funding or review decisions. Switch back to Amihan to inspect your own private records.',
-            warning: true,
-          ),
-        ]
-      : [
-          const SectionHeading('Only your private records'),
-          const FinanceNotice(
-            'Amihan’s private accounts and classifications are visible only in this local private view. They are not part of the group record.',
-          ),
-          for (final s in c.groupSettlements.where(
-            (s) => c.privateSettlements.contains(s.id),
-          ))
-            FinancialLine(
-              'Private payment / receipt',
-              '${s.sender} → ${s.recipient} · actual movement already recorded\nGroup state: ${s.status.name} · ${c.privateSettlementReviews[s.id] ?? 'Clearing coverage needs review'}',
-              icon: Icons.lock_outline,
-              onTap: () => openFinancialEditor(
-                context,
-                c,
-                FinancialAction.settlementPrivate,
-                sourceId: s.id,
-                initial: {'decision': 'Review clearing coverage'},
-              ),
-            ),
-          for (final b in c.groupBills)
-            Builder(
-              builder: (context) {
-                final a = c.adoptions[b.id];
-                return FinancialLine(
-                  b.title,
-                  a == null
-                      ? 'Not adopted · no private effect'
-                      : 'Accepted v${a.revision} / group v${b.revision} · funding ${money(a.funding)} · own share ${money(a.share)}${c.retainedReviews[b.id] == null ? '' : '\nRetained evidence review: ${c.retainedReviews[b.id]}'}',
-                  icon: Icons.lock_outline,
-                  color: Palette.mint,
-                  onTap: () => edit(
-                    a == null
-                        ? FinancialAction.adoption
-                        : FinancialAction.privateReview,
-                    source: b.id,
-                  ),
-                );
-              },
-            ),
-        ];
 }

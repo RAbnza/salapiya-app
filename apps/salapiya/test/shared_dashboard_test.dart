@@ -558,10 +558,18 @@ void main() {
         of: card,
         matching: find.text('Needs your attention'),
       );
-      final row = find.descendant(of: card, matching: find.text('Gas refill'));
+      // A linked record that changed comes before a draft.
+      final row = find.descendant(
+        of: card,
+        matching: find.text('Weekly market'),
+      );
       expect(
         tester.getTopLeft(row).dy - tester.getBottomLeft(title).dy,
         lessThan(Space.xxxl),
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Gas refill')),
+        findsOneWidget,
       );
       expect(
         find.descendant(of: card, matching: find.byType(ListEnd)),

@@ -22,7 +22,7 @@ class SharedHub extends ChangeNotifier {
         session.localFinance.store,
       );
       this.repo = repo;
-      private = SharedNativeForms(session, repo);
+      private = SharedNativeForms(this, session);
       repo
         ..addListener(notifyListeners)
         ..open();
@@ -111,6 +111,10 @@ class SharedHub extends ChangeNotifier {
       drafts: repo.drafts,
       reviews: repo.reviews,
       current: local.localFinance.snapshot.current,
+      accountName: (id) => local.localFinance.snapshot.accounts
+          .where((a) => a.id == id)
+          .firstOrNull
+          ?.name,
       error: repo.error,
       pendingCount: local.runtime.connected.sharedPendingCount,
       needsReview: session.needsReview,

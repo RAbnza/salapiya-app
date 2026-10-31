@@ -43,10 +43,9 @@ class SharedBillsTab extends StatelessWidget {
     final rows = loaded
         ? sharedBillRows(g, me, intents: source.intents)
         : const <SharedBillRow>[];
-    final standing = sharedStanding(g, me);
     final month = monthOf(today);
     final tasks = loaded
-        ? sharedTasks(source, g, payments: false)
+        ? sharedTasks(source, g, scope: SharedTaskScope.bills)
         : const <SharedTask>[];
     final toConfirm = !loaded
         ? 0
@@ -66,34 +65,7 @@ class SharedBillsTab extends StatelessWidget {
           size: MoneySize.tile,
           textAlign: TextAlign.start,
         );
-    final hasAmount =
-        standing.kind == StandingKind.owedToYou ||
-        standing.kind == StandingKind.youOwe;
-    final where = KpiTile(
-      key: const ValueKey('shared-standing'),
-      labels: labels,
-      accent: true,
-      icon: Icons.account_balance_wallet_outlined,
-      label: 'Where you stand',
-      value: !whole || standing.kind == StandingKind.unknown
-          ? figure(null)
-          : hasAmount
-          ? figure(
-              amount(standing.amount),
-              kind: standing.kind == StandingKind.owedToYou
-                  ? MoneyKind.owedToYou
-                  : MoneyKind.owed,
-            )
-          : figure(standing.kind.label),
-      change: hasAmount && whole ? StandingWords(standing.kind) : null,
-      caption: !loaded
-          ? null
-          : !g.complete
-          ? 'You’ve left this group, so this is only your earlier records.'
-          : standing.projected == null
-          ? 'Confirmed payments only'
-          : '${positionWords(standing.projected!, amount)} if waiting payments are confirmed',
-    );
+    final where = standingTile(source, g, labels);
     final part = KpiTile(
       key: const ValueKey('shared-part'),
       labels: labels,
@@ -223,6 +195,48 @@ class SharedBillsTab extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Where the user stands, the accent tile on Bills and Balances.
+KpiTile standingTile(SharedSource source, SharedGroup g, List<String> labels) {
+  final amount = source.amount;
+  final loaded = source.complete, whole = loaded && g.complete;
+  final standing = sharedStanding(g, g.participant(source.actor ?? ''));
+  final hasAmount =
+      standing.kind == StandingKind.owedToYou ||
+      standing.kind == StandingKind.youOwe;
+  Widget figure(String? text, {MoneyKind kind = MoneyKind.neutral}) =>
+      MoneyAmount(
+        text,
+        kind: kind,
+        size: MoneySize.tile,
+        textAlign: TextAlign.start,
+      );
+  return KpiTile(
+    key: const ValueKey('shared-standing'),
+    labels: labels,
+    accent: true,
+    icon: Icons.account_balance_wallet_outlined,
+    label: 'Where you stand',
+    value: !whole || standing.kind == StandingKind.unknown
+        ? figure(null)
+        : hasAmount
+        ? figure(
+            amount(standing.amount),
+            kind: standing.kind == StandingKind.owedToYou
+                ? MoneyKind.owedToYou
+                : MoneyKind.owed,
+          )
+        : figure(standing.kind.label),
+    change: hasAmount && whole ? StandingWords(standing.kind) : null,
+    caption: !loaded
+        ? null
+        : !g.complete
+        ? 'You’ve left this group, so this is only your earlier records.'
+        : standing.projected == null
+        ? 'Confirmed payments only'
+        : '${positionWords(standing.projected!, amount)} if waiting payments are confirmed',
+  );
 }
 
 /// The direction, in words and an arrow, so color is never the only cue.

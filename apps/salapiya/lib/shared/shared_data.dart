@@ -27,6 +27,17 @@ abstract class SharedWriter {
   Future<void> draft(String id, String group, SharedJson values);
   Future<SharedJson?> readDraft(String id);
   Future<void> discardDraft(String id);
+
+  /// Notes that the user's own record stays as it is after a bill changed.
+  /// Nothing reaches the group. [id] makes a repeat the same review.
+  Future<void> keepRecord({
+    required String id,
+    required String group,
+    required String bill,
+    required String record,
+    required String stamp,
+    required String reason,
+  });
 }
 
 /// Everything Shared Expenses shows, from a real profile or the demo.
@@ -53,6 +64,7 @@ class SharedSource {
     this.syncLabel = '',
     this.onReview,
     this.onConnect,
+    this.accountName,
     this.demo = false,
   });
   final String today;
@@ -75,6 +87,9 @@ class SharedSource {
   final String syncLabel;
   final VoidCallback? onReview, onConnect;
 
+  /// One of the user's own accounts by id, for their own eyes only.
+  final String? Function(String id)? accountName;
+
   /// Saving here doesn't change the sample.
   final bool demo;
 
@@ -86,7 +101,7 @@ class SharedSource {
 
 /// A rule refused to work these figures out, which only happens on a partial
 /// copy of a group. Null reads "Not available yet", never a wrong number.
-T? _guarded<T>(T Function() read) {
+T? guarded<T>(T Function() read) {
   try {
     return read();
   } catch (_) {
@@ -125,8 +140,8 @@ class SharedStanding {
 /// the user left is a partial copy, so it has no position to show.
 SharedStanding sharedStanding(SharedGroup g, String? me) {
   if (me == null || !g.complete) return SharedStanding.unknown();
-  final now = _guarded(() => g.positions()[me]);
-  final next = _guarded(() => g.positions(projected: true)[me]);
+  final now = guarded(() => g.positions()[me]);
+  final next = guarded(() => g.positions(projected: true)[me]);
   if (now == null) return SharedStanding.unknown();
   return SharedStanding(
     now > BigInt.zero
@@ -265,7 +280,7 @@ List<SharedBillRow> sharedBillRows(
   String? me, {
   List<SharedJson> intents = const [],
 }) {
-  final left = me == null ? null : _guarded(() => leftOnBills(g, me));
+  final left = me == null ? null : guarded(() => leftOnBills(g, me));
   final rows = <SharedBillRow>[
     for (final id in g.bills.keys)
       () {
@@ -617,7 +632,7 @@ String appliedLine(SharedGroup g, SharedPaymentRow p) {
   SharedPaymentRow p,
 ) {
   if (!g.complete) return null;
-  return _guarded(() {
+  return guarded(() {
     BigInt pair(Iterable<SharedEdge> edges) => sumMinor(
       edges.map(
         (e) => e.sender == p.sender && e.recipient == p.recipient
@@ -633,7 +648,7 @@ String appliedLine(SharedGroup g, SharedPaymentRow p) {
 
 /// What [sender] owes [recipient], or nothing when it can't be worked out.
 BigInt owedBetween(SharedGroup g, String sender, String recipient) =>
-    _guarded(() => g.due(sender, recipient)) ?? BigInt.zero;
+    guarded(() => g.due(sender, recipient)) ?? BigInt.zero;
 
 /// The payments applied to [bill], with what each put on it.
 List<(SharedPaymentRow, BigInt)> billPayments(
@@ -692,7 +707,7 @@ bool canChangeBill(SharedGroup g, String bill, String? me) =>
 /// People the user owes or who owe the user, largest first within each.
 List<(String person, BigInt signed)> pairsWithMe(SharedGroup g, String? me) {
   if (me == null || !g.complete) return const [];
-  final pairs = _guarded(() => g.reciprocalPairs) ?? const <SharedEdge>[];
+  final pairs = guarded(() => g.reciprocalPairs) ?? const <SharedEdge>[];
   final rows = [
     for (final p in pairs)
       if (p.sender == me)
@@ -779,14 +794,22 @@ class SharedTask {
   final String title, detail;
 }
 
-const _paymentOps = {'report', 'resolve'};
+/// Which tab's work to list. People and group changes used to show on Bills.
+enum SharedTaskScope { bills, payments, people, group }
+
+SharedTaskScope _scopeOf(Object? op) => switch (op) {
+  'report' || 'resolve' => SharedTaskScope.payments,
+  'manual' || 'invite' || 'revoke' || 'remove' => SharedTaskScope.people,
+  'leave' || 'transfer' || 'archive' => SharedTaskScope.group,
+  _ => SharedTaskScope.bills,
+};
 
 /// What needs the user on one tab, most pressing first: refused commands,
 /// restored ones, linked records that changed, drafts, then waiting work.
 List<SharedTask> sharedTasks(
   SharedSource source,
   SharedGroup g, {
-  required bool payments,
+  required SharedTaskScope scope,
 }) {
   final tasks = <SharedTask>[];
   final known = source.groups.map((x) => x.id).toSet();
@@ -796,7 +819,7 @@ List<SharedTask> sharedTasks(
     final state = intent['state'];
     if (state == 'reconciled') continue;
     final command = object(jsonDecode(intent['payload'] as String));
-    if (_paymentOps.contains(command['op']) != payments) continue;
+    if (_scopeOf(command['op']) != scope) continue;
     tasks.add(
       SharedTask(
         switch (state) {
@@ -810,13 +833,13 @@ List<SharedTask> sharedTasks(
       ),
     );
   }
-  if (!payments && me != null) {
+  if (scope == SharedTaskScope.bills && me != null) {
     for (final r in source.current) {
       if (r.values['sharedGroup'] != g.id || r.values['sharedMode'] != 'bill') {
         continue;
       }
       final key = r.values['sharedKey'];
-      if (_guarded(
+      if (guarded(
             () => privateBillNeedsSharedReview(
               g,
               me,
@@ -843,7 +866,10 @@ List<SharedTask> sharedTasks(
     final payload = object(jsonDecode(d['payload'] as String));
     final group = d['group_id'] as String?;
     if (group != g.id && known.contains(group)) continue;
-    if ((payload['op'] == 'report') != payments) continue;
+    final tab = payload['op'] == 'report'
+        ? SharedTaskScope.payments
+        : SharedTaskScope.bills;
+    if (tab != scope) continue;
     tasks.add(
       SharedTask(
         SharedTaskKind.draft,
@@ -908,6 +934,27 @@ const sharedReasons = {
   'Invitation unavailable, changed, expired or wrong verified recipient': 'This invitation isn’t available. It may have expired or been meant for another account.',
   'Invitation unavailable': 'This invitation isn’t available. It may have expired or been meant for another account.',
   'Already an active member': 'You’re already in this group.',
+  'Owner required': 'Only the group’s owner can do this.',
+  'Owner required; participant limit 100':
+      'Only the owner can add people, and a group holds up to 100.',
+  'Participant limit 100': 'This group is full. It holds up to 100 people.',
+  'Participant already exists': 'This person is already in the group.',
+  'Invalid invitation': 'Check the email address and try again.',
+  'Nominate an unclaimed manual participant':
+      'This person already has an account here.',
+  'Identity claim requires review':
+      'This invitation is for someone else in the group.',
+  'Transfer to an active registered member':
+      'The new owner must be a registered member who’s still in the group.',
+  'Transfer ownership before exit; current authority required':
+      'The owner can’t leave or be removed. Make someone else the owner first.',
+  'Outside retained entitlement':
+      'This payment is on records you no longer have.',
+  'Settlement unavailable': 'This payment isn’t here any more.',
+  'Private source or group evidence changed':
+      'Your record or this bill changed. Check it and try again.',
+  'Group history exceeds the reviewed 10 MiB bound; export and review capacity':
+      'This group has reached its limit for these records.',
 };
 
 const sharedReasonFallback =

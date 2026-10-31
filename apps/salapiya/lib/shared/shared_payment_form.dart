@@ -21,14 +21,16 @@ class SharedPaymentForm extends StatefulWidget {
     super.key,
     required this.hub,
     required this.group,
+    this.sender,
     this.recipient,
     this.draftId,
   });
   final SharedHub hub;
   final SharedGroup group;
 
-  /// Prefilled, from a row that says who's owed.
-  final String? recipient;
+  /// Prefilled, from a row that says who's owed. The sender is set when the
+  /// owner logs for someone who isn't registered.
+  final String? sender, recipient;
   final String? draftId;
   static const title = 'Log a payment between members';
   @override
@@ -80,7 +82,7 @@ class _SharedPaymentFormState extends State<SharedPaymentForm>
   late final Map<String, String> values = startingValues();
 
   Map<String, String> startingValues() {
-    final me = this.me ?? '';
+    final me = widget.sender ?? this.me ?? '';
     final to = widget.recipient ?? '';
     final due = to.isEmpty ? BigInt.zero : owedBetween(group, me, to);
     return {

@@ -186,7 +186,7 @@ void main() {
             expect(tester.takeException(), isNull);
             await localTap(tester, find.byKey(const ValueKey('Balances')));
             expect(
-              find.textContaining('Suggestions are nonposting'),
+              find.textContaining('A proposal. Nothing changes'),
               findsOneWidget,
             );
             expect(tester.takeException(), isNull);
@@ -227,7 +227,9 @@ void main() {
                 'bill': refused,
               });
             });
-            final saved = find.byKey(ValueKey('shared-intent-$refused'));
+            // A refused bill is on Bills, under Needs your attention.
+            await localTap(tester, find.byKey(const ValueKey('Bills')));
+            final saved = find.byKey(ValueKey('shared-task-$refused'));
             await localWait(tester, () => saved.evaluate().isNotEmpty);
             await localTap(tester, saved);
             expect(find.text('Retained rejected purchase'), findsWidgets);
@@ -266,23 +268,13 @@ void main() {
             await localTap(tester, find.text('Keep draft & close'));
             expect(saved, findsOneWidget);
             expect(tester.takeException(), isNull);
-            await localTap(tester, find.byKey(const ValueKey('Lifecycle')));
-            await localTap(tester, find.text('Revoke invitation'));
-            final issued = find.byKey(
-              const ValueKey('shared-field-invitation'),
-            );
-            await localWait(tester, () => issued.evaluate().isNotEmpty);
-            expect(
-              tester
-                  .widget<DropdownButtonFormField<String>>(issued)
-                  .initialValue,
-              invitation,
-            );
-            await localTap(tester, find.text('Review').last);
-            expect(
-              find.textContaining('reference ${invitation.substring(0, 8)}'),
-              findsOneWidget,
-            );
+            await localTap(tester, find.byKey(const ValueKey('People')));
+            final revoke = find.byKey(ValueKey('revoke-$invitation'));
+            await localWait(tester, () => revoke.evaluate().isNotEmpty);
+            await localTap(tester, revoke);
+            // Offline here, so it says so before a form opens.
+            expect(find.text('This needs a connection'), findsOneWidget);
+            expect(find.text('Revoke this invitation?'), findsNothing);
             await localTap(tester, find.text('Close').last);
             expect(tester.takeException(), isNull);
             await localTap(tester, find.byKey(const ValueKey('Bills')));
@@ -295,15 +287,14 @@ void main() {
             await localWait(
               tester,
               () => find
-                  .textContaining('The saved private purchase changed.')
+                  .textContaining('The purchase you saved changed.')
                   .evaluate()
                   .isNotEmpty,
             );
             expect(
-              find.byKey(const ValueKey('shared-field-account')),
+              find.byKey(const ValueKey('native-select-account')),
               findsNothing,
             );
-            await localTap(tester, find.text('Close').last);
             expect(tester.takeException(), isNull);
           } finally {
             debugDefaultTargetPlatformOverride = null;

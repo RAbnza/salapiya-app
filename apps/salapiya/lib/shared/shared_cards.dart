@@ -307,9 +307,15 @@ class _SharedBillsCardState extends State<SharedBillsCard> {
 
 /// What needs the user on this tab. Hidden when there's nothing.
 class SharedTasksCard extends StatelessWidget {
-  const SharedTasksCard({super.key, required this.tasks, required this.onOpen});
+  const SharedTasksCard({
+    super.key,
+    required this.tasks,
+    required this.onOpen,
+    this.title = 'Needs your attention',
+  });
   final List<SharedTask> tasks;
   final ValueChanged<SharedTask> onOpen;
+  final String title;
 
   static IconData icon(SharedTaskKind kind) => switch (kind) {
     SharedTaskKind.refused => Icons.error_outline,
@@ -322,7 +328,7 @@ class SharedTasksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => OverviewCard(
     key: const ValueKey('shared-attention'),
-    title: 'Needs your attention',
+    title: title,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -549,10 +555,14 @@ class SharedPairsCard extends StatelessWidget {
     required this.available,
     required this.onLog,
     required this.onBalances,
+    this.onOpen,
   });
   final SharedGroup group;
   final String? me;
   final List<(String, BigInt)> pairs;
+
+  /// Opens everything between the user and this person.
+  final ValueChanged<String>? onOpen;
   final String Function(BigInt) amount;
   final bool available;
 
@@ -612,6 +622,7 @@ class SharedPairsCard extends StatelessWidget {
                             ),
                         ],
                       ),
+                      onTap: onOpen == null ? null : () => onOpen!(person),
                     ),
                 ],
               ),

@@ -76,6 +76,24 @@ class FakeWriter implements SharedWriter {
     drafts.remove(id);
     discarded.add(id);
   }
+
+  final kept = <String>[];
+
+  /// Thrown by each [keepRecord] until it's cleared.
+  Object? keepFails;
+  @override
+  Future<void> keepRecord({
+    required String id,
+    required String group,
+    required String bill,
+    required String record,
+    required String stamp,
+    required String reason,
+  }) async {
+    kept.add(id);
+    final fail = keepFails;
+    if (fail != null) throw fail;
+  }
 }
 
 class FakeHub extends SharedHub {
