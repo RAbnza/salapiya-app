@@ -97,7 +97,8 @@ class MoneyEditor extends StatefulWidget {
   State<MoneyEditor> createState() => _MoneyEditorState();
 }
 
-class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
+class _MoneyEditorState extends State<MoneyEditor>
+    with FormInputs, FinanceFormFields {
   @override
   LocalFinancialController get c => widget.controller;
   FinancialAction get action => widget.action;
@@ -122,7 +123,7 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
       draftFailed = false,
       unknown = false,
       saved = false;
-  String? error;
+  String? error, shareProblem;
 
   LocalRevision? get source =>
       c.snapshot.revisions.where((r) => r.id == values['source']).firstOrNull;
@@ -987,16 +988,15 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
   };
 
   Future<void> share() async {
+    setState(() => shareProblem = null);
     try {
       await sharePrivatePurchase(context, c, id);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e is LocalRuleException ? e.message : 'Group sharing could not complete. Your purchase stays saved.',
-            ),
-          ),
+        setState(
+          () => shareProblem = e is LocalRuleException
+              ? e.message
+              : 'That didn’t work. Your purchase stays saved.',
         );
       }
     }
@@ -1026,6 +1026,10 @@ class _MoneyEditorState extends State<MoneyEditor> with FinanceFormFields {
         ),
         if (c.connected) FormSyncStatus(state: c.synchronizationStates[id]),
         if (plan != null) review(),
+        if (shareProblem != null) ...[
+          SizedBox(height: CompactForm.fieldGap(context)),
+          InlineNotice(shareProblem!, tone: NoticeTone.error, live: true),
+        ],
         SizedBox(height: CompactForm.groupGap(context)),
         actions(
           FilledButton(

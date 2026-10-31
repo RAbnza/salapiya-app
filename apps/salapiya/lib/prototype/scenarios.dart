@@ -136,6 +136,9 @@ class PrototypeSession extends ChangeNotifier {
   OverviewScenario scenario = OverviewScenario.local;
   bool hideAmounts = false;
 
+  /// The group Shared Expenses opens on, when there are several.
+  String? sharedDefaultGroup;
+
   bool get empty =>
       scenario == OverviewScenario.empty && finance.accounts.isEmpty;
   bool get complete => scenario != OverviewScenario.incomplete;

@@ -101,7 +101,7 @@ void main() {
       await tester.pumpAndSettle();
       final original = controller.offset;
       final footerTop = tester.getTopLeft(find.byType(ShellBottomBar)).dy;
-      final finalText = find.text('Tala reported a payment · example');
+      final finalText = find.textContaining('Tala logged');
       expect(tester.getBottomLeft(finalText).dy, lessThan(footerTop));
       await tester.tap(find.byKey(const ValueKey('nav-money')));
       await tester.pumpAndSettle();

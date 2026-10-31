@@ -17,6 +17,8 @@ import '../features/finance/presentation/financial_editor.dart';
 import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../local/local_runtime.dart';
+import '../shared/shared_hub.dart' show SharedScope;
+import '../shared/shared_pages.dart' show SharedFlows;
 import '../prototype/scenarios.dart';
 import 'card_pages.dart';
 import 'file_access.dart';
@@ -85,7 +87,7 @@ MoneySource localMoneySource(
             'profile/connection',
           )
         : null,
-    draftCount: () async => (await c.store.drafts()).length,
+    draftCount: () async => (await c.store.drafts()).where(isFormDraft).length,
     importDraft: () async {
       final saved = await c.store.draft(ImportFlow.operation);
       return saved == null
@@ -1004,14 +1006,16 @@ class RecordDetailView extends StatelessWidget {
       );
       Widget? notice;
       if (can.shared) {
+        final hub = SharedScope.maybeOf(context);
         notice = InlineNotice(
           'This record is linked to Shared Expenses, so it’s changed there.',
-          action: ShellNavigation.maybeOf(context) == null
+          action: hub == null
               ? null
               : AppButton.secondary(
-                  'Open Shared Expenses',
+                  'Open in Shared Expenses',
+                  key: const ValueKey('record-open-shared'),
                   onPressed: () =>
-                      ShellNavigation.of(context).select(AppDestination.shared),
+                      SharedFlows(hub).openLinked(context, r.values),
                 ),
         );
       } else if (can.superseded != null) {
@@ -1230,6 +1234,12 @@ class _Draft {
   }
 }
 
+/// Whether a stored draft is an unfinished form. A shared purchase's row isn't
+/// one: it's the link between a bill and the user's own purchase, and nothing
+/// opens it.
+bool isFormDraft(Map<String, dynamic> row) =>
+    !(row['operation'] as String).startsWith('shared-purchase:');
+
 /// Unfinished entries, encrypted on this device. Each opens its form; none
 /// of them is in the user's records.
 class SavedDraftsPage extends StatefulWidget {
@@ -1252,7 +1262,7 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
   late Future<List<_Draft>> drafts = load();
 
   Future<List<_Draft>> load() async => [
-    for (final row in await c.store.drafts())
+    for (final row in (await c.store.drafts()).where(isFormDraft))
       _Draft(
         row['operation'] as String,
         Map<String, String>.from(

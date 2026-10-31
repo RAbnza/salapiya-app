@@ -230,7 +230,7 @@ void main() {
     expect(find.text('1 payment to confirm'), findsOneWidget);
     await tester.tap(find.text('1 payment to confirm'));
     await tester.pumpAndSettle();
-    expect(crumbs(tester), ['Shared Expenses', 'Payments']);
+    expect(crumbs(tester), ['Shared Expenses', 'Household', 'Payments']);
 
     await tester.tap(find.byKey(const ValueKey('shell-hide-amounts')));
     await tester.pumpAndSettle();
@@ -248,6 +248,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(crumbs(tester), [
       'Shared Expenses',
+      'Household',
       'Payments',
       'Profile and settings',
     ]);

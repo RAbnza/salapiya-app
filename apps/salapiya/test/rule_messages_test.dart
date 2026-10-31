@@ -5,6 +5,7 @@ import 'package:salapiya/finance/finance_screen.dart';
 import 'package:salapiya/finance/import_data.dart';
 import 'package:salapiya/finance/import_flow.dart';
 import 'package:salapiya/finance/money_editor.dart';
+import 'package:salapiya/shared/shared_data.dart';
 
 /// The forms put a rule's message on its field by matching its words, and
 /// people read those words, so these hold both to the rule files.
@@ -120,6 +121,56 @@ void main() {
       for (final word in jargon) {
         expect(message.toLowerCase(), isNot(contains(word)), reason: message);
       }
+    }
+  });
+
+  test('Shared Expenses’ messages use the glossary (§7)', () {
+    const jargon = [
+      'allocation',
+      'axis',
+      'capacity',
+      'intent',
+      'operation',
+      'synchronize',
+      'participants',
+      'identity',
+    ];
+    // Only a developer reaches these.
+    const internal = {
+      'Use exact integer minor-unit strings.',
+      'Positions do not sum to zero.',
+      'Invalid authenticated group receipt.',
+      'This command already has different frozen values.',
+      'Unsupported shared storage version; preserve your database.',
+    };
+    for (final file in [
+      'lib/shared/shared_domain.dart',
+      'lib/shared/shared_repository.dart',
+      'lib/shared/shared_store.dart',
+    ]) {
+      final found = messages(File(file).readAsStringSync()).toList();
+      expect(found, isNotEmpty, reason: file);
+      for (final message in found.where((m) => !internal.contains(m))) {
+        for (final word in jargon) {
+          expect(
+            message.toLowerCase(),
+            isNot(contains(word)),
+            reason: '$file: $message',
+          );
+        }
+      }
+    }
+  });
+
+  test('every server reason shown on screen is one the server writes', () {
+    final sql = Directory('../../services/salapiya/p0/supabase/migrations')
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.contains('p3_'))
+        .map((f) => f.readAsStringSync())
+        .join('\n');
+    for (final reason in sharedReasons.keys) {
+      expect(sql, contains(reason), reason: reason);
     }
   });
 

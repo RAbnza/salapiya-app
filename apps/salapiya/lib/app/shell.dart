@@ -29,6 +29,8 @@ import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
 import '../finance/money_editor.dart';
 import '../life/life_controller.dart';
+import '../shared/shared_hub.dart';
+import '../shared/shared_pages.dart' show SharedFlows;
 
 /// A create action: a fixed key (it also names the route, `action/<key>`),
 /// the glossary label, and an icon.
@@ -46,6 +48,14 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   @override
   void initState() {
     super.initState();
+    navigation.places[AppDestination.shared] = () {
+      final source = sharedHub.source();
+      if (source.groups.length < 2 && !sharedHub.choosing) return null;
+      return (
+        label: sharedHub.group(source)?.name,
+        home: sharedHub.showChooser,
+      );
+    };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final life = session.life;
@@ -75,6 +85,11 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
 
   late final PrototypeSession session = widget.session ?? PrototypeSession();
   final navigation = ShellNavigation();
+
+  /// Outlives the section's screen, which is keyed on its tab, so the group
+  /// on show and its records survive a change of tab.
+  late final sharedHub = SharedHub(session)
+    ..openConnection = () => utilities('Connection');
   final scrolls = [for (final _ in AppDestination.values) ScrollController()];
   final newMenu = MenuController();
   final newFirstItem = FocusNode(debugLabel: 'New menu first item');
@@ -90,6 +105,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     }
     navigation.dispose();
     newFirstItem.dispose();
+    sharedHub.dispose();
     if (widget.session == null) session.dispose();
     super.dispose();
   }
@@ -135,6 +151,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       );
       return;
     }
+    if (source == PreviewSource.settlement) sharedHub.focusWaiting();
     navigation.select(
       source.destination,
       tab: switch (source) {
@@ -246,8 +263,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               : '$toConfirm payments to confirm',
           icon: Icons.how_to_reg_outlined,
           tone: PillTone.warning,
-          onTap: () =>
-              navigation.select(AppDestination.shared, tab: 'Payments'),
+          onTap: () {
+            sharedHub.focusWaiting();
+            navigation.select(AppDestination.shared, tab: 'Payments');
+          },
         ),
       if (waiting > 0)
         SidebarNotice(
@@ -362,6 +381,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               'Add existing debt',
               'Record borrowing',
               'Pay credit card',
+              'Add shared expense',
+              'Report payment',
               'Add task',
               'Add event',
             ].contains(item.$1))
@@ -376,6 +397,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       editLifeEntry(content, session, LifeKind.task);
     } else if (key == 'Add event') {
       editPersonalEvent(content, session);
+    } else if (key == 'Add shared expense' && session.complete) {
+      SharedFlows(sharedHub).addBill(content);
+    } else if (key == 'Report payment' && session.complete) {
+      SharedFlows(sharedHub).startPayment(content);
     } else {
       open(actionPage(key, label), 'action/$key', title: label);
     }
@@ -737,6 +762,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       key: ValueKey(navigation.revisionOf(destination)),
       session: session,
       initial: navigation.tabOf(destination)!,
+      hub: sharedHub,
     ),
     AppDestination.life => LifeScreen(
       key: ValueKey(navigation.revisionOf(destination)),
@@ -780,183 +806,203 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   @override
   Widget build(BuildContext context) => ShellNavigationScope(
     navigation: navigation,
-    child: ListenableBuilder(
-      listenable: Listenable.merge([
-        session,
-        navigation,
-        widget.settings,
-        ?local?.runtime.connected,
-      ]),
-      builder: (context, _) {
-        final desktop = isDesktop(context);
-        final width = WidthClass.of(context);
-        final titleBar = TitleBarScope.maybeOf(context) != null;
-        final rail = desktop && width != WidthClass.compact;
-        final canExpand = width.index >= WidthClass.expanded.index;
-        final isExpanded = canExpand && (expanded ?? !widget.settings.compact);
-        final paged = navigation.hasPages;
-        final showDock =
-            !desktop && !paged && MediaQuery.viewInsetsOf(context).bottom == 0;
-        return TitleBarSlot(
-          items: TitleBarItems(
-            navigation: navigation,
-            status: status,
-            notices: notices,
-            hideAmounts: session.hideAmounts,
-            sidebarWidth: rail
-                ? (isExpanded ? Space.sidebarWidth : Space.railWidth)
-                : 0,
-            onGoTo: goTo,
-            onStatus: syncDetails,
-            onHideAmounts: session.togglePrivacy,
-            onCalendar: () =>
-                navigation.select(AppDestination.life, tab: 'Calendar'),
-          ),
-          child: PopScope(
-            canPop:
-                !paged &&
-                (desktop || navigation.destination == AppDestination.overview),
-            onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) back(desktop);
-            },
-            child: CallbackShortcuts(
-              bindings: {
-                if (desktop) ...{
-                  const SingleActivator(
-                    LogicalKeyboardKey.arrowLeft,
-                    alt: true,
-                  ): navigation.goBack,
-                  const SingleActivator(
-                    LogicalKeyboardKey.arrowRight,
-                    alt: true,
-                  ): navigation.goForward,
-                  const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-                      openNewMenu,
-                  const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-                      goTo,
-                  const SingleActivator(LogicalKeyboardKey.keyH, control: true):
-                      session.togglePrivacy,
-                },
+    child: SharedScope(
+      hub: sharedHub,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          session,
+          navigation,
+          sharedHub,
+          widget.settings,
+          ?local?.runtime.connected,
+        ]),
+        builder: (context, _) {
+          final desktop = isDesktop(context);
+          final width = WidthClass.of(context);
+          final titleBar = TitleBarScope.maybeOf(context) != null;
+          final rail = desktop && width != WidthClass.compact;
+          final canExpand = width.index >= WidthClass.expanded.index;
+          final isExpanded =
+              canExpand && (expanded ?? !widget.settings.compact);
+          final paged = navigation.hasPages;
+          final showDock =
+              !desktop &&
+              !paged &&
+              MediaQuery.viewInsetsOf(context).bottom == 0;
+          return TitleBarSlot(
+            items: TitleBarItems(
+              navigation: navigation,
+              status: status,
+              notices: notices,
+              hideAmounts: session.hideAmounts,
+              sidebarWidth: rail
+                  ? (isExpanded ? Space.sidebarWidth : Space.railWidth)
+                  : 0,
+              onGoTo: goTo,
+              onStatus: syncDetails,
+              onHideAmounts: session.togglePrivacy,
+              onCalendar: () =>
+                  navigation.select(AppDestination.life, tab: 'Calendar'),
+            ),
+            child: PopScope(
+              canPop:
+                  !paged &&
+                  (desktop ||
+                      navigation.destination == AppDestination.overview),
+              onPopInvokedWithResult: (didPop, _) {
+                if (!didPop) back(desktop);
               },
-              child: Shortcuts(
-                shortcuts: const {
-                  SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+              child: CallbackShortcuts(
+                bindings: {
+                  if (desktop) ...{
+                    const SingleActivator(
+                      LogicalKeyboardKey.arrowLeft,
+                      alt: true,
+                    ): navigation.goBack,
+                    const SingleActivator(
+                      LogicalKeyboardKey.arrowRight,
+                      alt: true,
+                    ): navigation.goForward,
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyN,
+                      control: true,
+                    ): openNewMenu,
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyK,
+                      control: true,
+                    ): goTo,
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyH,
+                      control: true,
+                    ): session.togglePrivacy,
+                  },
                 },
-                child: Actions(
-                  actions: {DismissIntent: _CloseMenu(newMenu)},
-                  child: Listener(
-                    onPointerDown: desktop ? pointer : null,
-                    child: Focus(
-                      autofocus: true,
-                      child: Scaffold(
-                        body: SafeArea(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Stable Row/Expanded ancestry preserves destination controllers on resize.
-                              if (rail)
-                                ShellSidebar(
-                                  navigation: navigation,
-                                  expanded: isExpanded,
-                                  profileName: session.profile.name,
-                                  status: titleBar ? null : status,
-                                  titleBar: titleBar,
-                                  quickCreate: [
-                                    for (final item in newItems.take(3))
-                                      (
-                                        label: item.$2,
-                                        icon: item.$3,
-                                        onSelected: () => runNew(item),
-                                      ),
-                                  ],
-                                  profileLinks: profileLinks,
-                                  tabs: sectionTabs,
-                                  badges: {AppDestination.shared: toConfirm},
-                                  notices: notices,
-                                  hideAmounts: session.hideAmounts,
-                                  onHideAmounts: session.togglePrivacy,
-                                  themeMode: widget.settings.themeMode,
-                                  onThemeMode: (mode) => widget.settings.change(
-                                    () => widget.settings.themeMode = mode,
-                                  ),
-                                  onSettings: utilities,
-                                  onHelp: () => utilities(
-                                    local == null ? 'Profile' : 'Help',
-                                  ),
-                                  toggle: canExpand
-                                      ? () => setState(
-                                          () => expanded = !isExpanded,
-                                        )
-                                      : null,
-                                )
-                              else
-                                const SizedBox.shrink(),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    if (desktop || !paged)
-                                      header(
-                                        context,
-                                        desktop: desktop,
-                                        rail: rail,
-                                        titleBar: titleBar,
-                                      ),
-                                    Expanded(
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          // A route's modal barrier hides what is painted
-                                          // before it from screen readers, up to the nearest
-                                          // container; this keeps the sidebar and header.
-                                          Semantics(
-                                            container: true,
-                                            child: Navigator(
-                                              key: navigation.navigatorKey,
-                                              observers: [navigation.observer],
-                                              pages: [
-                                                MaterialPage<void>(
-                                                  key: const ValueKey(
-                                                    'shell-destinations',
+                child: Shortcuts(
+                  shortcuts: const {
+                    SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+                  },
+                  child: Actions(
+                    actions: {DismissIntent: _CloseMenu(newMenu)},
+                    child: Listener(
+                      onPointerDown: desktop ? pointer : null,
+                      child: Focus(
+                        autofocus: true,
+                        child: Scaffold(
+                          body: SafeArea(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Stable Row/Expanded ancestry preserves destination controllers on resize.
+                                if (rail)
+                                  ShellSidebar(
+                                    navigation: navigation,
+                                    expanded: isExpanded,
+                                    profileName: session.profile.name,
+                                    status: titleBar ? null : status,
+                                    titleBar: titleBar,
+                                    quickCreate: [
+                                      for (final item in newItems.take(3))
+                                        (
+                                          label: item.$2,
+                                          icon: item.$3,
+                                          onSelected: () => runNew(item),
+                                        ),
+                                    ],
+                                    profileLinks: profileLinks,
+                                    tabs: sectionTabs,
+                                    badges: {AppDestination.shared: toConfirm},
+                                    notices: notices,
+                                    hideAmounts: session.hideAmounts,
+                                    onHideAmounts: session.togglePrivacy,
+                                    themeMode: widget.settings.themeMode,
+                                    onThemeMode: (mode) =>
+                                        widget.settings.change(
+                                          () =>
+                                              widget.settings.themeMode = mode,
+                                        ),
+                                    onSettings: utilities,
+                                    onHelp: () => utilities(
+                                      local == null ? 'Profile' : 'Help',
+                                    ),
+                                    toggle: canExpand
+                                        ? () => setState(
+                                            () => expanded = !isExpanded,
+                                          )
+                                        : null,
+                                  )
+                                else
+                                  const SizedBox.shrink(),
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      if (desktop || !paged)
+                                        header(
+                                          context,
+                                          desktop: desktop,
+                                          rail: rail,
+                                          titleBar: titleBar,
+                                        ),
+                                      Expanded(
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            // A route's modal barrier hides what is painted
+                                            // before it from screen readers, up to the nearest
+                                            // container; this keeps the sidebar and header.
+                                            Semantics(
+                                              container: true,
+                                              child: Navigator(
+                                                key: navigation.navigatorKey,
+                                                observers: [
+                                                  navigation.observer,
+                                                ],
+                                                pages: [
+                                                  MaterialPage<void>(
+                                                    key: const ValueKey(
+                                                      'shell-destinations',
+                                                    ),
+                                                    child: destinations(
+                                                      showDock,
+                                                    ),
                                                   ),
-                                                  child: destinations(showDock),
-                                                ),
-                                              ],
-                                              onDidRemovePage: (_) {},
-                                            ),
-                                          ),
-                                          // The scroll viewport extends behind the dock. Only its
-                                          // trailing content padding reserves final-item clearance.
-                                          if (showDock)
-                                            Positioned(
-                                              left: 0,
-                                              right: 0,
-                                              bottom: 0,
-                                              child: MeasureSize(
-                                                onChanged: (size) {
-                                                  if (mounted &&
-                                                      dockHeight !=
-                                                          size.height) {
-                                                    setState(
-                                                      () => dockHeight =
-                                                          size.height,
-                                                    );
-                                                  }
-                                                },
-                                                child: ShellBottomBar(
-                                                  selected:
-                                                      navigation.destination,
-                                                  select: select,
-                                                  onNew: showNewSheet,
-                                                ),
+                                                ],
+                                                onDidRemovePage: (_) {},
                                               ),
                                             ),
-                                        ],
+                                            // The scroll viewport extends behind the dock. Only its
+                                            // trailing content padding reserves final-item clearance.
+                                            if (showDock)
+                                              Positioned(
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                child: MeasureSize(
+                                                  onChanged: (size) {
+                                                    if (mounted &&
+                                                        dockHeight !=
+                                                            size.height) {
+                                                      setState(
+                                                        () => dockHeight =
+                                                            size.height,
+                                                      );
+                                                    }
+                                                  },
+                                                  child: ShellBottomBar(
+                                                    selected:
+                                                        navigation.destination,
+                                                    select: select,
+                                                    onNew: showNewSheet,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -965,9 +1011,9 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     ),
   );
 }

@@ -103,7 +103,7 @@ At text scale ≥ 150%, drop one column class.
   - **Then, scrolling when the window is short:**
     - **Profile card:** the initial and the name on one line. It opens the profile menu. The sync state is in the title bar; without the custom frame, the card shows it on a second line with its icon.
     - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
-    - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event. Hidden when the section has none (Shared Expenses in production) and on the rail.
+    - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event. Shared Expenses: Add shared expense, Log a payment between members. Hidden on the rail.
     - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
   - **Bottom, fixed:**
     - Settings (opens Profile and settings) and Help. Without the title bar, Hide amounts (a small switch) comes first; with it, Hide amounts is in the title bar.
@@ -325,6 +325,37 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
 - **Forms:** every Cards and Planning form on `NativeFinanceEditor`, on the compact scale, with plain labels, More details, pickers limited to what applies and automatic names. Adding a recurring item also adds its next 90 days, as a second command. If that fails, the item stays saved and offers Add to Upcoming.
 - **Demo build:** `demoSample` gained three cards' worth of activity, recurring items, goals, budgets, two imports (one done, one waiting) and three files (on this device, missing, archived link), all replayed through the rules. It shows every tab and detail page, including the forecast. It can't show the Cards and Planning forms, the Import review, Attach a file, or real file preview, check and restore, which need the encrypted store.
 
+### Shared Expenses A: groups, Bills, Payments (Chat 10)
+
+`lib/shared/shared_hub.dart` (what the section shows, kept outside its screen), `shared_data.dart` (the source and display-only derivations), `shared_header.dart` (header and switcher), `shared_cards.dart`, `shared_bills_tab.dart`, `shared_payments_tab.dart`, `shared_pages.dart` (pages and flows), `shared_bill_form.dart`, `shared_payment_form.dart`, `shared_group_forms.dart`, `shared_demo.dart`; tested in `test/shared_data_test.dart`, `shared_dashboard_test.dart` and `shared_form_test.dart`. `lib/features/finance/presentation/shared_screen.dart` is the frame on both builds. Balances, People, Private review, History and Lifecycle keep their content for Chat 11.
+
+Five-second questions. Groups: which group am I looking at, and where do I stand in it? Bills: what's been shared, what's my part, and does anything need me? Payments: who paid whom, and what's waiting to be confirmed?
+
+- **`SharedHub`:** the shell creates it once. It holds the repository and the chosen group, so a change of tab keeps them. The shell keys each section's screen on its tab, so nothing that must survive can live in that screen.
+- **Choosing a group.** With two or more active groups and no default, Shared Expenses opens on **Choose a group** (`SharedGroupChooser`), not on a group the app picked. Each active group is a card with where you stand, its people and bills, anything to confirm and whether it's the default; archived and left groups are listed under it; Create a group and Join with a code are in the header (below the groups on Android).
+  - **What opens:** the group chosen this session, then a default that can still be used, then an only active group. Archived and left groups don't count, so one active group opens by itself. Otherwise the chooser. A choice lasts until the app closes, so leaving and coming back doesn't ask again.
+  - **Default group:** "Make this my default" on a card's menu or the Group page's More menu. It's saved with the profile's settings on that device, through the same path as Hide amounts, because saving settings rewrites the whole set. If it's archived or left, the chooser opens instead. Chat 14 adds it to Profile and settings.
+  - **Back to choosing:** See all groups in the switcher, or Shared Expenses in the breadcrumb, which reads Shared Expenses › Household › Bills with several groups.
+  - **What skips it:** the bell, the Overview's links and linked Money records already know the group. A sidebar tab picked first opens after the group is chosen. New asks which group in the form, or with a short list for a payment.
+- **Header.** The group is the page's title and opens the switcher; the breadcrumb and app bar already name the section. Windows: its name as `headlineMedium` with a chevron, "As of ‹long date› · 4 people · 12 bills", and the actions at the right end. Android: the 48-tall row with the group's initial, its name and a "1 to confirm" pill that opens Payments.
+- **Switcher.** A menu on Windows, a sheet on Android. Current groups with each one's standing and a count badge, then Archived or left, then About this group, Create a group, Join with a code and See all groups.
+- **Tabs and notices.** `AppTabs` with the seven labels. Under them, only when they apply: first download not finished; offline ("New bills and payments wait here. Other changes need a connection."); N changes waiting for the group; sync needs review; left or archived.
+- **Bills.** Tiles: Where you stand (the accent, with what you'd stand at if waiting payments are confirmed, always labelled), Your part this month, Group spending, Needs you. Bills (8; 12 when nothing needs the user) by month, newest first, 25 rows then Show more. Needs your attention (4): refused, restored, linked records that changed, drafts, waiting work, with Who paid, whose part under it so a long list has nothing empty beside it, and Shared over time (12) below. With nothing needing attention: Shared over time (7) beside Who paid, whose part (5).
+- **Android order:** Where you stand, Your part + Group spending, Needs your attention, Bills, Who paid, Shared over time.
+- **Payments.** Tiles: To confirm (the accent), Waiting for others, Confirmed this month, If all are confirmed (always labelled). Waiting to be confirmed (7): payments still open, with Confirm in the row for whoever can answer, then disputed ones. Between you and others (5): who the user owes and who owes them, with Log payment prefilled and a link to Balances. Needs your attention (12, only when there's something). Payments (12): by month, newest first, with filters for To confirm, Waiting, Confirmed, Disputed, and Cancelled or reversed, 25 rows then Show more.
+- **Android order (Payments):** To confirm, Waiting + Confirmed, If all are confirmed, Waiting to be confirmed, Needs your attention, Between you and others, Payments.
+- **What a payment offers** (`paymentChoices`, which mirrors the server): the recipient, or the owner for someone who isn't registered, can confirm or dispute one that's waiting, and undo one that's confirmed. The sender can cancel one that's waiting or disputed. Anyone else only reads it. Nothing is offered and then refused.
+- **Pages** (`SectionPage`). Bill: How it was split (the accent, 8) beside About this bill (4), then Payments on this bill, Refunds and Edit history. Correct and Log a refund show for the bill's creator, off with a reason when offline. The More menu holds only the private actions that apply. Group: Where everyone stands (Confirmed | If confirmed, also at the top of Balances) beside About this group, then Recent activity. Payment: What this does (the accent, 8), with what's owed now and if it's confirmed, always labelled, beside About this payment (4), then Applied to and History (each event, with its reason). Its More menu holds only the private actions that apply: Add to my Money, then Count it in my group balance once it's confirmed, then Take it out of my group balance if that's undone.
+- **Shareable lists** (opened from each card's corner menu, or a bill's More menu): a group's bills and a group's payments, each with This month, Last month or All dates, "as of", the totals and every item, oldest first, with no row limit; and one bill's split. They have no tabs or actions, so one screenshot says it all. Between you and one person is Chat 11's.
+- **Landing.** A count of payments to confirm covers every group, so the bell and the Overview open the group that has one. A record in Money linked to Shared Expenses opens its group, tab and bill or payment.
+- **States.** Not connected: Connect. Loading: a skeleton, never the empty state. No groups: Create a group and Join with a code. Offline with no groups: a connect message, and drafts stay listed. One member: Add someone. A group the user left is a partial copy: totals read "Not available yet", and their earlier records stay listed. An incomplete download shows no ₱. Hidden amounts hide charts and every figure.
+- **You owe** is `text` with ↗, and Owed to you is teal with ↙, always with the words.
+- **Forms** (compact scale; all of Chat 10's). Add shared expense and Correct: one payer by default with "Split between payers", Who's in with Equal or Exact amounts, and the extra centavo named. Each person in Who's in shows what the bill leaves them with: "Owes ₱150.00" or "Gets back ₱150.00", over "Part ₱250.00 · paid ₱100.00". Until Who paid adds up to the total, only the part shows, with a note saying why, because a figure from half-entered amounts would be wrong. Correct starts from the bill's own split and date. Log a refund: who got the money back and whose part goes down, each with what's left beside it. Log a payment between members: who to, then All of it, Part of it or Choose bills, with what's owed shown first; only people the rules allow are offered as the payer, and anything over what's owed asks first. Choose bills sends the sum of its bills as the amount. Share your saved purchase is the bill form with its amount, date and payer fixed. Confirm, Dispute, Cancel and Undo, Create a group and Join with a code are modals. The commands are the same as before: `paid` lists everyone, zeros included. New bills and payments queue offline; everything else needs a connection and says so before the form opens or before Save.
+- **Ids** are made once per form and frozen after a lost answer, so "Check again" asks about the same command, and the server answers from its receipt. A refusal gets a new id. A form that would send a stale group version stops at Review, because a refused command stays on record.
+- **Dates.** Bills and payments count by their own date. Group balances have no date, so a bill dated later still counts in standing and sits in its month, with no Later section. A bill's refunds subtract from that bill wherever they fall. "N days waiting" runs from when the payment was logged, on the Asia/Manila calendar.
+- **Saved drafts.** Drafts get real titles from what was typed, and opening one never fails: if its group or bill is gone, it says so and offers Discard draft. A shared purchase's link row isn't a draft, so Money's Saved drafts leaves it out.
+- **Demo build:** `shared_demo.dart` builds five groups dated relative to today with the real split and payment rules: Household (the Overview's "1 payment to confirm"), Boracay trip (you owe), Reunion 2025 (archived), Old apartment (left), New group (one member). Scenarios and hidden amounts apply. The new forms work there, and saving doesn't change the sample. One bill the user paid is linked to a record in `demoSample`, so the record page's link works. The demo can't show the private forms or a real join. Its five Chat 11 tabs keep their old fixture, so their figures don't match the sample.
+
 ### Section screen standard (the Overview's quality bar)
 
 Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section chat from Chat 7 on. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
@@ -428,7 +459,7 @@ Status is always shown with an icon and a label too, never by color alone.
 | `overdue` | `#A1173F` / `#FDEEF2` | `#FF9DB6` / `#3A1A26` | A debt or bill past due. Rose, so it doesn't read as a form error |
 | `owedToYou` | `#0E6A63` / `#E6F5F2` | `#6FD3C7` / `#102E2B` | Money others owe you. Teal, so it doesn't read as "done" |
 
-"You owe" uses neutral `text`; Chat 10 decides whether it needs a role.
+"You owe" uses neutral `text` with the words and an arrow, and has no role of its own (Chat 10): owing a friend isn't a problem state, and teal stays the only colored direction.
 
 ### Charts, title bar, high contrast and legacy colors
 
@@ -780,7 +811,7 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
   - **Focal:** `displayMedium`, stepping down. It scrolls sideways only as a last resort.
   - Figures are always tabular, and the line never wraps.
 - **Kinds:**
-  - **Neutral, Spent and You owe:** `text`. "You owe" may get its own role in Chat 10.
+  - **Neutral, Spent and You owe:** `text`, with no role of its own (§3).
   - **Owed to you:** `owedToYou`. Pair it with a caption such as "Owed to you".
   - **Screen readers:** the kind is appended, e.g. "Philippine pesos 800.00, owed to you".
 - **Unknown:** a null value shows "Not available yet" in `secondary`, never ₱0.00.
@@ -851,6 +882,10 @@ Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same
 ### Tables (`AppTable`; moved from Debts, Chat 8)
 
 `kit/app_table.dart`: `AppTable`, `AppTableRow`, `AppTableColumn`, `dateColumn` and `ShowMore`, moved from `lib/finance/debt_cards.dart` and renamed, because a debt-named class doesn't belong in the kit. The look is unchanged. Additions, both optional: `AppTableRow.header` starts a group of rows and takes no part in the columns, so every day of a dated list shares one set of widths; `dense` is for long lists of one-line rows. A group header has `groupGap` above it (`md` under the table's own header) and `xs` below it, with no hairline around it, as columns and as rows. `ActivityCard` gained an optional `footer`.
+
+### Form fields without a store (Chat 10)
+
+`FormInputs` in `lib/finance/form_mechanics.dart` holds a compact form's fields, anchors and errors, split out of `FinanceFormFields` with no change in look, so forms with no `LocalFinancialController` can use them. `SharedFormSteps` adds the group forms' details, review and send.
 
 ### Form exits (`FormExitGuard`)
 
@@ -992,6 +1027,22 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Occurrence | Date | "Recurring date" where it needs context |
 | Recurring expectation, Recurring activity | Recurring item | |
 | Basis (net / gross) | What counts | Net subtracts refunds; gross doesn't |
+| Consumed share | Part | "Your part" |
+| Contributed | Paid | |
+| Split method | How to split | Equal, Exact amounts |
+| Canonical participant order | The extra centavo goes to ‹name› | |
+| Allocation | Applied to | Payments between members |
+| Advance | Paid ahead | |
+| Over-net | More than what's owed | |
+| Receivable, Payable | Owed to you, You owe | |
+| Private adoption | Add to my Money | |
+| Dispute receipt | Dispute | |
+| Cancel my report | Cancel this payment | |
+| Reverse confirmation | Undo confirmation | |
+| Manual participant | Not registered | |
+| Retained history | Earlier records | |
+| Group acceptance | Reached the group | |
+| Immutable revision | Edit history | |
 
 ### Tone rules
 
@@ -1051,6 +1102,15 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Import: where each import stands, each row's result, whether a choice of rows would go below zero | `ImportBatch`, `importBatches`, `ImportRow`, `importGoesBelowZero` (`lib/finance/import_data.dart`) | UI aggregation (approved, Chat 9) |
 | Files: where each file stands, what it's attached to, what the tiles count | `FileRow`, `fileRows`, `FilesSummary` (`lib/finance/files_data.dart`) | UI aggregation (approved, Chat 9) |
 | Record page: plain labels for Cards, Planning and Files records | `recordFacts` (`lib/finance/record_facts.dart`) | UI aggregation (approved, Chat 9) |
+| Shared: where the user stands, confirmed and if waiting payments are confirmed | `SharedStanding`, `sharedStanding` (`lib/shared/shared_data.dart`), from `positions()` | UI aggregation (approved, Chat 10) |
+| Shared: groups in order, with each one's standing and what's waiting | `sharedGroupRows` | UI aggregation (approved, Chat 10) |
+| Shared: one row per bill, after refunds, with the user's part and what's left between them | `SharedBillRow`, `sharedBillRows`, `leftOnBills` (the sum of `due(me, other, bill:)`) | UI aggregation (approved, Chat 10) |
+| Shared: who paid and whose part on a bill and across bills; who gets the extra centavo | `billSplit`, `peopleTotals`, `extraCentavo` | UI aggregation (approved, Chat 10) |
+| Shared: totals by month, by bill date, refunds subtracted | `monthTotal`, `monthPart`, `sharedByMonth` | UI aggregation (approved, Chat 10) |
+| Shared: one row per payment, its status for this user, and what the rules let them do | `SharedPaymentRow`, `sharedPaymentRows`, `billPayments`, `paymentChoices`, `canChangeBill` | UI aggregation (approved, Chat 10) |
+| Shared: who the user owes and who owes them | `pairsWithMe`, from `reciprocalPairs` | UI aggregation (approved, Chat 10) |
+| Shared: payments still open, filters, totals, what each is applied to; what's owed between two people now and if waiting payments are confirmed | `openPayments`, `PaymentFilter`, `paymentTotal`, `appliedLine`, `owedBetween`, `paymentProjection` | UI aggregation (approved, Chat 10) |
+| Shared: what needs the user, and drafts and saved work in plain words | `sharedTasks`, `draftTitle`, `intentTitle`, `intentState`, `sharedReason` | UI aggregation (approved, Chat 10) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1069,11 +1129,11 @@ Remove this section when the redesign is finished.
 | 7 | Debts | Done |
 | 8 | Money A: Accounts, Activity, transaction form | Done |
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Done |
-| 10 | Shared Expenses A: groups, Bills, Payments | Next |
-| 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle | Planned |
+| 10 | Shared Expenses A: groups, Bills, Payments | Done |
+| 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog | Next |
 | 12 | Life A: Calendar, Tasks, reminders | Planned |
 | 13 | Life B: Learning, Books, Career | Planned |
-| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help | Planned |
+| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Planned |
 | 15 | Onboarding: welcome, local setup, Google, restore | Planned |
 | 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
@@ -1099,7 +1159,7 @@ Error messages written in rule files stay as they are until the chat that works 
 
 | Chat | Rule files | Messages left | Examples |
 | --- | --- | --- | --- |
-| 10 | `shared_domain.dart`, `shared_repository.dart` | 15 | "Each allocation axis must independently equal the total.", "Connect and synchronize before reviewing this operation." |
+| 10 | `shared_domain.dart`, `shared_repository.dart`, `shared_store.dart` | Done: 15, plus the connected-identity message | The server's reasons stay as they are; `sharedReason` shows them plainly, and a test holds that table to the SQL |
 | 11 | `shared_private_domain.dart` | 26 | "Group settlement payments require actual cash evidence.", "Explain the private source reconciliation." |
 | 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages | About 35, with Chat 15 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup." |
 | 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
@@ -1247,3 +1307,21 @@ Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks th
 | 2026-10-31 | Opening a file in another app needs a plain copy outside the encrypted store, which ARCHITECTURE asks to protect. The owner asked for it, and Save a copy already writes one. Each copy goes in a private temporary folder and is removed after 10 minutes, or at the next start. Its extension comes from the checked file type, so a stored name never decides what runs. | Approved |
 | 2026-10-31 | Android opens that copy through a small platform channel and `FileProvider`, limited to the one folder and read-only, rather than a new package. | Done |
 | 2026-10-31 | Owner review of Cards: a list cut short closes with a link to the whole list (`ListEnd(onPressed:)`), on every card that has one: Due next and Coming up open a page, Debts' Due next opens Schedule, Recent activity opens Activity. A list that shows everything keeps "That's everything", which Recent activity used to say even when it showed only the newest rows. | Approved |
+| 2026-10-31 | Shared Expenses (Chat 10): the group is the page's title and opens a switcher with each group's standing. No third tab layer. | Approved |
+| 2026-10-31 | Bills: tiles, then Bills 8 beside Needs your attention 4, then Shared over time 7 beside Who paid, whose part 5. Payments: tiles, then Waiting to be confirmed 7 beside Between you and others 5, then every payment. | Approved |
+| 2026-10-31 | Shareable lists: a group's bills, a group's payments and one bill's split. Between you and one person moves to Chat 11, because it's the pair breakdown Balances needs anyway. | Approved |
+| 2026-10-31 | Add shared expense asks Who paid and Who's in, with one payer by default. The command is unchanged. Log a payment starts from what's owed: All of it, Part of it, Choose bills. | Approved |
+| 2026-10-31 | The private forms stay on `_SharedForm` until Chat 11, with their rule messages. This chat only shows them where they apply. | Approved |
+| 2026-10-31 | "You owe" has no color role of its own. It stays `text`, with the words and an arrow. | Approved |
+| 2026-10-31 | The demo's Bills and Payments use a new sample built with the real rules; its five Chat 11 tabs keep their old fixture until then. | Approved |
+| 2026-10-31 | Shared rule messages reworded as approved, with `shared_store.dart`'s identity message. Server reasons change on screen only. | Approved |
+| 2026-10-31 | Correct starts from the bill's own split method, and from its date. Both used to be reset by the form. This is the one command value that changes. | Approved |
+| 2026-10-31 | A shared draft can be discarded. A group the user left shows "Not available yet" for totals. `shared-purchase:` rows are left out of Money's Saved drafts, and `shared_attention.dart` is deleted. | Approved |
+| 2026-10-31 | The old demo bill page (`SharedBillDetail`) is gone: Bills' rows open the new page on both builds. | Done |
+| 2026-10-31 | Choose bills sends the sum of its bills as the amount, so there's no separate Amount field. The old form could send more than the bills held; Part of it covers that, with the same consent. | Done |
+| 2026-10-31 | "Confirmed by the owner" is the pill for a payment the owner recorded for someone who isn't registered, and the payment's page says they didn't sign in. | Done |
+| 2026-10-31 | Owner's request: with two or more active groups and no default, Shared Expenses opens on Choose a group instead of a group the app picked. An only active group opens by itself; archived and left groups don't count. A choice lasts until the app closes. Links that already know the group skip it, and a sidebar tab picked first opens after the group is chosen. | Approved |
+| 2026-10-31 | A default group, set from the chooser or the Group page, saved per profile on the device with the profile's settings. It falls back to the chooser if it's archived or left. Settings lists it in Chat 14. | Approved |
+| 2026-10-31 | The Your groups page is replaced by the chooser. The breadcrumb reads Shared Expenses › Group › Tab with several groups, and its first segment goes back to choosing. | Done |
+| 2026-10-31 | Owner review of the bill form: with several payers, a person's part alone read as what they owe. Who's in now shows what the bill leaves each person with (paid minus part, as `billPositions` does), with the part and what they paid beneath it. | Approved |
+| 2026-10-31 | Owner left the open Chat 10 calls to the recommendation: Correct keeps the bill's date; `SharedBillDetail` stays removed; Choose bills sends the sum of its bills; and on Bills, Who paid, whose part sits under Needs your attention so a long list has no empty space beside it. | Approved |

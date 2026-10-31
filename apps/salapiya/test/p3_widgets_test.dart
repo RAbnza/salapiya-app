@@ -14,6 +14,16 @@ import 'package:salapiya/local/local_store.dart';
 import 'local_money_journey.dart';
 import 'local_test_support.dart';
 
+/// Leaves a form as Back or Esc does; it has no Close button of its own.
+Future<void> close(WidgetTester tester, Finder inside) async {
+  await tester
+      .state<NavigatorState>(
+        find.ancestor(of: inside, matching: find.byType(Navigator)).first,
+      )
+      .maybePop();
+  await localSettle(tester);
+}
+
 void main() {
   for (final mobile in [false, true]) {
     for (final theme in ['light', 'dark']) {
@@ -123,8 +133,11 @@ void main() {
               tester,
               () => find.text(name).evaluate().isNotEmpty,
             );
-            await localTap(tester, find.text('Add shared expense'));
-            final field = find.byKey(const ValueKey('shared-field-name'));
+            await localAction(tester, 'Add shared expense');
+            final field = find.descendant(
+              of: find.byKey(const ValueKey('native-name')),
+              matching: find.byType(TextField),
+            );
             await localWait(tester, () => field.evaluate().isNotEmpty);
             await tester.ensureVisible(field);
             await tester.tap(field);
@@ -156,7 +169,7 @@ void main() {
             expect(readFinished, isTrue);
             await reading;
             expect(persisted, isTrue);
-            await localTap(tester, find.text('Close').last);
+            await close(tester, field);
             await localTap(tester, find.text('Keep draft & close'));
             var intentsRead = false;
             final intents = f.store.db
@@ -171,10 +184,7 @@ void main() {
             expect(intentsRead, isTrue);
             expect(await intents, isEmpty);
             expect(tester.takeException(), isNull);
-            await localTap(
-              tester,
-              find.widgetWithText(TextButton, 'Balances'),
-            );
+            await localTap(tester, find.byKey(const ValueKey('Balances')));
             expect(
               find.textContaining('Suggestions are nonposting'),
               findsOneWidget,
@@ -220,8 +230,8 @@ void main() {
             final saved = find.byKey(ValueKey('shared-intent-$refused'));
             await localWait(tester, () => saved.evaluate().isNotEmpty);
             await localTap(tester, saved);
-            expect(find.text('Retained rejected purchase'), findsOneWidget);
-            await localTap(tester, find.text('Create corrected draft'));
+            expect(find.text('Retained rejected purchase'), findsWidgets);
+            await localTap(tester, find.text('Fix it'));
             await localWait(tester, () => field.evaluate().isNotEmpty);
             expect(
               tester.widget<TextField>(field).controller!.text,
@@ -252,13 +262,11 @@ void main() {
             expect(linkRead, isTrue);
             await links;
             expect(linkCopied, isTrue);
-            await localTap(tester, find.text('Close').last);
+            await close(tester, field);
+            await localTap(tester, find.text('Keep draft & close'));
             expect(saved, findsOneWidget);
             expect(tester.takeException(), isNull);
-            await localTap(
-              tester,
-              find.widgetWithText(TextButton, 'Lifecycle'),
-            );
+            await localTap(tester, find.byKey(const ValueKey('Lifecycle')));
             await localTap(tester, find.text('Revoke invitation'));
             final issued = find.byKey(
               const ValueKey('shared-field-invitation'),
@@ -277,7 +285,9 @@ void main() {
             );
             await localTap(tester, find.text('Close').last);
             expect(tester.takeException(), isNull);
-            await localTap(tester, find.widgetWithText(TextButton, 'Bills'));
+            await localTap(tester, find.byKey(const ValueKey('Bills')));
+            await localTap(tester, find.text('Earlier accepted shared source'));
+            await localTap(tester, find.byKey(const ValueKey('bill-menu')));
             await localTap(
               tester,
               find.byKey(ValueKey('private-bill-$source')),

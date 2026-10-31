@@ -180,7 +180,7 @@ Future<void> localMoneyJourney(
   await tester.enterText(find.byType(TextField), 'Everyday owner');
   await localTap(tester, find.text('Create local profile'));
   await localWait(tester, () => runtime.session != null);
-  expect(find.textContaining('Tala reported'), findsNothing);
+  expect(find.textContaining('Tala logged'), findsNothing);
   expect(find.textContaining('DEMO ·'), findsNothing);
   await localTap(tester, find.byKey(const ValueKey('nav-money')));
   await localTap(tester, find.text('Add account'));

@@ -16,120 +16,15 @@ const syncBlockedTitle = 'Couldn’t check your latest records';
 const syncBlockedMessage =
     'Salapiya checks your latest records before saving this, and that needs a connection. Nothing was saved, and what you entered is still here.';
 
-/// What the compact finance forms share (§3, §5): their fields, errors on the
-/// field they're about, account balances, the below-zero choice and syncing
-/// before a change that needs the latest records. `NativeFinanceEditor` and
-/// `MoneyEditor` each decide which fields to show and what to save.
-mixin FinanceFormFields<T extends StatefulWidget> on State<T> {
-  LocalFinancialController get c;
+/// The fields of a compact form (§3, §5), errors on the field they're about
+/// included. They need no store, so Shared Expenses' forms use them too.
+mixin FormInputs<T extends StatefulWidget> on State<T> {
   Map<String, String> get values;
-  String get id;
   void retain();
-
-  /// Money leaving the chosen account in this form, once it's a valid amount.
-  BigInt? get leaving;
 
   final fields = <String, TextEditingController>{};
   final anchors = <String, GlobalKey>{};
   String? errorField, errorMessage;
-
-  /// The command, its plan and the records it was planned on, once at Review.
-  LocalCommand? reviewed;
-  LocalPlan? plan;
-  LocalSnapshot? reviewSnapshot;
-
-  /// The rules asked whether going below zero is right.
-  bool needsConsent = false;
-
-  /// The account field the below-zero choice is about.
-  String consentField = 'account';
-
-  /// A sync is under way before saving.
-  bool syncing = false;
-
-  /// The rule refused the change even after trying to sync.
-  bool syncBlocked = false;
-
-  /// The sync brought new records, so the review was built again.
-  bool rechecked = false;
-
-  bool get needsLatest =>
-      c.connected && reviewed != null && dependencySensitive(reviewed!);
-
-  /// Syncs before a change that needs the latest records. If that brought
-  /// new records the reviewed command is out of date, so it's reviewed again
-  /// on them and nothing saves: returns true.
-  Future<bool> refreshBeforeSaving() async {
-    if (!needsLatest) return false;
-    setState(() => syncing = true);
-    await c.syncLatest?.call();
-    await c.reload();
-    if (mounted) setState(() => syncing = false);
-    if (c.snapshot.version == reviewed!.expectedVersion) return false;
-    reviewed = LocalCommand(
-      id: id,
-      owner: c.store.owner,
-      expectedVersion: c.snapshot.version,
-      kind: reviewed!.kind,
-      values: reviewed!.values,
-    );
-    reviewSnapshot = c.snapshot;
-    plan = planLocal(reviewSnapshot!, reviewed!);
-    return true;
-  }
-
-  /// What Review says about syncing, under the review itself.
-  List<Widget> syncNotices() => [
-    if (c.connected) ...[
-      SizedBox(height: CompactForm.fieldGap(context)),
-      const InlineNotice(
-        'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
-      ),
-    ],
-    if (syncBlocked || rechecked || needsLatest)
-      SizedBox(height: CompactForm.fieldGap(context)),
-    if (syncBlocked)
-      const InlineNotice(
-        syncBlockedMessage,
-        title: syncBlockedTitle,
-        tone: NoticeTone.warning,
-        live: true,
-      )
-    else if (rechecked)
-      const InlineNotice(
-        'Syncing brought in newer records, so this review was updated. Check it again, then save.',
-        title: 'Your records changed',
-        tone: NoticeTone.warning,
-        live: true,
-      )
-    else if (needsLatest)
-      const InlineNotice(
-        'Saving this checks your latest records first, so it needs a connection.',
-      ),
-  ];
-
-  /// An account's balance today, for the eye: hidden amounts stay hidden.
-  String shownBalance(String id) => c.amountsHidden
-      ? 'Amount hidden'
-      : c.amount(c.snapshot.balance(id, through: civilToday()));
-
-  /// Each account's balance under its name, and a warning on the chosen one
-  /// if this amount takes it below zero. Saving is still the rules' call.
-  Map<String, String> balanceLines(Map<String, String> accounts, String key) {
-    final amount = leaving;
-    return {
-      for (final id in accounts.keys)
-        if (id.isNotEmpty)
-          id: [
-            'Balance ${shownBalance(id)}',
-            if (!c.amountsHidden &&
-                amount != null &&
-                id == values[key] &&
-                amount > c.snapshot.balance(id, through: civilToday()))
-              'this takes it below zero',
-          ].join(' · '),
-    };
-  }
 
   /// The problem shows in place (§6); this brings it into view.
   Future<void> showProblem(String message, String? field) async {
@@ -280,6 +175,133 @@ mixin FinanceFormFields<T extends StatefulWidget> on State<T> {
     ),
   );
 
+  /// Windows: end-aligned, the primary rightmost. Android: full width.
+  Widget actions(Widget primary, [Widget? secondary]) => isDesktop(context)
+      ? Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (secondary != null) ...[
+              secondary,
+              const SizedBox(width: Space.sm),
+            ],
+            primary,
+          ],
+        )
+      : Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [primary, ?secondary],
+        );
+}
+
+/// What the compact finance forms add to [FormInputs]: account balances, the
+/// below-zero choice and syncing before a change that needs the latest
+/// records. `NativeFinanceEditor` and `MoneyEditor` each decide which fields
+/// to show and what to save.
+mixin FinanceFormFields<T extends StatefulWidget> on FormInputs<T> {
+  LocalFinancialController get c;
+  String get id;
+
+  /// Money leaving the chosen account in this form, once it's a valid amount.
+  BigInt? get leaving;
+
+  /// The command, its plan and the records it was planned on, once at Review.
+  LocalCommand? reviewed;
+  LocalPlan? plan;
+  LocalSnapshot? reviewSnapshot;
+
+  /// The rules asked whether going below zero is right.
+  bool needsConsent = false;
+
+  /// The account field the below-zero choice is about.
+  String consentField = 'account';
+
+  /// A sync is under way before saving.
+  bool syncing = false;
+
+  /// The rule refused the change even after trying to sync.
+  bool syncBlocked = false;
+
+  /// The sync brought new records, so the review was built again.
+  bool rechecked = false;
+
+  bool get needsLatest =>
+      c.connected && reviewed != null && dependencySensitive(reviewed!);
+
+  /// Syncs before a change that needs the latest records. If that brought
+  /// new records the reviewed command is out of date, so it's reviewed again
+  /// on them and nothing saves: returns true.
+  Future<bool> refreshBeforeSaving() async {
+    if (!needsLatest) return false;
+    setState(() => syncing = true);
+    await c.syncLatest?.call();
+    await c.reload();
+    if (mounted) setState(() => syncing = false);
+    if (c.snapshot.version == reviewed!.expectedVersion) return false;
+    reviewed = LocalCommand(
+      id: id,
+      owner: c.store.owner,
+      expectedVersion: c.snapshot.version,
+      kind: reviewed!.kind,
+      values: reviewed!.values,
+    );
+    reviewSnapshot = c.snapshot;
+    plan = planLocal(reviewSnapshot!, reviewed!);
+    return true;
+  }
+
+  /// What Review says about syncing, under the review itself.
+  List<Widget> syncNotices() => [
+    if (c.connected) ...[
+      SizedBox(height: CompactForm.fieldGap(context)),
+      const InlineNotice(
+        'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
+      ),
+    ],
+    if (syncBlocked || rechecked || needsLatest)
+      SizedBox(height: CompactForm.fieldGap(context)),
+    if (syncBlocked)
+      const InlineNotice(
+        syncBlockedMessage,
+        title: syncBlockedTitle,
+        tone: NoticeTone.warning,
+        live: true,
+      )
+    else if (rechecked)
+      const InlineNotice(
+        'Syncing brought in newer records, so this review was updated. Check it again, then save.',
+        title: 'Your records changed',
+        tone: NoticeTone.warning,
+        live: true,
+      )
+    else if (needsLatest)
+      const InlineNotice(
+        'Saving this checks your latest records first, so it needs a connection.',
+      ),
+  ];
+
+  /// An account's balance today, for the eye: hidden amounts stay hidden.
+  String shownBalance(String id) => c.amountsHidden
+      ? 'Amount hidden'
+      : c.amount(c.snapshot.balance(id, through: civilToday()));
+
+  /// Each account's balance under its name, and a warning on the chosen one
+  /// if this amount takes it below zero. Saving is still the rules' call.
+  Map<String, String> balanceLines(Map<String, String> accounts, String key) {
+    final amount = leaving;
+    return {
+      for (final id in accounts.keys)
+        if (id.isNotEmpty)
+          id: [
+            'Balance ${shownBalance(id)}',
+            if (!c.amountsHidden &&
+                amount != null &&
+                id == values[key] &&
+                amount > c.snapshot.balance(id, through: civilToday()))
+              'this takes it below zero',
+          ].join(' · '),
+    };
+  }
+
   /// Shown only once the rules ask for it.
   Widget consentInput() => Padding(
     key: anchor('acknowledge'),
@@ -307,21 +329,4 @@ mixin FinanceFormFields<T extends StatefulWidget> on State<T> {
       },
     ),
   );
-
-  /// Windows: end-aligned, the primary rightmost. Android: full width.
-  Widget actions(Widget primary, [Widget? secondary]) => isDesktop(context)
-      ? Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            if (secondary != null) ...[
-              secondary,
-              const SizedBox(width: Space.sm),
-            ],
-            primary,
-          ],
-        )
-      : Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [primary, ?secondary],
-        );
 }

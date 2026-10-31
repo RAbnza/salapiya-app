@@ -95,12 +95,30 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.text('Done'));
   expect(session.finance.debts.length, 2);
   await financialTap(tester, find.byKey(const ValueKey('nav-shared')));
-  await financialTap(tester, find.text('Add shared expense'));
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  expect(find.textContaining('paid ₱1,200.00'), findsOneWidget);
-  await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
-  await financialTap(tester, find.text('Done'));
-  expect(session.finance.bills.length, 2);
+  if (find.text('Add shared expense').evaluate().isEmpty) {
+    await financialTap(tester, find.byKey(const ValueKey('shell-new')));
+  }
+  await financialTap(tester, find.text('Add shared expense').first);
+  await tester.enterText(
+    find.descendant(
+      of: find.byKey(const ValueKey('native-name')),
+      matching: find.byType(TextField),
+    ),
+    'Dinner with friends',
+  );
+  await tester.enterText(
+    find.descendant(
+      of: find.byKey(const ValueKey('native-total')),
+      matching: find.byType(TextField),
+    ),
+    '1200.00',
+  );
+  await tester.pumpAndSettle();
+  await financialTap(tester, find.byKey(const ValueKey('shared-submit')));
+  expect(find.text('₱1,200.00'), findsWidgets);
+  await financialTap(tester, find.byKey(const ValueKey('shared-submit')));
+  expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
+  await financialTap(tester, find.byKey(const ValueKey('shared-done')));
   await financialTap(tester, find.byKey(const ValueKey('nav-money')));
   await financialTap(tester, find.text('Import').first);
   await financialTap(tester, find.text('Market groceries'));

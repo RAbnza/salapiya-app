@@ -133,6 +133,30 @@ void main() {
     };
   }
 
+  testWidgets('sharing a purchase says what’s wrong in place, not in a toast', (
+    tester,
+  ) async {
+    sized(tester);
+    final (f, c, wallet, _) = await open(tester);
+    await tester.pumpWidget(
+      app(c, FinancialAction.expense, initial: {'account': wallet}),
+    );
+    await localSettle(tester);
+    await enter(tester, 'name', 'Groceries');
+    await enter(tester, 'amount', '100.00');
+    await save(tester);
+    await localTap(tester, find.text('Share this purchase'));
+    await localSettle(tester);
+    expect(
+      find.text(
+        'Connect this profile with Google to share it. Your purchase stays saved.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
+    await close(tester, f, c);
+  });
+
   group('command values', () {
     testWidgets('Log expense', (tester) async {
       sized(tester);

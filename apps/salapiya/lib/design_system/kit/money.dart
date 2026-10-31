@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// What an amount means to the user. Only owed-to-you has its own color;
-/// "you owe" stays neutral until Chat 10 decides (§3).
+/// "you owe" stays neutral, with the words beside it (§3).
 enum MoneyKind {
   neutral(null),
   spent('spent'),

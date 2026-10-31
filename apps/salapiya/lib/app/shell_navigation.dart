@@ -39,6 +39,10 @@ class ShellCrumb {
 
 typedef ShellLocation = ({AppDestination destination, String? tab});
 
+/// A step a section has above its tabs, as Shared Expenses' group does:
+/// its name, null while choosing, and how to get back to choosing.
+typedef SectionPlace = ({String? label, VoidCallback home});
+
 /// Where the user is in the app shell and how they got there. UI state only;
 /// routes and route names don't change.
 ///
@@ -68,6 +72,9 @@ class ShellNavigation extends ChangeNotifier {
   final _revisions = <AppDestination, int>{};
   final _routes = <Route<dynamic>>[];
   final _back = <ShellLocation>[], _forward = <ShellLocation>[];
+
+  /// Sections with a step above their tabs. Null when it doesn't apply now.
+  final places = <AppDestination, SectionPlace? Function()>{};
 
   static ShellNavigation? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<ShellNavigationScope>()
@@ -101,6 +108,33 @@ class ShellNavigation extends ChangeNotifier {
   List<ShellCrumb> get breadcrumb {
     final open = pages;
     final first = defaultTabs[destination];
+    final place = places[destination]?.call();
+    if (place != null) {
+      Future<void> home() async {
+        if (await closePages()) place.home();
+      }
+
+      return [
+        ShellCrumb(
+          destination.label,
+          place.label == null && open.isEmpty ? null : home,
+        ),
+        if (place.label != null) ...[
+          ShellCrumb(
+            place.label!,
+            open.isEmpty && tab == first
+                ? null
+                : () => select(destination, tab: first),
+          ),
+          if (tab != null) ShellCrumb(tab!, open.isEmpty ? null : closePages),
+        ],
+        for (final (i, page) in open.indexed)
+          ShellCrumb(
+            page.title,
+            i == open.length - 1 ? null : () => closePages(keep: i + 1),
+          ),
+      ];
+    }
     return [
       ShellCrumb(
         destination.label,

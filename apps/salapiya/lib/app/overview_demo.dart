@@ -6,6 +6,7 @@ import '../connected/financial_contract.dart';
 import '../local/finance_domain.dart';
 import '../local/local_store.dart' show defaultLocalCategories;
 import '../finance/money_demo.dart';
+import '../shared/shared_demo.dart' show demoLinkedBill, demoToConfirmLine;
 import '../prototype/fixtures.dart' show DemoMoney, demoAccounts;
 import '../prototype/scenarios.dart';
 import 'overview_cards.dart';
@@ -211,6 +212,24 @@ LocalSnapshot _replay(String today, List<BigInt> openings) {
     'amount': '-20.00',
     'reason': 'Counted my wallet',
     'mode': 'manual',
+  });
+  // A bill the user paid for the group, linked to their own record.
+  final linked = demoLinkedBill(today);
+  post('shared', {
+    'name': 'Shared bill · ${linked.name}',
+    'date': linked.date,
+    'sharedMode': 'bill',
+    'sharedAccounting': '2',
+    'sharedGroup': linked.group,
+    'sharedKey': linked.bill,
+    'sharedRevision': linked.revision,
+    'fundingAmount': linked.paid,
+    'shareAmount': linked.part,
+    'account': bank,
+    'category': 'category-bills',
+    'reason': '',
+    'funding': 'cash',
+    'acknowledgeFunding': 'false',
   });
   // Dated after today, so it isn't in any balance yet.
   expense(3, 'Insurance premium', bank, 'bills', '1200.00');
@@ -984,7 +1003,7 @@ OverviewSource demoOverviewSource(
             (
               icon: Icons.people_outline,
               title: '1 payment to confirm',
-              subtitle: 'Tala reported a payment · example',
+              subtitle: demoToConfirmLine(today, session.amount),
               amount: null,
               onTap: () => open(PreviewSource.settlement),
             ),

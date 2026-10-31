@@ -74,7 +74,7 @@ void main() {
           );
           await localSettle(tester);
           expect(find.byType(OverviewDashboard), findsOneWidget);
-          expect(find.textContaining('Tala reported'), findsNothing);
+          expect(find.textContaining('Tala logged'), findsNothing);
           expect(find.textContaining('DEMO ·'), findsNothing);
           expect(runtime.session!.finance.liquid, BigInt.from(10000));
           expect(find.text('Real receipt'), findsOneWidget);

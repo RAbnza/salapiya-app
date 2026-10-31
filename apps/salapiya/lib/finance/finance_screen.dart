@@ -1029,7 +1029,7 @@ class NativeFinanceEditor extends StatefulWidget {
 }
 
 class _NativeFinanceEditorState extends State<NativeFinanceEditor>
-    with FinanceFormFields {
+    with FormInputs, FinanceFormFields {
   late final inputs = financeInputs(
     widget.controller.snapshot,
     widget.replacing == null

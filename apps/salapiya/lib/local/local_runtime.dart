@@ -90,6 +90,7 @@ class LocalRuntime extends ChangeNotifier {
     session!.profile.devices['This installation'] =
         'Local only · encrypted storage';
     session!.hideAmounts = preferences['hideAmounts'] == 'true';
+    session!.sharedDefaultGroup = preferences['sharedDefaultGroup'];
     await life.startReminders(
       session!.finance,
       complete: () => session?.complete ?? false,
@@ -110,6 +111,7 @@ class LocalRuntime extends ChangeNotifier {
       'compact': '${settings.compact}',
       'textScale': '${settings.textScale}',
       'hideAmounts': '${s.hideAmounts}',
+      'sharedDefaultGroup': ?s.sharedDefaultGroup,
     };
     final name = s.profile.name;
     _preferences = _preferences
