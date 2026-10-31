@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salapiya/finance/reports_screen.dart';
+import 'package:salapiya/finance/report_data.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/local/local_store.dart';
