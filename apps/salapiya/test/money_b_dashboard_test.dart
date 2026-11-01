@@ -681,7 +681,12 @@ void main() {
     testWidgets('Where it went keeps its shares in one column', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
-      await tab(tester, session, const ReportFilter());
+      // Three months always hold six categories; this month may not yet.
+      await tab(
+        tester,
+        session,
+        const ReportFilter(period: ReportPeriod.last90),
+      );
       final edges = <double>{};
       for (var i = 0; i < 6; i++) {
         final share = find.descendant(
@@ -700,8 +705,9 @@ void main() {
       addTearDown(session.dispose);
       await tab(tester, session, const ReportFilter());
       final card = find.byKey(const ValueKey('report-debts-cards'));
+      // The caption names the period, so it reads differently through a month.
       final caption = tester.getBottomLeft(
-        find.descendant(of: card, matching: find.text('October 2026')).first,
+        find.descendant(of: card, matching: find.byType(Text)).at(1),
       );
       final first = tester.getTopLeft(
         find.descendant(of: card, matching: find.text('Card purchases')),
@@ -805,8 +811,26 @@ void main() {
         find.descendant(of: row, matching: find.text('Over the limit')),
         findsNothing,
       );
-      expect(find.text('2 of 4'), findsOneWidget);
-      expect(find.text('Within limit · 2 over'), findsOneWidget);
+      // Spending builds through the month, so how many are over moves. What
+      // holds is that the zero-limit budget is in neither figure.
+      final budgets = [
+        for (final (period, b) in budgetRows(sample(), civilToday()))
+          if (period == BudgetWhen.current) b,
+      ];
+      final summary = PlanningSummary(budgets, const [], const []);
+      expect(summary.limited.length, budgets.length - 1);
+      expect(
+        find.text('${summary.withinLimit} of ${summary.limited.length}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          summary.overLimit == 0
+              ? 'Within limit'
+              : 'Within limit · ${summary.overLimit} over',
+        ),
+        findsOneWidget,
+      );
       final id = sample().current
           .firstWhere((r) => r.title == 'Bills held at zero')
           .actionId;
@@ -1264,7 +1288,8 @@ void main() {
         '1',
         'x',
         'Rewards',
-        addCivilDays(civilToday(), 1),
+        // Tomorrow isn't this week on a Sunday.
+        civilToday(),
         BigInt.from(100),
         kind,
       );

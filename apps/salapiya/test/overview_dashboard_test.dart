@@ -918,7 +918,8 @@ void main() {
     ) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
-      await show(tester, session, platform: TargetPlatform.android, width: 412);
+      // The test font is much wider than Geist, and would wrap a long month.
+      await show(tester, session, platform: TargetPlatform.android, width: 640);
       final date = tester.getRect(find.byKey(const ValueKey('overview-date')));
       final pill = find.byKey(const ValueKey('overview-dues-pill'));
       expect(date.height, Space.target);

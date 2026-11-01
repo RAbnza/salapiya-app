@@ -778,10 +778,11 @@ void main() {
       addTearDown(hub.dispose);
       final g = hub.source().groups.first;
       await page(tester, SharedBillsPage(hub: hub, group: g.id));
-      expect(find.text('Total shared'), findsOneWidget);
       expect(find.textContaining('As of '), findsOneWidget);
+      // On the 1st nothing has happened this month, so it opens with no total.
       await tester.tap(find.text('All dates'));
       await tester.pump();
+      expect(find.text('Total shared'), findsOneWidget);
       for (final r in sharedBillRows(g, g.participant(demoActor))) {
         expect(find.text(r.name), findsOneWidget);
       }

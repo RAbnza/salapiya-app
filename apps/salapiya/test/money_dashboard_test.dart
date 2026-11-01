@@ -552,6 +552,11 @@ void main() {
           width: width,
           tab: 'Activity',
         );
+        // This month has no yesterday on the 1st.
+        await tester.tap(find.byKey(const ValueKey('activity-period')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Last 90 days').last);
+        await tester.pumpAndSettle();
         final next = find.textContaining('Yesterday · ');
         final above = tester.getBottomLeft(
           find.byKey(ValueKey('row-${last.id}')),

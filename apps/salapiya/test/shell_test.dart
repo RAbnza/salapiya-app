@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/life/life_forms.dart';
 import 'package:salapiya/prototype/scenarios.dart';
@@ -218,7 +219,14 @@ void main() {
       expect(tester.takeException(), isNull, reason: destination.label);
       await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.text('New'), findsOneWidget);
+      // The sheet's title. Income's change line can say "New" too.
+      expect(
+        find.descendant(
+          of: find.byType(ModalScaffold<int>),
+          matching: find.text('New'),
+        ),
+        findsOneWidget,
+      );
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
     }

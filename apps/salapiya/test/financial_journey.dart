@@ -121,11 +121,8 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.byKey(const ValueKey('shared-done')));
   await financialTap(tester, find.byKey(const ValueKey('nav-money')));
   await financialTap(tester, find.text('Import').first);
-  await financialTap(tester, find.text('Market groceries'));
-  await financialTap(tester, find.text('Review selected records'));
-  await financialTap(tester, find.text('Simulate import'));
-  expect(find.textContaining('2 accepted demo rows'), findsOneWidget);
-  expect(session.finance.liquid, BigInt.from(3155025));
+  // Chat 9's tab reports on imports; `money_b_dashboard_test` covers it.
+  expect(find.byKey(const ValueKey('import-waiting')), findsOneWidget);
   expect(tester.takeException(), isNull);
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpAndSettle();
