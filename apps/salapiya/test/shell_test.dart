@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
+import 'package:salapiya/life/life_forms.dart';
 import 'package:salapiya/prototype/scenarios.dart';
-import 'package:salapiya/features/common/prototype_form.dart';
 import 'package:salapiya/app/shell_navigation.dart';
 
 import 'shell_journey.dart';
@@ -60,7 +60,7 @@ void main() {
               await tester.tap(find.byKey(const ValueKey('shell-new')));
               await tester.pumpAndSettle();
               await tapVisible(tester, find.text('Add task'));
-              expect(find.byType(PrototypeForm), findsOneWidget);
+              expect(find.byType(LifeTaskForm), findsOneWidget);
               await tester.binding.handlePopRoute();
               await tester.pumpAndSettle();
               expect(tester.takeException(), isNull);
@@ -182,20 +182,21 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
       await tapVisible(tester, find.text('Add task'));
-      final taskTitle = find.widgetWithText(TextField, 'Title');
+      final taskTitle = find.descendant(
+        of: find.byKey(const ValueKey('life-field-title')),
+        matching: find.byType(EditableText),
+      );
       await tester.ensureVisible(taskTitle);
       await tester.enterText(taskTitle, 'Review the weekly plan');
       FocusManager.instance.primaryFocus?.unfocus();
       tester.view.viewInsets = const FakeViewPadding(bottom: 220);
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('Review changes'));
-      expect(find.byType(PrototypeForm), findsOneWidget);
-      await tester.ensureVisible(find.text('Apply simulation'));
-      expect(
-        tester.getBottomLeft(find.text('Apply simulation')).dy,
-        lessThanOrEqualTo(348),
-      );
+      final submit = find.byKey(const ValueKey('life-submit'));
+      await tapVisible(tester, submit);
+      expect(find.byType(LifeTaskForm), findsOneWidget);
+      await tester.ensureVisible(submit);
+      expect(tester.getBottomLeft(submit).dy, lessThanOrEqualTo(348));
       expect(tester.takeException(), isNull);
     },
   );

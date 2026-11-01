@@ -18,7 +18,7 @@ import 'package:salapiya/p0/auth_runtime.dart';
 import 'package:salapiya/p0/google_auth_proof.dart';
 
 import '../test/local_money_journey.dart';
-import 'p5_life_native_test.dart' show lifeEnter, lifeSave;
+import 'p5_life_native_test.dart' show lifeEnter, lifeSaveForm;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -148,12 +148,12 @@ void main() {
         await tester.runAsync(() => runtime.connected.pause(true));
         await localTap(tester, find.byKey(const ValueKey('nav-life')));
         await localTap(tester, find.text('Tasks').first);
-        await localTap(tester, find.text('New task'));
+        await localAction(tester, 'Add task');
         final title =
             'P5 $role ${stage == 'seed' ? 'staged offline task' : 'offline task'} ${newLocalId().substring(0, 8)}';
         await lifeEnter(tester, 'title', title);
         await lifeEnter(tester, 'due', LifeTime.today());
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Task saved');
         expect(c.waiting, greaterThan(0));
         final task = c.entries.singleWhere((e) => e.title == title),
             id = task.id;

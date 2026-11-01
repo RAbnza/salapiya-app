@@ -1536,44 +1536,19 @@ class ShareablePage extends StatelessWidget {
   final Widget child;
   final bool empty;
   @override
-  Widget build(BuildContext context) => SectionPage(
+  Widget build(BuildContext context) => ShareableList<SharedPeriod>(
     title: title,
     caption: group,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: MiniSegmented<SharedPeriod>(
-            key: const ValueKey('shared-period'),
-            label: 'Period',
-            options: [for (final p in SharedPeriod.values) (p, p.label)],
-            selected: period,
-            onSelected: onPeriod,
-          ),
-        ),
-        SizedBox(height: Space.cardGapOf(context)),
-        OverviewCard(
-          key: const ValueKey('shared-list'),
-          title: period.heading(as),
-          caption: 'As of ${civilDay(as)}',
-          child: empty
-              ? const EmptyState(
-                  icon: Icons.event_busy_outlined,
-                  title: 'Nothing in this period',
-                  message: 'Try another period.',
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    StatStrip(stats: stats),
-                    const SizedBox(height: Space.md),
-                    child,
-                  ],
-                ),
-        ),
-      ],
-    ),
+    heading: period.heading(as),
+    asOf: 'As of ${civilDay(as)}',
+    periods: [for (final p in SharedPeriod.values) (p, p.label)],
+    period: period,
+    onPeriod: onPeriod,
+    periodKey: const ValueKey('shared-period'),
+    listKey: const ValueKey('shared-list'),
+    stats: stats,
+    empty: empty,
+    child: child,
   );
 }
 

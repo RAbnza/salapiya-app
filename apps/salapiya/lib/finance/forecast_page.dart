@@ -205,13 +205,11 @@ class _ForecastPageState extends State<ForecastPage> {
                   ),
                 ),
                 const SizedBox(width: Space.md),
-                Semantics(
+                AppSwitch(
+                  key: const ValueKey('forecast-independent'),
                   label: 'Count recurring items too',
-                  child: Switch(
-                    key: const ValueKey('forecast-independent'),
-                    value: independent,
-                    onChanged: (v) => setState(() => independent = v),
-                  ),
+                  value: independent,
+                  onChanged: (v) => setState(() => independent = v),
                 ),
               ],
             ),

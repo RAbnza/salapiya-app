@@ -404,6 +404,81 @@ Five-second questions. People: who's in this group, and what can each of them do
 - **Saved work** shows on its own tab: bills on Bills, payments on Payments, people changes on People, group changes on Manage Group, and only the open group's.
 - **Demo build.** All three tabs show the sample. The group forms work there, and saving doesn't change it. Boracay trip shows a member's view, Reunion 2025 an archived group and Old apartment a group the user left.
 
+### Life A: Calendar (Chat 12, stage 12a)
+
+`lib/life/life_data.dart` (display-only derivations, `LifeSource`, `LifeWriter`), `life_hub.dart` (what Life is showing, the real source and writer), `life_header.dart`, `life_cards.dart`, `calendar_tab.dart`, `agenda_page.dart`, `life_pages_detail.dart`, `life_forms.dart`, `life_demo.dart`; tested in `test/life_data_test.dart`, `life_dashboard_test.dart` and `life_form_test.dart`. `lib/features/life/presentation/life_screen.dart` is the frame, and holds Tasks until 12b and Learning, Books and Career until Chat 13.
+
+Five-second question: what's coming up, what's today, and is anything late?
+
+- **`LifeHub`:** one per session (`lifeHubOf`), because the shell keys the section's screen on its tab. It holds the chosen day, the month on show, Calendar or Agenda, the Show filter and the search. The title bar's calendar, Android's date sheet and the Android pill all land on it.
+- **Header.** Windows: a `PageHeader`, "As of ‹long date› · N things this week", with Add task and Add event as chips. Android: the 48-tall date row with a pill ("N overdue", else "N today"), no action buttons.
+- **Tabs** (`AppTabs`): the shell's list. A tab hidden in Preferences while it's open goes back to the Calendar.
+- **Notices,** under the tabs, only when they apply: first download not finished (for Life's records, and for money rows); changes waiting to sync, including that a reminder can still go off for something already logged until they sync; Life couldn't refresh.
+- **Calendar:**
+  - **Tiles:** Today (the accent, "1 event · 1 due"), This week (today to Sunday), Overdue ("Oldest N days"), Next up (the first thing that hasn't gone by). Counts only: statements and installments overlap, and tasks have no amount. An unfinished download reads "Not available yet", because the counts would leave money out.
+  - **Month** (7) beside **the chosen day** and **Overdue** stacked (5, `SideStack`), then **Coming up** (12, the next seven days). With nothing overdue, Coming up takes Overdue's place and there's no third row. So nothing empty sits beside the month.
+  - **Month:** `MonthGrid`, Previous, Next, Today, and a `StatStrip` (Events, Tasks and due dates, Bills, cards and debts). The corner menu picks Calendar or Agenda, Show (only what Preferences shows), Open as a page, Past and cancelled, Reminders, and Preferences & help.
+  - **Agenda:** every row of the month by day, in `LifeTable`, with search, 25 then `ShowMore`. Overdue sits above it, because late rows may belong to another month.
+  - **Android order:** Today, This week + Overdue, Next up, Overdue, Month, the day, Coming up.
+- **Rows.** A row says what it is, when, and how late. An all-day event reads "All day", a due date reads "Due", and neither ever shows a time. An event in another timezone shows both: "8:00 AM · 9:00 AM in Tokyo".
+- **Money rows** are reminders of records, never instructions. They read as the rest of the app does ("Debt · Due Tue, 3 Nov", the amount, a pill), with "Reminders of your records. Salapiya doesn't pay anything." once per card, and have no Log link. They read the same records as Debts, waiting work included, so the two agree; notifications stay on accepted records (`p5_agenda_test`). A row opens its own page: a debt's, a statement's, a plan's or a recurring item's. Recurring dates not added yet don't show.
+- **What's late.** Tasks, due dates and money dues. An event that has gone by isn't: few people mark one done, so it only reads Past, and its page offers Mark as done (owner, 2026-11-01).
+- **Today** is `civilToday()`, as on Debts and the Overview. Timed events sit on their date in the display timezone.
+- **Event page** (`LifeEventPage`, a `SectionPage`): the title, a pill unless it's simply scheduled, and "Event · ‹date› · ‹time›", then Edit event and a More menu that offers only what applies: Mark as done, Cancel event, Archive event, Mark as not done, Restore event. **When** (the accent, 8), with both timezones and a clock-change note, beside **About this event** (4), then **Reminder** and **Edit history**: each version's reason, when, and what changed, with ids under View details. Cancelling asks why, and each confirmation says what changes and what stays. Life has no delete.
+- **Shareable lists** (`LifeListPage`, on `ShareableList`): This week, This month or Next month; one day; Overdue. Each has "as of", counts by kind, and every item, with no tabs, actions or money total.
+- **Past and cancelled** (`LifeRetiredPage`): events that left the Calendar, newest first.
+- **Forms** (compact scale; `LifeFormSteps`). Add event and Edit event: Title, Date, All day, Time and, only when the time happens twice, Which one?. Under More details: Timezone (a searchable list of plain names), Location, Notes. Edit asks why. Status and Archive left the form for the page's actions. The keys and defaults are the same as before (09:00, Asia/Manila, Scheduled). A time that doesn't exist errors on Time as it's picked, using the rules' own words, and nothing is chosen for the user when a time happens twice. Each form has one command id. After a lost save it freezes, comes back frozen if closed, and Check again sends the same command, which the store recognizes. A record that changed while the form was open stops it and offers Discard draft.
+- **Demo build.** Calendar, Agenda, the event page and the event forms all work there, from `demoLife`, replayed through the real rules and dated relative to today, with `demoSample`'s money, so it agrees with Debts, Cards, Planning and the Overview's Next up. Accounts still end on ₱29,300.75. `DemoLifeWriter` checks with the rules and keeps nothing. It can't show real notifications, permission prompts, a save surviving a restart, a lost save or waiting sync.
+
+### Life A: Tasks (Chat 12, stage 12b)
+
+`lib/life/tasks_tab.dart` (the tab, the task page and the shareable list), `life_reviews.dart` (Changes to check) and `LifeTaskForm` in `life_forms.dart`; the derivations are in `life_data.dart`.
+
+Five-second question: what do I need to do, and what's next?
+
+- **Header.** It counts what the tab counts: on Tasks, the caption says how many are left, and Android's pill counts tasks only.
+- **Tiles:** To do (the accent, "N high priority"), Overdue ("Oldest N days"), Today, This week (today to Sunday, as the Calendar's). Open tasks only.
+- **Next up** (7): five open tasks, overdue first, then by date, undated last, nothing on hold, each with a checkbox. It closes with a link to the whole list.
+- **By priority** (5): High, Normal and Low with a `SlimBar`, then On hold and No due date.
+- **Your tasks** (12): Task, Due, Priority and Status, under a header per group: Overdue, Today, This week, Later, No due date. Active, Completed, Archived, All, and search through titles and details. 25 rows, then Show more. The checkbox sits outside the row (`AppTableRow.lead`), so one tap completes a task and the row opens it.
+- **Android order:** To do, Overdue + Today, This week, Next up, By priority, Your tasks.
+- **One tap** sends the same command as the page's button: `status` Completed with the reason Completed, or In progress with Reopened. It has no form, so a refusal shows above the cards.
+- **Task page** (`LifeTaskPage`): the title, a pill, "Task · High priority · Due ‹date›", then Complete task or Reopen task, and a More menu with Edit task, Archive task or Restore task. **About this task** beside **Reminder**, then **Edit history**. A task with no due date says to add one to get a reminder. An archived task offers only Restore. A completion date shows only while it's Completed, because a reopened task keeps its old date in its record.
+- **Shareable list** (`LifeTaskListPage`): what's left, by group, with "as of" and counts. No tabs or actions.
+- **Forms.** Add task and Edit task: Title, Due date, Priority. Under More details: Details, Status, Date finished (only while Completed), Notes. Edit asks why. The keys and defaults are the same as before. The form steps, lost-save handling and field errors are the event form's.
+- **Saved drafts.** Life's drafts have real titles and show what was typed. Add task, Add event, and editing a task or event open their form. Anything else, or a draft whose record went, says it can't open there and offers Discard draft. A tap never fails.
+- **Changes to check** (`LifeChecksPage`): each refused edit, with why in plain words and only the fields that differ, Now above Your edit. **Use my edit** asks why and saves a new version; **Keep what's there** closes it. Either way the refused edit stays on record. Use my edit makes its command once, so Check again after a lost answer can't save it twice. An edit to a record that's gone can only be kept. A notice under the tabs opens the page. Edits a backup brought back wait there until the connection has checked them.
+- **The bell.** `LocalSession` counts Life's waiting and refused edits, so the bell matches the sync pill. With only Life's to look at, Sync needs review opens Changes to check. Refused Life edits can be closed, which Shared's refused commands can't yet.
+- **Demo build.** Tasks, the task page and the forms work there, from the same sample, and the Review scenario shows one refused edit. A checkbox says nothing was saved.
+
+### Life A: Reminders and preferences (Chat 12, stage 12c)
+
+`lib/life/reminders_tab.dart` (the tab, the whole list and `ReminderCenter`, a thin page for Profile until Chat 14), `reminder_page.dart` (one item's settings and `ReminderSummary`, which event, task and Chat 13's pages show), `reminder_data.dart` (display-only derivations and `LifeReminders`), `life_settings.dart`. `reminder_widgets.dart` is gone. Scheduling stays in `device_reminders.dart`, which now records each item's `ReminderView` beside its text, so screens read a state and don't parse a sentence.
+
+Five-second question: what will remind me, when, and how do I change that?
+
+- **Tabs:** Calendar · Tasks · Reminders · Learning · Books · Career. Reminders can't be hidden. The header says how many are set on this device, with no actions or pill.
+- **This device** (the accent, 12): on or off, what the device allows, what it can do, and Send a test. Turning off says how many are cancelled and that records, the Calendar and other devices don't change.
+- **Coming reminders** (8): what, and when it fires, nearest first, eight rows, then a link to every reminder. An item with no time, because it's dismissed or off, stays in date order. An overdue item with reminders off isn't "coming".
+- **Quiet hours** and **What may show** (4, `SideStack`): start, end and timezone, with times picked, not typed. The notification's real words are shown, with Include the date. Titles, amounts, company names, contacts and notes never show.
+- **By type** (6) beside **What happened** (6). Stopping a type that has reminders set asks first. What happened says what became of each, and never claims one was seen: "Its time passed. Salapiya can't tell whether it showed."
+- **Android order:** This device, Coming reminders, Quiet hours, What may show, By type, What happened.
+- **Reminder settings** (`LifeReminderPage`): when it reminds you, Change reminder, and What you can do. Only what applies: Dismiss what can still fire; Snooze 1 hour only once it has fired, because earlier it would fire early and lose the real one; Bring back what's dismissed; Turn off (with a confirmation) or Turn on. All-day items offer no minutes before, unless one is already chosen. "Inherited" reads "Default (on the day)" or "Default (at the time)"; the stored value stays. A dismissal that came back because the item changed says so. Nothing here completes anything or marks anything as paid.
+- **What each platform can do.**
+
+  | | Windows | Android |
+  | --- | --- | --- |
+  | Permission | No prompt; Windows settings decide, and it can't always say | Asks once; can be refused |
+  | Timing | Scheduled by Windows | Inexact; battery saving can delay it |
+  | After a restart | Windows keeps the schedule | Set again at boot |
+  | Limit | Nearest 128 within 90 days | The same |
+  | Locked screen | Follows Windows settings | Private visibility |
+
+  With permission refused, the switch stays on and says the device is blocking these, with where to change it.
+- **Notifications.** "Salapiya reminder", then "You have something coming up. Open Salapiya to see it." With Include the date on, the date replaces "coming up". There's no reminder email in the app; V2-G's email rules are the web build's, and these meet the same default. Tapping one whose item changed opens the Calendar and says "This changed, so its reminder no longer applies."
+- **Preferences** (`LifeSettings`): Show in Life and Timezone beside Show on Calendar. Hiding keeps everything, and Calendar and reminder switches are separate.
+- **Demo build.** Reminders, a reminder's settings and Preferences all work there, with a sample of states, kept in memory. Nothing is delivered, and Send a test says so. It can't show a permission prompt, a real notification, a refusal or what the device does after a restart.
+
 ### Section screen standard (the Overview's quality bar)
 
 Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section chat from Chat 7 on. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
@@ -764,6 +839,12 @@ The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit
 - **Clearing:** an optional date shows a "Clear ‹label›" button once it has a value. A required date can't be cleared.
 - **Display only:** the field hands back a `DateTime`. Each form converts it to the format its rules store (`YYYY-MM-DD` today), so domain parsing is unchanged.
 
+### Time and long lists (`TimeField`, `SearchPickerField`; Chat 12)
+
+- **`TimeField`:** a time is chosen with the system's picker, never typed. It shows the time as the device writes it and hands back a `TimeOfDay`. Its actions are "Choose time" and "Cancel".
+- **`SearchPickerField`:** a choice from a list too long to scroll, such as a timezone. It opens a list with a search box: a dialog on Windows, a sheet on Android. Options show plain names, never ids.
+- Both share `DateField`'s field, which didn't change.
+
 ### Option picker (`OptionPicker`)
 
 Each option is a `PickerOption` with a short noun-phrase label and an optional one-line description. `PickerStyle.auto` applies this rule:
@@ -774,7 +855,7 @@ Each option is a `PickerOption` with a short noun-phrase label and an optional o
 | Radio list | Up to 5 options that differ in effect | Always visible under each label. The whole row is the target. |
 | Dropdown | 6 or more options, or long lists such as accounts and categories | Two-line menu items, visible in the open menu before choosing. The selected option's description becomes the helper text. |
 
-Switches and checkboxes are the stock widgets, themed. A switch with help goes inside a `HelpField`.
+Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Windows and 24 on Android, in step with compact fields, with a 48 hit area on Android. `SwitchRow` is a label and its switch, read as one control and kept to a row's height. A switch with help goes inside a `HelpField`. Older screens keep the stock size until their chats.
 
 ### Dialogs and sheets (`showAdaptiveModal`, `showAppDialog`, `showAppSheet`, `ModalScaffold`)
 
@@ -926,6 +1007,14 @@ Switches and checkboxes are the stock widgets, themed. A switch with help goes i
 Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same look. New: `CardLink(chevron: false)` for a link in a row with its own chevron, which then ends flush with its text; `ListEnd(onPressed:)` for a list cut short; `detailLine`, whose details break between themselves and never inside one; `LabelAmount(stackBelow:)`; `OverviewCard(fill: true)`, which hands its child the height left under the header.
 
 `kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
+
+### Tables with a leading control (Chat 12)
+
+`AppTable(leadWidth:)` reserves a column before the row, and `AppTableRow.lead` puts a control in it, outside the row's target. Tasks' checkbox uses it. Tables that don't pass it don't change.
+
+### Calendar grid and side cards (Chat 12)
+
+`kit/month_grid.dart`: `MonthGrid`, split out of `DueCalendar` with no change in look, so Life's Calendar can use it; `DueCalendar` wraps it. `SideStack` in `kit/dashboard.dart` holds two cards in one grid cell, the second taking the height left, so nothing empty sits under them beside a taller card. `ShareableList` in `kit/section_page.dart` is Shared's shareable page without its group, same look.
 
 ### Tables (`AppTable`; moved from Debts, Chat 8)
 
@@ -1100,6 +1189,18 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Retained history | Earlier records | |
 | Group acceptance | Reached the group | |
 | Immutable revision | Edit history | |
+| Source, authoritative source | Record | Life |
+| Commitment | Item | Life |
+| Personal event | Event | |
+| Deadline | Due date | |
+| Inherited | Default | Reminders; the stored value stays |
+| Ambiguous time occurrence | Which one? | "The earlier one", "The later one" |
+| IANA timezone | Timezone | |
+| Retained edit | Your edit | Life |
+| Snoozed 1 hour, Dismissed, Restored (buttons) | Snooze 1 hour, Dismiss, Bring back | The stored action values stay |
+| Elapsed, suppressed, no automatic resend | Its time passed | Never says it was seen |
+| OS permission denied | Your device is blocking these | |
+| Quiet start, endpoints | Start, End | Quiet hours |
 
 ### Tone rules
 
@@ -1179,6 +1280,12 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Shared: what the user can do to a group and to one person; who can be removed; who can become the owner | `groupChoices`, `memberChoices`, `removableMembers`, `ownerCandidates` | UI aggregation (Chat 11) |
 | Shared: invitations that may still be open: sent in the last seven days and not revoked on this device. Whether one was used isn't readable | `openInvitations` | UI aggregation (Chat 11) |
 | Shared: the group's history in plain words, with who did it, what it's about and its amount | `historyRows`, `HistoryFilter` | UI aggregation (Chat 11) |
+| Life: one row per agenda item or due, with its kind, date, display time, recorded time and state; what's late, today, this week and coming up; what's next | `LifeRow`, `LifeCalendar`, `LifeSource.rows` (`lib/life/life_data.dart`), from `lifeAgendaItems` and `financialReminderSources` | UI aggregation (Chat 12) |
+| Life: rows by day; how many of each kind, never a money total | `rowsByDay`, `rowCounts` | UI aggregation (Chat 12) |
+| Life: where an event stands, when it is in a timezone, what left the Calendar, what each saved version changed | `eventState`, `eventWhen`, `retiredEvents`, `lifeChanges` | UI aggregation (Chat 12) |
+| Life: one row per task, its group, the filters and search, and the counts on the tiles and By priority | `TaskRow`, `taskRows`, `filterTasks`, `TaskCounts` | UI aggregation (Chat 12) |
+| Life: refused edits nobody has dealt with, against what's there now, field by field | `LifeReviewRow`, `lifeReviewRows` | UI aggregation (Chat 12) |
+| Life: each item's reminder state and time on this device; what's coming, nearest first; how many are set; which choices apply | `ReminderView` (`device_reminders.dart`), `ReminderRow`, `comingReminders`, `setReminders`, `reminderChoices` (`reminder_data.dart`) | UI aggregation (Chat 12) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1199,8 +1306,8 @@ Remove this section when the redesign is finished.
 | 9 | Money B: Cards, Planning, Reports, Import, Files | Done |
 | 10 | Shared Expenses A: groups, Bills, Payments | Done |
 | 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog. **All three stages built and approved** (Balances, a person, two people, My Records, the private forms and their rule messages, People, History, Manage Group and the group forms) | Done |
-| 12 | Life A: Calendar, Tasks, reminders | Next |
-| 13 | Life B: Learning, Books, Career | Planned |
+| 12 | Life A: Calendar, Tasks, reminders. Three stages: 12a Calendar, 12b Tasks, 12c Reminders | Done |
+| 13 | Life B: Learning, Books, Career | Next |
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Planned |
 | 15 | Onboarding: welcome, local setup, Google, restore | Planned |
 | 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
@@ -1229,10 +1336,12 @@ Error messages written in rule files stay as they are until the chat that works 
 | --- | --- | --- | --- |
 | 10 | `shared_domain.dart`, `shared_repository.dart`, `shared_store.dart` | Done: 15, plus the connected-identity message | The server's reasons stay as they are; `sharedReason` shows them plainly, and a test holds that table to the SQL |
 | 11 | `shared_private_domain.dart` | Done: 21, plus 2 review notes. 5 only a developer can reach stay as they are | `privateRuleFields` puts them on their fields, and a test holds that table to the rules |
-| 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages | About 35, with Chat 15 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup." |
+| 12 | `life_domain.dart`, `life_controller.dart`, `device_reminders.dart`, `life_store.dart` | Done: 18, plus Life's reasons on screen through `lifeReason`. 1 was already plain and 18 only a developer can reach stay as they are | `lifeRuleFields` puts them on their fields, and a test holds that table, the 72 calls and the reasons to the rules and the SQL |
+| 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | 28 | "Completion cannot precede the started date.", "Use an HTTP(S) posting URL without credentials." |
+| 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages. Also 7 of Life's that a restore can reach, in `life_domain.dart` and `life_store.dart` | About 35, with Chat 15, and those 7 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup.", "Unsupported Life archive coverage." |
 | 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
 
-Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks the errors its own forms show. The counts are from 2026-10-31, and count each distinct message once.
+Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 72 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
 
 ## 10. Decision log
 
@@ -1410,3 +1519,19 @@ Chats 12 and 13 have none: Life's rules don't use `reject`. Each still checks th
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
 | 2026-11-01 | Owner review: stage 11c looks good, which finishes Chat 11. | Approved |
+| 2026-11-01 | Owner review: stage 12a looks good, including Add event's new arrangement, shown as a sample. | Approved |
+| 2026-11-01 | Owner review: stage 12c looks good with the compact switches. Chat 12 is approved. | Approved |
+| 2026-11-01 | Owner review of 12c: the stock switches were too big beside the compact controls. `AppSwitch` is 20 tall on Windows and 24 on Android, with a 48 hit area on Android, matching the sidebar's small switch. | Done |
+| 2026-11-01 | Owner review: stage 12b looks good. | Approved |
+| 2026-11-01 | Coming reminders shows eight rows, then links to every reminder, because 25 left a large gap under the side cards. This narrows the plan's 25 then Show more, which the whole list keeps. | Done |
+| 2026-11-01 | A radio list's label sits level with its radio when it has no description. | Done |
+| 2026-11-01 | The old demo reminder code retires: ReminderControls, ReminderCenter's demo body, `reminder_widgets.dart` and the demo controller's reminder fields. The demo's `agenda` stays, because the d4 tests use it. | Done |
+| 2026-11-01 | Chat 12: Reminders is a Life tab, after Tasks (built in 12c). Calendar is tiles, the month beside the chosen day, then what's overdue and coming up. Tasks is tiles, Next up beside By priority, then every task. Three stages. | Approved |
+| 2026-11-01 | An event that has gone by doesn't count as late: it reads Past. Tasks, due dates and money dues do count. This is narrower than ARCHITECTURE §12.1 for events, because few people mark an event done. | Approved |
+| 2026-11-01 | Calendar's money rows include waiting work, so they match Debts. Notifications stay on accepted records, so a reminder can still go off for a due the Calendar no longer shows, and a notice says so. | Approved |
+| 2026-11-01 | Money rows open their record, with no Log link on the Calendar. | Approved |
+| 2026-11-01 | Reminders: Snooze only once a reminder has fired; minutes-before hidden on all-day items; a plain status beside the text in `device_reminders.dart`; Inherited reads Default on screen. Built in 12c. | Approved |
+| 2026-11-01 | Shareable lists for a week or month, one day and the task list, with counts and no money total. | Approved |
+| 2026-11-01 | `lifeAgendaItems` moved out of `agendaWindow` with the same results, and forms save through `LifeWriter`, so the demo replays real records and its forms work. Today counts by `civilToday()`. Life counts in the bell's waiting and review rows (built in 12b). | Approved |
+| 2026-11-01 | Chat 12's 18 rule messages are reworded as approved, with Life's stored reasons changed on screen only. | Approved |
+| 2026-11-01 | Old Life demo code retires in 12c. The demo controller's Learning, Books and Career data stays for Chat 13. | Approved |

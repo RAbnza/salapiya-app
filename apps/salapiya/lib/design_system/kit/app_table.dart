@@ -22,6 +22,7 @@ class AppTableRow {
     required this.narrow,
     this.onTap,
     this.action,
+    this.lead,
   }) : header = null;
 
   /// Starts a group of rows, e.g. one day of a dated list. It takes no part
@@ -33,7 +34,8 @@ class AppTableRow {
       spoken = '',
       narrow = header,
       onTap = null,
-      action = null;
+      action = null,
+      lead = null;
 
   final String id;
   final Widget? header;
@@ -53,6 +55,9 @@ class AppTableRow {
 
   /// Sits outside the row's own target, so it stays its own control.
   final Widget? action;
+
+  /// The same, before the row: a checkbox, say.
+  final Widget? lead;
 }
 
 /// The width of a small action column: [label] and its chevron.
@@ -79,6 +84,7 @@ class AppTable extends StatelessWidget {
     this.moneyColumns = const [],
     this.actionLabel,
     this.dense = false,
+    this.leadWidth,
   });
   final List<AppTableColumn> columns;
   final List<String> moneyColumns;
@@ -89,6 +95,9 @@ class AppTable extends StatelessWidget {
 
   /// Rows of one line, for long lists.
   final bool dense;
+
+  /// Reserves a column this wide for each row's [AppTableRow.lead].
+  final double? leadWidth;
 
   /// The narrow table: rows under their group headers, with hairlines only
   /// between the rows of a group.
@@ -146,6 +155,7 @@ class AppTable extends StatelessWidget {
           ].fold<double>(0, (a, b) => a + b) +
           Space.md * (columns.length + moneyColumns.length - 1) +
           Space.sm * 2 +
+          (leadWidth ?? 0) +
           (actionWidth == null ? 0 : actionWidth + Space.sm);
       final shares = columns.fold(0, (n, column) => n + column.flex);
       if (narrowAt(context, box.maxWidth, tableBase) ||
@@ -198,6 +208,7 @@ class AppTable extends StatelessWidget {
           ExcludeSemantics(
             child: Row(
               children: [
+                if (leadWidth != null) SizedBox(width: leadWidth),
                 Expanded(
                   child: Padding(
                     padding: padding,
@@ -220,6 +231,8 @@ class AppTable extends StatelessWidget {
             else
               Row(
                 children: [
+                  if (leadWidth != null)
+                    SizedBox(width: leadWidth, child: r.lead),
                   Expanded(
                     child: Semantics(
                       button: r.onTap != null,

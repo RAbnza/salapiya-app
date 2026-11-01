@@ -13,7 +13,7 @@ import 'package:salapiya/life/life_controller.dart';
 
 import '../test/local_money_journey.dart';
 import 'p4_cards_test.dart' show nativeEnter, nativeSave;
-import 'p5_life_native_test.dart' show lifeEnter, lifeSave;
+import 'p5_life_native_test.dart' show lifeEnter, lifeSaveForm;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -95,10 +95,10 @@ void main() {
         await nativeSave(tester);
         await localTap(tester, find.byKey(const ValueKey('nav-life')));
         await localTap(tester, find.text('Tasks').first);
-        await localTap(tester, find.text('New task'));
+        await localAction(tester, 'Add task');
         await lifeEnter(tester, 'title', 'Plan the week');
         await checkScreen('task-form');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Task saved');
         expect(
           (runtime.session!.life as DurableLifeController).entries.single.title,
           'Plan the week',

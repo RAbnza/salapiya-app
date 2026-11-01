@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
@@ -19,6 +20,21 @@ Future<void> lifeEnter(WidgetTester tester, String key, String value) async {
   final field = find.byKey(ValueKey('life-field-$key'));
   await tester.ensureVisible(field);
   await tester.pumpAndSettle();
+  final widget = tester.widget(field);
+  // Dates and times are picked, not typed; the picker is the system's.
+  if (widget is DateField) {
+    widget.onChanged!(DateTime.parse(value));
+    await localSettle(tester);
+    return;
+  }
+  if (widget is TimeField) {
+    final p = value.split(':');
+    widget.onChanged!(
+      TimeOfDay(hour: int.parse(p[0]), minute: int.parse(p[1])),
+    );
+    await localSettle(tester);
+    return;
+  }
   final editable = find.descendant(
     of: field,
     matching: find.byType(EditableText),
@@ -50,6 +66,20 @@ Future<void> lifeSave(WidgetTester tester) async {
     () => find.text('Saved on this device').evaluate().isNotEmpty,
   );
   await localTap(tester, find.text('Done'));
+}
+
+/// Saves a redesigned Life form, which has its own steps.
+Future<void> lifeSaveForm(WidgetTester tester, String saved) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  final submit = find.byKey(const ValueKey('life-submit'));
+  await localTap(tester, submit);
+  await localWait(
+    tester,
+    () => find.text('Step 2 of 2 · Review').evaluate().isNotEmpty,
+  );
+  await localTap(tester, submit);
+  await localWait(tester, () => find.text(saved).evaluate().isNotEmpty);
+  await localTap(tester, find.byKey(const ValueKey('life-done')));
 }
 
 Future<void> lifeBack(WidgetTester tester) async {
@@ -96,28 +126,30 @@ void main() {
             store = c.store;
         expect(c.records, isEmpty);
         await localTap(tester, find.byKey(const ValueKey('nav-life')));
-        await localTap(tester, find.text('New event'));
+        await localAction(tester, 'Add event');
         await lifeEnter(tester, 'title', 'P5 native personal event');
         await lifeEnter(tester, 'date', tomorrow);
-        await lifeEnter(tester, 'time', '');
-        await lifeSave(tester);
+        await localTap(tester, find.byKey(const ValueKey('life-field-allDay')));
+        await lifeSaveForm(tester, 'Event saved');
         expect(c.events.length, 1);
+        await localTap(tester, find.byTooltip('Calendar options'));
         await localTap(tester, find.text('Agenda').first);
         await localTap(tester, find.text('P5 native personal event').first);
         expect(find.text('P5 native personal event'), findsWidgets);
         await localTap(tester, find.text('Edit event'));
+        await localTap(tester, find.text('More details'));
         await lifeEnter(tester, 'location', 'Synthetic venue');
         await lifeEnter(tester, 'reason', 'Correct venue');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Event saved');
         expect(c.events.single.version, 2);
         await lifeBack(tester);
 
         await localTap(tester, find.text('Tasks').first);
-        await localTap(tester, find.text('New task'));
+        await localAction(tester, 'Add task');
         await lifeEnter(tester, 'title', 'P5 native task');
         await lifeEnter(tester, 'due', tomorrow);
-        await lifeSave(tester);
-        await localTap(tester, find.text('P5 native task'));
+        await lifeSaveForm(tester, 'Task saved');
+        await localTap(tester, find.text('P5 native task').first);
         await localTap(tester, find.text('Complete task'));
         await tester.runAsync(c.reload);
         await localSettle(tester);
@@ -129,8 +161,11 @@ void main() {
           isEmpty,
         );
         await localTap(tester, find.text('Reopen task'));
-        await localTap(tester, find.text('Archive').first);
-        await localTap(tester, find.text('Restore').first);
+        await localTap(tester, find.byTooltip('More actions'));
+        await localTap(tester, find.text('Archive task'));
+        await localTap(tester, find.text('Archive task').last);
+        await localTap(tester, find.byTooltip('More actions'));
+        await localTap(tester, find.text('Restore task'));
         expect(c.entries.single.archived, isFalse);
         expect(c.entries.single.status, 'In progress');
         await lifeBack(tester);

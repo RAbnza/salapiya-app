@@ -64,7 +64,7 @@ void main() {
           await localSettle(tester);
           await localTap(tester, find.byKey(const ValueKey('nav-life')));
           await localTap(tester, find.text('Tasks').first);
-          expect(find.text('A durable accessible task'), findsOneWidget);
+          expect(find.text('A durable accessible task'), findsWidgets);
           expect(find.textContaining('View state:'), findsNothing);
           expect(find.text('Simulated outcome'), findsNothing);
           expect(
@@ -85,8 +85,9 @@ void main() {
           await localTap(tester, find.text('Calendar').first);
           expect(find.text('Demo today'), findsNothing);
           expect(tester.takeException(), isNull);
+          await localTap(tester, find.byTooltip('Calendar options'));
           await localTap(tester, find.text('Preferences & help'));
-          expect(find.textContaining('Visibility changes'), findsOneWidget);
+          expect(find.text('Show in Life'), findsOneWidget);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           await localSettle(tester);

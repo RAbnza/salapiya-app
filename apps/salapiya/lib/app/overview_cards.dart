@@ -514,9 +514,8 @@ class _DuesCardState extends State<DuesCard> {
   }
 }
 
-/// The period's days: a week strip, or a month grid. A dot marks a day with
-/// something due and an icon marks one with something overdue, so the two
-/// differ by shape as well as color. Tapping a day filters the rows.
+/// The period's days as a `MonthGrid`, each with its dues. Tapping a day
+/// filters the rows.
 class DueCalendar extends StatelessWidget {
   const DueCalendar({
     super.key,
@@ -528,130 +527,30 @@ class DueCalendar extends StatelessWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
 
-  static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
   @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    final text = Theme.of(context).textTheme;
-    final days = dues.days;
-    final week = dues.period == DuePeriod.week;
-    final height = isDesktop(context)
-        ? Space.compactTwoLineRow
-        : Space.target + Space.sm;
-    Widget cell(String date, List<DueItem> items) {
-      final isToday = date == dues.today, isSelected = date == selected;
-      final late = items.any((i) => i.days < 0);
-      final count = items.length;
-      return Semantics(
-        button: true,
-        selected: isSelected,
-        label: [
-          civilLabel(date),
-          if (isToday) 'today',
-          count == 0
-              ? 'nothing due'
-              : late
-              ? '${_plural(count, 'item')}, overdue'
-              : '${_plural(count, 'item')} due',
-        ].join(', '),
-        excludeSemantics: true,
-        child: Pressable(
-          key: ValueKey('due-day-$date'),
-          radius: Radii.controlOf(context),
-          color: isSelected
-              ? c.selection
-              : late
-              ? c.overdue.$2
-              : null,
-          border: isToday ? Border.all(color: c.primary) : null,
-          onTap: () => onSelected(date),
-          // A minimum, not a fixed height, so the cell grows with the text.
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: height),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (week)
-                  Text(
-                    _letters[DateTime.parse(date).weekday - 1],
-                    style: text.labelSmall?.copyWith(color: c.secondary),
-                  ),
-                Text(
-                  '${DateTime.parse(date).day}',
-                  style: text.labelLarge?.copyWith(
-                    color: isSelected ? c.onSelection : c.text,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                SizedBox(
-                  height: Space.md,
-                  child: late
-                      ? Icon(
-                          Icons.error_outline,
-                          size: Space.md,
-                          color: c.overdue.$1,
-                        )
-                      : count > 0
-                      ? Center(
-                          child: Container(
-                            width: Space.xs + Space.xxs,
-                            height: Space.xs + Space.xxs,
-                            decoration: BoxDecoration(
-                              color: c.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-              ],
-            ),
-          ),
+  Widget build(BuildContext context) => MonthGrid(
+    days: [
+      for (final (date, items) in dues.days)
+        (
+          date: date,
+          count: items.length,
+          late: items.any((i) => i.days < 0),
         ),
-      );
-    }
-
-    Widget line(List<Widget> cells) => Row(
-      children: [
-        for (final (i, w) in cells.indexed) ...[
-          if (i > 0) const SizedBox(width: Space.xxs),
-          Expanded(child: w),
-        ],
-      ],
-    );
-
-    if (week) return line([for (final (d, items) in days) cell(d, items)]);
-    final lead = DateTime.parse(days.first.$1).weekday - 1;
-    final cells = <Widget>[
-      for (var i = 0; i < lead; i++) const SizedBox.shrink(),
-      for (final (d, items) in days) cell(d, items),
-    ];
-    while (cells.length % 7 != 0) {
-      cells.add(const SizedBox.shrink());
-    }
-    return Column(
-      children: [
-        line([
-          for (final l in _letters)
-            ExcludeSemantics(
-              child: Center(
-                child: Text(
-                  l,
-                  style: text.labelSmall?.copyWith(color: c.secondary),
-                ),
-              ),
-            ),
-        ]),
-        const SizedBox(height: Space.xs),
-        for (var r = 0; r < cells.length; r += 7) ...[
-          if (r > 0) const SizedBox(height: Space.xxs),
-          line(cells.sublist(r, r + 7)),
-        ],
-      ],
-    );
-  }
+    ],
+    today: dues.today,
+    selected: selected,
+    onSelected: onSelected,
+    strip: dues.period == DuePeriod.week,
+    spoken: (day) => [
+      civilLabel(day.date),
+      if (day.date == dues.today) 'today',
+      day.count == 0
+          ? 'nothing due'
+          : day.late
+          ? '${_plural(day.count, 'item')}, overdue'
+          : '${_plural(day.count, 'item')} due',
+    ].join(', '),
+  );
 }
 
 /// R4: payoff progress per debt, by its payment schedule, most urgent first:

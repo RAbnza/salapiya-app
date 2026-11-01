@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,6 +45,110 @@ bool infoFocused() =>
     FocusManager.instance.primaryFocus?.debugLabel == 'InfoControl';
 
 void main() {
+  group('switches', () {
+    Future<void> show(
+      WidgetTester tester,
+      TargetPlatform platform,
+      Widget child,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          themeAnimationDuration: Duration.zero,
+          theme: SalapiyaTheme.build(Brightness.light, platform: platform),
+          home: Scaffold(body: Center(child: child)),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('it sits at the compact scale on both platforms', (
+      tester,
+    ) async {
+      for (final (platform, tall) in const [
+        (TargetPlatform.windows, 20.0),
+        (TargetPlatform.android, 24.0),
+      ]) {
+        await show(
+          tester,
+          platform,
+          AppSwitch(key: UniqueKey(), value: true, onChanged: (_) {}),
+        );
+        // The rect, because a size ignores the scale it's drawn at.
+        expect(tester.getRect(find.byType(Switch)).height, tall);
+      }
+    });
+
+    testWidgets('Android keeps a 48 hit area around it', (tester) async {
+      var on = false;
+      await show(
+        tester,
+        TargetPlatform.android,
+        AppSwitch(
+          key: const ValueKey('s'),
+          value: false,
+          onChanged: (v) => on = v,
+        ),
+      );
+      final area = tester.getRect(find.byKey(const ValueKey('s')));
+      expect(area.height, greaterThanOrEqualTo(Space.target));
+      expect(area.width, greaterThanOrEqualTo(Space.target));
+      // Just inside the top edge: clear of the switch, inside its target.
+      await tester.tapAt(area.topCenter + const Offset(0, 2));
+      expect(on, isTrue);
+    });
+
+    testWidgets('off when it has nothing to do', (tester) async {
+      await show(
+        tester,
+        TargetPlatform.windows,
+        const AppSwitch(value: false, onChanged: null),
+      );
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+    });
+
+    testWidgets('a row reads as one toggle, for screen readers too', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      for (final platform in const [
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      ]) {
+        var taps = 0;
+        await show(
+          tester,
+          platform,
+          SizedBox(
+            key: UniqueKey(),
+            width: 300,
+            child: SwitchRow(
+              label: 'All day',
+              value: false,
+              onChanged: (_) => taps++,
+            ),
+          ),
+        );
+        final node = tester.getSemantics(find.text('All day'));
+        expect(node.flagsCollection.isToggled.toBoolOrNull(), isFalse);
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        await tester.tap(find.byType(Switch));
+        expect(taps, 1);
+      }
+      semantics.dispose();
+    });
+
+    testWidgets('a switch alone says what it does', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await show(
+        tester,
+        TargetPlatform.android,
+        AppSwitch(label: 'Quiet hours', value: true, onChanged: (_) {}),
+      );
+      expect(find.bySemanticsLabel('Quiet hours'), findsOneWidget);
+      semantics.dispose();
+    });
+  });
+
   group('Info control', () {
     // Windows starts in traditional (pointer and keyboard) highlight mode;
     // the test binding starts in touch mode.

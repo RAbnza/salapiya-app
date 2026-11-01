@@ -116,7 +116,7 @@ extension LifeLocalStore on LocalStore {
     );
     if (rows.length > 20000) {
       lifeReject(
-        'Life history exceeds the supported 20,000 revision capacity.',
+        'Life can’t hold any more. Nothing was lost. Older items can be archived, but they still count.',
       );
     }
     final result = <String, LifeRecord>{};
@@ -153,6 +153,18 @@ extension LifeLocalStore on LocalStore {
     [owner],
   )).map((r) => Map<String, dynamic>.from(r)).toList();
 
+  /// Every saved version of one record, oldest first, with when it was saved.
+  Future<List<(String, LifeCommand)>> lifeRecordHistory(String id) async => [
+    for (final r in await db.getAll(
+      'SELECT id,payload,recorded_at FROM life_revision WHERE owner_id=? AND record_id=? ORDER BY version',
+      [owner, id],
+    ))
+      (
+        r['recorded_at'] as String,
+        LifeCommand.decode(r['id'] as String, r['payload'] as String),
+      ),
+  ];
+
   Future<void> _insertLife(
     SqliteWriteContext tx,
     LifeCommand c,
@@ -175,7 +187,7 @@ extension LifeLocalStore on LocalStore {
         (await tx.get('SELECT count(*) n FROM life_revision'))['n'] as int;
     if (count >= 20000 || records.length >= 10000 && c.expectedVersion == 0) {
       lifeReject(
-        'Life capacity reached. Preserve history and narrow the workspace before adding records.',
+        'Life can’t hold any more. Nothing was lost. Older items can be archived, but they still count.',
       );
     }
     await tx.execute('INSERT INTO life_revision VALUES(?,?,?,?,?,?,?)', [
@@ -218,13 +230,13 @@ extension LifeLocalStore on LocalStore {
     } else {
       if (binding['phase'] != 'connected') {
         lifeReject(
-          'Finish connection/recovery review first. Your draft remains protected.',
+          'Finish checking your connection first. What you entered is kept.',
         );
       }
       final current = await lifeRecordsIn(tx);
       if (c.expectedVersion == 0 && current.length >= 10000) {
         lifeReject(
-          'Life record capacity reached. Preserve existing history before enlarging this workspace.',
+          'Life can’t hold any more. Nothing was lost. Older items can be archived, but they still count.',
         );
       }
       applyLifeCommand(current, c);
@@ -243,7 +255,7 @@ extension LifeLocalStore on LocalStore {
     if (((await tx.get('SELECT count(*) n FROM life_intent'))['n'] as int) >=
         20000) {
       lifeReject(
-        'Life intent capacity reached. Preserve existing evidence before enlarging this workspace.',
+        'Life can’t hold any more. Nothing was lost. Older items can be archived, but they still count.',
       );
     }
     final next = (await tx.get(

@@ -1,131 +1,222 @@
-import '../design_system/theme.dart';
-
 import 'package:flutter/material.dart';
 
-import '../features/common/prototype_form.dart';
-import '../features/finance/presentation/financial_widgets.dart';
-import '../local/local_store.dart';
-import '../prototype/scenarios.dart';
-import 'life_controller.dart';
+import '../design_system/kit/kit.dart';
+import '../design_system/theme.dart';
+import '../local/finance_domain.dart' show newLocalId;
+import 'life_data.dart';
 import 'life_domain.dart';
-import 'life_form.dart';
+import 'life_forms.dart' show lostSaveMessage, lostSaveTitle;
+import 'life_pages_detail.dart'
+    show ReasonForm, ReasonFormState, lifeFieldValue;
 
-class LifeReviews extends StatelessWidget {
-  const LifeReviews({super.key, required this.session});
-  final PrototypeSession session;
+/// What a refused edit was to.
+String _kind(LifeType type) => switch (type) {
+  LifeType.task => 'Task',
+  LifeType.personal => 'Event',
+  LifeType.learning => 'Learning',
+  LifeType.book => 'Book',
+  LifeType.application => 'Application',
+  LifeType.careerEvent => 'Career step',
+  LifeType.document => 'Document',
+};
+
+/// A command to save a refused edit, kept so a lost answer asks about the
+/// same one.
+class _Retry {
+  _Retry(this.command, this.original);
+  final LifeCommand command;
+  final String original;
+}
+
+/// Edits that couldn't be saved. Each stays on record whatever the user
+/// chooses, and choosing closes it.
+class LifeChecksPage extends StatefulWidget {
+  const LifeChecksPage({
+    super.key,
+    required this.listenable,
+    required this.source,
+  });
+  final Listenable listenable;
+  final LifeSource Function(BuildContext context) source;
   @override
-  Widget build(BuildContext context) {
-    final c = session.life as DurableLifeController;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final row in c.intents.where(
-          (r) => r['resolved_at'] == null && r['state'] == 'review',
-        ))
-          Builder(
-            builder: (context) {
-              final original = LifeCommand.decode(
-                    row['id'] as String,
-                    row['payload'] as String,
-                  ),
-                  current =
-                      c.records[LifeCommand.decode(
-                        row['id'] as String,
-                        row['payload'] as String,
-                      ).recordId];
-              return ExpansionTile(
-                key: PageStorageKey('life-review-${original.id}'),
-                title: Text('Review retained ${original.type.name} edit'),
-                subtitle: Text(row['reason'] as String? ?? 'Sources changed'),
+  State<LifeChecksPage> createState() => _LifeChecksPageState();
+}
+
+class _LifeChecksPageState extends State<LifeChecksPage> {
+  String? problem;
+  _Retry? lost;
+  bool busy = false;
+
+  Future<void> run(Future<void> Function() work) async {
+    setState(() {
+      busy = true;
+      problem = null;
+    });
+    try {
+      await work();
+      lost = null;
+    } on FormatException catch (e) {
+      problem = e.message;
+      lost = null;
+    } catch (_) {
+      if (lost == null) problem = 'That didn’t save. Nothing changed.';
+    }
+    if (mounted) setState(() => busy = false);
+  }
+
+  Future<void> use(LifeSource source, LifeReviewRow r) async {
+    final form = GlobalKey<ReasonFormState>();
+    String? reason;
+    final yes = await showAppDialog<bool>(
+      context,
+      title: 'Use your edit?',
+      body: ReasonForm(
+        key: form,
+        message:
+            'Your edit replaces what’s there now. What’s there stays in Edit history.',
+        label: 'Why you’re using it',
+        missing: 'Say why you’re using it.',
+        fieldKey: const ValueKey('life-check-why'),
+      ),
+      primary: ModalAction(
+        'Use my edit',
+        value: true,
+        onPressed: () {
+          reason = form.currentState?.answer();
+          return reason != null;
+        },
+      ),
+    );
+    if (yes != true || !mounted) return;
+    final command = LifeCommand(
+      id: newLocalId(),
+      owner: r.original.owner,
+      recordId: r.original.recordId,
+      type: r.original.type,
+      expectedVersion: r.current?.version ?? 0,
+      fields: r.original.fields,
+      reason: reason!,
+    );
+    lost = _Retry(command, r.id);
+    await run(() => source.writer.useEdit(command, r.id));
+  }
+
+  Future<void> keep(LifeSource source, LifeReviewRow r) async {
+    final yes = await showAppDialog<bool>(
+      context,
+      title: 'Keep what’s there?',
+      body: const Text(
+        'Your record stays as it is, and your edit isn’t used. It stays on record, so nothing is lost.',
+      ),
+      primary: const ModalAction('Keep what’s there', value: true),
+    );
+    if (yes == true) await run(() => source.writer.keepCurrent(r.id));
+  }
+
+  Widget card(BuildContext context, LifeSource source, LifeReviewRow r) {
+    final c = CraftTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    final muted = text.bodySmall?.copyWith(color: c.secondary);
+    String shown(String key, String value) =>
+        source.hidden && ['salaryMin', 'salaryMax'].contains(key)
+        ? 'Amount hidden'
+        : lifeFieldValue(context, key, value);
+    return OverviewCard(
+      key: ValueKey('life-check-${r.id}'),
+      title: r.current?.title ?? r.original.fields['title'] ?? 'An edit',
+      caption: '${_kind(r.original.type)} · ${lifeReason(r.reason)}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (key, now, mine) in r.differences)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.xs),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const FormStatus(
-                    title: 'Edit needs review',
-                    tone: NoticeTone.warning,
-                    message: 'The original command and rejected receipt remain unchanged. Review both versions before creating a separate command. Unrelated records can continue synchronizing.',
-                  ),
-                  for (final value in original.fields.entries)
-                    ReviewRow(
-                      value.key,
-                      session.hideAmounts &&
-                              ['salaryMin', 'salaryMax'].contains(value.key)
-                          ? 'Current: Hidden\nRetained edit: Hidden'
-                          : 'Current: ${current?.fields[value.key] ?? 'unavailable'}\nRetained edit: ${value.value}',
-                    ),
-                  FormEvidence(
-                    children: [
-                      SelectableText(
-                        'Original command: ${original.id}\nSource version: ${original.expectedVersion}',
-                      ),
-                    ],
-                  ),
-                  if (current != null || original.expectedVersion == 0)
-                    TextButton(
-                      onPressed: () => lifeReviewForm(
-                        context,
-                        session,
-                        title: 'Review retained Life edit',
-                        draftKey: 'review:${original.id}',
-                        sourceId: current?.id,
-                        fields: [
-                          for (final value in original.fields.entries)
-                            DemoField(
-                              value.key,
-                              value.key,
-                              value: value.value,
-                              required: false,
-                              lines:
-                                  ['notes', 'description'].contains(value.key)
-                                  ? 3
-                                  : 1,
-                            ),
-                          const DemoField(
-                            'reason',
-                            'Reason for applying this reviewed edit',
-                          ),
-                        ],
-                        save: (values) async {
-                          final command = LifeCommand(
-                            id: values['__command'],
-                            owner: c.store.owner,
-                            recordId: original.recordId,
-                            type: original.type,
-                            expectedVersion: int.parse(
-                              values['__version'] ?? '0',
-                            ),
-                            fields: {
-                              for (final key in original.fields.keys)
-                                key: values[key]!,
-                            },
-                            reason: values['reason']!,
-                            recordedAt: DateTime.parse(values['__recordedAt']!),
-                          );
-                          await c.store.commitLife(
-                            command,
-                            draft: values['__draft'],
-                          );
-                          await c.store.resolveLifeReview(
-                            original.id,
-                            command.id,
-                          );
-                          await c.reload();
-                        },
-                      ),
-                      child: const Text('Review as a separate edit'),
-                    ),
-                  TextButton(
-                    onPressed: () => lifeAction(context, () async {
-                      await c.store.resolveLifeReview(original.id, null);
-                      await c.reload();
-                    }),
-                    child: const Text(
-                      'Keep current record; retain rejected evidence',
-                    ),
-                  ),
+                  Text(lifeFieldNames[key]!, style: text.labelMedium),
+                  const SizedBox(height: Space.xxs),
+                  FactRow('Now', shown(key, now)),
+                  FactRow('Your edit', shown(key, mine)),
                 ],
-              );
-            },
+              ),
+            ),
+          if (r.differences.isEmpty)
+            Text('Your edit changes nothing you can see here.', style: muted),
+          const SizedBox(height: Space.md),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
+              AppButton.tertiary(
+                'Keep what’s there',
+                key: ValueKey('life-check-keep-${r.id}'),
+                onPressed: busy ? null : () => keep(source, r),
+              ),
+              if (r.usable)
+                AppButton.secondary(
+                  'Use my edit',
+                  key: ValueKey('life-check-use-${r.id}'),
+                  onPressed: busy ? null : () => use(source, r),
+                ),
+            ],
           ),
-      ],
+        ],
+      ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.listenable,
+    builder: (context, _) {
+      final source = widget.source(context);
+      final gap = SizedBox(height: Space.cardGapOf(context));
+      final retry = lost;
+      return SectionPage(
+        title: 'Changes to check',
+        caption: 'Edits that couldn’t be saved. You choose what happens.',
+        maxWidth: Space.reviewMaxWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (retry != null && !busy) ...[
+              InlineNotice(
+                lostSaveMessage,
+                title: lostSaveTitle,
+                tone: NoticeTone.warning,
+                live: true,
+                action: AppButton.secondary(
+                  'Check again',
+                  key: const ValueKey('life-check-retry'),
+                  onPressed: () => run(
+                    () => source.writer.useEdit(retry.command, retry.original),
+                  ),
+                ),
+              ),
+              gap,
+            ],
+            if (problem != null) ...[
+              InlineNotice(problem!, tone: NoticeTone.error, live: true),
+              gap,
+            ],
+            if (source.reviews.isEmpty)
+              const SurfaceCard(
+                child: EmptyState(
+                  icon: Icons.task_alt,
+                  title: 'Nothing to check',
+                  message: 'Edits that can’t be saved show here.',
+                ),
+              )
+            else
+              for (final (i, r) in source.reviews.indexed) ...[
+                if (i > 0) gap,
+                card(context, source, r),
+              ],
+          ],
+        ),
+      );
+    },
+  );
 }

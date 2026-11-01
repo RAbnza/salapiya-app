@@ -6,6 +6,11 @@ import '../connected/financial_contract.dart';
 import '../local/finance_domain.dart';
 import '../local/local_store.dart' show defaultLocalCategories;
 import '../finance/money_demo.dart';
+import '../life/life_cards.dart' show nextUpRow;
+import '../life/life_controller.dart' show lifeAgendaItems, sortedAgenda;
+import '../life/life_data.dart' show LifeRow;
+import '../life/life_demo.dart' show demoLife;
+import '../life/life_hub.dart' show lifeHubOf;
 import '../shared/shared_demo.dart'
     show
         demoLinkedBill,
@@ -978,25 +983,24 @@ OverviewSource demoOverviewSource(
         r,
   ]..sort((a, b) => b.date.compareTo(a.date));
 
-  final life = empty
-      ? const <OverviewRow>[]
-      : <OverviewRow>[
-          for (final (offset, title, time, kind) in [
-            (1, 'Dentist appointment', '10:00', 'Events'),
-            (2, 'Renew driver’s license', 'All day', 'Tasks'),
-            (4, 'Book club', '19:00', 'Events'),
-          ])
-            (
-              icon: kind == 'Tasks'
-                  ? Icons.check_circle_outline
-                  : Icons.event_outlined,
-              title: title,
-              subtitle:
-                  '${civilLabel(addCivilDays(today, offset))} · $time · $kind',
-              amount: null,
-              onTap: () => open(PreviewSource.agenda),
-            ),
-        ];
+  // The Calendar's own sample, so the two agree.
+  final records = demoLife(today, empty: empty).records;
+  final agenda = sortedAgenda([
+    for (final item in lifeAgendaItems(
+      records,
+      today,
+      addCivilDays(today, 30),
+    ))
+      if (lifeHubOf(session).calendarShown(item.kind)) item,
+  ]);
+  final life = <OverviewRow>[
+    for (final item in agenda.take(3))
+      nextUpRow(
+        context,
+        LifeRow.record(item, records, today, 'Asia/Manila'),
+        () => open(PreviewSource.agenda),
+      ),
+  ];
   return OverviewSource(
     today: today,
     accepted: s,
@@ -1028,6 +1032,7 @@ OverviewSource demoOverviewSource(
             ),
           ],
     life: life,
+    lifeMore: agenda.length > 3 ? agenda.length - 3 : 0,
     recent: [
       for (final r in recent.take(10))
         (

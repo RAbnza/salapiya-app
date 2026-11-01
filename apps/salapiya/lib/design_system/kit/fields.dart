@@ -9,6 +9,7 @@ import 'calculator.dart';
 import 'compact_form.dart';
 import 'focus_ring.dart';
 import 'modals.dart';
+import 'rows.dart';
 
 /// The ⓘ control from §6. It says what a field or option *does*.
 ///
@@ -762,7 +763,7 @@ class DateField extends StatefulWidget {
 }
 
 class _DateFieldState extends State<DateField> {
-  bool hovered = false, focused = false, open = false;
+  bool open = false;
 
   Future<void> pick() async {
     final first = widget.firstDate ?? DateTime(2000);
@@ -790,12 +791,68 @@ class _DateFieldState extends State<DateField> {
 
   @override
   Widget build(BuildContext context) {
+    final value = widget.value;
+    return _PickField(
+      label: widget.label,
+      helper: widget.helper,
+      info: widget.info,
+      errorText: widget.errorText,
+      disabledReason: widget.disabledReason,
+      required: widget.required,
+      enabled: widget.onChanged != null,
+      open: open,
+      shown: value == null ? null : DateField.format(value),
+      hintText: widget.hintText,
+      icon: Icons.calendar_today_outlined,
+      focusNode: widget.focusNode,
+      onPick: pick,
+      onClear: !widget.required && value != null
+          ? () => widget.onChanged!(null)
+          : null,
+    );
+  }
+}
+
+/// What [DateField], [TimeField] and [SearchPickerField] share: it looks like
+/// a text field, and pressing it opens a picker.
+class _PickField extends StatefulWidget {
+  const _PickField({
+    required this.label,
+    required this.shown,
+    required this.hintText,
+    required this.icon,
+    required this.onPick,
+    required this.enabled,
+    required this.open,
+    this.helper,
+    this.info,
+    this.errorText,
+    this.disabledReason,
+    this.required = false,
+    this.focusNode,
+    this.onClear,
+  });
+  final String label, hintText;
+  final String? shown, helper, info, errorText, disabledReason;
+  final IconData icon;
+  final VoidCallback onPick;
+  final VoidCallback? onClear;
+  final bool enabled, open, required;
+  final FocusNode? focusNode;
+  @override
+  State<_PickField> createState() => _PickFieldState();
+}
+
+class _PickFieldState extends State<_PickField> {
+  bool hovered = false, focused = false;
+
+  @override
+  Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
     final input = Theme.of(context).inputDecorationTheme;
-    final enabled = widget.onChanged != null;
-    final value = widget.value;
-    final shown = value == null ? null : DateField.format(value);
+    final enabled = widget.enabled;
+    final shown = widget.shown;
     return HelpField(
       label: widget.label,
       helper: widget.helper,
@@ -817,33 +874,33 @@ class _DateFieldState extends State<DateField> {
           actions: {
             ActivateIntent: CallbackAction<ActivateIntent>(
               onInvoke: (_) {
-                pick();
+                widget.onPick();
                 return null;
               },
             ),
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: enabled ? pick : null,
+            onTap: enabled ? widget.onPick : null,
             child: InputDecorator(
-              isFocused: focused || open,
+              isFocused: focused || widget.open,
               isHovering: hovered,
               decoration: InputDecoration(
                 enabled: enabled,
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (!widget.required && value != null && enabled)
+                    if (widget.onClear != null && enabled)
                       IconButton(
                         icon: const Icon(Icons.close),
                         tooltip: 'Clear ${widget.label}',
                         color: c.secondary,
-                        onPressed: () => widget.onChanged!(null),
+                        onPressed: widget.onClear,
                       ),
                     Padding(
                       padding: const EdgeInsetsDirectional.only(end: Space.md),
                       child: Icon(
-                        Icons.calendar_today_outlined,
+                        widget.icon,
                         color: enabled ? c.text : c.secondary,
                       ),
                     ),
@@ -866,6 +923,221 @@ class _DateFieldState extends State<DateField> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A time chosen with the system's picker, never typed. It shows the time as
+/// the device writes it, and hands back a `TimeOfDay`.
+class TimeField extends StatefulWidget {
+  const TimeField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.helper,
+    this.info,
+    this.errorText,
+    this.hintText = 'Choose a time',
+    this.required = false,
+    this.disabledReason,
+    this.focusNode,
+  });
+  final String label;
+  final TimeOfDay? value;
+
+  /// Null disables the field; give a [disabledReason].
+  final ValueChanged<TimeOfDay>? onChanged;
+  final String? helper, info, errorText, disabledReason;
+  final String hintText;
+  final bool required;
+  final FocusNode? focusNode;
+
+  /// The time as this device writes it, following its 12/24-hour setting.
+  static String format(BuildContext context, TimeOfDay time) =>
+      MaterialLocalizations.of(context).formatTimeOfDay(
+        time,
+        alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+      );
+
+  @override
+  State<TimeField> createState() => _TimeFieldState();
+}
+
+class _TimeFieldState extends State<TimeField> {
+  bool open = false;
+
+  Future<void> pick() async {
+    setState(() => open = true);
+    final picked = await restoringFocus(
+      () => showTimePicker(
+        context: context,
+        initialTime: widget.value ?? const TimeOfDay(hour: 9, minute: 0),
+        helpText: widget.label,
+        confirmText: 'Choose time',
+        cancelText: 'Cancel',
+      ),
+    );
+    if (!mounted) return;
+    setState(() => open = false);
+    if (picked != null) widget.onChanged?.call(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.value;
+    return _PickField(
+      label: widget.label,
+      helper: widget.helper,
+      info: widget.info,
+      errorText: widget.errorText,
+      disabledReason: widget.disabledReason,
+      required: widget.required,
+      enabled: widget.onChanged != null,
+      open: open,
+      shown: value == null ? null : TimeField.format(context, value),
+      hintText: widget.hintText,
+      icon: Icons.schedule,
+      focusNode: widget.focusNode,
+      onPick: pick,
+    );
+  }
+}
+
+/// A choice from a list too long to scroll: it opens a list with a search box,
+/// a dialog on Windows and a sheet on Android. Options show plain names, never
+/// ids.
+class SearchPickerField extends StatefulWidget {
+  const SearchPickerField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    this.helper,
+    this.info,
+    this.errorText,
+    this.hintText = 'Choose one',
+    this.searchLabel = 'Search',
+    this.required = false,
+  });
+  final String label, hintText, searchLabel;
+  final String? value, helper, info, errorText;
+
+  /// Value and name.
+  final List<(String, String)> options;
+  final ValueChanged<String>? onChanged;
+  final bool required;
+  @override
+  State<SearchPickerField> createState() => _SearchPickerFieldState();
+}
+
+class _SearchPickerFieldState extends State<SearchPickerField> {
+  bool open = false;
+
+  Future<void> pick() async {
+    setState(() => open = true);
+    final picked = await showAdaptiveModal<String>(
+      context,
+      title: widget.label,
+      purpose: ModalPurpose.choice,
+      primary: null,
+      body: _SearchList(
+        options: widget.options,
+        label: widget.searchLabel,
+        selected: widget.value,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => open = false);
+    if (picked != null) widget.onChanged?.call(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = widget.options
+        .where((o) => o.$1 == widget.value)
+        .firstOrNull
+        ?.$2;
+    return _PickField(
+      label: widget.label,
+      helper: widget.helper,
+      info: widget.info,
+      errorText: widget.errorText,
+      required: widget.required,
+      enabled: widget.onChanged != null,
+      open: open,
+      shown: shown ?? widget.value,
+      hintText: widget.hintText,
+      icon: Icons.unfold_more,
+      onPick: pick,
+    );
+  }
+}
+
+class _SearchList extends StatefulWidget {
+  const _SearchList({
+    required this.options,
+    required this.label,
+    required this.selected,
+  });
+  final List<(String, String)> options;
+  final String label;
+  final String? selected;
+  @override
+  State<_SearchList> createState() => _SearchListState();
+}
+
+class _SearchListState extends State<_SearchList> {
+  String words = '';
+  @override
+  Widget build(BuildContext context) {
+    final c = CraftTheme.of(context);
+    final found = [
+      for (final o in widget.options)
+        if (o.$2.toLowerCase().contains(words)) o,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: const ValueKey('search-picker-words'),
+          autofocus: isDesktop(context),
+          decoration: InputDecoration(
+            hintText: widget.label,
+            prefixIcon: const Icon(Icons.search),
+          ),
+          onChanged: (v) => setState(() => words = v.trim().toLowerCase()),
+        ),
+        const SizedBox(height: Space.sm),
+        SizedBox(
+          height: Space.xxxl * 6,
+          child: found.isEmpty
+              ? Center(
+                  child: Text(
+                    'Nothing matches',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: c.secondary),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: found.length,
+                  itemBuilder: (context, i) {
+                    final (value, name) = found[i];
+                    return ListRow(
+                      key: ValueKey('search-picker-$value'),
+                      title: name,
+                      trailing: value == widget.selected
+                          ? Icon(Icons.check, color: c.primary)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(value),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

@@ -29,6 +29,8 @@ import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
 import '../finance/money_editor.dart';
 import '../life/life_controller.dart';
+import '../life/life_hub.dart';
+import '../local/finance_domain.dart' show civilToday;
 import '../shared/shared_hub.dart';
 import '../shared/shared_pages.dart' show SharedFlows;
 
@@ -48,6 +50,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   @override
   void initState() {
     super.initState();
+    lifeHubOf(session).openTab = (tab) =>
+        navigation.select(AppDestination.life, tab: tab);
     navigation.places[AppDestination.shared] = () {
       final source = sharedHub.source();
       if (source.groups.length < 2 && !sharedHub.choosing) return null;
@@ -63,13 +67,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         life.device!.navigate = (item) {
           if (!mounted) return;
           if (item == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'This reminder source changed or is no longer available. Open Life to review current commitments.',
-                ),
-              ),
+            lifeHubOf(session).setProblem(
+              'This changed, so its reminder no longer applies.',
             );
+            navigation.select(AppDestination.life, tab: 'Calendar');
             return;
           }
           openLifeSource(
@@ -111,6 +112,12 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   }
 
   void select(AppDestination destination) => navigation.select(destination);
+
+  /// Life › Calendar, on today.
+  void openCalendar() {
+    lifeHubOf(session).select(civilToday());
+    navigation.select(AppDestination.life, tab: 'Calendar');
+  }
 
   /// Opens [page] in the content area, so the Windows sidebar stays.
   Future<void> open(Widget page, String name, {String? title}) async {
@@ -205,7 +212,6 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
 
   /// Each section's tabs, mirroring the tab lists in the section screens.
   Map<AppDestination, List<String>> get sectionTabs {
-    final life = session.life;
     return {
       AppDestination.money: const [
         'Accounts',
@@ -232,17 +238,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         'Manage Group',
       ],
       AppDestination.life: [
-        for (final tab in const [
-          'Calendar',
-          'Tasks',
-          'Learning',
-          'Books',
-          'Career',
-        ])
-          if (life is! DurableLifeController ||
-              tab == 'Calendar' ||
-              life.tabVisible(tab))
-            tab,
+        for (final tab in lifeTabs)
+          if (lifeHubOf(session).tabShown(tab)) tab,
       ],
     };
   }
@@ -279,7 +276,13 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           'Sync needs review',
           icon: Icons.error_outline,
           tone: PillTone.warning,
-          onTap: () => utilities('Connection'),
+          // Only Life's edits: they're looked at in Life, not on Connection.
+          onTap: () => local?.lifeOnlyReview == true
+              ? openLifeChecks(
+                  navigation.navigatorKey.currentContext ?? context,
+                  session,
+                )
+              : utilities('Connection'),
         ),
     ];
   }
@@ -768,6 +771,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       key: ValueKey(navigation.revisionOf(destination)),
       session: session,
       initial: navigation.tabOf(destination)!,
+      actions: [
+        for (final item in newItemsFor(AppDestination.life))
+          (label: item.$2, icon: item.$3, onSelected: () => runNew(item)),
+      ],
     ),
   };
 
@@ -842,7 +849,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               onStatus: syncDetails,
               onHideAmounts: session.togglePrivacy,
               onCalendar: () =>
-                  navigation.select(AppDestination.life, tab: 'Calendar'),
+                  openCalendar(),
             ),
             child: PopScope(
               canPop:

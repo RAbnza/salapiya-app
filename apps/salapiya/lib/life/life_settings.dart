@@ -1,96 +1,124 @@
 import 'package:flutter/material.dart';
 
-import '../features/common/prototype_form.dart';
-import '../features/finance/presentation/financial_widgets.dart';
+import '../design_system/kit/kit.dart';
+import '../design_system/theme.dart';
 import '../prototype/scenarios.dart';
 import 'device_reminders.dart';
-import 'life_controller.dart';
-import 'life_form.dart';
+import 'life_data.dart';
+import 'life_forms.dart' show timezoneOptions;
+import 'life_hub.dart';
 
-class LifeSettings extends StatelessWidget {
+/// What shows in Life on this device. Nothing here deletes a record or stops
+/// a reminder.
+class LifeSettings extends StatefulWidget {
   const LifeSettings({super.key, required this.session});
   final PrototypeSession session;
   @override
+  State<LifeSettings> createState() => _LifeSettingsState();
+}
+
+class _LifeSettingsState extends State<LifeSettings> {
+  String? problem;
+
+  Future<void> save(LifeHub hub, Map<String, dynamic> next) async {
+    setState(() => problem = null);
+    try {
+      await hub.saveView(next);
+    } catch (_) {
+      if (mounted) {
+        setState(() => problem = 'That didn’t save. Nothing changed.');
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final c = session.life as DurableLifeController;
-    return FinancePage(
-      title: 'Life preferences & help',
-      child: ListenableBuilder(
-        listenable: c,
-        builder: (context, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const FinanceHeading(
-              'LIFE / YOUR SPACE',
-              'Make room for what matters.',
-              'Visibility changes the navigation or Calendar view on this device. It never deletes records or turns off reminders.',
-            ),
-            for (final tab in ['Tasks', 'Learning', 'Books', 'Career'])
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('Show $tab in Life navigation'),
-                value: c.tabVisible(tab),
-                onChanged: (v) => lifeAction(
-                  context,
-                  () => c.saveViewPreferences({
-                    ...c.viewPreferences,
-                    'tabs': {...c.viewPreferences['tabs'] as Map, tab: v},
+    final session = widget.session, hub = lifeHubOf(session);
+    return ListenableBuilder(
+      listenable: Listenable.merge([session, hub]),
+      builder: (context, _) {
+        final view = hub.view;
+        final tabs = view['tabs'] as Map, calendar = view['calendar'] as Map;
+        final show = OverviewCard(
+          key: const ValueKey('life-settings-tabs'),
+          title: 'Show in Life',
+          caption: 'Hiding a tab keeps everything in it',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final tab in const ['Tasks', 'Learning', 'Books', 'Career'])
+                SwitchRow(
+                  label: tab,
+                  switchKey: ValueKey('life-setting-$tab'),
+                  value: tabs[tab] != false,
+                  onChanged: (v) => save(hub, {
+                    ...view,
+                    'tabs': {...tabs, tab: v},
                   }),
                 ),
-              ),
-            const SizedBox(height: 16),
-            const Text('Calendar source visibility'),
-            for (final module in reminderModules)
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(module),
-                value: c.calendarVisible(module),
-                onChanged: (v) => lifeAction(
-                  context,
-                  () => c.saveViewPreferences({
-                    ...c.viewPreferences,
-                    'calendar': {
-                      ...c.viewPreferences['calendar'] as Map,
-                      module: v,
-                    },
+            ],
+          ),
+        );
+        final onCalendar = OverviewCard(
+          key: const ValueKey('life-settings-calendar'),
+          title: 'Show on Calendar',
+          caption: 'Reminders have their own switches',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final module in reminderModules)
+                SwitchRow(
+                  label: lifeModuleName(module),
+                  switchKey: ValueKey('life-setting-calendar-$module'),
+                  value: calendar[module] != false,
+                  onChanged: (v) => save(hub, {
+                    ...view,
+                    'calendar': {...calendar, module: v},
                   }),
                 ),
+            ],
+          ),
+        );
+        final zone = OverviewCard(
+          key: const ValueKey('life-settings-timezone'),
+          title: 'Timezone',
+          child: CompactForm(
+            child: SearchPickerField(
+              key: const ValueKey('life-field-display-timezone'),
+              label: 'Show times in',
+              value: view['timezone'] as String,
+              helper:
+                  'Events keep their own timezone. All-day items and due dates never move.',
+              searchLabel: 'Search timezones',
+              options: timezoneOptions(),
+              onChanged: (v) => save(hub, {...view, 'timezone': v}),
+            ),
+          ),
+        );
+        return SectionPage(
+          title: 'Life preferences',
+          caption: 'These stay on this device.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (problem != null) ...[
+                InlineNotice(problem!, tone: NoticeTone.error, live: true),
+                SizedBox(height: Space.cardGapOf(context)),
+              ],
+              DashboardGrid(
+                cards: isDesktop(context)
+                    ? [
+                        // Together, so nothing empty sits beside the longer list.
+                        (SideStack(top: show, rest: zone), 6, 12),
+                        (onCalendar, 6, 12),
+                      ]
+                    : null,
+                stacked: [show, onCalendar, zone],
               ),
-            TextButton(
-              onPressed: () => lifeReviewForm(
-                context,
-                session,
-                title: 'Calendar display timezone',
-                draftKey: 'calendar-timezone',
-                fields: [
-                  DemoField(
-                    'timezone',
-                    'IANA display timezone',
-                    value: c.displayTimezone,
-                  ),
-                ],
-                save: (v) => c.saveViewPreferences({
-                  ...c.viewPreferences,
-                  'timezone': v['timezone'],
-                }),
-              ),
-              child: Text('Display timezone: ${c.displayTimezone}'),
-            ),
-            const FinanceNotice(
-              'Calendar entries open their authoritative sources. Dates without a time stay civil dates. Timed appointments retain UTC and their original IANA timezone; ambiguous local times require an explicit occurrence. Calendar visibility and notification preferences are independent.',
-            ),
-            const FinanceNotice(
-              'Tasks have explicit statuses. A manual completion date is a field value, not a history timestamp. Progress actions explicitly map reaching the total to Completed; editing totals or page counts alone does not complete a record. Archive retains history, and restore uses the current source generation.',
-            ),
-            const FinanceNotice(
-              'Career attempts are independent, including repeated applications to one employer. Stages may repeat or skip. No response is dated observation evidence, never an inferred rejection. Salary is private Career information and never income. Supporting bytes stay on the device until cloud storage and scanning are verified.',
-            ),
-            const FinanceNotice(
-              'Saved on device, waiting for acceptance, and synchronized are different states. A conflicting edit remains in review with its original command. Back retains protected drafts. Native notification permission, quiet hours and schedules belong to this device and are rebuilt after recovery with consent off.',
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

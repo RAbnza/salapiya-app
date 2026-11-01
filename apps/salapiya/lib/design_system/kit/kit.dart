@@ -13,6 +13,7 @@ export 'fields.dart';
 export 'focus_ring.dart';
 export 'modals.dart';
 export 'money.dart';
+export 'month_grid.dart';
 export 'option_picker.dart';
 export 'provider_sign_in.dart';
 export 'rows.dart';

@@ -71,7 +71,7 @@ String lifeDate(String value, {bool optional = false}) {
       parsed.year < 1900 ||
       parsed.year > 2200 ||
       parsed.toIso8601String().substring(0, 10) != value) {
-    lifeReject('Choose a valid civil date between 1900 and 2200.');
+    lifeReject('Choose a date between 1900 and 2200.');
   }
   return value;
 }
@@ -91,7 +91,7 @@ class LifeTime {
     try {
       return tz.getLocation(name);
     } catch (_) {
-      lifeReject('Choose a supported IANA timezone.');
+      lifeReject('Choose a timezone from the list.');
     }
   }
 
@@ -103,7 +103,7 @@ class LifeTime {
   static List<DateTime> candidates(String date, String time, String timezone) {
     lifeDate(date);
     if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(time)) {
-      lifeReject('Use a 24-hour time (HH:MM).');
+      lifeReject('Enter a time, like 14:30.');
     }
     final location = zone(timezone), wall = DateTime.parse('${date}T$time:00Z');
     final result = <DateTime>[];
@@ -131,12 +131,12 @@ class LifeTime {
     final matches = candidates(date, time, timezone);
     if (matches.isEmpty) {
       lifeReject(
-        'That local time falls in a daylight-saving gap. Choose another time.',
+        'That time doesn’t happen on this date, because the clocks change. Choose another time.',
       );
     }
     if (matches.length > 1 && !['Earlier', 'Later'].contains(fold)) {
       lifeReject(
-        'That local time occurs twice. Explicitly choose Earlier or Later.',
+        'That time happens twice on this date, because the clocks change. Choose the earlier or later one.',
       );
     }
     return fold == 'Later' ? matches.last : matches.first;
@@ -353,7 +353,7 @@ Map<String, String> validateLifeFields(
     if (entry.value.length >
             (['notes', 'description'].contains(entry.key) ? 20000 : 2000) ||
         entry.value.contains('\u0000')) {
-      lifeReject('A field exceeds its supported limit.');
+      lifeReject('One of these is too long. Shorten it and try again.');
     }
   }
   v['title'] = v['title']!.trim();
@@ -575,7 +575,7 @@ class LifeCommand {
         expectedVersion > 1000000 ||
         reason.trim().isEmpty ||
         reason.length > 2000) {
-      lifeReject('A supported source version and reason are required.');
+      lifeReject('Say why you’re changing this, in up to 2,000 characters.');
     }
   }
   final String id, owner, recordId, reason;
@@ -625,7 +625,7 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
   if ((old?.version ?? 0) != c.expectedVersion ||
       old != null && (old.type != c.type || old.owner != c.owner)) {
     lifeReject(
-      'This source changed. Review the current record and preserve your draft.',
+      'This changed while you were working. Check it, then try again. What you entered is kept.',
     );
   }
   if (c.type == LifeType.careerEvent) {

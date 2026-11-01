@@ -199,7 +199,9 @@ class LocalSession extends PrototypeSession {
   @override
   BigInt? get projected => pending && complete ? finance.liquid : null;
   @override
-  bool get needsReview => runtime.connected.reviewCount > 0;
+  bool get needsReview =>
+      runtime.connected.reviewCount > 0 ||
+      runtime.connected.lifeReviewCount > 0;
   @override
   String get syncLabel => runtime.connected.label;
   @override
@@ -208,7 +210,13 @@ class LocalSession extends PrototypeSession {
             ? 'Initial download incomplete. Complete balances are unavailable.'
             : '${finance.accounts.length} accounts · accepted history and $pendingCount waiting commands · PHP · Asia/Manila'
       : super.coverage;
-  int get pendingCount => runtime.connected.pendingCount;
+  int get pendingCount =>
+      runtime.connected.pendingCount + runtime.connected.lifePendingCount;
+
+  /// Everything to review is a Life edit, so Life is where to look.
+  bool get lifeOnlyReview =>
+      runtime.connected.reviewCount == 0 &&
+      runtime.connected.lifeReviewCount > 0;
   @override
   void dispose() {
     runtime.connected.removeListener(notifyListeners);

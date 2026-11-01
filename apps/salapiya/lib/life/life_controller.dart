@@ -15,9 +15,7 @@ import 'device_reminders.dart';
 /// Mutable D4 models are read models only; every production write goes through
 /// commitLife and expected source versions, including checkbox shortcuts.
 class DurableLifeController extends LifeController {
-  DurableLifeController(this.store) : super(demo: false) {
-    permission = false;
-  }
+  DurableLifeController(this.store) : super(demo: false);
   final LocalStore store;
   Map<String, LifeRecord> records = const {};
   List<Map<String, dynamic>> intents = const [];
@@ -132,7 +130,7 @@ class DurableLifeController extends LifeController {
         _publish(history);
         error = null;
       } catch (_) {
-        error = 'Life records could not be refreshed. Existing records and drafts are preserved. Retry after checking storage or synchronization.';
+        error = 'Life couldn’t refresh. Your records and drafts are safe. Check your storage or connection, then try again.';
       }
       if (!_disposed) {
         changed();
@@ -254,23 +252,42 @@ class DurableLifeController extends LifeController {
     String? oldId,
     int? oldVersion,
   }) async {
-    final recordId = oldId ?? values['__record'] ?? newLocalId();
-    final c = LifeCommand(
-      id: values['__command'],
-      owner: store.owner,
-      recordId: recordId,
-      type: type,
-      expectedVersion:
-          int.tryParse(values['__version'] ?? '') ?? oldVersion ?? 0,
-      fields: {...fields(oldId), ...data},
-      reason: values['reason']?.trim().isNotEmpty == true
-          ? values['reason']!
-          : 'Created',
-      recordedAt: DateTime.tryParse(values['__recordedAt'] ?? ''),
+    final c = lifeCommandFor(
+      store.owner,
+      type,
+      values,
+      data,
+      current: fields(oldId),
+      oldId: oldId,
+      oldVersion: oldVersion,
     );
     await store.commitLife(c, draft: values['__draft']);
     await reload();
   }
+
+  /// The same for a task.
+  LifeCommand taskCommand(Map<String, String> v, {String? old}) =>
+      lifeCommandFor(
+        store.owner,
+        LifeType.task,
+        v,
+        lifeEntryData(LifeType.task, v),
+        current: fields(old),
+        oldId: old,
+        oldVersion: records[old]?.version,
+      );
+
+  /// The command a form's values make, for checking them before Review.
+  LifeCommand eventCommand(Map<String, String> v, {String? old}) =>
+      lifeCommandFor(
+        store.owner,
+        LifeType.personal,
+        v,
+        lifeEventData(v),
+        current: fields(old),
+        oldId: old,
+        oldVersion: records[old]?.version,
+      );
 
   @override
   Future<void> saveEntry(
@@ -280,10 +297,7 @@ class DurableLifeController extends LifeController {
   }) => _save(
     LifeType.values.byName(kind.name),
     v,
-    {
-      for (final key in lifeDefaults(LifeType.values.byName(kind.name)).keys)
-        if (v.containsKey(key)) key: v[key]!,
-    },
+    lifeEntryData(LifeType.values.byName(kind.name), v),
     oldId: old?.id,
     oldVersion: old?.version,
   );
@@ -291,11 +305,7 @@ class DurableLifeController extends LifeController {
   Future<void> saveEvent(Map<String, String> v, {PersonalEvent? old}) => _save(
     LifeType.personal,
     v,
-    {
-      for (final key in lifeDefaults(LifeType.personal).keys)
-        if (v.containsKey(key)) key: v[key]!,
-      'utc': '',
-    },
+    lifeEventData(v),
     oldId: old?.id,
     oldVersion: old?.version,
   );
@@ -359,7 +369,7 @@ class DurableLifeController extends LifeController {
     String reason,
   ) async {
     final record = records[id];
-    if (record == null) lifeReject('Record unavailable.');
+    if (record == null) lifeReject('This record isn’t available any more.');
     await _save(
       record.type,
       {'reason': reason},
@@ -415,73 +425,7 @@ class DurableLifeController extends LifeController {
     bool financial = true,
     String timezone = 'Asia/Manila',
   }) {
-    final result = <AgendaItem>[];
-    for (final r in records.values.where((r) => r.active)) {
-      if (r is CareerDocumentRecord) continue;
-      String date = '',
-          time = 'All day',
-          kind = '',
-          sourceId = r.id,
-          generation = '${r.id}:${r.version}';
-      DateTime? utc;
-      if (r is ScheduledRecord) {
-        date = r.date;
-        time = r.time.isEmpty ? 'All day' : r.time;
-        utc = r.utc;
-        if (utc != null) {
-          final local = tzTime(utc, timezone);
-          date = local.$1;
-          time = local.$2;
-        }
-        kind = r is PersonalRecord ? 'Personal' : 'Career';
-        if (r is CareerEventRecord) {
-          final a = records[r.applicationId];
-          if (a is! ApplicationRecord ||
-              a.archived ||
-              a.terminal ||
-              !['Interview', 'Assessment', 'Follow-up'].contains(r.kind)) {
-            continue;
-          }
-          sourceId = a.id;
-          generation += ':${a.version}';
-        }
-      } else if (r is ApplicationRecord) {
-        if (r.terminal || r.fields['followUp']!.isEmpty) continue;
-        date = r.fields['followUp']!;
-        kind = 'Career';
-        generation += ':followUp';
-      } else {
-        date = r.fields['due'] ?? '';
-        kind = switch (r.type) {
-          LifeType.task => 'Tasks',
-          LifeType.learning => 'Learning',
-          _ => 'Books',
-        };
-      }
-      if (date.isEmpty ||
-          date.compareTo(from) < 0 ||
-          date.compareTo(through) > 0) {
-        continue;
-      }
-      result.add(
-        AgendaItem(
-          r is ApplicationRecord ? 'followUp:${r.id}' : 'life:${r.id}',
-          sourceId,
-          kind,
-          r is CareerEventRecord
-              ? '${r.kind} · ${(records[r.applicationId] as ApplicationRecord).company}'
-              : r is ApplicationRecord
-              ? 'Follow-up · ${r.company}'
-              : r.title,
-          date,
-          time,
-          r.version,
-          sourceGeneration: generation,
-          utc: utc,
-          timezone: timezone,
-        ),
-      );
-    }
+    final result = lifeAgendaItems(records, from, through, timezone: timezone);
     if (financial && finance is LocalFinancialController) {
       for (final r in financialReminderSources(
         finance.acceptedSnapshot,
@@ -507,12 +451,7 @@ class DurableLifeController extends LifeController {
         );
       }
     }
-    result.sort((a, b) {
-      final order = '${a.date} ${a.time == 'All day' ? '00:00' : a.time}'
-          .compareTo('${b.date} ${b.time == 'All day' ? '00:00' : b.time}');
-      return order == 0 ? a.id.compareTo(b.id) : order;
-    });
-    return result;
+    return sortedAgenda(result);
   }
 
   @override
@@ -551,19 +490,137 @@ class DurableLifeController extends LifeController {
     await device?.stop();
   }
 
-  @override
-  String reminderState(AgendaItem item) =>
-      device?.state(item) ?? 'Native registration unavailable · in-app only';
-  @override
   Future<void> reminder(AgendaItem item, String mode, String action) async {
     if (device == null) {
       lifeReject(
-        'Native reminder service is unavailable. In-app sources remain usable.',
+        'Reminders aren’t available on this device right now. Your records aren’t affected.',
       );
     }
     await device!.choose(item, mode, action);
   }
 }
+
+/// The command a form's [values] make: the record's [current] fields under
+/// its new [data], with the ids the form holds.
+LifeCommand lifeCommandFor(
+  String owner,
+  LifeType type,
+  Map<String, String> values,
+  Map<String, String> data, {
+  Map<String, String> current = const {},
+  String? oldId,
+  int? oldVersion,
+}) => LifeCommand(
+  id: values['__command'],
+  owner: owner,
+  recordId: oldId ?? values['__record'] ?? newLocalId(),
+  type: type,
+  expectedVersion: int.tryParse(values['__version'] ?? '') ?? oldVersion ?? 0,
+  fields: {...current, ...data},
+  reason: values['reason']?.trim().isNotEmpty == true
+      ? values['reason']!
+      : 'Created',
+  recordedAt: DateTime.tryParse(values['__recordedAt'] ?? ''),
+);
+
+/// What a task, learning or book form's values put in a command.
+Map<String, String> lifeEntryData(LifeType type, Map<String, String> v) => {
+  for (final key in lifeDefaults(type).keys)
+    if (v.containsKey(key)) key: v[key]!,
+};
+
+/// What an event form's values put in a command. The rules work out `utc`.
+Map<String, String> lifeEventData(Map<String, String> v) => {
+  for (final key in lifeDefaults(LifeType.personal).keys)
+    if (v.containsKey(key)) key: v[key]!,
+  'utc': '',
+};
+
+/// Every active Life record dated in the window, in no order: [sortedAgenda]
+/// sorts them. Timed records show on their date in [timezone].
+List<AgendaItem> lifeAgendaItems(
+  Map<String, LifeRecord> records,
+  String from,
+  String through, {
+  String timezone = 'Asia/Manila',
+}) {
+  final result = <AgendaItem>[];
+  for (final r in records.values.where((r) => r.active)) {
+    if (r is CareerDocumentRecord) continue;
+    String date = '',
+        time = 'All day',
+        kind = '',
+        sourceId = r.id,
+        generation = '${r.id}:${r.version}';
+    DateTime? utc;
+    if (r is ScheduledRecord) {
+      date = r.date;
+      time = r.time.isEmpty ? 'All day' : r.time;
+      utc = r.utc;
+      if (utc != null) {
+        final local = tzTime(utc, timezone);
+        date = local.$1;
+        time = local.$2;
+      }
+      kind = r is PersonalRecord ? 'Personal' : 'Career';
+      if (r is CareerEventRecord) {
+        final a = records[r.applicationId];
+        if (a is! ApplicationRecord ||
+            a.archived ||
+            a.terminal ||
+            !['Interview', 'Assessment', 'Follow-up'].contains(r.kind)) {
+          continue;
+        }
+        sourceId = a.id;
+        generation += ':${a.version}';
+      }
+    } else if (r is ApplicationRecord) {
+      if (r.terminal || r.fields['followUp']!.isEmpty) continue;
+      date = r.fields['followUp']!;
+      kind = 'Career';
+      generation += ':followUp';
+    } else {
+      date = r.fields['due'] ?? '';
+      kind = switch (r.type) {
+        LifeType.task => 'Tasks',
+        LifeType.learning => 'Learning',
+        _ => 'Books',
+      };
+    }
+    if (date.isEmpty ||
+        date.compareTo(from) < 0 ||
+        date.compareTo(through) > 0) {
+      continue;
+    }
+    result.add(
+      AgendaItem(
+        r is ApplicationRecord ? 'followUp:${r.id}' : 'life:${r.id}',
+        sourceId,
+        kind,
+        r is CareerEventRecord
+            ? '${r.kind} · ${(records[r.applicationId] as ApplicationRecord).company}'
+            : r is ApplicationRecord
+            ? 'Follow-up · ${r.company}'
+            : r.title,
+        date,
+        time,
+        r.version,
+        sourceGeneration: generation,
+        utc: utc,
+        timezone: timezone,
+      ),
+    );
+  }
+  return result;
+}
+
+/// By date, all-day items first, then by time.
+List<AgendaItem> sortedAgenda(List<AgendaItem> items) => items
+  ..sort((a, b) {
+    final order = '${a.date} ${a.time == 'All day' ? '00:00' : a.time}'
+        .compareTo('${b.date} ${b.time == 'All day' ? '00:00' : b.time}');
+    return order == 0 ? a.id.compareTo(b.id) : order;
+  });
 
 (String, String) tzTime(DateTime utc, String timezone) {
   final value = LifeTime.zone(timezone);

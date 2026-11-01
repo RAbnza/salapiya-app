@@ -30,6 +30,7 @@ import 'import_flow.dart';
 import 'import_review.dart';
 import 'money_cards.dart';
 import 'money_dashboard.dart';
+import '../life/life_forms.dart' show lifeDraftKind, openLifeDraft;
 import 'money_data.dart';
 import 'money_editor.dart';
 import 'planning_pages.dart';
@@ -140,6 +141,7 @@ MoneySource localMoneySource(
         context,
         SavedDraftsPage(
           controller: c,
+          session: session,
           onImport: () =>
               ShellNavigation.maybeOf(context)
                   ?.select(AppDestination.money, tab: 'Import'),
@@ -1203,10 +1205,13 @@ class _Draft {
   bool get native => parts.first == 'finance';
   bool get import => parts.first == 'cash-import';
   bool get files => parts.first == 'files';
+  bool get life => parts.first == 'life';
   FinancialAction? get action =>
       FinancialAction.values.where((a) => a.name == parts.first).firstOrNull;
 
-  String get title => import
+  String get title => life
+      ? lifeDraftKind(operation, values).title
+      : import
       ? 'Imported history'
       : files
       ? 'Attach a file'
@@ -1229,7 +1234,7 @@ class _Draft {
 
   /// What the user typed, to tell drafts apart.
   String get subtitle {
-    final name = (values['name'] ?? '').trim();
+    final name = (values['name'] ?? values['title'] ?? '').trim();
     return name.isEmpty ? 'Not in your records yet' : name;
   }
 }
@@ -1248,8 +1253,12 @@ class SavedDraftsPage extends StatefulWidget {
     required this.controller,
     this.onImport,
     this.onFiles,
+    this.session,
   });
   final LocalFinancialController controller;
+
+  /// Opens Life's drafts.
+  final PrototypeSession? session;
 
   /// Import and Files keep their own drafts; these go there.
   final VoidCallback? onImport, onFiles;
@@ -1271,7 +1280,9 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
       ),
   ];
 
-  void reload() => setState(() => drafts = load());
+  void reload() => setState(() {
+    drafts = load();
+  });
 
   Future<void> open(_Draft d) async {
     if (d.import) {
@@ -1280,6 +1291,16 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
     }
     if (d.files) {
       widget.onFiles?.call();
+      return;
+    }
+    final session = widget.session;
+    if (d.life || d.action == null && !d.native) {
+      final opened =
+          d.life &&
+          session != null &&
+          await openLifeDraft(context, session, d.operation, d.values);
+      if (!opened && mounted) await cantOpen(d);
+      if (mounted) reload();
       return;
     }
     if (d.native) {
@@ -1303,6 +1324,27 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
         initial: d.parts.length > 2 ? {'mode': d.parts[2]} : null,
       );
     }
+    if (mounted) reload();
+  }
+
+  /// A draft whose form can't open: its record went, or the form has moved.
+  /// It says so, rather than a tap doing nothing.
+  Future<void> cantOpen(_Draft d) async {
+    final yes = await showAppDialog<bool>(
+      context,
+      title: 'This draft can’t open here',
+      body: const Text(
+        'What it was for may have changed or gone. It isn’t in your records, so discarding it changes nothing else.',
+      ),
+      primary: const ModalAction(
+        'Discard draft',
+        value: true,
+        destructive: true,
+      ),
+      secondary: const ModalAction.cancel(label: 'Keep draft'),
+    );
+    if (yes != true) return;
+    await c.discardDraft(d.operation);
     if (mounted) reload();
   }
 

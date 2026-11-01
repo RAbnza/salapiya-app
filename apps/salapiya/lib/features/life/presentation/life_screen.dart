@@ -1,32 +1,35 @@
 import 'package:flutter/material.dart';
 
+import '../../../life/calendar_tab.dart';
 import '../../../life/life_controller.dart';
+import '../../../life/life_data.dart';
 import '../../../life/life_domain.dart';
 import '../../../life/life_form.dart';
+import '../../../life/life_forms.dart';
+import '../../../life/life_header.dart';
 import '../../../life/life_history.dart';
+import '../../../life/life_hub.dart';
 import '../../../life/life_pages.dart';
-import '../../../life/life_reviews.dart';
-import '../../../life/life_settings.dart';
-import '../../../life/reminder_widgets.dart';
+import '../../../life/life_pages_detail.dart';
+import '../../../life/tasks_tab.dart';
+import '../../../life/reminder_data.dart' show setReminders;
+import '../../../life/reminders_tab.dart';
 import '../../../life/career_documents.dart';
+import '../../../local/finance_domain.dart' show civilToday;
 import '../../../local/local_runtime.dart';
-import '../../../local/local_finance_controller.dart';
-import '../../../finance/finance_screen.dart';
 
 import '../../../app/demo_routes.dart';
+import '../../../app/overview_data.dart' show monthStart;
 import '../../../app/shell_navigation.dart';
 import '../../../design_system/editorial.dart';
+import '../../../design_system/kit/kit.dart';
 import '../../../design_system/theme.dart';
 import '../../../prototype/scenarios.dart';
 import '../../common/prototype_form.dart';
 import '../../finance/presentation/financial_widgets.dart';
-import '../../finance/presentation/debts_screen.dart';
-import '../../finance/presentation/credit_screen.dart';
-import '../../planning/application/planning_controller.dart';
-import '../../planning/presentation/planning_screen.dart';
+import '../../planning/presentation/planning_screen.dart' show options;
 import '../application/life_controller.dart';
 import '../../supporting/presentation/files_screen.dart';
-import '../../finance/application/financial_controller.dart';
 
 Widget _lifeView({required bool production, required Widget child}) =>
     production ? child : DemoViewState(child: child);
@@ -36,7 +39,9 @@ Future<void> editLifeEntry(
   PrototypeSession s,
   LifeKind kind, {
   LifeEntry? entry,
-}) => lifeReviewForm(
+}) => kind == LifeKind.task
+    ? openTaskForm(context, s, id: entry?.id)
+    : lifeReviewForm(
   context,
   s,
   title: entry == null ? 'New ${kind.name}' : 'Edit ${entry.title}',
@@ -62,13 +67,6 @@ Future<void> editLifeEntry(
       value: entry?.due ?? (s.production ? '' : '2026-10-24'),
       required: false,
     ),
-    if (kind == LifeKind.task)
-      DemoField(
-        'priority',
-        'Priority',
-        value: entry?.priority ?? 'Normal',
-        options: options(['High', 'Normal', 'Low']),
-      ),
     if (kind != LifeKind.task) ...[
       DemoField(
         'total',
@@ -130,75 +128,10 @@ Future<void> editPersonalEvent(
   BuildContext context,
   PrototypeSession s, {
   PersonalEvent? event,
-}) => lifeReviewForm(
-  context,
-  s,
-  title: event == null ? 'New personal event' : 'Edit ${event.title}',
-  draftKey: event?.id ?? 'new-event',
-  revision: () => s.life.revision,
-  fields: [
-    DemoField('title', 'Event title', value: event?.title ?? ''),
-    DemoField(
-      'date',
-      'Date',
-      value: event?.date ?? (s.production ? LifeTime.today() : '2026-10-24'),
-    ),
-    DemoField(
-      'time',
-      'Time (empty for all day)',
-      value: event?.time == 'All day' ? '' : event?.time ?? '09:00',
-      required: false,
-    ),
-    if (s.production) ...[
-      DemoField(
-        'timezone',
-        'Original IANA timezone',
-        value:
-            (s.life as DurableLifeController).fields(event?.id)['timezone'] ??
-            'Asia/Manila',
-      ),
-      DemoField(
-        'archived',
-        'Archive event',
-        value:
-            (s.life as DurableLifeController).fields(event?.id)['archived'] ??
-            'false',
-        options: options(['false', 'true']),
-      ),
-      DemoField(
-        'fold',
-        'Ambiguous time occurrence',
-        value:
-            (s.life as DurableLifeController).fields(event?.id)['fold'] ?? '',
-        required: false,
-        options: options(['', 'Earlier', 'Later']),
-      ),
-      DemoField(
-        'status',
-        'Event status',
-        value:
-            (s.life as DurableLifeController).fields(event?.id)['status'] ??
-            'Scheduled',
-        options: options(['Scheduled', 'Completed', 'Cancelled']),
-      ),
-    ],
-    DemoField(
-      'location',
-      'Location',
-      value: event?.location ?? '',
-      required: false,
-    ),
-    DemoField(
-      'notes',
-      'Notes',
-      value: event?.notes ?? '',
-      required: false,
-      lines: 3,
-    ),
-    if (event != null) const DemoField('reason', 'Reason'),
-  ],
-  save: (v) => s.life.saveEvent(v, old: event),
-);
+}) => openEventForm(context, s, id: event?.id);
+
+/// Life's tabs, in order. Calendar and Reminders can't be hidden.
+const lifeTabs = ['Calendar', 'Tasks', 'Reminders', 'Learning', 'Books', 'Career'];
 
 class LifeScreen extends StatefulWidget {
   const LifeScreen({
@@ -206,10 +139,14 @@ class LifeScreen extends StatefulWidget {
     required this.session,
     this.initial = 'Calendar',
     this.initialRecord,
+    this.actions = const [],
   });
   final PrototypeSession session;
   final String initial;
   final String? initialRecord;
+
+  /// Quick actions in the header: the shell's New items.
+  final List<QuickAction> actions;
   @override
   State<LifeScreen> createState() => _LifeScreenState();
 }
@@ -225,9 +162,11 @@ class _LifeScreenState extends State<LifeScreen> {
       final event = c.events.where((r) => r.id == id).firstOrNull;
       final application = c.applications.where((r) => r.id == id).firstOrNull;
       if (entry != null) {
-        entryDetail(entry);
+        entry.kind == LifeKind.task
+            ? openLifeTask(context, s, entry.id)
+            : entryDetail(entry);
       } else if (event != null) {
-        personalDetail(event);
+        openLifeEvent(context, s, event.id);
       } else if (application != null) {
         applicationDetail(application);
       }
@@ -235,182 +174,244 @@ class _LifeScreenState extends State<LifeScreen> {
   }
 
   late String tab = widget.initial;
-  String query = '', filter = 'Active', stage = 'All', source = 'All';
-  late DateTime selected = widget.session.production
-      ? DateTime.parse(
-          LifeTime.today(
-            (widget.session.life as DurableLifeController).displayTimezone,
-          ),
-        )
-      : DateTime(2026, 10, 23);
-  late DateTime month = DateTime(selected.year, selected.month);
+  String query = '', filter = 'Active', stage = 'All';
   int page = 0;
-  int calendarPage = 0;
-  bool agendaView = false;
   PrototypeSession get s => widget.session;
   LifeController get c => s.life;
-  List<AgendaItem> get agenda => c is DurableLifeController
-      ? (c as DurableLifeController).agendaWindow(
-          s.finance,
-          civil(month),
-          civil(DateTime(month.year, month.month + 1, 0)),
-          financial: s.complete,
-          timezone: (c as DurableLifeController).displayTimezone,
-        )
-      : c.agenda(s.planning, s.finance, financial: s.complete);
+  LifeHub get hub => lifeHubOf(s);
+
+  void selectTab(String t) {
+    ShellNavigation.reportTab(context, t);
+    setState(() {
+      tab = t;
+      page = 0;
+      query = '';
+      filter = 'Active';
+    });
+  }
+
+  List<String> get visibleTabs => [
+    for (final t in lifeTabs)
+      if (hub.tabShown(t)) t,
+  ];
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: s,
-    builder: (context, _) => _lifeView(
-      production: s.production,
-      child: Column(
+    listenable: Listenable.merge([s, hub]),
+    builder: (context, _) {
+      final source = lifeSource(context, s);
+      final android = !isDesktop(context);
+      // A tab hidden in Preferences while open goes back to the Calendar.
+      final current = visibleTabs.contains(tab) ? tab : 'Calendar';
+      final today = source.today;
+      final calendar = LifeCalendar(
+        source.rowsThrough(lifeWindowEnd(today, today)),
+        today,
+        monthStart(today),
+        today,
+        now: source.now,
+      );
+      // The header counts what the tab counts, so the two never disagree.
+      final tasks = TaskCounts(taskRows(source.records, today));
+      final onTasks = current == 'Tasks';
+      final late = onTasks ? tasks.overdue : calendar.late.length;
+      final on = onTasks ? tasks.dueToday : calendar.onToday.length;
+      final week = calendar.thisWeek.length;
+      final reminding = current == 'Reminders';
+      final redesigned = const ['Calendar', 'Tasks'].contains(current);
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (c is DurableLifeController) ...[
-            FinanceNotice((c as DurableLifeController).coverage),
-            LifeReviews(session: s),
-            if ((c as DurableLifeController).error != null)
-              FinanceNotice((c as DurableLifeController).error!, warning: true),
+          LifeHeader(
+            today: today,
+            caption: reminding
+                ? '${setReminders(source.reminders?.rows ?? const [])} set on this device'
+                : onTasks
+                ? '${tasks.toDo} to do'
+                : '$week ${week == 1 ? 'thing' : 'things'} this week',
+            actions: reminding
+                ? const []
+                : redesigned
+                ? widget.actions
+                : tabActions(current, source),
+            alwaysActions: !redesigned && !reminding,
+            pill: reminding
+                ? null
+                : late > 0
+                ? StatusPill(
+                    '$late overdue',
+                    icon: Icons.error_outline,
+                    tone: PillTone.overdue,
+                  )
+                : on > 0
+                ? StatusPill(
+                    '$on today',
+                    icon: Icons.today_outlined,
+                    tone: PillTone.information,
+                  )
+                : null,
+            onPill: onTasks
+                ? null
+                : () {
+                    hub.select(today);
+                    if (current != 'Calendar') selectTab('Calendar');
+                  },
+          ),
+          // Android's header row is already a 48 target; keep the tabs close.
+          SizedBox(height: android ? Space.xs : Space.lg),
+          AppTabs<String>(
+            key: const ValueKey('life-tabs'),
+            tabs: [for (final t in visibleTabs) (t, t)],
+            selected: current,
+            onSelected: selectTab,
+          ),
+          SizedBox(height: Space.cardGapOf(context) + Space.xs),
+          for (final n in lifeNotices(source)) ...[
+            n,
+            SizedBox(height: Space.cardGapOf(context)),
           ],
-          FinanceHeading(
-            'LIFE / A LITTLE ROOM FOR YOU',
-            tab,
-            'Your plans, progress and everyday commitments, together.',
-            actions: [
-              FilledButton.icon(
-                onPressed: () => tab == 'Calendar'
-                    ? editPersonalEvent(context, s)
-                    : tab == 'Career'
-                    ? applicationForm()
-                    : editLifeEntry(
-                        context,
-                        s,
-                        tab == 'Books'
-                            ? LifeKind.book
-                            : tab == 'Learning'
-                            ? LifeKind.learning
-                            : LifeKind.task,
-                      ),
-                icon: const Icon(Icons.add),
-                label: Text(switch (tab) {
-                  'Calendar' => 'New event',
-                  'Career' => 'New application',
-                  'Books' => 'Add book',
-                  'Learning' => 'New learning goal',
-                  _ => 'New task',
-                }),
+          if (source.reviews.isNotEmpty) ...[
+            InlineNotice(
+              '${source.reviews.length} ${source.reviews.length == 1 ? 'edit' : 'edits'} couldn’t be saved. You choose what happens.',
+              title: 'Changes to check',
+              tone: NoticeTone.warning,
+              action: AppButton.secondary(
+                'Check them',
+                key: const ValueKey('life-open-checks'),
+                onPressed: () => openLifeChecks(context, s),
               ),
-              if (s.production)
-                TextButton.icon(
-                  onPressed: () => openDemoPage<void>(
-                    context,
-                    LifeSettings(session: s),
-                    'life/settings',
-                  ),
-                  icon: const Icon(Icons.tune),
-                  label: const Text('Preferences & help'),
-                ),
-              OutlinedButton.icon(
-                onPressed: () => openDemoPage<void>(
-                  context,
-                  ReminderCenter(session: s),
-                  'life/reminders',
-                ),
-                icon: const Icon(Icons.notifications_none),
-                label: const Text('Reminders'),
-              ),
-            ],
-          ),
-          WorkspaceTabs(
-            items: [
-              for (final t in [
-                'Calendar',
-                'Tasks',
-                'Learning',
-                'Books',
-                'Career',
-              ])
-                if (c is! DurableLifeController ||
-                    t == 'Calendar' ||
-                    (c as DurableLifeController).tabVisible(t))
-                  t,
-            ],
-            selected: tab,
-            onSelected: (t) {
-              ShellNavigation.reportTab(context, t);
-              setState(() {
-                tab = t;
-                page = 0;
-                query = '';
-                filter = 'Active';
-              });
-            },
-          ),
-          if (tab == 'Calendar')
-            calendar()
-          else ...[
-            TextField(
-              key: ValueKey('search-$tab'),
-              decoration: InputDecoration(
-                labelText: 'Search ${tab.toLowerCase()}',
-                prefixIcon: const Icon(Icons.search),
-              ),
-              onChanged: (v) => setState(() {
-                query = v.toLowerCase();
-                page = 0;
-              }),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final f in ['Active', 'Completed', 'Archived', 'All'])
-                  ChoiceChip(
-                    label: Text(f),
-                    selected: filter == f,
-                    onSelected: (_) => setState(() {
-                      filter = f;
+            SizedBox(height: Space.cardGapOf(context)),
+          ],
+          if (source.restoring > 0) ...[
+            InlineNotice(
+              '${source.restoring} ${source.restoring == 1 ? 'edit' : 'edits'} from a backup will be checked once your connection is finished.',
+            ),
+            SizedBox(height: Space.cardGapOf(context)),
+          ],
+          if (hub.problem != null) ...[
+            InlineNotice(hub.problem!, live: true),
+            SizedBox(height: Space.cardGapOf(context)),
+          ],
+          if (reminding)
+            LifeRemindersTab(source: source, hub: hub)
+          else if (current == 'Tasks')
+            LifeTasksTab(
+              source: source,
+              hub: hub,
+              listenable: Listenable.merge([s, hub]),
+              live: (context) => lifeSource(context, s),
+            )
+          else if (current == 'Calendar')
+            LifeCalendarTab(
+              source: source,
+              hub: hub,
+              listenable: Listenable.merge([s, hub]),
+              live: (context) => lifeSource(context, s),
+            )
+          else
+            _lifeView(
+              production: s.production,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    key: ValueKey('search-$current'),
+                    decoration: InputDecoration(
+                      labelText: 'Search ${current.toLowerCase()}',
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: (v) => setState(() {
+                      query = v.toLowerCase();
                       page = 0;
                     }),
                   ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (tab == 'Career')
-              career()
-            else
-              entries(
-                tab == 'Tasks'
-                    ? LifeKind.task
-                    : tab == 'Books'
-                    ? LifeKind.book
-                    : LifeKind.learning,
-              ),
-            if (filteredCount > 25)
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: page == 0 ? null : () => setState(() => page--),
-                    child: const Text('Previous page'),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final f in [
+                        'Active',
+                        'Completed',
+                        'Archived',
+                        'All',
+                      ])
+                        ChoiceChip(
+                          label: Text(f),
+                          selected: filter == f,
+                          onSelected: (_) => setState(() {
+                            filter = f;
+                            page = 0;
+                          }),
+                        ),
+                    ],
                   ),
-                  Text(
-                    'Page ${page + 1} / ${((filteredCount + 24) ~/ 25).clamp(1, 100000)}',
-                  ),
-                  TextButton(
-                    onPressed: (page + 1) * 25 >= filteredCount
-                        ? null
-                        : () => setState(() => page++),
-                    child: const Text('Next page'),
-                  ),
+                  const SizedBox(height: 24),
+                  if (current == 'Career')
+                    career()
+                  else
+                    entries(
+                      current == 'Books' ? LifeKind.book : LifeKind.learning,
+                    ),
+                  if (filteredCount > 25)
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: page == 0
+                              ? null
+                              : () => setState(() => page--),
+                          child: const Text('Previous page'),
+                        ),
+                        Text(
+                          'Page ${page + 1} / ${((filteredCount + 24) ~/ 25).clamp(1, 100000)}',
+                        ),
+                        TextButton(
+                          onPressed: (page + 1) * 25 >= filteredCount
+                              ? null
+                              : () => setState(() => page++),
+                          child: const Text('Next page'),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-          ],
+            ),
         ],
-      ),
-    ),
+      );
+    },
   );
+
+  /// Chat 13's tabs keep their own buttons until their chat.
+  List<QuickAction> tabActions(String t, LifeSource source) => [
+    (
+      label: switch (t) {
+        'Career' => 'New application',
+        'Books' => 'Add book',
+        _ => 'New learning goal',
+      },
+      icon: Icons.add,
+      onSelected: () => t == 'Career'
+          ? applicationForm()
+          : editLifeEntry(
+              context,
+              s,
+              t == 'Books' ? LifeKind.book : LifeKind.learning,
+            ),
+    ),
+    if (source.actions.preferences != null)
+      (
+        label: 'Preferences & help',
+        icon: Icons.tune,
+        onSelected: source.actions.preferences!,
+      ),
+    (
+      label: 'Reminders',
+      icon: Icons.notifications_none,
+      onSelected: source.actions.reminders,
+    ),
+  ];
 
   int get filteredCount {
     if (tab == 'Career') {
@@ -430,11 +431,7 @@ class _LifeScreenState extends State<LifeScreen> {
           )
           .length;
     }
-    final kind = tab == 'Tasks'
-        ? LifeKind.task
-        : tab == 'Books'
-        ? LifeKind.book
-        : LifeKind.learning;
+    final kind = tab == 'Books' ? LifeKind.book : LifeKind.learning;
     return c.entries
         .where(
           (e) =>
@@ -450,393 +447,6 @@ class _LifeScreenState extends State<LifeScreen> {
         .length;
   }
 
-  Widget calendar() {
-    final filtered = agenda
-        .where(
-          (e) =>
-              (source == 'All' || e.kind == source) &&
-              e.title.toLowerCase().contains(query) &&
-              (c is! DurableLifeController ||
-                  (c as DurableLifeController).calendarVisible(e.kind)),
-        )
-        .toList();
-    final monthItems = filtered
-        .where((e) => e.date.startsWith(civil(month).substring(0, 7)))
-        .toList();
-    final firstOffset = (month.weekday - 1) % 7,
-        days = DateTime(month.year, month.month + 1, 0).day;
-    final dayItems = filtered.where((e) => e.date == civil(selected)).toList();
-    final retired = c.events
-        .where(
-          (e) => s.production
-              ? !(c as DurableLifeController).records[e.id]!.active
-              : e.cancelled,
-        )
-        .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            IconButton(
-              tooltip: 'Previous month',
-              onPressed: () =>
-                  setState(() => month = DateTime(month.year, month.month - 1)),
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Text(
-              '${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month.month - 1]} ${month.year}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            IconButton(
-              tooltip: 'Next month',
-              onPressed: () =>
-                  setState(() => month = DateTime(month.year, month.month + 1)),
-              icon: const Icon(Icons.chevron_right),
-            ),
-            TextButton(
-              onPressed: () => setState(() {
-                selected = s.production
-                    ? DateTime.parse(
-                        LifeTime.today(
-                          (c as DurableLifeController).displayTimezone,
-                        ),
-                      )
-                    : DateTime(2026, 10, 21);
-                month = DateTime(selected.year, selected.month);
-              }),
-              child: Text(s.production ? 'Today' : 'Demo today'),
-            ),
-            ChoiceChip(
-              label: const Text('Month'),
-              selected: !agendaView,
-              onSelected: (_) => setState(() => agendaView = false),
-            ),
-            ChoiceChip(
-              label: const Text('Agenda'),
-              selected: agendaView,
-              onSelected: (_) => setState(() => agendaView = true),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final f in [
-                'All',
-                'Personal',
-                'Tasks',
-                'Learning',
-                'Books',
-                'Career',
-                'Recurring',
-                'Cards',
-                'Debts',
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(f),
-                    selected: source == f,
-                    onSelected: (_) => setState(() => source = f),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          decoration: const InputDecoration(
-            labelText: 'Search Calendar',
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: (v) => setState(() {
-            query = v.toLowerCase();
-            calendarPage = 0;
-          }),
-        ),
-        const SizedBox(height: 20),
-        if (agendaView) ...[
-          if (monthItems.isEmpty)
-            const FinanceNotice(
-              'A clear month. Add a personal event, or choose another source filter.',
-            ),
-          for (final e in monthItems.skip(calendarPage * 25).take(25))
-            agendaRow(e),
-          Wrap(
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: calendarPage == 0
-                    ? null
-                    : () => setState(() => calendarPage--),
-                child: const Text('Previous agenda'),
-              ),
-              TextButton(
-                onPressed: (calendarPage + 1) * 25 >= monthItems.length
-                    ? null
-                    : () => setState(() => calendarPage++),
-                child: const Text('Next agenda'),
-              ),
-            ],
-          ),
-        ] else
-          FinanceColumns(
-            ratio: 2,
-            main: LayoutBuilder(
-              builder: (context, b) => Column(
-                children: [
-                  Row(
-                    children: [
-                      for (final d in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Text(
-                              d,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: CraftTheme.of(context).secondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  for (var row = 0; row < (firstOffset + days + 6) ~/ 7; row++)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (var col = 0; col < 7; col++)
-                          Expanded(
-                            child: dayCell(
-                              row * 7 + col - firstOffset + 1,
-                              days,
-                              filtered,
-                              b.maxWidth,
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            aside: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ValueBlock(
-                  'YOUR DAY',
-                  '${selected.day} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][selected.month - 1]}',
-                  '${dayItems.length} commitments · Asia/Manila',
-                  color: Palette.peach,
-                ),
-                for (final e in dayItems.take(25)) agendaRow(e),
-                if (dayItems.isEmpty)
-                  const FinanceNotice(
-                    'A little breathing room. No commitments on this date.',
-                  ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 20),
-        const FinanceNotice(
-          'Generated commitments open their source. Moving a Career interview or completing a task updates this calendar once; it never creates a duplicate event.',
-        ),
-        ExpansionTile(
-          key: const PageStorageKey('cancelled-personal-events'),
-          title: const Text(
-            'Completed, cancelled and archived personal events',
-          ),
-          children: [
-            LifePages(
-              count: retired.length,
-              itemBuilder: (context, index) {
-                final e = retired[index];
-                return FinancialLine(
-                  e.title,
-                  e.date,
-                  onTap: () => personalDetail(e),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget dayCell(int day, int total, List<AgendaItem> items, double width) {
-    if (day < 1 || day > total) return const SizedBox(height: 64);
-    final date = DateTime(month.year, month.month, day),
-        active = civil(date) == civil(selected);
-    final count = items.where((e) => e.date == civil(date)).length;
-    return Semantics(
-      button: true,
-      selected: active,
-      label: '${civil(date)}, $count commitments',
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child: InkWell(
-          onTap: () => setState(() => selected = date),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            constraints: BoxConstraints(minHeight: width > 650 ? 84 : 60),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-            decoration: BoxDecoration(
-              color: active ? Palette.violet : CraftTheme.of(context).subtle,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  '$day',
-                  style: TextStyle(
-                    color: active ? Colors.white : CraftTheme.of(context).text,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                if (count > 0)
-                  Text(
-                    '• ${count > 1 ? count : ''}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: active ? Colors.white : Palette.violet,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget agendaRow(AgendaItem e) => FinancialLine(
-    e.title,
-    '${e.date} · ${e.time} · ${e.kind}',
-    value: e.amount == null ? null : s.amount(e.amount!),
-    icon: switch (e.kind) {
-      'Career' => Icons.work_outline,
-      'Personal' => Icons.event_outlined,
-      'Books' => Icons.auto_stories_outlined,
-      'Recurring' => Icons.event_repeat,
-      _ => Icons.check_circle_outline,
-    },
-    onTap: () => openAgenda(e),
-  );
-  void openAgenda(AgendaItem e) {
-    if (s.production && ['Cards', 'Debts', 'Recurring'].contains(e.kind)) {
-      openFinanceDetail(
-        context,
-        s.finance as LocalFinancialController,
-        e.sourceId,
-      );
-      return;
-    }
-    if (e.kind == 'Cards') s.finance.selectStatement(e.sourceId);
-    if (e.kind == 'Personal') {
-      personalDetail(c.events.firstWhere((x) => x.id == e.sourceId));
-      return;
-    }
-    if (e.kind == 'Career') {
-      applicationDetail(c.applications.firstWhere((x) => x.id == e.sourceId));
-      return;
-    }
-    if (['Tasks', 'Learning', 'Books'].contains(e.kind)) {
-      entryDetail(c.entries.firstWhere((x) => x.id == e.sourceId));
-      return;
-    }
-    openDemoPage<void>(
-      context,
-      FinancePage(
-        title: e.title,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FinanceNotice(
-              'Authoritative ${e.kind.toLowerCase()} source · ${e.date}. Expected commitment, not a recorded payment.',
-            ),
-            ReminderControls(session: s, item: e),
-            if (e.kind == 'Recurring')
-              PlanningScreen(session: s)
-            else if (e.kind == 'Cards')
-              CreditScreen(session: s)
-            else
-              DebtsScreen(session: s),
-          ],
-        ),
-      ),
-      'life/source/${e.id}',
-    );
-  }
-
-  void personalDetail(PersonalEvent e) => openDemoPage<void>(
-    context,
-    FinancePage(
-      title: e.title,
-      child: ListenableBuilder(
-        listenable: c,
-        builder: (context, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FinanceHeading(
-              'PERSONAL EVENT',
-              e.title,
-              '${e.date} · ${e.time} · Asia/Manila\n${e.location}',
-              actions: [
-                OutlinedButton(
-                  onPressed: () => editPersonalEvent(context, s, event: e),
-                  child: const Text('Edit event'),
-                ),
-                TextButton(
-                  onPressed: () => lifeReviewForm(
-                    context,
-                    s,
-                    title: e.cancelled ? 'Restore event' : 'Cancel event',
-                    fields: [const DemoField('reason', 'Reason')],
-                    save: (v) {
-                      e.cancelled = !e.cancelled;
-                      e.version++;
-                      e.history.add(
-                        '${e.cancelled ? 'Cancelled' : 'Restored'} · ${v['reason']}',
-                      );
-                      c.changed();
-                    },
-                  ),
-                  child: Text(e.cancelled ? 'Restore' : 'Cancel event'),
-                ),
-              ],
-            ),
-            Text(e.notes),
-            if (!e.cancelled)
-              ReminderControls(
-                session: s,
-                item: AgendaItem(
-                  e.id,
-                  e.id,
-                  'Personal',
-                  e.title,
-                  e.date,
-                  e.time,
-                  e.version,
-                ),
-              ),
-            if (c is DurableLifeController)
-              LifeHistory(controller: c as DurableLifeController, record: e.id)
-            else
-              for (final h in e.history) FinancialLine('Event history', h),
-          ],
-        ),
-      ),
-    ),
-    'life/event',
-  );
   Widget entries(LifeKind kind) {
     final all = c.entries.where((e) => e.kind == kind).toList();
     final matches = all
@@ -861,64 +471,6 @@ class _LifeScreenState extends State<LifeScreen> {
         icon: Icons.auto_awesome_outlined,
         title: 'A little room for what matters',
         message: 'Nothing here yet. Try another filter or add something you want to make time for.',
-      );
-    }
-    if (kind == LifeKind.task) {
-      return FinanceColumns(
-        main: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final priority in ['High', 'Normal', 'Low']) ...[
-              if (visible.any((e) => e.priority == priority))
-                SectionHeading('$priority priority'),
-              for (final e in visible.where((e) => e.priority == priority))
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      label:
-                          '${e.status == 'Completed' ? 'Reopen' : 'Complete'} task ${e.title}',
-                      child: Checkbox(
-                        value: e.status == 'Completed',
-                        onChanged: e.archived
-                            ? null
-                            : (v) => lifeAction(
-                                context,
-                                () => c.progress(
-                                  e,
-                                  v! ? 1 : 0,
-                                  v ? 'Completed' : 'Reopened',
-                                ),
-                              ),
-                      ),
-                    ),
-                    Expanded(
-                      child: FinancialLine(
-                        e.title,
-                        '${e.due.isEmpty ? 'No deadline' : e.due} · ${e.status}',
-                        onTap: () => entryDetail(e),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ],
-        ),
-        aside: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ValueBlock(
-              'A LITTLE PROGRESS',
-              '${all.where((e) => e.status == 'Completed').length} / ${all.length}',
-              'Tasks completed · current demo snapshot',
-              color: Palette.mint,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Make the next step small enough to start. Your history stays with you when you complete, reopen, or archive a task.',
-            ),
-          ],
-        ),
       );
     }
     if (kind == LifeKind.book) {
@@ -1132,9 +684,9 @@ class _LifeScreenState extends State<LifeScreen> {
                 ),
               ),
             if (!e.archived && e.status != 'Completed' && e.due.isNotEmpty)
-              ReminderControls(
-                session: s,
-                item: AgendaItem(
+              lifeReminderControls(
+                s,
+                AgendaItem(
                   e.id,
                   e.id,
                   e.kind.name,
@@ -1670,9 +1222,9 @@ class _LifeScreenState extends State<LifeScreen> {
                         ],
                       ),
                     if (!e.complete && !a.archived)
-                      ReminderControls(
-                        session: s,
-                        item: AgendaItem(
+                      lifeReminderControls(
+                        s,
+                        AgendaItem(
                           e.id,
                           a.id,
                           'Career',
@@ -1717,20 +1269,41 @@ class _LifeScreenState extends State<LifeScreen> {
   );
 }
 
+/// An agenda item's own page. Learning, Books and Career open their tab until
+/// Chat 13 gives them pages.
 Future<void> openLifeSource(
   BuildContext context,
   PrototypeSession session,
   AgendaItem? item,
 ) async {
-  if (item != null &&
-      ['Debts', 'Cards', 'Recurring'].contains(item.kind) &&
-      session.finance is LocalFinancialController) {
-    openFinanceDetail(
-      context,
-      session.finance as LocalFinancialController,
-      item.sourceId,
-    );
-    return;
+  if (item != null && session is LocalSession) {
+    final today = civilToday();
+    if (item.kind == 'Personal') {
+      openLifeEvent(context, session, item.sourceId);
+      return;
+    }
+    if (item.kind == 'Tasks') {
+      openLifeTask(context, session, item.sourceId);
+      return;
+    }
+    if (['Debts', 'Cards', 'Recurring'].contains(item.kind)) {
+      openLifeRow(
+        context,
+        session,
+        LifeRow(
+          id: item.id,
+          sourceId: item.sourceId,
+          module: item.kind,
+          title: item.title,
+          date: item.date,
+          time: item.time,
+          type: LifeRowType.money,
+          today: today,
+          item: item,
+        ),
+      );
+      return;
+    }
   }
   await openDemoPage<void>(
     context,
@@ -1750,178 +1323,4 @@ Future<void> openLifeSource(
     ),
     'life/source',
   );
-}
-
-class ReminderControls extends StatelessWidget {
-  const ReminderControls({
-    super.key,
-    required this.session,
-    required this.item,
-  });
-  final PrototypeSession session;
-  final AgendaItem item;
-  @override
-  Widget build(BuildContext context) => session.production
-      ? NativeReminderControls(session: session, item: item)
-      : Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Reminder · ${session.life.reminderState(item)}'),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final mode in [
-                    'Inherited',
-                    '1 day before',
-                    '1 hour before',
-                    'Off',
-                  ])
-                    ChoiceChip(
-                      label: Text(mode),
-                      selected:
-                          (session.life.reminders[item.id]?.mode ??
-                              'Inherited') ==
-                          mode,
-                      onSelected: (_) => session.life.reminder(
-                        item,
-                        mode,
-                        'Planned on this device · demo only',
-                      ),
-                    ),
-                ],
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final action in [
-                    'Snoozed 1 hour',
-                    'Dismissed',
-                    'Restored',
-                  ])
-                    TextButton(
-                      onPressed: () => session.life.reminder(
-                        item,
-                        session.life.reminders[item.id]?.mode ?? 'Inherited',
-                        action,
-                      ),
-                      child: Text(action),
-                    ),
-                ],
-              ),
-              const Text(
-                'Device-local simulation. Dismissing is not completion or payment. No notification is delivered.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-        );
-}
-
-class ReminderCenter extends StatelessWidget {
-  const ReminderCenter({super.key, required this.session});
-  final PrototypeSession session;
-  @override
-  Widget build(BuildContext context) => session.production
-      ? NativeReminderCenter(session: session)
-      : FinancePage(
-          title: 'Reminders',
-          child: ListenableBuilder(
-            listenable: session,
-            builder: (context, _) {
-              final c = session.life,
-                  items = session.life.agenda(
-                    session.planning,
-                    session.finance,
-                    financial: session.complete,
-                  );
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const FinanceHeading(
-                    'THIS DEVICE / REMINDERS',
-                    'A useful nudge.',
-                    'In-app and local notification presentation only. Delivery is best effort and can differ between devices.',
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Notification permission · simulated'),
-                    value: c.permission,
-                    onChanged: (v) {
-                      c.permission = v;
-                      c.changed();
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Quiet hours'),
-                    subtitle: Text(
-                      '${c.quietStart}–${c.quietEnd} · Asia/Manila',
-                    ),
-                    value: c.quietHours,
-                    onChanged: (v) {
-                      c.quietHours = v;
-                      c.changed();
-                    },
-                  ),
-                  TextButton(
-                    onPressed: () => reviewForm(
-                      context,
-                      title: 'Quiet hours',
-                      fields: [
-                        DemoField('start', 'Start HH:MM', value: c.quietStart),
-                        DemoField('end', 'End HH:MM', value: c.quietEnd),
-                      ],
-                      save: (v) {
-                        LifeController.validateTime(v['start']!);
-                        LifeController.validateTime(v['end']!);
-                        c.quietStart = v['start']!;
-                        c.quietEnd = v['end']!;
-                        c.changed();
-                      },
-                    ),
-                    child: const Text('Edit quiet hours'),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Show sensitive content on lock screen'),
-                    subtitle: const Text(
-                      'Hidden by default. This changes the demo preference only.',
-                    ),
-                    value: c.sensitiveContent,
-                    onChanged: (v) {
-                      c.sensitiveContent = v;
-                      c.changed();
-                    },
-                  ),
-                  const FinanceNotice(
-                    'Android battery restrictions and Windows background availability may delay reminders. Each device has separate consent; global exactly-once delivery is not promised.',
-                  ),
-                  for (final item in items.take(20))
-                    ExpansionTile(
-                      key: PageStorageKey('reminder-${item.id}'),
-                      title: Text(item.title),
-                      subtitle: Text('${item.date} · ${c.reminderState(item)}'),
-                      children: [
-                        ReminderControls(session: session, item: item),
-                      ],
-                    ),
-                  if (items.length > 20)
-                    Text(
-                      'Showing next 20 of ${items.length}; full sources are in Calendar.',
-                    ),
-                  const SectionHeading('Retained reminder history'),
-                  for (final h in c.reminderHistory.reversed)
-                    FinancialLine('Source generation', h),
-                  for (final e in c.reminders.entries.where(
-                    (e) => !items.any((i) => i.id == e.key),
-                  ))
-                    FinancialLine('Cancelled stale reminder', e.key),
-                ],
-              );
-            },
-          ),
-        );
 }

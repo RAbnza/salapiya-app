@@ -168,7 +168,10 @@ class _RadioList<T> extends StatelessWidget {
                       vertical: Space.sm,
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      // A label alone sits level with its radio.
+                      crossAxisAlignment: o.description == null
+                          ? CrossAxisAlignment.center
+                          : CrossAxisAlignment.start,
                       children: [
                         // The row is the target; the radio only shows state.
                         ExcludeFocus(

@@ -8,7 +8,7 @@ import '../../../gallery/settings.dart';
 import '../../../prototype/scenarios.dart';
 import '../../common/prototype_form.dart';
 import '../../finance/presentation/financial_widgets.dart';
-import '../../life/presentation/life_screen.dart';
+import '../../../life/reminders_tab.dart';
 import '../../planning/presentation/planning_screen.dart';
 
 class ProfileExperience extends StatefulWidget {
@@ -679,7 +679,6 @@ class _ProfileExperienceState extends State<ProfileExperience> {
             } else {
               s.replaceProfile(empty: false, name: 'Amihan · restored demo');
               s.profile.restore = 'Synthetic private snapshot activated · missing bytes remain unavailable';
-              s.life.permission = false;
             }
             s.profile.history.add(s.profile.restore);
             s.profile.changed();

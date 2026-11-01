@@ -8,8 +8,12 @@ import '../features/finance/presentation/financial_editor.dart';
 import '../finance/money_data.dart';
 import '../finance/money_details.dart' show localMoneySource, openMoneyRecord;
 import '../finance/planning_cards.dart';
+import '../features/life/application/life_controller.dart' show AgendaItem;
 import '../features/life/presentation/life_screen.dart';
+import '../life/life_cards.dart' show nextUpRow;
 import '../life/life_controller.dart';
+import '../life/life_data.dart' show LifeRow;
+import '../life/life_hub.dart' show lifeHubOf;
 import '../local/finance_domain.dart';
 import '../local/local_runtime.dart';
 import '../prototype/scenarios.dart';
@@ -63,6 +67,7 @@ class OverviewSource {
     this.pendingCount = 0,
     this.projected,
     this.needsReview = false,
+    this.lifeMore = 0,
     this.syncLabel = '',
     this.onReview,
     this.onAddAccount,
@@ -73,6 +78,9 @@ class OverviewSource {
   /// [current] records, as the Debts screen does.
   final LocalSnapshot accepted, current;
   final bool complete, hidden, pending, needsReview;
+
+  /// How many more of Life's next items there are than [life] shows.
+  final int lifeMore;
   final int pendingCount;
   final BigInt? available, projected;
   final String syncLabel;
@@ -108,16 +116,17 @@ OverviewSource localOverviewSource(
   final connected = session.runtime.connected;
   final life = session.life;
   final agenda = life is DurableLifeController
-      ? (life.agendaWindow(
-          session.finance,
-          today,
-          addCivilDays(today, 30),
-          financial: false,
-        )..sort((a, b) {
-          final d = a.date.compareTo(b.date);
-          return d != 0 ? d : a.time.compareTo(b.time);
-        }))
-      : const [];
+      ? [
+          for (final item in life.agendaWindow(
+            session.finance,
+            today,
+            addCivilDays(today, 30),
+            financial: false,
+            timezone: life.displayTimezone,
+          ))
+            if (life.calendarVisible(item.kind)) item,
+        ]
+      : const <AgendaItem>[];
   void openRecord(String id, String title) =>
       openMoneyRecord(context, c, id, session: session);
   return OverviewSource(
@@ -189,16 +198,13 @@ OverviewSource localOverviewSource(
     ],
     life: [
       for (final item in agenda.take(3))
-        (
-          icon: item.kind == 'Tasks'
-              ? Icons.check_circle_outline
-              : Icons.event_outlined,
-          title: item.title,
-          subtitle: '${civilLabel(item.date)} · ${item.time} · ${item.kind}',
-          amount: null,
-          onTap: () => openLifeSource(context, session, item),
+        nextUpRow(
+          context,
+          LifeRow.record(item, (life as DurableLifeController).records, today, life.displayTimezone),
+          () => openLifeSource(context, session, item),
         ),
     ],
+    lifeMore: agenda.length > 3 ? agenda.length - 3 : 0,
     recent: [
       for (final r
           in moneyActivity(
@@ -256,6 +262,7 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
       s.kind == 'Debt due' ? open(PreviewSource.debt) : source.openItem(s.source);
 
   Future<void> _calendar(BuildContext context, String today) async {
+    var picked = today;
     final go = await showAppSheet<bool>(
       context,
       title: 'Calendar',
@@ -265,12 +272,19 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
         currentDate: DateTime.parse(today),
         firstDate: DateTime(2000),
         lastDate: DateTime(2100),
-        onDateChanged: (_) {},
+        onDateChanged: (d) => picked = DateTime.utc(
+          d.year,
+          d.month,
+          d.day,
+        ).toIso8601String().substring(0, 10),
       ),
       primary: const ModalAction('Open Life › Calendar', value: true),
       secondary: const ModalAction.cancel(label: 'Close'),
     );
-    if (go == true) open(PreviewSource.agenda);
+    if (go == true) {
+      lifeHubOf(widget.session).select(picked);
+      open(PreviewSource.agenda);
+    }
   }
 
   @override
@@ -651,12 +665,18 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
     final lifeCard = RowsCard(
       key: const ValueKey('overview-life'),
       title: 'Next up in Life',
-      caption: 'Tasks and events in the next 30 days',
+      caption: 'What’s coming up in the next 30 days',
       rows: source.life,
       action: CardLink(
         'Open Life',
         onPressed: () => open(PreviewSource.agenda),
       ),
+      footer: source.lifeMore > 0
+          ? ListEnd(
+              label: '${source.lifeMore} more on the Calendar',
+              onPressed: () => open(PreviewSource.agenda),
+            )
+          : const ListEnd(),
       empty: EmptyState(
         icon: Icons.event_outlined,
         title: 'Nothing planned',

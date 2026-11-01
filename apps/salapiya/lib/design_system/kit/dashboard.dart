@@ -48,6 +48,76 @@ class TouchArea extends StatelessWidget {
         );
 }
 
+/// A switch at the compact scale: 20 tall on Windows and 24 on Android, in
+/// step with the fields and buttons around it. On Android it keeps a 48 hit
+/// area. Give it a [label] when no text beside it says what it does.
+class AppSwitch extends StatelessWidget {
+  const AppSwitch({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.label,
+  });
+  final bool value;
+
+  /// Null disables it.
+  final ValueChanged<bool>? onChanged;
+  final String? label;
+  @override
+  Widget build(BuildContext context) {
+    final change = onChanged;
+    return Semantics(
+      label: label,
+      child: TouchArea(
+        onTap: change == null ? null : () => change(!value),
+        child: SizedBox(
+          height: isDesktop(context) ? Space.xl - Space.xs : Space.xl,
+          child: FittedBox(
+            child: Switch(
+              value: value,
+              onChanged: change,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A label and its switch, read as one control. It keeps a row's height, so a
+/// list of them doesn't crowd.
+class SwitchRow extends StatelessWidget {
+  const SwitchRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.switchKey,
+  });
+  final String label;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final Key? switchKey;
+  @override
+  Widget build(BuildContext context) => MergeSemantics(
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: isDesktop(context) ? Space.pointerTarget : Space.target,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          const SizedBox(width: Space.md),
+          AppSwitch(key: switchKey, value: value, onChanged: onChanged),
+        ],
+      ),
+    ),
+  );
+}
+
 /// A small text action in a card header, e.g. "View all ›".
 class CardLink extends StatelessWidget {
   const CardLink(
@@ -929,6 +999,26 @@ class OverviewCard extends StatelessWidget {
       },
     );
   }
+}
+
+/// Two cards in one grid cell, beside a taller card: the second takes the
+/// height left, so nothing empty sits under them.
+class SideStack extends StatelessWidget {
+  const SideStack({super.key, required this.top, required this.rest});
+  final Widget top, rest;
+  @override
+  Widget build(BuildContext context) => _HeaderOverRest(
+    children: [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          top,
+          SizedBox(height: Space.cardGapOf(context)),
+        ],
+      ),
+      rest,
+    ],
+  );
 }
 
 /// A header over one child, which takes the height left as its minimum. A

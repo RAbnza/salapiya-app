@@ -44,6 +44,93 @@ class FakeNotificationDevice implements NotificationDevice {
 }
 
 void main() {
+  group('what screens read', () {
+    const future = '2099-01-01';
+    AgendaItem item(String date, {int version = 1}) =>
+        AgendaItem('i', 's', 'Tasks', 'A task', date, 'All day', version);
+    Future<(LocalFixture, DeviceReminders, FakeNotificationDevice)> open(
+      List<AgendaItem> Function() sources,
+      DateTime now,
+    ) async {
+      final f = await LocalFixture.open(), native = FakeNotificationDevice();
+      final d = DeviceReminders(
+        f.store,
+        sources,
+        device: native,
+        clock: () => now,
+      );
+      await d.initialize();
+      await d.configure({'enabled': true}, request: true);
+      return (f, d, native);
+    }
+
+    test('each state is readable, and the record never changes', () async {
+      final now = DateTime.utc(2026, 11, 1, 1);
+      var items = [item('2026-11-20')];
+      final (f, d, native) = await open(() => items, now);
+      expect(d.views['i']?.state, ReminderState.scheduled);
+      expect(d.views['i']?.at, isNotNull);
+
+      await d.choose(items.single, 'Off', 'Planned');
+      expect(d.views['i']?.state, ReminderState.turnedOff);
+      await d.choose(items.single, 'Inherited', 'Planned');
+      expect(d.views['i']?.state, ReminderState.scheduled);
+
+      await d.choose(items.single, 'Inherited', 'Dismissed');
+      expect(d.views['i']?.state, ReminderState.dismissed);
+      await d.choose(items.single, 'Inherited', 'Restored');
+      expect(d.views['i']?.state, ReminderState.scheduled);
+
+      await d.choose(items.single, 'Inherited', 'Dismissed');
+      items = [item('2026-11-21', version: 2)];
+      await d.reconcile();
+      expect(d.views['i']?.state, ReminderState.scheduled);
+      expect(d.views['i']?.returned, isTrue);
+
+      await d.configure({
+        'modules': {...d.preferences['modules'] as Map, 'Tasks': false},
+      });
+      expect(d.views['i']?.state, ReminderState.moduleOff);
+      await d.configure({
+        'modules': {...d.preferences['modules'] as Map, 'Tasks': true},
+      });
+
+      native.granted = false;
+      await d.reconcile();
+      expect(d.views['i']?.state, ReminderState.blocked);
+      await d.stop();
+      await f.close();
+    });
+
+    test('a time gone by reads as passed, and is never resent', () async {
+      final now = DateTime.utc(2026, 11, 2, 2);
+      final (f, d, native) = await open(() => [item('2026-11-01')], now);
+      expect(d.views['i']?.state, ReminderState.passed);
+      expect(native.scheduled, isEmpty);
+      await d.stop();
+      await f.close();
+    });
+
+    test('snoozing fires later, and shows until when', () async {
+      final now = DateTime.utc(2026, 11, 2, 2);
+      final items = [item('2026-11-01')];
+      final (f, d, _) = await open(() => items, now);
+      await d.choose(items.single, 'Inherited', 'Snoozed 1 hour');
+      expect(d.views['i']?.state, ReminderState.snoozed);
+      expect(d.views['i']?.at, now.add(const Duration(hours: 1)));
+      await d.stop();
+      await f.close();
+    });
+
+    test('what is too far off says so', () async {
+      final now = DateTime.utc(2026, 11, 1, 1);
+      final (f, d, _) = await open(() => [item(future)], now);
+      expect(d.views['i']?.state, ReminderState.far);
+      await d.stop();
+      await f.close();
+    });
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
     'local profile removal cancels only its recorded notification IDs',

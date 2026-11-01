@@ -21,7 +21,7 @@ import 'finance_domain.dart';
 import 'local_profiles.dart';
 import 'local_runtime.dart';
 import '../life/life_settings.dart';
-import '../life/reminder_widgets.dart';
+import '../life/reminders_tab.dart';
 
 class LocalBootstrap extends StatefulWidget {
   const LocalBootstrap({super.key, required this.settings, this.runtime});
@@ -530,7 +530,7 @@ class _LocalProfileViewState extends State<LocalProfileView> {
               TextButton(
                 onPressed: () => openDemoPage<void>(
                   context,
-                  NativeReminderCenter(session: s),
+                  ReminderCenter(session: s),
                   'life/reminders',
                 ),
                 child: const Text('Device reminder settings'),

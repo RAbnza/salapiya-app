@@ -22,6 +22,9 @@ mixin FormInputs<T extends StatefulWidget> on State<T> {
   Map<String, String> get values;
   void retain();
 
+  /// Starts each field's key, which device tests find it by.
+  String get fieldPrefix => 'native-';
+
   final fields = <String, TextEditingController>{};
   final anchors = <String, GlobalKey>{};
   String? errorField, errorMessage;
@@ -77,7 +80,7 @@ mixin FormInputs<T extends StatefulWidget> on State<T> {
     key: anchor(key),
     padding: gapAbove(info: info != null),
     child: AmountField(
-      key: ValueKey('native-$key'),
+      key: ValueKey('$fieldPrefix$key'),
       label: label,
       controller: controllerFor(key),
       required: required,
@@ -101,7 +104,7 @@ mixin FormInputs<T extends StatefulWidget> on State<T> {
     key: anchor(key),
     padding: gapAbove(info: info != null),
     child: HelpTextField(
-      key: ValueKey('native-$key'),
+      key: ValueKey('$fieldPrefix$key'),
       label: label,
       input: input,
       controller: controllerFor(key),
@@ -129,7 +132,7 @@ mixin FormInputs<T extends StatefulWidget> on State<T> {
     key: anchor(key),
     padding: gapAbove(info: info != null),
     child: OptionPicker<String>(
-      key: ValueKey('native-select-$key'),
+      key: ValueKey('${fieldPrefix}select-$key'),
       label: label,
       style: style,
       required: required,
@@ -164,7 +167,7 @@ mixin FormInputs<T extends StatefulWidget> on State<T> {
     key: anchor(key),
     padding: gapAbove(),
     child: DateField(
-      key: ValueKey('native-$key'),
+      key: ValueKey('$fieldPrefix$key'),
       label: label,
       required: required,
       helper: helper,

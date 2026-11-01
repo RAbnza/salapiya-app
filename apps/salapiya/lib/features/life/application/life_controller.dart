@@ -92,12 +92,6 @@ class AgendaItem {
       sourceGeneration ?? '$id:$version:$date:$time:$amount';
 }
 
-class ReminderChoice {
-  ReminderChoice(this.generation, this.mode, this.state);
-  final String generation;
-  String mode, state;
-}
-
 class LifeController extends ChangeNotifier {
   LifeController({bool demo = true}) {
     if (demo) reset();
@@ -105,10 +99,6 @@ class LifeController extends ChangeNotifier {
   final List<LifeEntry> entries = [];
   final List<PersonalEvent> events = [];
   final List<CareerApplication> applications = [];
-  final Map<String, ReminderChoice> reminders = {};
-  final List<String> reminderHistory = [];
-  bool permission = true, quietHours = true, sensitiveContent = false;
-  String quietStart = '22:00', quietEnd = '07:00';
   int serial = 0, revision = 0;
   void changed() {
     revision++;
@@ -119,11 +109,6 @@ class LifeController extends ChangeNotifier {
     entries.clear();
     events.clear();
     applications.clear();
-    reminders.clear();
-    reminderHistory.clear();
-    permission = true;
-    quietHours = true;
-    sensitiveContent = false;
     if (!empty) {
       entries.addAll([
         LifeEntry(
@@ -329,7 +314,7 @@ class LifeController extends ChangeNotifier {
 
   static void validateTime(String value) {
     if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(value)) {
-      throw const FormatException('Use a 24-hour time (HH:MM).');
+      throw const FormatException('Enter a time, like 14:30.');
     }
   }
 
@@ -480,22 +465,6 @@ class LifeController extends ChangeNotifier {
       (a, b) => '${a.date} ${a.time}'.compareTo('${b.date} ${b.time}'),
     );
     return result;
-  }
-
-  String reminderState(AgendaItem item) {
-    if (!permission) return 'Permission denied · in-app only';
-    final r = reminders[item.id];
-    if (r != null && r.generation != item.generation) {
-      return 'Old reminder cancelled · source changed';
-    }
-    if (r?.mode == 'Off') return 'Reminder off';
-    return r?.state ?? 'Planned on this device · demo only';
-  }
-
-  FutureOr<void> reminder(AgendaItem item, String mode, String action) {
-    reminders[item.id] = ReminderChoice(item.generation, mode, action);
-    reminderHistory.add('${item.title} · $mode · $action · ${item.generation}');
-    changed();
   }
 
   FutureOr<void> cancelEvent(PersonalEvent e, String reason) {

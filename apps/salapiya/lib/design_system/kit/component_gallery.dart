@@ -508,7 +508,7 @@ class _FieldsState extends State<_Fields> {
             helper: 'Useful when others can see your screen.',
             child: Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Switch(
+              child: AppSwitch(
                 value: hide,
                 onChanged: (v) => setState(() => hide = v),
               ),
