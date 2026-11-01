@@ -49,7 +49,7 @@ class LocalProfiles {
               p.basename(f.path).contains('.sqlite-'),
         )) {
           reject(
-            'Protected profile information is unavailable. Existing encrypted files have been preserved. Restore a portable backup or recover the original OS credentials; no database was reset.',
+            'Salapiya can’t reach the key that opens your profile. Your files are safe and nothing was reset. Make sure you’re signed in to the same device account, then try again.',
           );
         }
         return null;
@@ -75,13 +75,13 @@ class LocalProfiles {
         base64Url.decode(key).length != 32 ||
         !['initializing', 'ready', 'restoring'].contains(d['phase'])) {
       reject(
-        'Invalid protected profile descriptor. Existing data is preserved.',
+        'Salapiya can’t read what it needs to open your profile. Your files are safe and nothing was reset.',
       );
     }
     final file = File(p.join(directory.path, '$id.sqlite'));
     if (d['phase'] == 'ready' && !await file.exists()) {
       reject(
-        'The active encrypted database is missing. Restore a backup; a new empty profile will not replace it.',
+        'Your profile’s records aren’t on this device any more. Nothing was replaced with an empty profile. A backup can restore them on another device.',
       );
     }
     if (d['phase'] == 'restoring') {
@@ -93,7 +93,7 @@ class LocalProfiles {
       if (await staging.exists()) {
         if (await file.exists()) {
           reject(
-            'Recovery files need review; both database copies are preserved.',
+            'A restore didn’t finish, and two copies of this profile are on this device. Both are safe.',
           );
         }
         final check = openLocalDatabase(staging.path, key);
@@ -106,7 +106,7 @@ class LocalProfiles {
         await staging.rename(file.path);
       } else if (!await file.exists()) {
         reject(
-          'The verified recovery database is missing. Original archive is required.',
+          'A restore didn’t finish and its files have gone. Your backup file is safe, and it can restore on another device.',
         );
       }
       final check = openLocalDatabase(file.path, key);
@@ -162,14 +162,14 @@ class LocalProfiles {
     final previous = await vault.read();
     final old = previous == null ? null : jsonDecode(previous) as Map;
     if (active != null || (old != null && old['phase'] != 'empty')) {
-      reject('One profile is already initialized. Reopen it instead.');
+      reject('A profile is already set up on this device. Try again to open it.');
     }
     await directory.create(recursive: true);
     if (await directory.list().any(
       (f) => p.basename(f.path).contains('.sqlite'),
     )) {
       reject(
-        'Existing database files require recovery before creating a profile.',
+        'An earlier profile’s files are still on this device, so a new one can’t start here.',
       );
     }
     final d = {
@@ -198,7 +198,7 @@ class LocalProfiles {
     final prior = previous == null ? null : jsonDecode(previous) as Map;
     final hasCurrent = prior != null && prior['phase'] != 'empty';
     if (hasCurrent && !preserveCurrent) {
-      reject('An active profile already exists. Review the safe switch first.');
+      reject('A profile is already open on this device. Review the switch first.');
     }
     if (!RegExp(r'^[0-9a-f-]{36}$').hasMatch(id) ||
         name.trim().isEmpty ||
@@ -208,7 +208,7 @@ class LocalProfiles {
     final target = File(p.join(directory.path, '$id.sqlite'));
     if (await target.exists()) {
       reject(
-        'This cloud profile already has a protected database here. Existing files are preserved; review recovery before switching.',
+        'The profile on this Google account already has files on this device. They’re safe. Nothing changed.',
       );
     }
     await directory.create(recursive: true);
@@ -243,7 +243,7 @@ class LocalProfiles {
     final old = previous == null ? null : jsonDecode(previous) as Map;
     if (active != null || (old != null && old['phase'] != 'empty')) {
       reject(
-        'Recovery activation requires a fresh installation. The current profile is preserved.',
+        'A backup restores only when no profile is open on this device. Your profile hasn’t changed.',
       );
     }
     final id = bundle['owner'] as String;
@@ -354,7 +354,7 @@ class LocalProfiles {
     if (await target.exists()) {
       // Existing profiles are deliberately never replaced from an old archive.
       reject(
-        'This profile already exists on this installation. Its database and the validated recovery staging file are preserved. Restore on a fresh installation.',
+        'This profile is already on this device, so this backup can’t restore here. Your files are safe.',
       );
     }
     final descriptor = {
@@ -385,10 +385,10 @@ class LocalProfiles {
   /// Remote records, external archives and preserved profiles are never touched.
   Future<void> removeLocal(String expectedOwner) async {
     final raw = await vault.read();
-    if (raw == null) reject('No protected local profile is available.');
+    if (raw == null) reject('No profile is open on this device.');
     final d = jsonDecode(raw) as Map<String, dynamic>;
     if (d['id'] != expectedOwner || d['phase'] != 'ready') {
-      reject('The active profile changed. Review local removal again.');
+      reject('This profile changed. Open Remove again and check it.');
     }
     _validateRemovalPaths(d);
     await vault.write(jsonEncode({...d, 'phase': 'removing'}));
@@ -432,13 +432,13 @@ class LocalProfiles {
             p.basename(directory.path),
           ),
         )) {
-      reject('Local removal cannot follow a redirected profile directory.');
+      reject('This profile’s folder points somewhere else, so nothing was removed.');
     }
     // Validate every target before deleting any; never traverse a link/junction.
     for (final path in paths) {
       final type = await FileSystemEntity.type(path, followLinks: false);
       if (type == FileSystemEntityType.link) {
-        reject('Local removal cannot follow linked files.');
+        reject('Some of this profile’s files are links, so nothing was removed.');
       }
       if (type == FileSystemEntityType.directory) {
         await for (final entity in Directory(
@@ -446,7 +446,7 @@ class LocalProfiles {
         ).list(recursive: true, followLinks: false)) {
           if (await FileSystemEntity.type(entity.path, followLinks: false) ==
               FileSystemEntityType.link) {
-            reject('Local removal cannot follow linked attachments.');
+            reject('Some of this profile’s attached files are links, so nothing was removed.');
           }
         }
       }

@@ -175,10 +175,11 @@ Future<void> localMoneyJourney(
     SalapiyaApp(production: true, settings: settings, localRuntime: runtime),
   );
   await localSettle(tester);
+  await localTap(tester, find.byKey(const ValueKey('greeting-start')));
   expect(find.text('Continue with Google'), findsOneWidget);
-  await localTap(tester, find.text('Create a local offline profile'));
+  await localTap(tester, find.text('Start on this device'));
   await tester.enterText(find.byType(TextField), 'Everyday owner');
-  await localTap(tester, find.text('Create local profile'));
+  await localTap(tester, find.text('Create profile'));
   await localWait(tester, () => runtime.session != null);
   expect(find.textContaining('Tala logged'), findsNothing);
   expect(find.textContaining('DEMO ·'), findsNothing);
@@ -331,7 +332,7 @@ Future<void> localMoneyJourney(
   );
   await localSettle(tester);
   expect(find.byType(OverviewDashboard), findsOneWidget);
-  expect(find.text('Create a local offline profile'), findsNothing);
+  expect(find.text('Start on this device'), findsNothing);
   await localTap(tester, find.byKey(const ValueKey('nav-debts')));
   expect(find.text('A clear view of what you owe'), findsOneWidget);
   expect(find.text('Home essentials loan'), findsNothing);

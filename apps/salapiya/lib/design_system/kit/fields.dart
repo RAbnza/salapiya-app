@@ -532,6 +532,7 @@ class HelpTextField extends StatelessWidget {
     this.amount = false,
     this.keyboardType,
     this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
     this.maxLines = 1,
     this.onChanged,
     this.onSubmitted,
@@ -553,6 +554,7 @@ class HelpTextField extends StatelessWidget {
   final bool obscured;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
   final int? maxLines;
   final ValueChanged<String>? onChanged, onSubmitted;
 
@@ -584,6 +586,7 @@ class HelpTextField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: textInputAction,
+      textCapitalization: textCapitalization,
       inputFormatters: guard == null ? null : [guard],
       keyboardType:
           keyboardType ??

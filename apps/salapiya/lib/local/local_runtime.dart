@@ -145,7 +145,7 @@ class LocalRuntime extends ChangeNotifier {
 
   Future<void> removeLocalProfile(String expectedOwner) async {
     if (session?.localFinance.store.owner != expectedOwner) {
-      reject('The active profile changed. Review local removal again.');
+      reject('This profile changed. Open Remove again and check it.');
     }
     settings.removeListener(_persist);
     await flushPreferences();

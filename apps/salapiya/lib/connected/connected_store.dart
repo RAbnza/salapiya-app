@@ -269,7 +269,7 @@ extension ConnectedLocalStore on LocalStore {
     if (old != null) {
       if (old['remote_owner'] != actor) {
         reject(
-          'Reconnect with the Google identity already bound to this profile.',
+          'Sign in with the Google account this profile uses.',
         );
       }
       return;

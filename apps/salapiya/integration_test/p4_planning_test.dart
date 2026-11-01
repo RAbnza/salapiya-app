@@ -40,9 +40,10 @@ void main() {
           ),
         );
         await localSettle(tester);
-        await localAction(tester, 'Create a local offline profile');
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        await localAction(tester, 'Start on this device');
         await tester.enterText(find.byType(TextField), 'P4 planning owner');
-        await localAction(tester, 'Create local profile');
+        await localAction(tester, 'Create profile');
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localAction(tester, 'Add account');

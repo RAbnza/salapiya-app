@@ -86,16 +86,23 @@ void main() {
         );
         await localSettle(tester);
         if (runtime.session == null) {
+          await localTap(tester, find.byKey(const ValueKey('greeting-start')));
           await localTap(tester, find.text('Continue with Google'));
           await localTap(tester, find.text('Review connection'));
-          await localTap(tester, find.text('Confirm connection'));
+          await localTap(
+            tester,
+            find.text(
+              runtime.connected.cloud == null
+                  ? 'Create profile'
+                  : 'Use this profile',
+            ),
+          );
           await localWait(
             tester,
             () => runtime.session != null && !runtime.connected.busy,
           );
           expect(runtime.connected.error, isNull);
           expect(runtime.session!.localFinance.store.owner, config['profile']);
-          await localTap(tester, find.byType(BackButton));
         } else {
           await tester.runAsync(runtime.connected.syncNow);
           expect(runtime.connected.error, isNull);

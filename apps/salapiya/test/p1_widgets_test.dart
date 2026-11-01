@@ -134,16 +134,13 @@ void main() {
           ),
         );
         await localSettle(tester);
-        expect(find.text('Create a local offline profile'), findsOneWidget);
+        expect(find.text('Get started'), findsOneWidget);
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        expect(find.text('Start on this device'), findsOneWidget);
         expect(find.text('Continue with Google'), findsOneWidget);
         expect(find.text('Restore from backup'), findsOneWidget);
-        await tester.ensureVisible(find.text('Continue with Google'));
-        await localTap(tester, find.text('Continue with Google'));
-        await localSettle(tester);
-        expect(
-          find.textContaining('This build supports local use.'),
-          findsOneWidget,
-        );
+        // This test build can't connect, so the row says so and goes nowhere.
+        expect(find.textContaining('can’t connect to Google'), findsOneWidget);
         expect(runtime.session, isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());

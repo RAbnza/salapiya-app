@@ -37,21 +37,9 @@ class _ConnectionTabState extends State<ConnectionTab> {
   /// What connecting does. It stays this complete on every path here.
   Future<void> disclose() async {
     final a = source.actions;
-    final yes = await showAdaptiveModal<bool>(
+    final yes = await showConnectionDisclosure(
       context,
-      title: 'Turn on sync?',
-      body: _Paragraphs([
-        'Google account: ${a.facts().email ?? 'Not chosen'}',
-        'This uploads your Money and Life records, proof you’ve added, Career '
-            'details and the list of your files to Salapiya’s service, which '
-            'runs on Supabase and PowerSync. File contents stay on this '
-            'device, and so do drafts and device settings.',
-        'Google only confirms who you are. People who run the service can '
-            'reach synced records: this isn’t end-to-end encrypted.',
-        'Anything already on the service downloads before totals show as '
-            'complete.',
-      ]),
-      primary: const ModalAction('Turn on sync', value: true),
+      email: a.facts().email,
     );
     if (yes == true) await a.confirmConnection();
   }
@@ -70,7 +58,7 @@ class _ConnectionTabState extends State<ConnectionTab> {
     final yes = await showAdaptiveModal<bool>(
       context,
       title: 'Use ${a.facts().cloudName ?? 'that profile'} on this device?',
-      body: const _Paragraphs([
+      body: const ModalParagraphs([
         'Keep the backup you saved and its recovery secret apart from each '
             'other.',
         'This profile stays on this device, in its own protected files. '
@@ -91,7 +79,7 @@ class _ConnectionTabState extends State<ConnectionTab> {
     final yes = await showAdaptiveModal<bool>(
       context,
       title: 'Sign out on this device?',
-      body: _Paragraphs([
+      body: ModalParagraphs([
         if (waiting > 0)
           waiting == 1
               ? '1 change stays waiting. It uploads after you sign in again.'
@@ -206,7 +194,7 @@ class _ConnectionTabState extends State<ConnectionTab> {
         ],
       ),
     );
-    final shared = _WhatIsShared(source: source);
+    final shared = WhatIsShared(connected: f.connected);
     final waiting = _Waiting(source: source);
     final toCheck = source.reviews.isEmpty
         ? null
@@ -262,22 +250,6 @@ IconData phaseIcon(ConnectionPhase phase) => switch (phase) {
   ConnectionPhase.waiting => Icons.cloud_upload_outlined,
   _ => Icons.error_outline,
 };
-
-class _Paragraphs extends StatelessWidget {
-  const _Paragraphs(this.lines);
-  final List<String> lines;
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      for (final (i, line) in lines.indexed) ...[
-        if (i > 0) const SizedBox(height: Space.sm),
-        Text(line),
-      ],
-    ],
-  );
-}
 
 class _Waiting extends StatelessWidget {
   const _Waiting({required this.source});
@@ -427,36 +399,4 @@ class _ThisDevice extends StatelessWidget {
       ),
     );
   }
-}
-
-class _WhatIsShared extends StatelessWidget {
-  const _WhatIsShared({required this.source});
-  final ProfileSource source;
-  @override
-  Widget build(BuildContext context) => OverviewCard(
-    key: const ValueKey('connection-shared'),
-    title: 'What’s shared with the service',
-    caption: source.connection.connected
-        ? null
-        : 'Only once you connect and confirm',
-    child: const Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FactRow(
-          'Uploaded',
-          'Money and Life records, proof you’ve added, Career details and '
-              'the list of your files',
-        ),
-        FactRow(
-          'Stays on this device',
-          'File contents, drafts and device settings',
-        ),
-        FactRow('Google', 'Confirms who you are, and holds none of this'),
-        FactRow(
-          'Who can reach it',
-          'People who run the service. It isn’t end-to-end encrypted',
-        ),
-      ],
-    ),
-  );
 }

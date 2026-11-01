@@ -9,6 +9,23 @@ import 'compact_form.dart';
 import 'fields.dart';
 import 'focus_ring.dart';
 
+/// A modal's body as short paragraphs.
+class ModalParagraphs extends StatelessWidget {
+  const ModalParagraphs(this.lines, {super.key});
+  final List<String> lines;
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final (i, line) in lines.indexed) ...[
+        if (i > 0) const SizedBox(height: Space.sm),
+        Text(line),
+      ],
+    ],
+  );
+}
+
 /// A modal button. The modal closes with [value] unless [onPressed] returns
 /// false (e.g. a short form that fails validation).
 class ModalAction<T> {

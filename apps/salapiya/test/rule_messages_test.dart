@@ -7,6 +7,7 @@ import 'package:salapiya/finance/import_flow.dart';
 import 'package:salapiya/finance/money_editor.dart';
 import 'package:salapiya/life/life_data.dart';
 import 'package:salapiya/life/life_forms.dart';
+import 'package:salapiya/onboarding/onboarding_data.dart';
 import 'package:salapiya/profile/profile_actions.dart';
 import 'package:salapiya/profile/profile_data.dart';
 import 'package:salapiya/shared/shared_data.dart';
@@ -332,26 +333,26 @@ void main() {
       'This command ID already belongs to a different payload.',
       'Archive replay requires an empty, unconnected recovery database.',
       'Unsupported Life archive coverage.',
+      'Profile startup is already running.',
+      'Invalid recovery staging descriptor.',
+      'Invalid cloud profile descriptor.',
+      'Invalid profile identity. Existing files are preserved.',
+      'Local removal path is outside this profile.',
     };
-    // Chat 15 rewords signing in.
-    const signIn = {
-      'Finish Google sign-in first.',
-      'Select the Google identity bound to this profile.',
-      'Reconnect with the Google identity already bound to this profile.',
-      'This identity already owns a profile. Review the existing cloud profile.',
-    };
-
     test('every message the section shows uses the glossary (§7)', () {
       for (final file in [
         'lib/connected/connected_runtime.dart',
         'lib/connected/connected_store.dart',
         'lib/local/local_store.dart',
+        'lib/local/local_profiles.dart',
+        'lib/local/local_runtime.dart',
+        'lib/finance/bounded_file_read.dart',
       ]) {
         final source = File(file).readAsStringSync();
         final found = messages(source).toList();
         expect(found, isNotEmpty, reason: file);
         for (final message in found) {
-          if (internal.contains(message) || signIn.contains(message)) continue;
+          if (internal.contains(message)) continue;
           for (final word in jargon) {
             expect(
               message.toLowerCase(),
@@ -360,16 +361,6 @@ void main() {
             );
           }
         }
-      }
-    });
-
-    test('the sign-in messages left are still there for Chat 15', () {
-      final source = [
-        'lib/connected/connected_runtime.dart',
-        'lib/connected/connected_store.dart',
-      ].map((f) => File(f).readAsStringSync()).join();
-      for (final message in signIn) {
-        expect(source, contains(message));
       }
     });
 
@@ -385,6 +376,37 @@ void main() {
       ];
       for (final word in words) {
         expect(source, isNot(contains(word)));
+      }
+    });
+
+    test('the failure screen\'s table holds to the rules\' words', () {
+      final source = [
+        'lib/local/local_profiles.dart',
+        'lib/local/local_store.dart',
+      ].map((f) => File(f).readAsStringSync()).join();
+      for (final words in startupMessages.keys) {
+        expect(source, contains(words));
+      }
+      for (final message in messages(source)) {
+        if (message.contains('backup')) {
+          expect(
+            message.contains('Restore a backup'),
+            isFalse,
+            reason: 'The rules refuse a restore once a profile exists: $message',
+          );
+        }
+      }
+    });
+
+    test('messages that assume a profile read properly without one', () {
+      final source = File(
+        'lib/connected/connected_runtime.dart',
+      ).readAsStringSync().replaceAll(RegExp(r"'\s+'"), '');
+      for (final message in noProfileErrors.keys) {
+        expect(source, contains(message));
+      }
+      for (final words in noProfileErrors.values) {
+        expect(words, isNot(contains('Your records')));
       }
     });
 

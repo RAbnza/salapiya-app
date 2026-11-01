@@ -104,3 +104,60 @@ class ChangePage extends StatelessWidget {
     );
   }
 }
+
+/// What connecting does, for every path that connects. Each fact here stays:
+/// [lead] adds what this path does, and [title] and [confirm] name it.
+Future<bool?> showConnectionDisclosure(
+  BuildContext context, {
+  required String? email,
+  String title = 'Turn on sync?',
+  String confirm = 'Turn on sync',
+  String? lead,
+}) => showAdaptiveModal<bool>(
+  context,
+  title: title,
+  body: ModalParagraphs([
+    'Google account: ${email ?? 'Not chosen'}',
+    ?lead,
+    'This uploads your Money and Life records, proof you’ve added, Career '
+        'details and the list of your files to Salapiya’s service, which '
+        'runs on Supabase and PowerSync. File contents stay on this '
+        'device, and so do drafts and device settings.',
+    'Google only confirms who you are. People who run the service can '
+        'reach synced records: this isn’t end-to-end encrypted.',
+    'Anything already on the service downloads before totals show as '
+        'complete.',
+  ]),
+  primary: ModalAction(confirm, value: true),
+);
+
+/// What leaves the device once it's connected.
+class WhatIsShared extends StatelessWidget {
+  const WhatIsShared({super.key, required this.connected});
+  final bool connected;
+  @override
+  Widget build(BuildContext context) => OverviewCard(
+    key: const ValueKey('connection-shared'),
+    title: 'What’s shared with the service',
+    caption: connected ? null : 'Only once you connect and confirm',
+    child: const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FactRow(
+          'Uploaded',
+          'Money and Life records, proof you’ve added, Career details and '
+              'the list of your files',
+        ),
+        FactRow(
+          'Stays on this device',
+          'File contents, drafts and device settings',
+        ),
+        FactRow('Google', 'Confirms who you are, and holds none of this'),
+        FactRow(
+          'Who can reach it',
+          'People who run the service. It isn’t end-to-end encrypted',
+        ),
+      ],
+    ),
+  );
+}

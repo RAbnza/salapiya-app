@@ -160,7 +160,7 @@ class LocalStore {
     if ((await db.get('PRAGMA quick_check')).values.single != 'ok' ||
         (await db.getAll('PRAGMA foreign_key_check')).isNotEmpty) {
       reject(
-        'Salapiya found a problem with your records. Keep your files as they are and restore a backup you’ve checked.',
+        'Salapiya found a problem with your records. Keep your files as they are. A backup you’ve checked can restore them on another device.',
       );
     }
     final profile = await db.getAll('SELECT id,revision FROM local_profile');
@@ -178,7 +178,7 @@ class LocalStore {
     if (commands['n'] != profile.single['revision'] ||
         seals['n'] != commands['n']) {
       reject(
-        'Some of your records are incomplete. Your files are safe. Restore a backup you’ve checked.',
+        'Some of your records are incomplete. Your files are safe. A backup you’ve checked can restore them on another device.',
       );
     }
     final snap = await snapshot();
@@ -188,7 +188,7 @@ class LocalStore {
               r.postings.where((p) => p.date == date).map((p) => p.amount),
             ) !=
             BigInt.zero) {
-          reject('Your records don’t add up. Your files are safe. Restore a backup you’ve checked.');
+          reject('Your records don’t add up. Your files are safe. A backup you’ve checked can restore them on another device.');
         }
       }
     }

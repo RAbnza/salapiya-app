@@ -102,6 +102,7 @@ void main() {
         );
         await localSettle(tester);
         if (runtime.session == null) {
+          await localTap(tester, find.byKey(const ValueKey('greeting-start')));
           await localTap(tester, find.text('Continue with Google'));
         } else {
           await localTap(tester, find.byKey(const ValueKey('shell-profile')));
@@ -121,7 +122,7 @@ void main() {
           await localTap(
             tester,
             runtime.session == null
-                ? find.text('Select Google account')
+                ? find.byKey(const ValueKey('google-sign-in'))
                 : find.byKey(
                     ValueKey(
                       c.binding == null
@@ -210,9 +211,11 @@ void main() {
             await localTap(
               tester,
               find.text(
-                runtime.session == null
-                    ? 'Confirm connection'
-                    : 'Turn on sync',
+                runtime.session != null
+                    ? 'Turn on sync'
+                    : c.cloud == null
+                    ? 'Create profile'
+                    : 'Use this profile',
               ),
             );
             await tester.runAsync(() async {

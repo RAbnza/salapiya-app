@@ -64,11 +64,12 @@ void main() {
       );
       await localSettle(tester);
       if (firstRun) {
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
         await localTap(tester, find.text('Continue with Google'));
         expect(runtime.session, isNull);
         await localTap(tester, find.text('Review connection'));
         expect(runtime.session, isNull);
-        await localTap(tester, find.text('Confirm connection'));
+        await localTap(tester, find.text('Create profile'));
         await localWait(
           tester,
           () => runtime.session != null && !runtime.connected.busy,
@@ -79,7 +80,6 @@ void main() {
           (await runtime.session!.localFinance.store.snapshot()).accounts,
           isEmpty,
         );
-        await localTap(tester, find.byType(BackButton));
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Add account'));
         await localEnter(tester, 'name', 'Synthetic fresh $role');

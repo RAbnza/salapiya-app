@@ -12,7 +12,7 @@ Future<Uint8List> readBoundedFinancialFile(
   final reported = await file.length();
   if (reported == null || reported < 1 || reported > maximum) {
     reject(
-      'Selected file exceeds the supported size or has no readable length.',
+      'This file is too big, or it can’t be read. Choose another.',
     );
   }
   final buffer = BytesBuilder(copy: false);
@@ -21,13 +21,13 @@ Future<Uint8List> readBoundedFinancialFile(
     count += bytes.length;
     if (count > maximum) {
       reject(
-        'File changed or exceeds the supported size. No financial evidence was saved.',
+        'This file changed or is too big. Nothing was saved.',
       );
     }
     buffer.add(bytes);
   }
   if (count != reported) {
-    reject('File size changed during selection. Choose the original again.');
+    reject('This file changed while it was being read. Choose it again.');
   }
   return buffer.takeBytes();
 }

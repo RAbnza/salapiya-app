@@ -63,9 +63,10 @@ void main() {
           ),
         );
         await localSettle(tester);
-        await localTap(tester, find.text('Create a local offline profile'));
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        await localTap(tester, find.text('Start on this device'));
         await tester.enterText(find.byType(TextField), 'P4 portability owner');
-        await localTap(tester, find.text('Create local profile'));
+        await localTap(tester, find.text('Create profile'));
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Add account'));
@@ -201,22 +202,35 @@ void main() {
           ),
         );
         await localSettle(tester);
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
         await localTap(tester, find.text('Restore from backup'));
+        await localTap(tester, find.byKey(const ValueKey('restore-choose')));
+        await waitForNativePicker(
+          tester,
+          () => find.text('Choose another file').evaluate().isNotEmpty,
+          'select the encrypted archive just saved',
+        );
         await tester.enterText(
-          find.widgetWithText(TextField, 'Recovery secret'),
+          find.descendant(
+            of: find.byKey(const ValueKey('backup-secret')),
+            matching: find.byType(TextField),
+          ),
           recoverySecret,
         );
         FocusManager.instance.primaryFocus?.unfocus();
         await localSettle(tester);
-        await localTap(tester, find.text('Choose and inspect backup'));
-        await waitForNativePicker(
+        await localTap(tester, find.byKey(const ValueKey('restore-open')));
+        await localWait(
           tester,
-          () =>
-              find.text('Restore reviewed local profile').evaluate().isNotEmpty,
-          'select the encrypted archive just saved',
+          () => find
+              .byKey(const ValueKey('restore-confirm'))
+              .evaluate()
+              .isNotEmpty,
         );
-        await localTap(tester, find.text('Restore reviewed local profile'));
+        await localTap(tester, find.byKey(const ValueKey('restore-confirm')));
+        await localTap(tester, find.text('Restore'));
         await localWait(tester, () => restoredRuntime!.session != null);
+        await localTap(tester, find.byKey(const ValueKey('restore-open-app')));
         final recovered = restoredRuntime.session!.localFinance;
         expect(recovered.store.owner, owner);
         expect(

@@ -375,9 +375,9 @@ class ConnectedRuntime extends ChangeNotifier {
     await attach();
     await initializeAuth();
     final user = flow!.client.auth.currentUser;
-    if (user == null) reject('Finish Google sign-in first.');
+    if (user == null) reject('Finish signing in with Google first.');
     if (binding != null && binding!['remote_owner'] != user.id) {
-      reject('Select the Google identity bound to this profile.');
+      reject('Sign in with the Google account this profile uses.');
     }
     cloud = await boundary();
     sessionExpired = false;
@@ -401,10 +401,10 @@ class ConnectedRuntime extends ChangeNotifier {
     await attach();
     await initializeAuth();
     final user = flow!.client.auth.currentUser;
-    if (user == null) reject('Finish Google sign-in first.');
+    if (user == null) reject('Finish signing in with Google first.');
     if (binding != null && binding!['remote_owner'] != user.id) {
       reject(
-        'Reconnect with the Google identity already bound to this profile.',
+        'Sign in with the Google account this profile uses.',
       );
     }
     cloud = await boundary();
@@ -430,7 +430,7 @@ class ConnectedRuntime extends ChangeNotifier {
         if (published['outcome'] != 'published') {
           cloud = await boundary();
           reject(
-            'This identity already owns a profile. Review the existing cloud profile.',
+            'This Google account already has a profile. Review it to carry on.',
           );
         }
         cloud = await boundary();

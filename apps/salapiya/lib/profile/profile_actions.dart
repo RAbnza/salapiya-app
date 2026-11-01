@@ -66,6 +66,18 @@ const backupSecretErrors = [
   'This secret doesn’t open this backup',
 ];
 
+/// Opens a backup's bytes with its secret. A wrong secret is the rules' own
+/// refusal here, so it lands on the secret's field.
+Future<Map<String, dynamic>> openBackup(List<int> bytes, String secret) async {
+  try {
+    return await LocalBackup.unseal(bytes, secret);
+  } on SecretBoxAuthenticationError {
+    reject('This secret doesn’t open this backup.');
+  } on FormatException {
+    reject('Enter the whole recovery secret.');
+  }
+}
+
 class LocalProfileActions implements ProfileActions {
   LocalProfileActions(
     this.session, {
@@ -195,16 +207,10 @@ class LocalProfileActions implements ProfileActions {
   Future<BackupContents?> checkBackup(String secret) async {
     final bytes = await picker();
     if (bytes == null) return null;
-    try {
-      return BackupContents.from(
-        await LocalBackup.unseal(bytes, secret),
-        session.localFinance.store.owner,
-      );
-    } on SecretBoxAuthenticationError {
-      reject('This secret doesn’t open this backup.');
-    } on FormatException {
-      reject('Enter the whole recovery secret.');
-    }
+    return BackupContents.from(
+      await openBackup(bytes, secret),
+      session.localFinance.store.owner,
+    );
   }
 
   @override

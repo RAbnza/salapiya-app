@@ -1,149 +1,116 @@
 import 'package:flutter/material.dart';
 
-import '../app/demo_routes.dart';
-import 'craft.dart';
+import 'kit/kit.dart';
 import 'theme.dart';
-import 'workspace.dart';
 
-/// First-use frame. Returning profiles bypass it without timers or intro routes.
+/// The frame around the first-run steps. Returning profiles bypass it, with
+/// no timers or intro routes.
+///
+/// [aside] sits beside [child] when there's room, at the same height. Where
+/// there isn't, and always on Android, [lead] comes first and [stacked] (or
+/// [child]) follows in one column.
 class WelcomeFrame extends StatelessWidget {
   const WelcomeFrame({
     super.key,
     required this.child,
-    this.step = 'Welcome',
+    this.title,
+    this.caption,
+    this.step,
     this.back = true,
+    this.aside,
+    this.lead,
+    this.stacked,
   });
   final Widget child;
-  final String step;
+  final String? title, caption, step;
   final bool back;
+  final Widget? aside, lead;
+  final List<Widget>? stacked;
   @override
-  Widget build(BuildContext context) => RouteEscape(
-    child: Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, b) {
-            final c = CraftTheme.of(context);
-            final wide =
-                b.maxWidth >= 940 &&
-                MediaQuery.textScalerOf(context).scale(14) < 21;
-            final content = Padding(
-              padding: EdgeInsets.all(wide ? 40 : 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      if (back) const BackButton(),
-                      const BrandMark(size: 32),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Salapiya',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      Text(
-                        step,
-                        style: TextStyle(color: c.secondary, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
-                  child,
-                ],
+  Widget build(BuildContext context) {
+    final c = CraftTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    final width = WidthClass.of(context);
+    final gutter = Space.pageGutter(width);
+    final desktop = isDesktop(context);
+    final aside = this.aside;
+    final heading = [
+      Row(
+        children: [
+          if (back) ...[
+            const BackButton(),
+            const SizedBox(width: Space.xs),
+          ],
+          Flexible(
+            child: Image.asset(
+              'assets/branding/display/salapiya_horizontal_on_${c.dark ? 'dark' : 'light'}.png',
+              height: Space.xxl,
+              alignment: Alignment.centerLeft,
+              semanticLabel: 'Salapiya',
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: Space.xl),
+      if (step != null) ...[
+        Text(step!, style: text.bodySmall?.copyWith(color: c.secondary)),
+        const SizedBox(height: Space.captionGap),
+      ],
+      if (title != null)
+        Semantics(
+          header: true,
+          child: Text(title!, style: text.headlineMedium),
+        ),
+      if (caption != null) ...[
+        const SizedBox(height: Space.captionGap),
+        Text(caption!, style: text.bodyMedium?.copyWith(color: c.secondary)),
+      ],
+      const SizedBox(height: Space.xl),
+    ];
+    return RouteEscape(
+      child: Scaffold(
+        backgroundColor: c.canvas,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: gutter,
+                vertical: Space.pageTop(width),
               ),
-            );
-            return SingleChildScrollView(
-              padding: EdgeInsets.all(wide ? 40 : 0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1120),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(wide ? 20 : 0),
-                      border: wide ? Border.all(color: c.divider) : null,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: desktop
+                      ? box.maxHeight - Space.pageTop(width) * 2
+                      : 0,
+                ),
+                child: Align(
+                  alignment: desktop ? Alignment.center : Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: aside == null
+                          ? Space.formMaxWidth
+                          : DashboardGrid.four,
                     ),
-                    child: wide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 4,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 30),
-                                      const BrandMark(size: 92),
-                                      const SizedBox(height: 32),
-                                      Text(
-                                        'A little clarity.\nA lot more freedom.',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .displaySmall
-                                            ?.copyWith(
-                                              fontSize: 34,
-                                              height: 1.2,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'One calm place for your money, your plans, and what comes next.',
-                                        style: TextStyle(
-                                          color: c.secondary,
-                                          height: 1.6,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 44),
-                                      WorkspacePanel(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Icon(
-                                              Icons.lock_outline,
-                                              color: c.primary,
-                                              size: 22,
-                                            ),
-                                            const SizedBox(height: 12),
-                                            const Text(
-                                              'Private from the start',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'Your local profile is encrypted on this device. Connect Google only when you choose.',
-                                              style: TextStyle(
-                                                color: c.secondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Text(
-                                        'Your money, on your terms.',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Expanded(flex: 6, child: content),
-                            ],
-                          )
-                        : content,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ...heading,
+                        DashboardGrid(
+                          cards: desktop && aside != null
+                              ? [(child, 7, 7), (aside, 5, 5)]
+                              : null,
+                          stacked: [?lead, ...stacked ?? [child]],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

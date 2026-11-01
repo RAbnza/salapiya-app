@@ -4,8 +4,8 @@ import '../app/demo_routes.dart';
 import '../app/profile_utilities.dart';
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import '../features/profile/presentation/profile_experience.dart';
 import '../gallery/settings.dart';
+import '../onboarding/onboarding_demo.dart';
 import '../prototype/scenarios.dart';
 import 'profile_actions.dart';
 import 'profile_data.dart';
@@ -60,11 +60,7 @@ class DemoToolsCard extends StatelessWidget {
                 icon: Icons.waving_hand_outlined,
                 onPressed: () => openDemoPage<void>(
                   context,
-                  ProfileExperience(
-                    session: session,
-                    settings: settings,
-                    initial: 'Welcome',
-                  ),
+                  FirstRunPreview(settings: settings),
                   'first-run',
                 ),
               ),

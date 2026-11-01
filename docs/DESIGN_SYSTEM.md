@@ -151,6 +151,7 @@ At text scale ≥ 150%, drop one column class.
 - **Not in the bar:** the logo and app name (they stay in the sidebar) and the breadcrumb (it stays in the app bar).
 - **Colors:** see [§3](#charts-title-bar-high-contrast-and-legacy-colors). Close uses the system red on hover, an allowed exception to the purple accent.
 - **Mica:** deferred. Flutter's Windows engine draws an opaque surface, so Mica would need an unsupported transparent surface. Translucent sidebar text also can't be contrast-checked against a wallpaper tint. The bar and the sidebar stay solid.
+- **Opening:** the window opens maximized on every launch, not full screen, so the taskbar stays. Nothing remembers a window size. Restore Down goes to 1280 × 720.
 - **Native frame (runner):**
   - `WM_NCCALCSIZE` moves the client top to the window's top edge. The left, right and bottom frame stay native, which keeps the resize borders, the shadow, Windows 11's rounded corners, Aero Snap, Win+arrow keys and Alt+Space. A maximized window gets its hidden frame back as top padding, minus one pixel on an auto-hide taskbar's edge.
   - Hit testing: the Flutter view is subclassed to return `HTTRANSPARENT` over the bar's drag space, the top resize band and the maximize button. The window then answers `HTCAPTION` (drag, double-click to maximize, right-click for the system menu), `HTTOP`/`HTTOPLEFT`/`HTTOPRIGHT` (not when maximized), or `HTMAXBUTTON`, which brings up Snap Layouts.
@@ -545,7 +546,7 @@ Five-second question: where do my applications stand, and what's my next step?
 
 ### Profile and settings (Chat 14)
 
-`lib/profile/`: `profile_page.dart` (the frame), `profile_source.dart` (`ProfileSource`, which real and demo builds share), `profile_actions.dart` (`ProfileActions`, everything these tabs can ask for, and the real build's `LocalProfileActions`), `profile_data.dart` (display-only derivations), `profile_tab.dart`, `help_tab.dart`, `help_data.dart`, `connection_tab.dart`, `connection_pages.dart`, `devices_tab.dart`, `backup_tab.dart`, `backup_pages.dart`, `profile_demo.dart`. The welcome screen's Google step and restore stay on `ConnectionBody` and `LocalRecoveryBody` until Chat 15.
+`lib/profile/`: `profile_page.dart` (the frame), `profile_source.dart` (`ProfileSource`, which real and demo builds share), `profile_actions.dart` (`ProfileActions`, everything these tabs can ask for, and the real build's `LocalProfileActions`), `profile_data.dart` (display-only derivations), `profile_tab.dart`, `help_tab.dart`, `help_data.dart`, `connection_tab.dart`, `connection_pages.dart`, `devices_tab.dart`, `backup_tab.dart`, `backup_pages.dart`, `profile_demo.dart`.
 
 - **Five-second questions.** Profile: who is this profile, and how is it set up? Connection: is my data on this device only or syncing, is it healthy, and does anything need me? Devices: which sign-ins have my profile, and is anything wrong with one? Backup & recovery: is my data safe, when was my last backup, has anything changed since, and how do I get it back? Help: how do I find the answer to what I'm stuck on?
 - **Frame.** One page, "Profile and settings", with `AppTabs` and a caption that says what the tab is for. There's no status pill: At a glance and Connection say it. A link to another tab moves the open page there and never opens a second copy, because the shell holds the tab. A failed preference save shows on every tab.
@@ -569,7 +570,35 @@ Five-second question: where do my applications stand, and what's my next step?
 - **Restore** isn't offered with a profile in use, because the rules refuse it. The tab says where it happens.
 - **Privacy.** The Google email shows on Connection only. Device names are platform names. Ids sit under View details. This section has no shareable views.
 - **Offline.** Profile, Help, saving and checking a backup, removing the profile and pausing all work. Sync now, Devices, Revoke, Connect, Delete account and Send this change need a connection.
-- **Demo build.** The same tabs from a sample, with Demo tools on Profile and a demo-only Show a state menu on Connection, Devices and Backup & recovery, covering each state above. Actions show their confirmation, then say nothing happened. It can't show real Google sign-in, sync, revoking, deleting, the system's save and open windows, a real secret or a real restore. `ProfileExperience` stays for First-run preview and the d4 tests, until Chat 16.
+- **Demo build.** The same tabs from a sample, with Demo tools on Profile and a demo-only Show a state menu on Connection, Devices and Backup & recovery, covering each state above. Actions show their confirmation, then say nothing happened. It can't show real Google sign-in, sync, revoking, deleting, the system's save and open windows, a real secret or a real restore. `ProfileExperience` stays for the d4 tests, until Chat 16.
+
+### Onboarding (Chat 15)
+
+`lib/onboarding/`: `records_map.dart` (the map, its views and their words), `onboarding_data.dart` (`DeviceStart`, `StartupProblem`, words for a device with no profile), `onboarding_actions.dart` (`OnboardingActions`, everything these screens can ask for, and the real build's `LocalOnboardingActions`), `startup_pages.dart`, `greeting_page.dart`, `greeting_preview.dart`, `welcome_page.dart`, `setup_page.dart`, `google_page.dart`, `restore_page.dart`, `onboarding_demo.dart`. `lib/design_system/welcome_frame.dart` is the frame; `LocalBootstrap` stays in `lib/local/local_profile_view.dart`. Tested in `test/onboarding_data_test.dart`, `onboarding_pages_test.dart`, `onboarding_form_test.dart` and `onboarding_restore_test.dart`.
+
+- **Five-second questions.** Opening: is my data all right? Startup failure: what went wrong, what's safe, and what can I do? Greeting: what is this, and how do I begin? Welcome: how do I start, and which way is right for me? Local setup: what do you need from me, and what can wait? Google: what happens next, and what leaves this device? Restore: is this the right backup, what will I get back, and what won't I?
+- **What the standard doesn't cover here.** These are single steps with no records yet, so there are no tabs, KPI tiles, charts, tables, amount columns, `ListEnd`, Show values, shareable lists, or hidden-amounts and incomplete states. Tokens, cards, compact forms, errors on their field, one main action, large text, hit areas, the sweep and the demo all apply.
+- **Frame** (`WelcomeFrame`). On `canvas`: the logo, a Back row on a step, a step line where there is one, the title and a caption. `aside` sits beside the content at the same height on Windows from `DashboardGrid`'s medium width (7 + 5); otherwise, and always on Android, `lead` comes first and `stacked` follows in one column. With no `aside` it's one 640 column. Windows centers it in the window, and Android starts at the top.
+- **Where your records live** (`RecordsMap`, `recordsCard`). This device, Salapiya's service, Google and a backup file, each saying what it holds. A lit place on a solid line holds records or is getting them; a quiet one on a dashed line doesn't. Views: `local`, `google`, `chosen`, `restore`, `restoreConnected`. Each box is as tall as its text, the lines take the card's spare height, and one line sits under it (`recordsCaption`). Screen readers hear the full sentence (`recordsWords`). A phone gets one row of circles; at 150% text and up, just the sentence, because the labels have no room.
+- **Opening** (`OpeningScreen`). "Opening Salapiya · Checking what's on this device". After 5 seconds it adds that nothing is lost by closing, which is true because creating, restoring, removing and migrating all resume or roll back. It claims nothing else.
+- **Startup failure** (`StartupFailurePage`). A title per problem (`StartupProblem`), then What happened, What's safe and What you can do, then Try again. Show details holds the rule's words and, on Windows, the folder. Try again is the only action: the rules refuse a restore once anything is saved, and offering one where the key can't be read could overwrite the only key if the OS credential comes back. An exception's own text never shows, because it could quote a key. A saved stage of `removing` or `restoring` decides the words, whatever went wrong under it. `startupMessages` holds the table to the rule files.
+- **Greeting** (`GreetingPage`, `GreetingPreview`). The first screen with no profile open. On Windows from 1008 wide: the logo, a large headline ("Keep track of your money and plans in one place."), the four sections with a line each, Get started and that Salapiya never moves money, on the left (5), beside a sample of the app on the right (7). Otherwise, and always on Android, it stays simple, with no sample: the logo, the headline and the four sections, centered, with Get started pinned at the bottom. It fits one screen; only a very short screen or large text scrolls, and the button stays in reach.
+- **The sample** (Windows only) is built from the real cards, tinted as the screen's one accent, and marked Sample. Its figures are made up and fixed, not the demo's records. It can't be pressed or focused, and screen readers hear only that it's a sample with made-up figures, so nobody can take it for a real balance.
+- **The greeting** is the app's one introduction, so Welcome doesn't repeat it. There's nowhere to save that it was seen before a profile exists, so it shows each time the app opens with no profile. With work in progress (a sign-in, or a first run or restore that stopped part-way) it steps aside for Welcome, which has something to say. Someone who has just removed a profile goes straight to Welcome.
+- **Welcome** (`WelcomePage`). "Set up Salapiya". Three rows with a "Best if" line, the privacy card under them (`SideStack`) and the map beside them. Hovering or focusing a row shows it on the map.
+- **What Welcome reads** (`DeviceStart`, read only, after the first frame). The saved stage, whether a profile's files are there, and the kept profile's name. The key never leaves `readDeviceStart`, and a test on a real store holds it to what `create` does. An earlier profile's files turn Start on this device off, with why; Google and Restore stay. A first run or restore that stopped part-way leaves only Start on this device, which carries on. "The last profile on this device was removed" shows after a removal. A sign-in that survived a restart shows with Continue.
+- **Local setup** (`ProfileSetupPage`). Display name and Theme, which shows as it's picked and goes back on leaving, because only a new profile keeps it. A note on pesos, Manila time, encryption and that no accounts are added. A refusal about the name goes on its field; anything else in a notice above the buttons. If a first try stops part-way, the name and theme are fixed, the button reads Try again, and it calls `reopen`, because creating again would be refused by the check the first try set. Leaving then doesn't ask, because nothing is lost.
+- **Google** (`GooglePage`). One page by state, using Chat 14's `phaseOf` and `offered`: What happens next with Google's own button, Waiting for Google with Cancel sign-in, Google account chosen with Review connection and Don't connect. Android says the same: Google opens in the browser. Review connection looks the account up, then opens the disclosure with what this path does: a profile found downloads, and a new account names the profile it creates. Every fact of the disclosure stays. When the profile opens, the page closes and the shell shows the first download.
+- **What leaves first.** Signing in tells Google nothing about records. Reviewing lists the device's type under the account's sign-ins, before the disclosure, because `boundary()` registers it. The steps and the map both say so.
+- **Words without a profile** (`noProfileNote`, `noProfileError`). A device with no profile has no records to reassure anyone about, so these say nothing changed. An error left from opening the app waits until something is tried.
+- **Restore** (`RestorePage`). Step 1: the file, then the secret, then Open backup, with What comes back under them. A wrong secret errors on its field and the file stays chosen. Step 2: the backup's name, when it was saved, what's in it, What doesn't come back and, for a connected backup, the Google account and what's checked after signing in. A dialog says what changes, what stays and how to undo it. Then a one-column finished page with only what applies.
+- **What a restore checks first.** `$owner.sqlite` being there means the rules would refuse it after doing all the work, so the review says so and offers Choose another backup only.
+- **The secret.** Masked, no keyboard learning, no draft, cleared the moment the backup opens. The opened backup goes after restoring, or with the page.
+- **Interruption.** Back is off while restoring. A restore that stops before its checkpoint changed nothing; after it, startup finishes it. On the page, Try again calls `reopen`, with no second restore and no dialog.
+- **Offline.** Opening, the failure screen, Welcome, local setup and Restore all work. Google sign-in, lookup, connecting and the first download need a connection.
+- **Privacy.** No email or id on Opening, the failure screen, Welcome or setup. The Google page shows the chosen account's email. Restore's review and finished page show the email saved in a connected backup, only after its secret has opened it. The profile id and format number never show.
+- **Demo build.** First-run preview opens these pages on `DemoOnboarding`, with a demo-only Show a state menu covering each state above. It can't show real sign-in, a browser, the system's file window, a real secret or restore, a real failure, or a restart. Saving says nothing happened.
+- **PRODUCT §12's tutorial.** Not built here: the starting goal, the guided first steps, the Getting started checklist and the replayable tour. Empty states, in-place help, Help and the demo build are what exists.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -1127,6 +1156,10 @@ An optional `discardDraft` adds Discard draft beside Keep draft & close, for for
 
 `kit/modals.dart`. For a consequential action behind a phrase: focus starts on Cancel, the destructive button stays off until the phrase is typed exactly, and the field's controller lasts through the closing animation. `ModalAction.ready`, optional, keeps any modal's primary off until it's true; other modals don't change. `HelpTextField` gains `secret` (no suggestions, autocorrect or keyboard learning) and `obscured`. `ProfileInitial(onAccent:)` uses `surface` on the tinted card, as `IconBadge` does.
 
+### Secret field and modal paragraphs (Chat 15)
+
+`SecretField` in `kit/secret_field.dart` and `ModalParagraphs` in `kit/modals.dart`, moved from `backup_pages.dart` and `connection_tab.dart`, same look. `showConnectionDisclosure` and `WhatIsShared` moved to `connection_pages.dart`, same words, so every path that connects says the same; `lead` adds what a path does. `openBackup` in `profile_actions.dart` keeps a wrong secret's handling in one place. `HelpTextField` gains `textCapitalization`.
+
 ### Section page (`SectionPage`; Chat 7)
 
 A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
@@ -1329,7 +1362,14 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Original command, original intent | Change | Needs review |
 | Resume this original command | Send this change | |
 | Cloud profile | The profile on this Google account | |
-| Google identity | Google account | Sign-in messages change in Chat 15 |
+| Google identity | Google account | |
+| Create a local offline profile | Start on this device | Welcome's row |
+| Create local profile | Create profile | The setup form's button |
+| Select Google account, Review selected Google account | Sign in with Google, Review connection | The button is Google's own artwork |
+| Cancel connection (before any connection) | Don't connect | Signs out of Google on this device; nothing else changes |
+| Recovery coverage, committed commands, Archive format | What comes back, What doesn't come back | Restore's review. The format and profile id never show |
+| Private space | Salapiya, your profile | |
+| Porcelain, Midnight | Light, Dark | Theme, as on Profile |
 
 ### Tone rules
 
@@ -1425,6 +1465,8 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Profile: one row per change to check, in plain labels | `ReviewRow`, `reviewRow`, `changeReasons` | UI aggregation (Chat 14) |
 | Profile: when the last backup on this device was saved, and whether records changed since | `lastBackup`, from `life_device` | Readable (approved, Chat 14) |
 | Profile: what's inside a backup | `BackupContents`, `filesLine` | UI aggregation (Chat 14) |
+| Onboarding: what an installation holds before a profile is open: its saved stage, whether a profile's files are there, the kept profile's name | `DeviceStart`, `readDeviceStart` (`lib/onboarding/onboarding_data.dart`), read only; the key never leaves it | UI aggregation (approved, Chat 15) |
+| Onboarding: a backup's Google account, and how many changes it holds to check after signing in | `BackupContents.email`, `.toCheck`, from the opened backup | UI aggregation (Chat 15) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1448,8 +1490,8 @@ Remove this section when the redesign is finished.
 | 12 | Life A: Calendar, Tasks, reminders. Three stages: 12a Calendar, 12b Tasks, 12c Reminders | Done |
 | 13 | Life B: Learning, Books, Career. Three stages: 13a Learning and Books, 13b Career, 13c Documents and cleanup | Done |
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`). Two stages: 14a frame, Profile, Help; 14b Connection, Devices, Backup, rule messages | Done |
-| 15 | Onboarding: welcome, local setup, Google, restore | Next |
-| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
+| 15 | Onboarding: welcome, local setup, Google, restore. Two stages: 1 frame, opening, startup failure, Welcome, local setup; 2 Google, Restore, demo preview, retirements | Done |
+| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Next |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
 | 17 | Final review | Planned |
 
@@ -1478,7 +1520,7 @@ Error messages written in rule files stay as they are until the chat that works 
 | 12 | `life_domain.dart`, `life_controller.dart`, `device_reminders.dart`, `life_store.dart` | Done: 18, plus Life's reasons on screen through `lifeReason`. 1 was already plain and 18 only a developer can reach stay as they are | `lifeRuleFields` puts them on their fields, and a test holds that table, the 72 calls and the reasons to the rules and the SQL |
 | 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | Done: 28 | `lifeRuleFields` puts them on their fields, and a test holds that table to the rules |
 | 14 | `connected_store.dart`, `local_store.dart`, `connected_runtime.dart`'s connection messages, what Check a backup reaches in `local_profiles.dart`, and 7 of Life's in `life_domain.dart` and `life_store.dart` | Done, with the status labels. A few only a developer can reach stay as they are | `rule_messages_test` holds them to the glossary, and the reasons on Needs review to the SQL |
-| 15 | `connected_runtime.dart`'s sign-in messages (4 distinct, 5 calls, one also in `connected_store.dart`), and `local_profiles.dart`'s startup and restore messages | Left | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
+| 15 | `connected_runtime.dart`'s sign-in messages (4 distinct, 5 calls, one also in `connected_store.dart`), and `local_profiles.dart`'s startup, create, retrieve, restore and removal messages, with 3 in `local_store.dart` and 3 in `bounded_file_read.dart` | Done: 26, with 1 already plain and 5 only a developer can reach staying as they are | `startupMessages` holds the failure screen to the rules' words, and `noProfileErrors` holds the connection's messages to theirs |
 
 Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
 
@@ -1657,6 +1699,27 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 cal
 | 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-02 | Chat 15's frame is "Where your records live": a live map of This device, Salapiya's service, Google and a backup file, beside the choices on Windows and slim above them on Android. It replaces the side panel and its slogans. A lit place on a solid line holds records; a quiet one on a dashed line doesn't, and every place says so in words. | Approved |
+| 2026-11-02 | Owner review of the sample: no empty space. The choices sit tight at the top of their card with "Your profile and your privacy" under them (`SideStack`), the map fills its card, each box is as tall as its text, and the words under it are one line. Screen readers hear the full sentence. | Approved |
+| 2026-11-02 | Welcome is three rows with a "Best if" line, and shows only what the rules allow: a read-only look at the saved stage and the profile's folder turns Start on this device off, with why, when an earlier profile's files are still there. It never holds the key. | Approved |
+| 2026-11-02 | The startup failure screen says What happened, What's safe and What you can do, and offers only Try again. Restoring there is refused by the rules, and could overwrite the only key if the OS credential comes back. The words no longer promise it. An exception's own text never shows, because it could quote a key. | Approved |
+| 2026-11-02 | A failed Create carries on with `reopen`, with its name and theme fixed, because creating again would be refused by the check the first try set. | Done |
+| 2026-11-02 | `local_profiles.dart`'s startup, create, retrieve, restore and removal messages, and `local_store.dart`'s three that said to restore, are reworded as approved. Removal's were left by Chat 14; they show on the failure screen too. | Approved |
+| 2026-11-02 | Owner review: stage 2 and the greeting look good, which finishes Chat 15. | Approved |
+| 2026-11-02 | Owner review: stage 1 of Chat 15 looks good. | Approved |
+| 2026-11-02 | The Google step is one page by state, with the Connection tab's disclosure and a tailored title. The disclosure says whether a profile was found, or names the one it creates, and keeps every fact. | Approved |
+| 2026-11-02 | Restore asks for the file, then the secret, so a wrong secret keeps the file. It reviews what comes back and what doesn't, confirms in a dialog, and ends on a short finished page. A connected backup's Google email shows on those pages. | Approved |
+| 2026-11-02 | Restore's first step has What comes back under the form, and its finished page drops the map, because each left a large empty space. Review's buttons sit inside the card. | Done |
+| 2026-11-02 | First-run preview opens the real pages with Show a state. `showUpcoming`, `FirstRunPage`, `LocalRecoveryView`, `LocalRecoveryBody`, `ConnectionBody` and `ConnectionPage`'s no-profile branch are retired. `UpcomingView` and `ProfileExperience` stay. | Approved |
+| 2026-11-02 | A first run or restore that stopped part-way leaves only Start on this device on Welcome, which carries on, because Google and Restore would be refused. | Done |
+| 2026-11-02 | The sign-in messages and `bounded_file_read.dart`'s three are reworded as approved. Messages that assume a profile read differently on these screens only (`noProfileErrors`). | Approved |
+| 2026-11-02 | Owner's request: a greeting before Welcome, with the logo and a button. Get started leads on. Welcome becomes "Set up Salapiya", and the greeting takes "It never moves money" and the app's introduction. | Approved |
+| 2026-11-02 | Owner review: the first greeting was too plain and compact. It's now a live app preview: the words on the left and a Sample of the real cards on the right, which is the one accent. Phones get a shorter sample with the button pinned at the bottom. | Approved |
+| 2026-11-02 | Owner review of the greeting: the sample's tiles have the real tiles' change line, so amounts start level with their sparklines. On Android it stays simple: no sample, one screen, and a `headlineSmall` headline. | Approved |
+| 2026-11-02 | Owner's request: Windows opens maximized, not full screen, so the taskbar stays. The runner shows the window with `SW_SHOWMAXIMIZED`. The app doesn't remember a window size, so this is every launch; Restore Down goes to the size the window was created with. | Approved |
+| 2026-11-02 | The greeting steps aside when work is in progress, and after a removal in the same session, because Welcome then has something to say. | Done |
+| 2026-11-02 | Owner review: setup's Theme shows as it's picked, and leaving puts it back. Only a new profile keeps it. | Done |
+| 2026-11-02 | Android keeps the browser for Google sign-in in Chat 15. The system account sheet changes the auth flow, so it waits for its own stage under Needs approval. | Approved |
 | 2026-11-02 | Owner review: stage 14b looks good, including Save a backup's new structure, which finishes Chat 14. | Approved |
 | 2026-11-02 | Owner review: stage 14a looks good. | Approved |
 | 2026-11-02 | Connection is Sync 8 beside Waiting and to check 4, Needs review, then Sync on this device 6 beside What's shared 6. Devices is Signed-in devices 8 beside Lost a device? 4, then Remove or delete. Backup & recovery is Your backups 8 beside How to get it back 4, then What's in a backup. | Approved |

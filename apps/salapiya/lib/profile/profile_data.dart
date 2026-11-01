@@ -414,8 +414,16 @@ class BackupContents {
     required this.filesListed,
     required this.connected,
     required this.thisProfile,
+    this.email,
+    this.toCheck = 0,
   });
   final String name;
+
+  /// The Google account a connected backup belongs to.
+  final String? email;
+
+  /// Changes a connected backup holds, checked after signing in.
+  final int toCheck;
 
   /// The moment it was made, as recorded in it.
   final String created;
@@ -425,9 +433,12 @@ class BackupContents {
   final int? filesListed;
   final bool connected, thisProfile;
 
-  factory BackupContents.from(Map<String, dynamic> bundle, String owner) {
+  /// [owner] is the open profile, or null with none open.
+  factory BackupContents.from(Map<String, dynamic> bundle, String? owner) {
     final coverage = bundle['financialCoverage'] as Map?;
     final life = bundle['life'] as Map?;
+    final connection = bundle['connection'] as Map?;
+    int count(Object? list) => (list as List?)?.length ?? 0;
     return BackupContents(
       name: bundle['name'] as String,
       created: bundle['createdUtc'] as String,
@@ -437,6 +448,11 @@ class BackupContents {
       filesListed: coverage?['supportingFileMetadata'] as int?,
       connected: const [2, 3].contains(bundle['format']),
       thisProfile: bundle['owner'] == owner,
+      email: connection?['email'] as String?,
+      toCheck:
+          count(bundle['intents']) +
+          count(bundle['sharedIntents']) +
+          (connection == null ? 0 : count(life?['intents'])),
     );
   }
 }

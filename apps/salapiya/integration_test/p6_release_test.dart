@@ -55,15 +55,20 @@ void main() {
             localRuntime: runtime,
           ),
         );
+        await checkScreen('greeting');
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
         await checkScreen('welcome');
-        await localTap(tester, find.text('Continue with Google'));
-        await checkScreen('connection');
-        expect(runtime.session, isNull);
-        await back();
+        // A build that can't connect has nowhere to go from this row.
+        if (runtime.connected.configured) {
+          await localTap(tester, find.text('Continue with Google'));
+          await checkScreen('connection');
+          expect(runtime.session, isNull);
+          await back();
+        }
         await localTap(tester, find.text('Restore from backup'));
         await checkScreen('restore');
         await back();
-        await localTap(tester, find.text('Create a local offline profile'));
+        await localTap(tester, find.text('Start on this device'));
         await tester.enterText(
           find.byType(TextField),
           'P6 synthetic release check',
@@ -72,7 +77,7 @@ void main() {
         expect(find.text('Discard your changes?'), findsOneWidget);
         await localTap(tester, find.text('Keep editing'));
         await checkScreen('profile-setup');
-        await localTap(tester, find.text('Create local profile'));
+        await localTap(tester, find.text('Create profile'));
         await localWait(tester, () => runtime.session != null);
         await checkScreen('overview-empty');
         await localTap(tester, find.byKey(const ValueKey('nav-money')));

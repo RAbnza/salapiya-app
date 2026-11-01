@@ -18,6 +18,7 @@ export 'option_picker.dart';
 export 'provider_sign_in.dart';
 export 'rows.dart';
 export 'section_page.dart';
+export 'secret_field.dart';
 export 'states.dart';
 export 'status.dart';
 export 'surfaces.dart';

@@ -176,7 +176,9 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  // Maximized, not full screen, so the taskbar stays. Restore Down goes back
+  // to the size the window was created with.
+  return ShowWindow(window_handle_, SW_SHOWMAXIMIZED);
 }
 
 // static

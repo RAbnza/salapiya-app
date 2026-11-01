@@ -190,7 +190,7 @@ void main() {
       );
       await localSettle(tester);
       expect(find.byType(OverviewDashboard), findsOneWidget);
-      expect(find.text('Create a local offline profile'), findsNothing);
+      expect(find.text('Start on this device'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await localSettle(tester);

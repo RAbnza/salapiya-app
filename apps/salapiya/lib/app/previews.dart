@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../design_system/components.dart';
-import '../design_system/craft.dart';
 import '../design_system/theme.dart';
 import '../prototype/fixtures.dart';
 import '../prototype/scenarios.dart';
@@ -343,91 +342,6 @@ class _DemoActionPageState extends State<DemoActionPage> {
             ),
         ],
       ),
-    ),
-  );
-}
-
-class FirstRunPage extends StatelessWidget {
-  const FirstRunPage({super.key, required this.session});
-  final PrototypeSession session;
-  @override
-  Widget build(BuildContext context) => DemoPage(
-    title: 'First-run preview',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: BrandMark(size: 72),
-        ),
-        const SizedBox(height: 16),
-        const SectionTitle(
-          'Your money, on your terms.',
-          caption: 'Three distinct ways to begin. This preview uses only synthetic information.',
-        ),
-        for (final entry in [
-          (
-            'Create a local offline profile',
-            Icons.devices_outlined,
-            'Start without internet, Google or email. The fictional Amihan profile begins empty.',
-            OverviewScenario.empty,
-          ),
-          (
-            'Continue with Google',
-            Icons.cloud_outlined,
-            'Simulated account: Amihan. Retrieve an existing profile without first creating a disposable local one. No credentials requested.',
-            OverviewScenario.incomplete,
-          ),
-          (
-            'Restore from backup',
-            Icons.restore_outlined,
-            'Synthetic manifest: Amihan · 20 Oct 2026 · schema preview v1 · 3 accounts. Attachment bytes omitted. Group access still needs online identity. No file or secret requested.',
-            OverviewScenario.local,
-          ),
-        ])
-          SourceLink(
-            title: entry.$1,
-            subtitle: entry.$3,
-            icon: entry.$2,
-            onTap: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                animationStyle: MediaQuery.disableAnimationsOf(context)
-                    ? AnimationStyle.noAnimation
-                    : null,
-                builder: (context) => AlertDialog(
-                  scrollable: true,
-                  title: Text(entry.$1),
-                  content: Text(
-                    '${entry.$3}\n\nSwitch only the in-memory scenario? No real profile, authentication or restore will occur.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Explore simulated result'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirm == true && context.mounted) {
-                session.select(entry.$4);
-                Navigator.pop(context);
-              }
-            },
-          ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () {
-            session.select(OverviewScenario.local);
-            Navigator.pop(context);
-          },
-          child: const Text('Skip to populated demo'),
-        ),
-      ],
     ),
   );
 }

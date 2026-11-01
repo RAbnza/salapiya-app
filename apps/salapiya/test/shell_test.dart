@@ -174,8 +174,13 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       await tapVisible(tester, find.text('First-run preview'));
+      await tapVisible(tester, find.text('Get started'));
       await tapVisible(tester, find.text('Restore from backup'));
-      expect(find.text('Restore deliberately'), findsOneWidget);
+      expect(find.text('Choose backup file'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
