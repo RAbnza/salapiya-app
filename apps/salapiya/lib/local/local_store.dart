@@ -78,7 +78,7 @@ class LocalStore {
             localSchemaVersion,
           ].contains(versions.single['version'])) {
         reject(
-          'Unsupported database version. Preserve this database and use a compatible Salapiya version.',
+          'This version of Salapiya can’t open your records. Update Salapiya. Your files are safe.',
         );
       }
       await _migrateConnection(tx);
@@ -137,7 +137,7 @@ class LocalStore {
     final rows = await tx.getAll('SELECT id FROM local_profile');
     if (rows.isNotEmpty) {
       if (rows.single['id'] != owner) {
-        reject('Database profile identity mismatch.');
+        reject('These records belong to a different profile. Your files are safe.');
       }
       return;
     }
@@ -160,12 +160,12 @@ class LocalStore {
     if ((await db.get('PRAGMA quick_check')).values.single != 'ok' ||
         (await db.getAll('PRAGMA foreign_key_check')).isNotEmpty) {
       reject(
-        'Database integrity check failed. Preserve your files and restore a verified backup.',
+        'Salapiya found a problem with your records. Keep your files as they are and restore a backup you’ve checked.',
       );
     }
     final profile = await db.getAll('SELECT id,revision FROM local_profile');
     if (profile.length != 1 || profile.single['id'] != owner) {
-      reject('Database identity does not match the protected profile.');
+      reject('These records belong to a different profile. Your files are safe.');
     }
     final commands = await db.get(
       'SELECT count(*) AS n FROM local_command WHERE owner_id=?',
@@ -178,7 +178,7 @@ class LocalStore {
     if (commands['n'] != profile.single['revision'] ||
         seals['n'] != commands['n']) {
       reject(
-        'Incomplete financial command evidence. Existing data is preserved.',
+        'Some of your records are incomplete. Your files are safe. Restore a backup you’ve checked.',
       );
     }
     final snap = await snapshot();
@@ -188,7 +188,7 @@ class LocalStore {
               r.postings.where((p) => p.date == date).map((p) => p.amount),
             ) !=
             BigInt.zero) {
-          reject('Unbalanced financial evidence.');
+          reject('Your records don’t add up. Your files are safe. Restore a backup you’ve checked.');
         }
       }
     }
@@ -379,7 +379,7 @@ class LocalStore {
     if (canonicalJson(evidence(snapshot)) !=
         canonicalJson(evidence(await _snapshot(tx)))) {
       reject(
-        'Recovered financial evidence differs from its validated commands.',
+        'This backup doesn’t match its own records. Nothing was restored.',
       );
     }
   });
@@ -522,6 +522,47 @@ class LocalStore {
           as String,
     ) as Map,
   );
+  /// Tells a later look whether anything a backup holds has changed.
+  Future<String> _backupMark(SqliteReadContext tx) async {
+    final row = await tx.get(
+      '''SELECT (SELECT count(*) FROM local_command WHERE owner_id=?1) AS commands,
+      (SELECT count(*) FROM connected_intent WHERE profile_id=?1) AS intents,
+      (SELECT count(*) FROM life_revision WHERE owner_id=?1) AS life,
+      (SELECT count(*) FROM life_intent WHERE owner_id=?1) AS changes''',
+      [owner],
+    );
+    return '${row['commands']}:${row['intents']}:${row['life']}:${row['changes']}';
+  }
+
+  /// Notes on this device that a backup was saved. It stays in `life_device`,
+  /// which neither syncs nor goes into a backup beyond `life:view`.
+  Future<void> recordBackup() => db.writeTransaction((tx) async {
+    await tx.execute(
+      "INSERT INTO life_device VALUES('backup:last',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      [
+        jsonEncode({
+          'at': DateTime.now().toUtc().toIso8601String(),
+          'mark': await _backupMark(tx),
+        }),
+      ],
+    );
+  });
+
+  /// When the last backup on this device was saved, and whether records have
+  /// changed since. Null when none was noted.
+  Future<({String at, bool changed})?> lastBackup() =>
+      db.readTransaction((tx) async {
+        final rows = await tx.getAll(
+          "SELECT value FROM life_device WHERE key='backup:last'",
+        );
+        if (rows.isEmpty) return null;
+        final note = jsonDecode(rows.single['value'] as String) as Map;
+        return (
+          at: note['at'] as String,
+          changed: note['mark'] != await _backupMark(tx),
+        );
+      });
+
   Future<String> displayName() async =>
       (await db.get('SELECT name FROM local_profile WHERE id=?', [
             owner,
@@ -552,7 +593,7 @@ class LocalStore {
           (v) =>
               v.length > (operation.startsWith('cash-import:') ? 40000 : 20000),
         )) {
-      reject('Draft exceeds the supported size.');
+      reject('This draft is too long to save. Shorten it and try again.');
     }
     await db.writeTransaction((tx) async {
       if ((await tx.getAll('SELECT id FROM local_command WHERE id=?', [

@@ -104,8 +104,14 @@ void main() {
         if (runtime.session == null) {
           await localTap(tester, find.text('Continue with Google'));
         } else {
-          await localTap(tester, find.byTooltip('Profile & utilities'));
-          await localTap(tester, find.text('Connection'));
+          await localTap(tester, find.byKey(const ValueKey('shell-profile')));
+          final menu = find.byKey(const ValueKey('profile-menu-Connection'));
+          await localTap(
+            tester,
+            menu.evaluate().isNotEmpty
+                ? menu
+                : find.byKey(const ValueKey('Connection')),
+          );
         }
         final c = runtime.connected;
         if (reuseSession) {
@@ -114,11 +120,15 @@ void main() {
         } else {
           await localTap(
             tester,
-            find.text(
-              c.binding == null
-                  ? 'Select Google account'
-                  : 'Reconnect Google account',
-            ),
+            runtime.session == null
+                ? find.text('Select Google account')
+                : find.byKey(
+                    ValueKey(
+                      c.binding == null
+                          ? 'connection-connect'
+                          : 'connection-reconnect',
+                    ),
+                  ),
           );
           debugPrint('P2_GOOGLE_SELECT_ACCOUNT role=$role action=$action');
           await tester.runAsync(() async {
@@ -140,7 +150,10 @@ void main() {
             }
             debugPrint('P2_GOOGLE_WRONG_ACCOUNT_REJECTED role=$role');
             await localSettle(tester);
-            await localTap(tester, find.text('Reconnect Google account'));
+            await localTap(
+              tester,
+              find.byKey(const ValueKey('connection-reconnect')),
+            );
             debugPrint('P2_GOOGLE_SELECT_BOUND_ACCOUNT role=$role');
             await tester.runAsync(() async {
               final started = DateTime.now();
@@ -170,8 +183,11 @@ void main() {
         if (action == 'collision') {
           expect(c.cloud, isNotNull);
           expect(c.cloud!['id'], isNot(before!['owner']));
-          expect(find.textContaining('no automatic merge'), findsWidgets);
-          await localTap(tester, find.text('Cancel connection'));
+          expect(find.textContaining('never merges'), findsWidgets);
+          await localTap(
+            tester,
+            find.byKey(const ValueKey('connection-keepProfile')),
+          );
           final after = await LocalBackup.capture(
             runtime.session!.localFinance.store,
           );
@@ -191,7 +207,14 @@ void main() {
         } else {
           if (c.binding == null) {
             await localTap(tester, find.text('Review connection'));
-            await localTap(tester, find.text('Confirm connection'));
+            await localTap(
+              tester,
+              find.text(
+                runtime.session == null
+                    ? 'Confirm connection'
+                    : 'Turn on sync',
+              ),
+            );
             await tester.runAsync(() async {
               while (c.busy) {
                 await Future<void>.delayed(const Duration(milliseconds: 100));

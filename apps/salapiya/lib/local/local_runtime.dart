@@ -180,6 +180,10 @@ class LocalSession extends PrototypeSession {
     runtime.connected.addListener(notifyListeners);
   }
   final LocalRuntime runtime;
+
+  /// The connected account was deleted while this app was open. Not saved:
+  /// nothing on the device records it, so a restart can't know.
+  bool accountDeleted = false;
   LocalFinancialController get localFinance =>
       finance as LocalFinancialController;
   @override

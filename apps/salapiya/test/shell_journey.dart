@@ -161,9 +161,9 @@ Future<void> shellJourney(WidgetTester tester) async {
   await openProfile(tester);
   await tapVisible(tester, find.text('Dark'));
   expect(settings.themeMode, ThemeMode.dark);
-  await tapVisible(tester, find.text('Reduce motion'));
+  await tapVisible(tester, find.byKey(const ValueKey('profile-reduce-motion')));
   expect(settings.reduceMotion, isTrue);
-  await tapVisible(tester, find.text('Craft effects'));
+  await tapVisible(tester, find.byKey(const ValueKey('demo-craft-effects')));
   expect(settings.effects, isFalse);
   await tapVisible(tester, find.text('First-run preview'));
   expect(find.text('Create a local offline profile'), findsOneWidget);

@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'buttons.dart';
+import 'compact_form.dart';
+import 'fields.dart';
 import 'focus_ring.dart';
 
 /// A modal button. The modal closes with [value] unless [onPressed] returns
@@ -14,15 +17,20 @@ class ModalAction<T> {
     this.value,
     this.destructive = false,
     this.onPressed,
+    this.ready,
   });
   const ModalAction.cancel({this.label = 'Cancel'})
     : value = null,
       destructive = false,
-      onPressed = null;
+      onPressed = null,
+      ready = null;
   final String label;
   final T? value;
   final bool destructive;
   final FutureOr<bool> Function()? onPressed;
+
+  /// When set, the button stays off until this is true. Null is always on.
+  final ValueListenable<bool>? ready;
 }
 
 /// What a modal is for; [showAdaptiveModal] picks the surface from it.
@@ -65,15 +73,21 @@ class ModalScaffold<T> extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final sheet = presentation == ModalPresentation.sheet;
     final cancelFirst = primary?.destructive ?? false;
+    Widget primaryNow(bool ready) => AppButton(
+      primary!.label,
+      variant: primary!.destructive
+          ? AppButtonVariant.destructive
+          : AppButtonVariant.primary,
+      onPressed: ready ? () => _press(context, primary!) : null,
+      expand: sheet,
+    );
     final primaryButton = primary == null
         ? null
-        : AppButton(
-            primary!.label,
-            variant: primary!.destructive
-                ? AppButtonVariant.destructive
-                : AppButtonVariant.primary,
-            onPressed: () => _press(context, primary!),
-            expand: sheet,
+        : primary!.ready == null
+        ? primaryNow(true)
+        : ValueListenableBuilder<bool>(
+            valueListenable: primary!.ready!,
+            builder: (_, ready, _) => primaryNow(ready),
           );
     final secondaryButton = secondary == null
         ? null
@@ -234,5 +248,65 @@ Future<T?> showAdaptiveModal<T>(
     maxWidth: purpose == ModalPurpose.choice
         ? Space.formMaxWidth
         : Space.dialogMaxWidth,
+  );
+}
+
+/// A consequential action behind a typed phrase. It opens with focus on
+/// Cancel and its button stays off until [phrase] is typed exactly. True
+/// means confirmed.
+Future<bool> showTypedConfirmation(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String phrase,
+  required String action,
+}) async {
+  final ready = ValueNotifier(false);
+  final done = await showAdaptiveModal<bool>(
+    context,
+    title: title,
+    body: _TypedBody(body: body, phrase: phrase, ready: ready),
+    primary: ModalAction(action, value: true, destructive: true, ready: ready),
+  );
+  return done == true;
+}
+
+class _TypedBody extends StatefulWidget {
+  const _TypedBody({
+    required this.body,
+    required this.phrase,
+    required this.ready,
+  });
+  final String body, phrase;
+  final ValueNotifier<bool> ready;
+  @override
+  State<_TypedBody> createState() => _TypedBodyState();
+}
+
+class _TypedBodyState extends State<_TypedBody> {
+  // Owned here, so it outlives the closing animation.
+  final typed = TextEditingController();
+  @override
+  void dispose() {
+    typed.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(widget.body),
+      const SizedBox(height: Space.md),
+      CompactForm(
+        child: HelpTextField(
+          key: const ValueKey('typed-confirmation'),
+          label: 'Type ${widget.phrase}',
+          controller: typed,
+          onChanged: (text) => widget.ready.value = text == widget.phrase,
+        ),
+      ),
+    ],
   );
 }

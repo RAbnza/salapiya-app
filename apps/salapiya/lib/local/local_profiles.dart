@@ -478,7 +478,7 @@ class LocalBackup {
   static SecretKey _key(String value) {
     final bytes = base64Url.decode(value.trim());
     if (bytes.length != 32) {
-      reject('Enter the complete generated recovery secret.');
+      reject('Enter the whole recovery secret.');
     }
     return SecretKey(bytes);
   }
@@ -604,7 +604,7 @@ class LocalBackup {
         (b['name'] as String).length > 200 ||
         DateTime.tryParse(b['createdUtc'] as String) == null ||
         !(b['createdUtc'] as String).endsWith('Z')) {
-      reject('Unsupported or invalid local archive.');
+      reject('This version of Salapiya can’t open this backup.');
     }
     final commands = b['commands'] as List, drafts = b['drafts'] as List;
     if (b['life'] case final Map life) {
@@ -628,7 +628,7 @@ class LocalBackup {
                     'financialFile';
               }).length) {
         reject(
-          'Unsupported or inconsistent financial archive coverage. Attachment bytes are not restored by this archive.',
+          'This backup’s file list doesn’t add up. Nothing changed.',
         );
       }
     }
@@ -636,7 +636,7 @@ class LocalBackup {
     if (commands.length > 20000 ||
         drafts.length > 100 ||
         b['revision'] != '${commands.length}') {
-      reject('Archive counts or version are incompatible.');
+      reject('This version of Salapiya can’t open this backup.');
     }
     final ids = <String>{};
     for (var i = 0; i < commands.length; i++) {
@@ -647,7 +647,7 @@ class LocalBackup {
           (connected ? c.expectedVersion < 0 : c.expectedVersion != i) ||
           c.payload != r['payload'] ||
           DateTime.tryParse(r['recorded_at'] as String) == null) {
-        reject('Archive command history is incompatible.');
+        reject('This backup’s history is damaged. Nothing changed.');
       }
     }
     if (connected) {
@@ -660,16 +660,16 @@ class LocalBackup {
                   jsonDecode(remote['enrollment_snapshot'] as String),
                 ) !=
                 canonicalJson(commands)) {
-          reject('Invalid unpublished enrollment recovery graph.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       if (!RegExp(r'^[0-9a-f-]{36}$')
               .hasMatch(remote['remote_owner'] as String) ||
           remote['email'] is! String) {
-        reject('Invalid connected recovery identity.');
+        reject('This backup is damaged. Nothing changed.');
       }
       final intents = b['intents'] as List;
-      if (intents.length > 20000) reject('Unsupported recovery intent count.');
+      if (intents.length > 20000) reject('This backup is damaged. Nothing changed.');
       final intentIds = <String>{};
       var last = 0;
       for (final raw in intents) {
@@ -688,14 +688,14 @@ class LocalBackup {
             r['sequence_no'] is! int ||
             (r['sequence_no'] as int) <= last ||
             DateTime.tryParse(r['recorded_at'] as String) == null) {
-          reject('Invalid connected recovery intent.');
+          reject('This backup is damaged. Nothing changed.');
         }
         last = r['sequence_no'] as int;
       }
     }
     if (b['format'] == 3) {
       if ((b['sharedReviews'] as List? ?? []).length > 20000) {
-        reject('Unsupported private review history count.');
+        reject('This backup is damaged. Nothing changed.');
       }
       for (final raw in b['sharedReviews'] as List? ?? []) {
         final r = raw as Map;
@@ -703,12 +703,12 @@ class LocalBackup {
             r['owner_id'] != (b['connection'] as Map)['remote_owner'] ||
             r['id'] is! String ||
             r['reason'] is! String) {
-          reject('Invalid owned private review evidence.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       if ((b['sharedIntents'] as List).length > 20000 ||
           (b['sharedDrafts'] as List).length > 100) {
-        reject('Unsupported shared recovery counts.');
+        reject('This backup is damaged. Nothing changed.');
       }
       final sharedIds = <String>{};
       for (final raw in b['sharedIntents'] as List) {
@@ -719,14 +719,14 @@ class LocalBackup {
             payload['contract'] != 3 ||
             payload['group'] != r['group_id'] ||
             DateTime.tryParse(r['recorded_at'] as String) == null) {
-          reject('Invalid original shared recovery intent.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       for (final raw in b['sharedDrafts'] as List) {
         final r = raw as Map;
         if ((r['payload'] as String).length > 131072 ||
             DateTime.tryParse(r['updated_at'] as String) == null) {
-          reject('Invalid shared draft.');
+          reject('This backup is damaged. Nothing changed.');
         }
         jsonDecode(r['payload'] as String);
       }
@@ -735,7 +735,7 @@ class LocalBackup {
       final r = raw as Map;
       if (ids.contains(r['command_id']) ||
           (r['operation'] as String).length > 200) {
-        reject('Invalid restored draft.');
+        reject('This backup is damaged. Nothing changed.');
       }
       Map<String, String>.from(jsonDecode(r['values_json'] as String) as Map);
     }
@@ -748,7 +748,7 @@ class LocalBackup {
     validate(bundle);
     final bytes = utf8.encode(jsonEncode(bundle));
     if (bytes.length > maxBytes) {
-      reject('Archive exceeds the 32 MiB local recovery limit.');
+      reject('This backup is over the 32 MB limit. Nothing was saved.');
     }
     final box = await _cipher.encrypt(
       bytes,
@@ -768,7 +768,7 @@ class LocalBackup {
           _header.length,
           (i) => bytes[i] == _header[i],
         ).every((x) => x)) {
-      reject('Unsupported or incomplete backup file.');
+      reject('This file isn’t a complete Salapiya backup.');
     }
     final plain = await _cipher.decrypt(
       SecretBox.fromConcatenation(

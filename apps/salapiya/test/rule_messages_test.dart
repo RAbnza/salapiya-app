@@ -7,6 +7,8 @@ import 'package:salapiya/finance/import_flow.dart';
 import 'package:salapiya/finance/money_editor.dart';
 import 'package:salapiya/life/life_data.dart';
 import 'package:salapiya/life/life_forms.dart';
+import 'package:salapiya/profile/profile_actions.dart';
+import 'package:salapiya/profile/profile_data.dart';
 import 'package:salapiya/shared/shared_data.dart';
 import 'package:salapiya/shared/shared_private_form.dart';
 
@@ -24,6 +26,8 @@ void main() {
     'lib/shared/shared_private_domain.dart',
     'lib/life/life_domain.dart',
     'lib/life/life_controller.dart',
+    'lib/local/local_profiles.dart',
+    'lib/profile/profile_actions.dart',
   ];
   final rules = files.map((f) => File(f).readAsStringSync()).join('\n');
 
@@ -238,17 +242,6 @@ void main() {
       'Wrong private profile.',
       'Command ID reused with a changed payload.',
     };
-    // Chat 14 rewords what a restore can reach.
-    const chat14 = {
-      'Unsupported Life archive coverage.',
-      'Invalid Life archive history.',
-      'Invalid original Life recovery intent.',
-      'Invalid retained Life review decision.',
-      'Invalid authenticated Life receipt.',
-      'Reconnect with the bound identity.',
-      'Recovery receipt identity mismatch.',
-    };
-
     test('every message is reworded, or belongs to someone', () {
       const jargon = [
         'iana',
@@ -272,7 +265,7 @@ void main() {
       ];
       // Every call is counted once, so a new message can't slip by.
       expect(found, hasLength(74));
-      final mine = found.toSet().difference({...internal, ...chat14});
+      final mine = found.toSet().difference(internal);
       expect(mine, isNotEmpty);
       for (final message in mine) {
         for (final word in jargon) {
@@ -286,7 +279,7 @@ void main() {
         for (final file in lifeFiles)
           ...lifeMessages(File(file).readAsStringSync()),
       };
-      for (final message in {...internal, ...chat14}) {
+      for (final message in internal) {
         expect(found, contains(message));
       }
     });
@@ -313,6 +306,119 @@ void main() {
       final stored = sql + File('lib/life/life_store.dart').readAsStringSync();
       for (final reason in lifeReasons.keys) {
         expect(stored, contains(reason), reason: reason);
+      }
+    });
+  });
+
+  group('connection and backup', () {
+    const jargon = [
+      'binding',
+      'bound',
+      'cloud history',
+      'enrollment',
+      'evidence',
+      'identity',
+      'integrity',
+      'intent',
+      'mismatch',
+      'preserve',
+      'publication',
+      'receipt',
+      'synchroniz',
+    ];
+    // Only a developer reaches these: the forms set what they're about.
+    const internal = {
+      'Wrong profile owner.',
+      'This command ID already belongs to a different payload.',
+      'Archive replay requires an empty, unconnected recovery database.',
+      'Unsupported Life archive coverage.',
+    };
+    // Chat 15 rewords signing in.
+    const signIn = {
+      'Finish Google sign-in first.',
+      'Select the Google identity bound to this profile.',
+      'Reconnect with the Google identity already bound to this profile.',
+      'This identity already owns a profile. Review the existing cloud profile.',
+    };
+
+    test('every message the section shows uses the glossary (§7)', () {
+      for (final file in [
+        'lib/connected/connected_runtime.dart',
+        'lib/connected/connected_store.dart',
+        'lib/local/local_store.dart',
+      ]) {
+        final source = File(file).readAsStringSync();
+        final found = messages(source).toList();
+        expect(found, isNotEmpty, reason: file);
+        for (final message in found) {
+          if (internal.contains(message) || signIn.contains(message)) continue;
+          for (final word in jargon) {
+            expect(
+              message.toLowerCase(),
+              isNot(contains(word)),
+              reason: '$file: $message',
+            );
+          }
+        }
+      }
+    });
+
+    test('the sign-in messages left are still there for Chat 15', () {
+      final source = [
+        'lib/connected/connected_runtime.dart',
+        'lib/connected/connected_store.dart',
+      ].map((f) => File(f).readAsStringSync()).join();
+      for (final message in signIn) {
+        expect(source, contains(message));
+      }
+    });
+
+    test('what Check a backup can reach is in plain words', () {
+      final source = File('lib/local/local_profiles.dart').readAsStringSync();
+      const words = [
+        'Unsupported or incomplete',
+        'Archive command history',
+        'Archive counts',
+        'local archive',
+        'recovery graph',
+        'attachment bytes',
+      ];
+      for (final word in words) {
+        expect(source, isNot(contains(word)));
+      }
+    });
+
+    test('the sync rule still starts as the forms expect', () {
+      final store = File('lib/connected/connected_store.dart').readAsStringSync();
+      final forms = File('lib/finance/form_mechanics.dart').readAsStringSync();
+      final start = RegExp(r"startsWith\('([^']+)'\)").firstMatch(forms)![1]!;
+      expect(store, contains(start));
+    });
+
+    test('every field word is still in a rule', () {
+      for (final text in backupSecretErrors) {
+        expect(rules, contains(text));
+      }
+    });
+
+    test('every reason shown on Needs review is one that gets stored', () {
+      final sql = Directory('../../services/salapiya/p0/supabase/migrations')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.contains('p2_'))
+          .map((f) => f.readAsStringSync())
+          .join();
+      final stored = [
+        sql,
+        File('lib/connected/command_connector.dart').readAsStringSync(),
+        File('lib/connected/connected_runtime.dart').readAsStringSync(),
+        File('lib/local/local_profiles.dart').readAsStringSync(),
+      ].join();
+      for (final reason in changeReasons.keys) {
+        final made = reason.startsWith('restored_')
+            ? stored.contains(reason) || stored.contains('restored_\$')
+            : stored.contains(reason);
+        expect(made, isTrue, reason: reason);
       }
     });
   });

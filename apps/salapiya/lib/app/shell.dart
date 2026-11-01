@@ -110,6 +110,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     navigation.dispose();
     newFirstItem.dispose();
     sharedHub.dispose();
+    profileTab.dispose();
     if (widget.session == null) session.dispose();
     super.dispose();
   }
@@ -183,16 +184,26 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     );
   }
 
-  /// Opens Profile and settings, on [section] for a local profile.
-  void utilities([String section = 'Profile']) => open(
-    ProfileUtilities(
-      settings: widget.settings,
-      session: session,
-      initialSection: section,
-    ),
-    'profile',
-    title: section == 'Profile' ? 'Profile and settings' : section,
-  );
+  /// The tab Profile and settings shows.
+  final profileTab = ValueNotifier('Profile');
+
+  /// Opens Profile and settings on [section]. If it's already on top, it
+  /// moves there and doesn't open a second copy.
+  void utilities([String section = 'Profile']) {
+    profileTab.value = section;
+    if (navigation.pages.lastOrNull?.name == 'profile') return;
+    open(
+      ProfileUtilities(
+        settings: widget.settings,
+        session: session,
+        tab: profileTab,
+        hub: sharedHub,
+        goTo: (destination, tab) => navigation.select(destination, tab: tab),
+      ),
+      'profile',
+      title: 'Profile and settings',
+    );
+  }
 
   LocalSession? get local =>
       session is LocalSession ? session as LocalSession : null;

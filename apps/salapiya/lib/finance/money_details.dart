@@ -84,11 +84,7 @@ MoneySource localMoneySource(
     needsReview: session?.needsReview ?? false,
     syncLabel: session?.syncLabel ?? '',
     onReview: session is LocalSession
-        ? () => openDemoPage<void>(
-            context,
-            ConnectionPage(runtime: session.runtime),
-            'profile/connection',
-          )
+        ? () => openConnection(context, session.runtime)
         : null,
     draftCount: () async => (await c.store.drafts()).where(isFormDraft).length,
     importDraft: () async {

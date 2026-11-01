@@ -10,7 +10,7 @@ import '../local/local_finance_controller.dart';
 /// (ARCHITECTURE §8.2). It stays a rule; these are the form's words for it.
 bool isSyncBlock(Object e) =>
     e is LocalRuleException &&
-    e.message.startsWith('Sync now before finalizing');
+    e.message.startsWith('Sync now before saving');
 
 const syncBlockedTitle = 'Couldn’t check your latest records';
 const syncBlockedMessage =

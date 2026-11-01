@@ -17,7 +17,6 @@ import '../life/life_hub.dart' show lifeHubOf;
 import '../local/finance_domain.dart';
 import '../local/local_runtime.dart';
 import '../prototype/scenarios.dart';
-import 'demo_routes.dart';
 import 'overview_cards.dart';
 import 'overview_controls.dart';
 import 'overview_data.dart';
@@ -144,11 +143,7 @@ OverviewSource localOverviewSource(
     projected: session.projected,
     needsReview: session.needsReview,
     syncLabel: session.syncLabel,
-    onReview: () => openDemoPage<void>(
-      context,
-      ConnectionPage(runtime: session.runtime),
-      'profile/connection',
-    ),
+    onReview: () => openConnection(context, session.runtime),
     onAddAccount: () =>
         openFinancialEditor(context, c, FinancialAction.account),
     openRecord: openRecord,

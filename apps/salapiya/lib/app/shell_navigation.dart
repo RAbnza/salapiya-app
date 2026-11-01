@@ -1577,16 +1577,24 @@ class ShellBreadcrumb extends StatelessWidget {
 
 /// The profile's initial in a tinted circle, [size] across.
 class ProfileInitial extends StatelessWidget {
-  const ProfileInitial({super.key, required this.name, this.size = Space.xxl});
+  const ProfileInitial({
+    super.key,
+    required this.name,
+    this.size = Space.xxl,
+    this.onAccent = false,
+  });
   final String name;
   final double size;
+
+  /// On the tinted focal card it uses `surface`, as [IconBadge] does.
+  final bool onAccent;
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: c.selection,
+      backgroundColor: onAccent ? c.surface : c.selection,
       foregroundColor: c.onSelection,
       child: Text(
         name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),

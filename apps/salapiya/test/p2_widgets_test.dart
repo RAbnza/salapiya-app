@@ -78,12 +78,19 @@ void main() {
           await tester.ensureVisible(profile);
           await tester.tap(profile);
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('Connection'));
-          await tester.tap(find.text('Connection'));
+          // Windows opens a menu; a phone goes straight to the page's tabs.
+          final menu = find.byKey(const ValueKey('profile-menu-Connection'));
+          await tester.tap(
+            menu.evaluate().isNotEmpty
+                ? menu
+                : find.byKey(const ValueKey('Connection')),
+          );
           await tester.pumpAndSettle();
-          expect(find.text('Your money, across devices.'), findsOneWidget);
-          expect(find.textContaining('1 waiting'), findsOneWidget);
-          expect(find.text('Sync now'), findsOneWidget);
+          // A test build can't reach the service, so it offers nothing to
+          // press, and what's waiting still shows.
+          expect(find.text('Can’t connect in this build'), findsOneWidget);
+          expect(find.textContaining('1\u00A0waiting'), findsOneWidget);
+          expect(find.byKey(const ValueKey('connection-syncNow')), findsNothing);
           expect(tester.takeException(), isNull);
         } finally {
           debugDefaultTargetPlatformOverride = null;

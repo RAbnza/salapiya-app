@@ -155,31 +155,31 @@ void main() {
         await tester.runAsync(c.store.integrity);
         final originalIds = c.snapshot.revisions.map((r) => r.id).toList(),
             owner = c.store.owner;
-        await localTap(tester, find.byTooltip('Profile & utilities'));
-        await localTap(tester, find.text('Backup & recovery'));
-        await localTap(tester, find.text('Generate recovery secret'));
-        final secretField = find.widgetWithText(TextField, 'Recovery secret');
-        final recoverySecret = tester
-            .widget<TextField>(secretField)
-            .controller!
-            .text;
-        expect(recoverySecret, isNotEmpty);
+        await localTap(tester, find.byKey(const ValueKey('shell-profile')));
+        final menu = find.byKey(const ValueKey('profile-menu-Backup & recovery'));
         await localTap(
           tester,
-          find.widgetWithText(
-            CheckboxListTile,
-            'I have saved this recovery secret in a separate safe place',
-          ),
+          menu.evaluate().isNotEmpty
+              ? menu
+              : find.byKey(const ValueKey('Backup & recovery')),
         );
-        await localTap(tester, find.text('Save encrypted backup'));
+        await localTap(tester, find.byKey(const ValueKey('backup-save')));
+        final secretField = find.descendant(
+          of: find.byKey(const ValueKey('backup-secret')),
+          matching: find.byType(TextField),
+        );
+        String shownSecret() =>
+            tester.widget<TextField>(secretField).controller!.text;
+        await localWait(tester, () => shownSecret().isNotEmpty);
+        final recoverySecret = shownSecret();
+        await localTap(tester, find.byKey(const ValueKey('backup-kept')));
+        await localTap(tester, find.byKey(const ValueKey('backup-save-file')));
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Encrypted backup saved.')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Backup saved').evaluate().isNotEmpty,
           'save encrypted synthetic financial archive',
         );
+        await localTap(tester, find.byKey(const ValueKey('backup-done')));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(runtime.close);
         runtime.dispose();

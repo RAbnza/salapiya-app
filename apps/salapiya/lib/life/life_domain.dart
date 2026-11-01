@@ -696,7 +696,7 @@ void validateLifeArchive(
       (life['revisions'] as List).length > 20000 ||
       (life['intents'] as List).length > 20000 ||
       !connected && (life['intents'] as List).isNotEmpty) {
-    lifeReject('Unsupported Life archive coverage.');
+    lifeReject('This version of Salapiya can’t read this backup’s Life records. Nothing was restored.');
   }
   final records = <String, LifeRecord>{}, payloads = <String, String>{};
   for (final raw in life['revisions'] as List) {
@@ -705,7 +705,7 @@ void validateLifeArchive(
     if (c.owner != owner ||
         payloads.containsKey(c.id) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('Invalid Life archive history.');
+      lifeReject('This backup’s Life history is damaged or incomplete. Nothing was restored.');
     }
     records[c.recordId] = applyLifeCommand(records, c);
     payloads[c.id] = c.payload;
@@ -724,7 +724,7 @@ void validateLifeArchive(
           'review',
           'restored',
         ].contains(row['state'])) {
-      lifeReject('Invalid original Life recovery intent.');
+      lifeReject('A saved Life change in this backup can’t be read. Nothing was restored.');
     }
     // Rejected/conflicting intent is retained as evidence, never applied to the
     // replacement graph or automatically granted authority by an archive.
@@ -738,7 +738,7 @@ void validateLifeArchive(
             !payloads.containsKey(row['replacement_id']) &&
             !intentIds.contains(row['replacement_id']) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('Invalid retained Life review decision.');
+      lifeReject('A saved Life decision in this backup can’t be read. Nothing was restored.');
     }
   }
   if (life['viewPreferences'] case final Map prefs) {

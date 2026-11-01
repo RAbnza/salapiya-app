@@ -146,7 +146,7 @@ At text scale ≥ 150%, drop one column class.
   - **Bell:** what needs the user, from the existing counts (payments to confirm, waiting to sync, sync needs review), with a `primary` count badge. It opens a menu headed "Needs attention" whose rows go where each item is handled; with none it says "Nothing needs attention". It replaces the sidebar's Needs attention group.
   - **Calculator:** a popover with a keypad (C, Backspace, Copy, the four operators, digits, the decimal point, =). Typing works while it's open (digits, + − * / or x, Enter or =, Backspace, Delete or C, Ctrl+C, and the numpad); Esc closes it. Arithmetic is on exact fractions, left to right as in Windows' standard mode. A result that doesn't end within 10 decimals shows rounded to centavos and marked "≈" (DOMAIN_RULES §49: rounding is never silent); Copy puts the plain value (for example `416.67`) on the clipboard. It saves nothing. Hidden below 600.
   - **Hide amounts:** an eye button, "Hide amounts (Ctrl+H)" or "Show amounts (Ctrl+H)", reported as a toggle. It replaces the sidebar footer's row, the rail's cell and, below 600, the header's button.
-  - **Sync status**, moved from the sidebar's profile card. It shows the shell's existing status labels ("On this device only", "Synced", "Synchronizing", "Waiting for connection", or "Demo · …"), in warning tone when sync needs review. It opens Profile › Connection, or Profile and settings in the demo. Below 600 it is icon-only, with the label in its tooltip.
+  - **Sync status**, moved from the sidebar's profile card. It shows the shell's existing status labels ("On this device only", "Synced", "Syncing", "Waiting for connection", or "Demo · …"), in warning tone when sync needs review. It opens Profile › Connection, or Profile and settings in the demo. Below 600 it is icon-only, with the label in its tooltip.
   - **Window controls:** minimize, maximize or restore, and close (`CaptionButtons`, 46 wide, full height).
 - **Not in the bar:** the logo and app name (they stay in the sidebar) and the breadcrumb (it stays in the app bar).
 - **Colors:** see [§3](#charts-title-bar-high-contrast-and-legacy-colors). Close uses the system red on hover, an allowed exception to the purple accent.
@@ -542,6 +542,34 @@ Five-second question: where do my applications stand, and what's my next step?
 - **Sync.** Attaching works offline. Its details queue and sync as any Life record; the file never leaves the device. Another device shows Not on this device, as does a profile restored from a backup, and Restore from your original brings it back.
 - **Privacy.** Files are private to the application's page. They're never in a list, shared view, notification or the bell.
 - **Demo build.** The card shows a file here, one on another device and an archived link, built through the rules. Every action says "Files need the encrypted store, so the demo can't open or save them." It can't show the picker, preview, opening a file, a half-attached file or a restore: those need the real build.
+
+### Profile and settings (Chat 14)
+
+`lib/profile/`: `profile_page.dart` (the frame), `profile_source.dart` (`ProfileSource`, which real and demo builds share), `profile_actions.dart` (`ProfileActions`, everything these tabs can ask for, and the real build's `LocalProfileActions`), `profile_data.dart` (display-only derivations), `profile_tab.dart`, `help_tab.dart`, `help_data.dart`, `connection_tab.dart`, `connection_pages.dart`, `devices_tab.dart`, `backup_tab.dart`, `backup_pages.dart`, `profile_demo.dart`. The welcome screen's Google step and restore stay on `ConnectionBody` and `LocalRecoveryBody` until Chat 15.
+
+- **Five-second questions.** Profile: who is this profile, and how is it set up? Connection: is my data on this device only or syncing, is it healthy, and does anything need me? Devices: which sign-ins have my profile, and is anything wrong with one? Backup & recovery: is my data safe, when was my last backup, has anything changed since, and how do I get it back? Help: how do I find the answer to what I'm stuck on?
+- **Frame.** One page, "Profile and settings", with `AppTabs` and a caption that says what the tab is for. There's no status pill: At a glance and Connection say it. A link to another tab moves the open page there and never opens a second copy, because the shell holds the tab. A failed preference save shows on every tab.
+- **Profile.** **This profile** (8, accent) beside **At a glance** (4), whose rows move to Connection, Devices and Backup & recovery. **Appearance** (6) beside **Hide amounts** (6, its switch in `toggle`). **Defaults and more settings** (12): Default group, Life preferences, Reminders. On a phone, in that order. The profile id is under View details, and the Google email doesn't show here.
+- **Default group.** The same saved value as the chooser and the Group page (`sharedDefaultGroup`, through `SharedHub.setDefault`). It lists only with two or more active groups, because with fewer Shared Expenses never asks. A default that was archived or left reads Ask me each time, with a note.
+- **Edit name** is a short form, a modal with its error on the field. A profile's name isn't synced, so on a connected profile the form says it changes the name on this device.
+- **Decorative effects** left the real Profile tab, because no redesigned screen reads it. The saved value stays, and the demo keeps the switch.
+- **Help.** Search filters every question on the page; it works offline and sends nothing. Six topic cards at 6, then About Salapiya with the version and Licenses. Questions open in place and link to their screen. The words live in `help_data.dart`.
+- **Life.** Life preferences opens `LifeSettings`, which isn't rebuilt. Reminders goes to Life's tab. `ReminderCenter` stays as `openLifeReminders`' fallback and the demo's row.
+- **Connection.** **Sync** (8, accent) says the state, why, Last synced and the Google account, with one main action. **Waiting and to check** (4) has Money, Shared Expenses and Life, each going where it's handled. **Needs review** (12) shows only when something does. **Sync on this device** (6, its switch in `toggle`, with Sign out) beside **What's shared with the service** (6). With no connection, Sync beside What's shared. On a phone: Sync, Needs review, Waiting and to check, Sync on this device, What's shared.
+- **States** (`ConnectionPhase`, from `phaseOf`): On this device only, Can't connect in this build, Waiting for Google, Google account chosen, This account has a different profile, Connection not finished, First download not finished, Checking a restored backup, Signed out, Sync paused, Syncing, Can't reach the service, N changes waiting, Needs review, Synced, Connected account deleted. `offered` lists what each allows and nothing else, so nothing is offered and then refused. Transport comes from `store.db.currentStatus`, because `label` stops at Needs review.
+- **Group refusals** say how many there are and link to Shared Expenses, on Connection only. They don't count towards Needs review, because nothing can clear them yet. The bell and pill don't change.
+- **A change to check** (`ChangePage`) says why, what can be done, and what it was in plain labels. Reasons are shown through `changeReasons`; the stored words don't change. Amounts mask with Hide amounts, and other saved values under View details don't show while hidden. Send this change appears only when the service has no record of it, and goes under its original id.
+- **Connecting.** Review connection looks the account up, then shows one disclosure. A different profile stops at the tab: Save a backup, then Use that profile, or Keep this profile. Don't connect signs out of Google with nothing uploaded. A saved backup lasts across tab changes. There's no disconnect for a connected profile, because no rule exists: pausing, signing out, removing the profile and deleting the account are the ways out.
+- **Devices.** **Signed-in devices** (8) lists after the first frame: this device first, then active, then ended, with Revoke on each active row. **Lost a device?** (4). **Remove or delete** (12). A local-only profile, or one with its account deleted, has a This device card and Remove. Offline it says it needs a connection and offers Try again. Signed out, it says to sign in and doesn't reach for the list. Dates read in Manila, "Not recorded" when the server has none. Session ids never show.
+- **Consequential actions.** Revoke, Delete account and Remove keep their typed phrases, through `showTypedConfirmation`. Delete has a step before it: Sign in with Google again, which opens it for five minutes. The server's own check is unchanged. After a refusal or a lost answer it starts from a fresh sign-in, and the server's recorded outcome answers the retry. After deletion, this session offers only Remove. Sign out has a plain confirmation with the waiting count. Pause needs none. Remove and Delete count what's waiting.
+- **Backup & recovery.** **Your backups** (8, accent): the last backup and whether records changed since, Save a backup, Check a backup. **How to get it back** (4), by whether the profile is connected. **What's in a backup** (12). On a phone: Your backups, What's in a backup, How to get it back. "Changed since" compares counts; there's no day limit, because no rule defines one. A failed backup shows until the page closes.
+- **The device note.** After a saved backup, `recordBackup` writes its date and counts to `life_device` under `backup:last`. It doesn't sync, isn't in a backup, and needs no migration. Failing to write it doesn't fail the backup.
+- **Save a backup** (`BackupSavePage`): what it holds, New secret or One I have, the secret masked with Show and Copy, a tick, then Save backup. The secret masks again when the app leaves the foreground, takes no keyboard learning, has no draft, and goes with the page. Copy says the clipboard is the user's to clear. Screens aren't blocked from capture. During an unfinished first download it says the backup holds only what has downloaded.
+- **Check a backup** (`BackupCheckPage`): the secret, then the file, then what's inside in plain words, and whether it's this profile's. A wrong secret errors on its field. Nothing on the device changes, and only what's shown is kept from the opened backup.
+- **Restore** isn't offered with a profile in use, because the rules refuse it. The tab says where it happens.
+- **Privacy.** The Google email shows on Connection only. Device names are platform names. Ids sit under View details. This section has no shareable views.
+- **Offline.** Profile, Help, saving and checking a backup, removing the profile and pausing all work. Sync now, Devices, Revoke, Connect, Delete account and Send this change need a connection.
+- **Demo build.** The same tabs from a sample, with Demo tools on Profile and a demo-only Show a state menu on Connection, Devices and Backup & recovery, covering each state above. Actions show their confirmation, then say nothing happened. It can't show real Google sign-in, sync, revoking, deleting, the system's save and open windows, a real secret or a real restore. `ProfileExperience` stays for First-run preview and the d4 tests, until Chat 16.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -1095,6 +1123,10 @@ Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same
 
 An optional `discardDraft` adds Discard draft beside Keep draft & close, for forms that bring a draft back on reopening. `MoneyEditor` passes it, and Saved drafts can discard one too. Other forms keep the two choices they had.
 
+### Typed confirmation (`showTypedConfirmation`; Chat 14)
+
+`kit/modals.dart`. For a consequential action behind a phrase: focus starts on Cancel, the destructive button stays off until the phrase is typed exactly, and the field's controller lasts through the closing animation. `ModalAction.ready`, optional, keeps any modal's primary off until it's true; other modals don't change. `HelpTextField` gains `secret` (no suggestions, autocorrect or keyboard learning) and `obscured`. `ProfileInitial(onAccent:)` uses `surface` on the tinted card, as `IconBadge` does.
+
 ### Section page (`SectionPage`; Chat 7)
 
 A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
@@ -1286,6 +1318,18 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Resume version used | Resume used | |
 | Salary minimum, maximum | Lowest and highest expected salary | |
 | Salary period | Paid per | |
+| Display name (on Profile's card) | Name | The field's label stays Display name |
+| Synchronizing, Synchronization paused | Syncing, Sync paused | Status labels |
+| Session expired / reconnect required | Signed out | |
+| Initial download incomplete | First download not finished | |
+| Enable private synchronization | Turn on sync | |
+| Authorized session | Sign-in | Devices |
+| Reauthenticate | Sign in with Google again | Before deleting an account |
+| Archive (backup file) | Backup | |
+| Original command, original intent | Change | Needs review |
+| Resume this original command | Send this change | |
+| Cloud profile | The profile on this Google account | |
+| Google identity | Google account | Sign-in messages change in Chat 15 |
 
 ### Tone rules
 
@@ -1319,7 +1363,7 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Who owes whom per group | `SharedRepository.groups` → `SharedGroup.positions()`. Loading the groups runs `store.reconcileShared()`, which writes, so the Overview doesn't use it. | Readable only by opening the repository (not on the Overview) |
 | Life agenda (tasks, events, financial reminders) | `DurableLifeController.agendaWindow` (`lib/life/life_controller.dart`) | Readable |
 | Sync state: label, waiting count, needs review, download complete, connected or on this device | `LocalSession.syncLabel`, `pendingCount`, `needsReview`, `complete`, `local` | Readable |
-| Last synced time | `lastSyncedAt` is read only inside `connected_store.dart`; the UI can't reach it | New logic (sync layer; not built) |
+| Last synced time | `binding['last_sync']`, the saved time of the last check against the service. Connection shows it. Other sections don't | Readable (Chat 14; this row said new logic until then) |
 | Amount privacy | `session.hideAmounts` | Readable; every dashboard value must respect it |
 | Month-over-month spending (same day span) and what you owe at each month end | Postings in `acceptedSnapshot` (`SpendingComparison`, `debtBalanceByMonth`) | UI aggregation (approved, Chat 6) |
 | Per-debt payoff progress (payments logged, scheduled amount left) | `DebtDueSummary` plus the schedule rows (`DebtProgress`) | UI aggregation (approved, Chat 6) |
@@ -1375,6 +1419,12 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Life: one row per application with its stage or outcome and next step; the filters and search; how many sit at each stage and each outcome; what's next, overdue follow-ups first, and how old the oldest is. Counts of current records only: no rates, time in stage or results by source (L05 is deferred) | `ApplicationRow`, `applicationRows`, `filterApplications`, `CareerCounts`, `careerRows`, `nextSteps` (`lib/life/life_data.dart`) | UI aggregation (Chat 13) |
 | Life: an application's documents, whether this device holds each file, and files not attached yet | `careerDocuments`, `PendingDocument`, `LifeDocuments.present`, `.pending` (`lib/life/life_data.dart`) | UI aggregation (Chat 13) |
 | Life: one row per Career step, where it stands, and whether it can change; expected salary in words, never from `amount` and never summed across currencies | `StepRow`, `CareerStepState`, `stepState`, `salaryLine` | UI aggregation (Chat 13) |
+| Profile: the default group's choices, what's chosen, and whether a saved default can still be used | `DefaultGroupChoices`, `defaultGroupChoices` (`lib/profile/profile_data.dart`), from `sharedGroupRows` | UI aggregation (Chat 14) |
+| Profile: where the connection stands, what it allows, and its words | `ConnectionFacts`, `phaseOf`, `offered`, `canManageSync`, `phaseWords` (`lib/profile/profile_data.dart`), from `ConnectedRuntime` and `store.db.currentStatus` | UI aggregation (Chat 14) |
+| Profile: one row per sign-in, in order, with plain dates | `DeviceRow`, `deviceRows`, `manilaWhen`, from `p7_devices` | UI aggregation (Chat 14) |
+| Profile: one row per change to check, in plain labels | `ReviewRow`, `reviewRow`, `changeReasons` | UI aggregation (Chat 14) |
+| Profile: when the last backup on this device was saved, and whether records changed since | `lastBackup`, from `life_device` | Readable (approved, Chat 14) |
+| Profile: what's inside a backup | `BackupContents`, `filesLine` | UI aggregation (Chat 14) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1397,8 +1447,8 @@ Remove this section when the redesign is finished.
 | 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog. **All three stages built and approved** (Balances, a person, two people, My Records, the private forms and their rule messages, People, History, Manage Group and the group forms) | Done |
 | 12 | Life A: Calendar, Tasks, reminders. Three stages: 12a Calendar, 12b Tasks, 12c Reminders | Done |
 | 13 | Life B: Learning, Books, Career. Three stages: 13a Learning and Books, 13b Career, 13c Documents and cleanup | Done |
-| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Next |
-| 15 | Onboarding: welcome, local setup, Google, restore | Planned |
+| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`). Two stages: 14a frame, Profile, Help; 14b Connection, Devices, Backup, rule messages | Done |
+| 15 | Onboarding: welcome, local setup, Google, restore | Next |
 | 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
 | 17 | Final review | Planned |
@@ -1427,8 +1477,8 @@ Error messages written in rule files stay as they are until the chat that works 
 | 11 | `shared_private_domain.dart` | Done: 21, plus 2 review notes. 5 only a developer can reach stay as they are | `privateRuleFields` puts them on their fields, and a test holds that table to the rules |
 | 12 | `life_domain.dart`, `life_controller.dart`, `device_reminders.dart`, `life_store.dart` | Done: 18, plus Life's reasons on screen through `lifeReason`. 1 was already plain and 18 only a developer can reach stay as they are | `lifeRuleFields` puts them on their fields, and a test holds that table, the 72 calls and the reasons to the rules and the SQL |
 | 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | Done: 28 | `lifeRuleFields` puts them on their fields, and a test holds that table to the rules |
-| 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages. Also 7 of Life's that a restore can reach, in `life_domain.dart` and `life_store.dart` | About 35, with Chat 15, and those 7 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup.", "Unsupported Life archive coverage." |
-| 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
+| 14 | `connected_store.dart`, `local_store.dart`, `connected_runtime.dart`'s connection messages, what Check a backup reaches in `local_profiles.dart`, and 7 of Life's in `life_domain.dart` and `life_store.dart` | Done, with the status labels. A few only a developer can reach stay as they are | `rule_messages_test` holds them to the glossary, and the reasons on Needs review to the SQL |
+| 15 | `connected_runtime.dart`'s sign-in messages (4 distinct, 5 calls, one also in `connected_store.dart`), and `local_profiles.dart`'s startup and restore messages | Left | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
 
 Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
 
@@ -1607,6 +1657,24 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 cal
 | 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-02 | Owner review: stage 14b looks good, including Save a backup's new structure, which finishes Chat 14. | Approved |
+| 2026-11-02 | Owner review: stage 14a looks good. | Approved |
+| 2026-11-02 | Connection is Sync 8 beside Waiting and to check 4, Needs review, then Sync on this device 6 beside What's shared 6. Devices is Signed-in devices 8 beside Lost a device? 4, then Remove or delete. Backup & recovery is Your backups 8 beside How to get it back 4, then What's in a backup. | Approved |
+| 2026-11-02 | One row in `life_device` notes the last backup's date and counts, so the tab can say when it was and whether anything changed. No migration or sync, and it isn't in a backup. "Changed since" has no day limit. | Approved |
+| 2026-11-02 | The recovery secret is masked until Show, masks again when the app leaves the foreground, takes no keyboard learning and goes with the page. Screens aren't blocked from capture. | Approved |
+| 2026-11-02 | Connection shows `binding['last_sync']` as Last synced. Sign out has a confirmation with the waiting count; Pause doesn't. Delete account has a fresh sign-in before its typed phrase. A backup during an unfinished download says it's partial. | Approved |
+| 2026-11-02 | Group refusals show on Connection only, as a count and a link. The bell, the pill and `needsReview` don't change, so a refusal nothing can clear doesn't keep the bell on. | Approved |
+| 2026-11-02 | The demo's tabs come from a sample, with a demo-only Show a state menu. | Approved |
+| 2026-11-02 | `connected_runtime.dart`, `connected_store.dart`, `local_store.dart`, Life's 7 and the status labels are reworded as approved. `isSyncBlock` reads the new start. Of `local_profiles.dart`, only what Check a backup reaches. | Approved |
+| 2026-11-02 | Don't connect signs out of Google, because Cancel connection did nothing once signed in. Keep this profile does both. Existing actions, in order. | Done |
+| 2026-11-02 | A connected profile that can't reach the service in this build offers nothing, because Sync now would be refused. | Done |
+| 2026-11-02 | `lifecycle_view.dart` is gone. `LocalRecoveryBody` and `ConnectionBody` keep only the welcome screen's parts, for Chat 15. | Done |
+| 2026-11-02 | Chat 14: Profile is This profile 8 beside At a glance 4, Appearance 6 beside Hide amounts 6, then Defaults and more settings. Help is search, then topics at 6, then About Salapiya. Two stages. | Approved |
+| 2026-11-02 | The default group lists only with two or more active groups, because with fewer Shared Expenses never asks. This narrows the plan's one. | Done |
+| 2026-11-02 | The frame has no status pill, because At a glance and Connection say it. A link to another tab moves the open page there, not a second copy. | Done |
+| 2026-11-02 | Decorative effects leaves the real Profile tab: no redesigned screen reads it. The saved value stays and the demo keeps the switch. | Approved |
+| 2026-11-02 | A profile's name isn't synced, so renaming a connected profile says it changes this device only. | Approved |
+| 2026-11-02 | Life preferences and Reminders are links on Profile. `ReminderCenter` stays as `openLifeReminders`' fallback. | Approved |
 | 2026-11-02 | Owner review: stage 13c looks good, which finishes Chat 13. | Approved |
 | 2026-11-02 | Owner review: stage 13b looks good. | Approved |
 | 2026-11-02 | A finished task with no due date says finished tasks don't remind you, not to add a date. | Approved |

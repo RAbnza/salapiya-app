@@ -57,7 +57,7 @@ Future<void> _migrateConnection(SqliteWriteContext tx) async {
   if (versions.isNotEmpty) {
     if (versions.length != 1 || ![1, 2].contains(versions.single['version'])) {
       reject(
-        'Unsupported connected storage version. Existing records are preserved.',
+        'This version of Salapiya can’t open your connection details. Update Salapiya. Your records are safe.',
       );
     }
     if (versions.single['version'] == 1) {
@@ -203,7 +203,7 @@ extension ConnectedLocalStore on LocalStore {
     final state = (await connectionIn(tx))!;
     if (state['phase'] != 'connected') {
       reject(
-        'Finish the connection or recovery review before saving connected activity. Your existing records and drafts are preserved.',
+        'Finish connecting, or finish checking your restored backup, before logging anything. Your records and drafts are safe.',
       );
     }
     final snap = await connectedSnapshot(tx);
@@ -221,7 +221,7 @@ extension ConnectedLocalStore on LocalStore {
           DateTime.now().toUtc().difference(last) >
               const Duration(minutes: 1)) {
         reject(
-          'Sync now before finalizing this change. Connected corrections, refunds, reversals, comparisons, adjustments and archive actions need a fresh online review with no waiting work.',
+          'Sync now before saving this change. Corrections, refunds, reversals, comparisons, adjustments and archiving need up-to-date records and nothing waiting to sync.',
         );
       }
     }
@@ -283,7 +283,7 @@ extension ConnectedLocalStore on LocalStore {
     if (rows.length > 20000 ||
         utf8.encode(snapshot).length > 32 * 1024 * 1024) {
       reject(
-        'This profile exceeds the supported enrollment size. Local records are unchanged.',
+        'This profile is too large to connect. Your records haven’t changed.',
       );
     }
     await tx.execute(
@@ -347,14 +347,14 @@ extension ConnectedLocalStore on LocalStore {
       final c = LocalCommand.decode(id, row['payload'] as String);
       if (c.owner != owner || c.payload != row['payload']) {
         reject(
-          'Downloaded command contract mismatch. Local data is preserved.',
+          'A downloaded record doesn’t match this profile. Your records here are safe.',
         );
       }
       final plan = planLocal(verified, rebaseCommand(c, i));
       if (canonicalJson(financialPlanJson(plan)) !=
           canonicalJson(jsonDecode(row['plan'] as String))) {
         reject(
-          'Financial rule versions disagree. Update Salapiya before continuing synchronization.',
+          'This version of Salapiya reads your records differently from the service. Update Salapiya to keep syncing.',
         );
       }
       verified = applyFinancialPlan(verified, plan);
@@ -366,17 +366,17 @@ extension ConnectedLocalStore on LocalStore {
         if (local.single['payload'] != c.payload ||
             local.single['sequence_no'] != i + 1) {
           reject(
-            'Downloaded evidence differs from this profile. Review connection before continuing.',
+            'A downloaded record differs from the one here. Check Connection before you go on.',
           );
         }
       } else {
         final snap = await _snapshot(tx);
-        if (snap.version != i) reject('Downloaded history is not contiguous.');
+        if (snap.version != i) reject('Some downloaded records are missing. Sync again.');
         final plan = planLocal(snap, rebaseCommand(c, snap.version));
         if (canonicalJson(financialPlanJson(plan)) !=
             canonicalJson(jsonDecode(row['plan'] as String))) {
           reject(
-            'Financial rule versions disagree. Update Salapiya before continuing synchronization.',
+            'This version of Salapiya reads your records differently from the service. Update Salapiya to keep syncing.',
           );
         }
         await commitAccepted(
@@ -392,7 +392,7 @@ extension ConnectedLocalStore on LocalStore {
       );
       if (intents.isNotEmpty) {
         if (intents.single['payload'] != c.payload) {
-          reject('Downloaded receipt payload mismatch.');
+          reject('A downloaded confirmation doesn’t match what was saved here. Your records are safe.');
         }
         // Require the authenticated receipt persisted by the connector/recovery.
         if (intents.single['state'] == 'accepted') {
@@ -408,7 +408,7 @@ extension ConnectedLocalStore on LocalStore {
       [owner],
     );
     if (total['revision'] != boundary) {
-      reject('Local and remote accepted coverage differ.');
+      reject('Your records here and on the service don’t match yet. Sync again.');
     }
     // Download may beat upload acknowledgement. A later reconciliation retires
     // it; the NOT EXISTS overlay rule already prevents counting it twice.

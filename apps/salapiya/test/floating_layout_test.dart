@@ -29,7 +29,14 @@ void main() {
         if (platform == TargetPlatform.windows) {
           expect(dock, findsNothing);
           expect(find.byType(ShellSidebar), findsOneWidget);
-          expect(find.text('New'), findsOneWidget);
+          // Only the button: a change line also says New early in a month.
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('shell-new')),
+              matching: find.text('New'),
+            ),
+            findsOneWidget,
+          );
         } else {
           expect(
             tester.getBottomLeft(scroll).dy,

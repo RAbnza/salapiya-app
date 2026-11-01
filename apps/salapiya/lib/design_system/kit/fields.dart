@@ -537,12 +537,20 @@ class HelpTextField extends StatelessWidget {
     this.onSubmitted,
     this.suffix,
     this.input,
+    this.secret = false,
+    this.obscured = false,
   });
   final String label;
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final String? helper, info, errorText, hintText, disabledReason;
   final bool required, enabled, readOnly, amount;
+
+  /// Recovery material: no suggestions, autocorrect or keyboard learning.
+  final bool secret;
+
+  /// Masks the text. Takes one line.
+  final bool obscured;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final int? maxLines;
@@ -569,6 +577,10 @@ class HelpTextField extends StatelessWidget {
       enabled: enabled,
       readOnly: readOnly,
       maxLines: maxLines,
+      obscureText: obscured,
+      enableSuggestions: !secret,
+      autocorrect: !secret,
+      enableIMEPersonalizedLearning: !secret,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: textInputAction,

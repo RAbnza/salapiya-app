@@ -299,7 +299,7 @@ extension LifeLocalStore on LocalStore {
         receipt['owner_id'] != actor ||
         receipt['profile_id'] != owner ||
         !['accepted', 'rejected'].contains(receipt['outcome'])) {
-      lifeReject('Invalid authenticated Life receipt.');
+      lifeReject('Salapiya couldn’t confirm a Life change with the service. Your records are safe. Try again.');
     }
     await db.execute(
       "UPDATE life_intent SET state=?,reason=? WHERE id=? AND state IN ('pending','accepted')",
@@ -358,7 +358,7 @@ extension LifeLocalStore on LocalStore {
   ) => db.writeTransaction((tx) async {
     final binding = await connectionIn(tx);
     if (binding?['remote_owner'] != actor) {
-      lifeReject('Reconnect with the bound identity.');
+      lifeReject('Sign in with the Google account this profile uses.');
     }
     final row = await tx.get(
       "SELECT * FROM life_intent WHERE id=? AND state='restored'",
@@ -378,7 +378,7 @@ extension LifeLocalStore on LocalStore {
       if (receipt['id'] != id ||
           receipt['owner_id'] != actor ||
           receipt['profile_id'] != owner) {
-        lifeReject('Recovery receipt identity mismatch.');
+        lifeReject('The service’s answer doesn’t match this profile. Nothing changed.');
       }
       await tx.execute('UPDATE life_intent SET state=?,reason=? WHERE id=?', [
         receipt['outcome'] == 'accepted' ? 'accepted' : 'review',

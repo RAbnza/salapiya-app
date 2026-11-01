@@ -535,7 +535,7 @@ class _LifeRemindersPageState extends State<LifeRemindersPage> {
   }
 }
 
-/// Reminders as a page, for Profile until Chat 14.
+/// Reminders as a page, for when Life's tabs aren't on show.
 class ReminderCenter extends StatelessWidget {
   const ReminderCenter({super.key, required this.session});
   final PrototypeSession session;

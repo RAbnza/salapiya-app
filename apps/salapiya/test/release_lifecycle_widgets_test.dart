@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salapiya/connected/lifecycle_view.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/local/local_runtime.dart';
+import 'package:salapiya/profile/profile_page.dart';
 
 import 'local_test_support.dart';
 import 'local_money_journey.dart';
@@ -48,39 +49,39 @@ Future<void> releaseRemovalJourney(
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: ListenableBuilder(
-              listenable: runtime,
-              builder: (context, _) => runtime.session == null
-                  ? const Text('Local profile removed')
-                  : DeviceLifecycleView(runtime: runtime),
-            ),
-          ),
+        home: ListenableBuilder(
+          listenable: runtime,
+          builder: (context, _) => runtime.session == null
+              ? const Text('Local profile removed')
+              : ProfilePage(
+                  session: runtime.session!,
+                  settings: settings,
+                  tab: ValueNotifier('Devices'),
+                ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Remove local profile'));
-    await localTap(tester, find.text('Remove local profile'));
+    final remove = find.byKey(const ValueKey('remove-profile'));
+    await tester.ensureVisible(remove);
+    await localTap(tester, remove);
     await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.textContaining('local-only profile'),
-      ),
-      findsOneWidget,
+    expect(find.textContaining('on this device only'), findsWidgets);
+    expect(find.textContaining('All records, drafts'), findsOneWidget);
+    Finder confirm() => find.descendant(
+      of: find.byType(ModalScaffold<bool>),
+      matching: find.byType(AppButton),
     );
-    expect(find.textContaining('Waiting work will be lost'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Confirm removal'),
+          .widget<AppButton>(
+            find.widgetWithText(AppButton, 'Remove profile'),
           )
           .onPressed,
       isNull,
     );
-    await localTap(tester, find.text('Keep profile'));
+    expect(confirm(), findsNWidgets(2));
+    await localTap(tester, find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(
       await tester.runAsync(
@@ -88,13 +89,16 @@ Future<void> releaseRemovalJourney(
       ),
       true,
     );
-    await localTap(tester, find.text('Remove local profile'));
+    await localTap(tester, remove);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'REMOVE LOCAL');
+    await tester.enterText(
+      find.byKey(const ValueKey('typed-confirmation')),
+      'REMOVE LOCAL',
+    );
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Confirm removal'));
-    await localTap(tester, find.text('Confirm removal'));
+    await tester.ensureVisible(find.text('Remove profile'));
+    await localTap(tester, find.text('Remove profile'));
     await tester.pump();
     final deadline = DateTime.now().add(const Duration(seconds: 30));
     while (runtime.session != null && DateTime.now().isBefore(deadline)) {
