@@ -725,9 +725,9 @@ class _LifeTaskPageState extends State<LifeTaskPage> {
         key: const ValueKey('life-task-reminder'),
         title: 'Reminder',
         child: item ?? Text(
-          r.due.isEmpty
-              ? 'Add a due date to get a reminder.'
-              : 'Finished and archived tasks don’t remind you.',
+          !r.open
+              ? 'Finished and archived tasks don’t remind you.'
+              : 'Add a due date to get a reminder.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       );

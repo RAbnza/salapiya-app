@@ -31,12 +31,35 @@ void openLifeEvent(
 String lifeFieldValue(BuildContext context, String key, String value) {
   if (value.isEmpty) return 'None';
   return switch (key) {
-    'date' || 'due' || 'completed' || 'started' => civilLabel(value),
+    'date' ||
+    'due' ||
+    'completed' ||
+    'started' ||
+    'stageDate' ||
+    'followUp' => civilLabel(value),
+    'arrangement' => careerArrangements[value] ?? value,
     'time' => lifeClock(context, value),
     'timezone' => zoneName(value),
     'archived' => value == 'true' ? 'Yes' : 'No',
     _ => value,
   };
+}
+
+/// One change in a version, in words. A job description is too long for a
+/// line, and salary follows Hide amounts.
+String lifeChangeLine(
+  BuildContext context,
+  String key,
+  String before,
+  String after, {
+  required bool hidden,
+}) {
+  final name = lifeFieldNames[key];
+  if (key == 'description') return '$name changed';
+  if (hidden && const {'salaryMin', 'salaryMax'}.contains(key)) {
+    return '$name: Amount hidden';
+  }
+  return '$name: ${lifeFieldValue(context, key, before)} → ${lifeFieldValue(context, key, after)}';
 }
 
 /// "2 Nov 2026, 9:14 AM" in Asia/Manila.
@@ -53,12 +76,16 @@ class LifeHistoryCard extends StatefulWidget {
     required this.writer,
     required this.id,
     required this.version,
+    this.hidden = false,
   });
   final LifeWriter writer;
   final String id;
 
   /// A new version reloads the card.
   final int version;
+
+  /// Hide amounts is on, so expected salary doesn't show.
+  final bool hidden;
   @override
   State<LifeHistoryCard> createState() => _LifeHistoryCardState();
 }
@@ -104,12 +131,18 @@ class _LifeHistoryCardState extends State<LifeHistoryCard> {
                   for (final change in changes.take(shown))
                     ListRow(
                       key: ValueKey('life-change-${change.id}'),
-                      title: change.reason,
+                      title: lifeReasonText(change.reason),
                       subtitle: detailLine([
                         lifeStamp(context, change.at),
                         for (final (key, before, after) in change.fields)
                           if (change.version > 1)
-                            '${lifeFieldNames[key]}: ${lifeFieldValue(context, key, before)} → ${lifeFieldValue(context, key, after)}',
+                            lifeChangeLine(
+                              context,
+                              key,
+                              before,
+                              after,
+                              hidden: widget.hidden,
+                            ),
                       ]),
                     ),
                 ],
@@ -137,6 +170,56 @@ class _LifeHistoryCardState extends State<LifeHistoryCard> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// When something is, in the user's timezone and its own, and whether the
+/// clocks change around it.
+class LifeWhenCard extends StatelessWidget {
+  const LifeWhenCard({super.key, required this.record, required this.timezone});
+  final ScheduledRecord record;
+  final String timezone;
+  @override
+  Widget build(BuildContext context) {
+    final c = CraftTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    final r = record;
+    final (date, time) = eventWhen(r, timezone);
+    final other = r.utc != null && r.timezone != timezone;
+    final fold =
+        r.utc != null &&
+        LifeTime.candidates(r.date, r.time, r.timezone).length > 1;
+    return OverviewCard(
+      title: 'When',
+      accent: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(overviewLongDate(date), style: text.titleMedium),
+          const SizedBox(height: Space.xxs),
+          Text(
+            r.utc == null
+                ? 'All day'
+                : '${lifeClock(context, time)} · ${zoneName(timezone)}',
+            style: text.bodyMedium,
+          ),
+          if (other) ...[
+            const SizedBox(height: Space.xxs),
+            Text(
+              '${overviewLongDate(r.date)}, ${lifeClock(context, r.time)} in ${zoneName(r.timezone)}',
+              style: text.bodySmall?.copyWith(color: c.secondary),
+            ),
+          ],
+          if (fold) ...[
+            const SizedBox(height: Space.xxs),
+            Text(
+              'This time happens twice on this date, because the clocks change. This is the ${r.fields['fold'] == 'Later' ? 'later' : 'earlier'} one.',
+              style: text.bodySmall?.copyWith(color: c.secondary),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -312,47 +395,6 @@ class _LifeEventPageState extends State<LifeEventPage> {
     );
   }
 
-  Widget whenCard(BuildContext context, LifeSource source, PersonalRecord r) {
-    final c = CraftTheme.of(context);
-    final text = Theme.of(context).textTheme;
-    final (date, time) = eventWhen(r, source.timezone);
-    final other = r.utc != null && r.timezone != source.timezone;
-    final fold =
-        r.utc != null &&
-        LifeTime.candidates(r.date, r.time, r.timezone).length > 1;
-    return OverviewCard(
-      key: const ValueKey('life-event-when'),
-      title: 'When',
-      accent: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(overviewLongDate(date), style: text.titleMedium),
-          const SizedBox(height: Space.xxs),
-          Text(
-            r.utc == null
-                ? 'All day'
-                : '${lifeClock(context, time)} · ${zoneName(source.timezone)}',
-            style: text.bodyMedium,
-          ),
-          if (other) ...[
-            const SizedBox(height: Space.xxs),
-            Text(
-              '${overviewLongDate(r.date)}, ${lifeClock(context, r.time)} in ${zoneName(r.timezone)}',
-              style: text.bodySmall?.copyWith(color: c.secondary),
-            ),
-          ],
-          if (fold) ...[
-            const SizedBox(height: Space.xxs),
-            Text(
-              'This time happens twice on this date, because the clocks change. This is the ${r.fields['fold'] == 'Later' ? 'later' : 'earlier'} one.',
-              style: text.bodySmall?.copyWith(color: c.secondary),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget aboutCard(BuildContext context, PersonalRecord r, EventState state) =>
       OverviewCard(
@@ -394,7 +436,11 @@ class _LifeEventPageState extends State<LifeEventPage> {
       final android = !isDesktop(context);
       final (date, time) = eventWhen(r, source.timezone);
       final state = eventState(r, source.today, date);
-      final when = whenCard(context, source, r);
+      final when = LifeWhenCard(
+        key: const ValueKey('life-event-when'),
+        record: r,
+        timezone: source.timezone,
+      );
       final about = aboutCard(context, r, state);
       final reminder = r.active
           ? OverviewCard(

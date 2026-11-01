@@ -16,7 +16,6 @@ class LifeHeader extends StatelessWidget {
     this.actions = const [],
     this.pill,
     this.onPill,
-    this.alwaysActions = false,
   });
   final String today;
 
@@ -25,9 +24,6 @@ class LifeHeader extends StatelessWidget {
   final List<QuickAction> actions;
   final StatusPill? pill;
   final VoidCallback? onPill;
-
-  /// Shows [actions] on Android too, for what the + button doesn't have.
-  final bool alwaysActions;
   @override
   Widget build(BuildContext context) {
     final date = overviewLongDate(today);
@@ -94,7 +90,6 @@ class LifeHeader extends StatelessWidget {
                     ],
                   ),
           ),
-          if (alwaysActions && actions.isNotEmpty) chips,
         ],
       );
     }

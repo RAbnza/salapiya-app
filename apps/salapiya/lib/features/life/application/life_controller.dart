@@ -135,42 +135,6 @@ class LifeController extends ChangeNotifier {
           due: '2026-10-21',
           priority: 'Low',
         ),
-        LifeEntry(
-          'dart',
-          LifeKind.learning,
-          'Thoughtful interfaces with Flutter',
-          detail: 'Self-paced course · 12 lessons',
-          due: '2026-11-15',
-          total: 12,
-          progress: 5,
-        ),
-        LifeEntry(
-          'spanish',
-          LifeKind.learning,
-          'Everyday Spanish',
-          detail: 'Practice sessions',
-          due: '2026-12-01',
-          total: 30,
-          progress: 8,
-        ),
-        LifeEntry(
-          'book-1',
-          LifeKind.book,
-          'The Art of Noticing',
-          detail: 'Rob Walker',
-          due: '2026-11-10',
-          total: 256,
-          progress: 96,
-        ),
-        LifeEntry(
-          'book-2',
-          LifeKind.book,
-          'A Field Guide to Getting Lost',
-          detail: 'Rebecca Solnit',
-          due: '2026-12-01',
-          total: 224,
-          progress: 32,
-        ),
       ]);
       events.add(
         PersonalEvent(
@@ -182,49 +146,6 @@ class LifeController extends ChangeNotifier {
           'Bring the appointment card.',
         ),
       );
-      applications.addAll([
-        CareerApplication(
-            'studio',
-            'Amihan Studio',
-            'Product designer',
-            '2026-10-16',
-            stage: 'Interview',
-            notes: 'Fictional team · design systems and thoughtful products',
-          )
-          ..events.add(
-            CareerEvent(
-              'interview',
-              'Interview',
-              '2026-10-23',
-              '10:00',
-              'Portfolio conversation · online',
-            ),
-          )
-          ..history.add('Applied 16 Oct → interview invitation 20 Oct'),
-        CareerApplication(
-            'bayan',
-            'Bayan Digital',
-            'Flutter developer',
-            '2026-10-19',
-            notes: 'Fictional company · hybrid',
-          )
-          ..events.add(
-            CareerEvent(
-              'follow-up',
-              'Follow-up',
-              '2026-10-29',
-              '14:00',
-              'Check the application status.',
-            ),
-          ),
-        CareerApplication(
-          'north',
-          'North & Co.',
-          'UX engineer',
-          '2026-10-20',
-          stage: 'Saved',
-        ),
-      ]);
     }
     changed();
   }

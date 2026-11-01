@@ -18,6 +18,11 @@ import 'life_demo.dart';
 import 'life_domain.dart';
 import 'life_forms.dart';
 import 'life_pages_detail.dart';
+import 'career_documents.dart' show LocalLifeDocuments;
+import 'career_forms.dart';
+import 'career_pages.dart';
+import 'progress_forms.dart';
+import 'progress_pages.dart';
 import 'device_reminders.dart' show reminderModules;
 import 'life_reviews.dart';
 import 'reminder_data.dart';
@@ -44,6 +49,18 @@ class LifeHub extends ChangeNotifier {
   /// The Tasks list's filter and search.
   TaskFilter taskFilter = TaskFilter.active;
   String taskQuery = '';
+
+  /// Learning's and Books' lists: each keeps its own filter and search.
+  final _progressFilters = <LifeType, ProgressFilter>{};
+  final _progressQueries = <LifeType, String>{};
+  ProgressFilter progressFilter(LifeType type) =>
+      _progressFilters[type] ?? ProgressFilter.active;
+  String progressQuery(LifeType type) => _progressQueries[type] ?? '';
+
+  /// Career's list: its filter, a stage, and the search.
+  ApplicationFilter careerFilter = ApplicationFilter.active;
+  String? careerStage;
+  String careerQuery = '';
 
   /// What went wrong with a one-tap action.
   String? problem;
@@ -92,6 +109,31 @@ class LifeHub extends ChangeNotifier {
 
   void setTaskQuery(String words) {
     taskQuery = words;
+    notifyListeners();
+  }
+
+  void setCareerFilter(ApplicationFilter filter) {
+    careerFilter = filter;
+    notifyListeners();
+  }
+
+  void setCareerStage(String? stage) {
+    careerStage = stage;
+    notifyListeners();
+  }
+
+  void setCareerQuery(String words) {
+    careerQuery = words;
+    notifyListeners();
+  }
+
+  void setProgressFilter(LifeType type, ProgressFilter filter) {
+    _progressFilters[type] = filter;
+    notifyListeners();
+  }
+
+  void setProgressQuery(LifeType type, String words) {
+    _progressQueries[type] = words;
     notifyListeners();
   }
 
@@ -246,6 +288,60 @@ class LocalLifeWriter implements LifeWriter {
         old: c.entries.where((e) => e.id == old).firstOrNull,
       );
   @override
+  LifeCommand entryCommand(
+    LifeType type,
+    Map<String, String> v, {
+    String? old,
+  }) => c.entryCommand(type, v, old: old);
+  @override
+  Future<void> saveEntry(
+    LifeType type,
+    Map<String, String> v, {
+    String? old,
+  }) async => c.saveEntry(
+    LifeKind.values.byName(type.name),
+    v,
+    old: c.entries.where((e) => e.id == old).firstOrNull,
+  );
+  @override
+  LifeCommand applicationCommand(Map<String, String> v, {String? old}) =>
+      c.applicationCommand(v, old: old);
+  @override
+  Future<void> saveApplication(Map<String, String> v, {String? old}) async =>
+      c.saveApplication(
+        v,
+        old: c.applications.where((a) => a.id == old).firstOrNull,
+      );
+  @override
+  bool duplicateApplication(Map<String, String> v) =>
+      lifeIsDuplicate(c.records, v);
+  @override
+  LifeCommand stepCommand(
+    Map<String, String> v,
+    String application, {
+    String? old,
+  }) => c.stepCommand(v, application, old: old);
+  @override
+  Future<void> saveStep(
+    Map<String, String> v,
+    String application, {
+    String? old,
+  }) async {
+    final a = c.applications.firstWhere((a) => a.id == application);
+    await c.saveCareerEvent(
+      a,
+      v,
+      old: a.events.where((e) => e.id == old).firstOrNull,
+    );
+  }
+
+  @override
+  LifeCommand progressCommand(Map<String, String> v, String id) =>
+      c.progressCommand(v, id);
+  @override
+  Future<void> saveProgress(Map<String, String> v, String id) =>
+      c.saveProgress(v, id);
+  @override
   Future<void> useEdit(LifeCommand command, String original) async {
     await store.commitLife(command);
     // After a lost answer it may already be closed; a decision never changes.
@@ -298,6 +394,7 @@ LifeSource localLifeSource(BuildContext context, LocalSession session) {
         .where((i) => i['resolved_at'] == null && i['state'] == 'restored')
         .length,
     reminders: c.device == null ? null : LocalReminders(c, session.finance),
+    documents: LocalLifeDocuments.of(session),
     actions: LifeActions(
       addEvent: () => openEventForm(context, session),
       addTask: () => openTaskForm(context, session),
@@ -305,6 +402,28 @@ LifeSource localLifeSource(BuildContext context, LocalSession session) {
       openEvent: (id) => openLifeEvent(context, session, id),
       editTask: (id) => openTaskForm(context, session, id: id),
       openTask: (id) => openLifeTask(context, session, id),
+      addEntry: (type) => openEntryForm(context, session, type),
+      openEntry: (id) => openLifeEntry(context, session, id),
+      editEntry: (id) => openEntryForm(
+        context,
+        session,
+        c.records[id]!.type,
+        id: id,
+      ),
+      logProgress: (id) => openProgressForm(context, session, id),
+      addApplication: () => openApplicationForm(context, session),
+      openApplication: (id) => openLifeApplication(context, session, id),
+      editApplication: (id) => openApplicationForm(context, session, id: id),
+      changeStage: (id) =>
+          openStageForm(context, session, id, StageChange.stage),
+      recordOutcome: (id) =>
+          openStageForm(context, session, id, StageChange.outcome),
+      reopenApplication: (id) =>
+          openStageForm(context, session, id, StageChange.reopen),
+      addStep: (id) => openStepForm(context, session, id),
+      openStep: (id) => openCareerStep(context, session, id),
+      editStep: (application, id) =>
+          openStepForm(context, session, application, id: id),
       openRow: (row) => openLifeRow(context, session, row),
       openItem: (item) => openLifeSource(context, session, item),
       openList: (page, title) =>
@@ -329,6 +448,8 @@ void openLifeRow(
 ) => switch (row.module) {
   'Personal' => openLifeEvent(context, session, row.sourceId),
   'Tasks' => openLifeTask(context, session, row.sourceId),
+  'Learning' || 'Books' => openLifeEntry(context, session, row.sourceId),
+  'Career' => openCareerItem(context, session, row.id, row.sourceId),
   'Debts' => openDebtDue(
     localDebtsSource(context, session.localFinance, session),
     row.sourceId,

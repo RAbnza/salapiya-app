@@ -404,6 +404,19 @@ void main() {
           openEvent: (_) {},
           editTask: (_) {},
           openTask: (_) {},
+          addEntry: (_) {},
+          openEntry: (_) {},
+          editEntry: (_) {},
+          logProgress: (_) {},
+          addApplication: () {},
+          openApplication: (_) {},
+          editApplication: (_) {},
+          changeStage: (_) {},
+          recordOutcome: (_) {},
+          reopenApplication: (_) {},
+          addStep: (_) {},
+          openStep: (_) {},
+          editStep: (_, _) {},
           openItem: (_) {},
           openRow: (_) {},
           openList: (_, _) {},
@@ -655,7 +668,7 @@ void main() {
         }),
       );
       await showDrafts(tester, f, session);
-      await tester.tap(find.text('Finish this draft'));
+      await tester.tap(find.text('Log progress'));
       await localSettle(tester);
       expect(tester.takeException(), isNull);
       expect(find.text('This draft can’t open here'), findsOneWidget);
@@ -758,6 +771,19 @@ void main() {
             openEvent: (_) {},
             editTask: (_) {},
             openTask: (_) {},
+            addEntry: (_) {},
+            openEntry: (_) {},
+            editEntry: (_) {},
+            logProgress: (_) {},
+            addApplication: () {},
+            openApplication: (_) {},
+            editApplication: (_) {},
+            changeStage: (_) {},
+            recordOutcome: (_) {},
+            reopenApplication: (_) {},
+            addStep: (_) {},
+            openStep: (_) {},
+            editStep: (_, _) {},
             openItem: (_) {},
             openRow: (_) {},
             openList: (_, _) {},

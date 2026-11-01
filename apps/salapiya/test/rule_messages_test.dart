@@ -23,6 +23,7 @@ void main() {
     'lib/finance/cash_import_rules.dart',
     'lib/shared/shared_private_domain.dart',
     'lib/life/life_domain.dart',
+    'lib/life/life_controller.dart',
   ];
   final rules = files.map((f) => File(f).readAsStringSync()).join('\n');
 
@@ -237,37 +238,6 @@ void main() {
       'Wrong private profile.',
       'Command ID reused with a changed payload.',
     };
-    // Chat 13 rewords Learning, Books and Career's.
-    const chat13 = {
-      'Completion cannot precede the started date.',
-      'Progress must be between zero and the positive total (at most 1,000,000).',
-      'Rating must be an exact decimal from 0 to 5, with at most four decimal places.',
-      'Rating must be between 0 and 5.',
-      'Invalid bounded private Career document metadata.',
-      'Choose a supported Career stage or outcome.',
-      'Enter the company (at most 200 characters).',
-      'Record the Career stage and distinct outcome explicitly.',
-      'A saved opportunity is not submitted and has no application date.',
-      'The stage date cannot precede submission.',
-      'Choose a supported work arrangement.',
-      'Choose a salary currency and period.',
-      'Use a nonnegative exact salary value with at most two decimal places.',
-      'Salary minimum exceeds maximum.',
-      'Use an HTTP(S) posting URL without credentials.',
-      'Choose a supported Career event kind.',
-      'Interviews and assessments require a time and timezone.',
-      'An observation is completed dated evidence, not an inferred outcome.',
-      'Choose an active owned Career application.',
-      'A Career event cannot move between attempts.',
-      'Choose the current owned Career application.',
-      'Document byte/source metadata is immutable. Select a new original for a new link.',
-      'Career document metadata exceeds the 1,000 object / 1 GiB limit.',
-      'A company/role match exists. Confirm a separate application attempt; valid reapplications are allowed.',
-      'Choose valid progress on an active record.',
-      'Protected file key unavailable.',
-      'Private document/profile mismatch.',
-      'Owned application unavailable.',
-    };
     // Chat 14 rewords what a restore can reach.
     const chat14 = {
       'Unsupported Life archive coverage.',
@@ -301,12 +271,8 @@ void main() {
           ...lifeMessages(File(file).readAsStringSync()),
       ];
       // Every call is counted once, so a new message can't slip by.
-      expect(found, hasLength(72));
-      final mine = found.toSet().difference({
-        ...internal,
-        ...chat13,
-        ...chat14,
-      });
+      expect(found, hasLength(74));
+      final mine = found.toSet().difference({...internal, ...chat14});
       expect(mine, isNotEmpty);
       for (final message in mine) {
         for (final word in jargon) {
@@ -320,7 +286,7 @@ void main() {
         for (final file in lifeFiles)
           ...lifeMessages(File(file).readAsStringSync()),
       };
-      for (final message in {...internal, ...chat13, ...chat14}) {
+      for (final message in {...internal, ...chat14}) {
         expect(found, contains(message));
       }
     });

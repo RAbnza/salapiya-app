@@ -872,11 +872,16 @@ class AdaptiveRow extends StatelessWidget {
     this.trailing,
     this.pill,
     this.onTap,
+    this.narrowBelow = rowBase,
   });
   final String title;
   final String? subtitle;
   final IconData? leading;
   final Widget? trailing;
+
+  /// The width, at 100% text, below which [trailing] moves under the text. A
+  /// short link can stay beside it in a narrower row than an amount can.
+  final double narrowBelow;
 
   /// A status pill. It sits under [trailing], or on the title's line in a
   /// narrow row, so only an amount ever moves under the text. A [trailing]
@@ -888,7 +893,7 @@ class AdaptiveRow extends StatelessWidget {
     builder: (context, box) {
       final status = pill ?? (trailing is StatusPill ? trailing : null);
       final rest = identical(status, trailing) ? null : trailing;
-      final narrow = narrowAt(context, box.maxWidth);
+      final narrow = narrowAt(context, box.maxWidth, narrowBelow);
       final onTitle = narrow && _fits(context, box.maxWidth, status);
       return ListRow(
         title: title,

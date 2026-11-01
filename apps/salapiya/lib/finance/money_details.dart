@@ -30,6 +30,8 @@ import 'import_flow.dart';
 import 'import_review.dart';
 import 'money_cards.dart';
 import 'money_dashboard.dart';
+import '../life/career_documents.dart'
+    show documentDraftName, forgetDocumentDraft, openDocumentDraft;
 import '../life/life_forms.dart' show lifeDraftKind, openLifeDraft;
 import 'money_data.dart';
 import 'money_editor.dart';
@@ -1206,11 +1208,14 @@ class _Draft {
   bool get import => parts.first == 'cash-import';
   bool get files => parts.first == 'files';
   bool get life => parts.first == 'life';
+  bool get document => parts.first == 'life-document';
   FinancialAction? get action =>
       FinancialAction.values.where((a) => a.name == parts.first).firstOrNull;
 
   String get title => life
       ? lifeDraftKind(operation, values).title
+      : document
+      ? 'Attach a document'
       : import
       ? 'Imported history'
       : files
@@ -1234,7 +1239,13 @@ class _Draft {
 
   /// What the user typed, to tell drafts apart.
   String get subtitle {
-    final name = (values['name'] ?? values['title'] ?? '').trim();
+    final name =
+        (values['name'] ??
+                values['title'] ??
+                values['position'] ??
+                documentDraftName(values) ??
+                '')
+            .trim();
     return name.isEmpty ? 'Not in your records yet' : name;
   }
 }
@@ -1294,6 +1305,14 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
       return;
     }
     final session = widget.session;
+    if (d.document) {
+      final opened =
+          session != null &&
+          await openDocumentDraft(context, session, d.values);
+      if (!opened && mounted) await cantOpen(d);
+      if (mounted) reload();
+      return;
+    }
     if (d.life || d.action == null && !d.native) {
       final opened =
           d.life &&
@@ -1344,8 +1363,14 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
       secondary: const ModalAction.cancel(label: 'Keep draft'),
     );
     if (yes != true) return;
-    await c.discardDraft(d.operation);
+    await drop(d);
     if (mounted) reload();
+  }
+
+  /// A half-attached document's encrypted file goes with its draft.
+  Future<void> drop(_Draft d) async {
+    if (d.document) await forgetDocumentDraft(widget.session, d.operation);
+    await c.discardDraft(d.operation);
   }
 
   Future<void> discard(_Draft d) async {
@@ -1360,7 +1385,7 @@ class _SavedDraftsPageState extends State<SavedDraftsPage> {
       ),
     );
     if (yes != true) return;
-    await c.discardDraft(d.operation);
+    await drop(d);
     if (mounted) reload();
   }
 

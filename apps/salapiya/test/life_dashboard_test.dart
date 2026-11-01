@@ -9,6 +9,7 @@ import 'package:salapiya/finance/debt_screen.dart' show DebtDetailView;
 import 'package:salapiya/life/agenda_page.dart';
 import 'package:salapiya/life/life_data.dart';
 import 'package:salapiya/life/life_demo.dart';
+import 'package:salapiya/life/life_domain.dart';
 import 'package:salapiya/life/life_hub.dart';
 import 'package:salapiya/life/life_pages_detail.dart';
 import 'package:salapiya/life/life_reviews.dart';
@@ -681,12 +682,57 @@ void main() {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await app(tester, tasks(session), platform: android, width: 412);
-      // Calendar counts two overdue, a task and a debt; Tasks only the task.
+      // Calendar also counts a debt, a learning goal and a follow-up; Tasks
+      // only the task.
       expect(find.text('1 overdue'), findsOneWidget);
-      expect(find.text('2 overdue'), findsNothing);
+      expect(find.text('4 overdue'), findsNothing);
       expect(find.byKey(const ValueKey('life-pill')), findsNothing);
       await app(tester, life(session), platform: android, width: 412);
-      expect(find.text('2 overdue'), findsOneWidget);
+      expect(find.text('4 overdue'), findsOneWidget);
+    });
+
+    testWidgets('a finished task isn’t told to add a due date', (tester) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      final today = civilToday();
+      final life = demoLife(today);
+      final finished = LifeRecord.read(
+        '00000000-0000-4000-8000-00000000f001',
+        '00000000-0000-4000-8000-00000000d000',
+        1,
+        LifeType.task,
+        {'title': 'Done, no date', 'status': 'Completed'},
+      );
+      await app(
+        tester,
+        LifeTaskPage(
+          listenable: session,
+          source: (context) {
+            final s = lifeSource(context, session);
+            return LifeSource(
+              today: s.today,
+              timezone: s.timezone,
+              complete: true,
+              hidden: false,
+              amount: s.amount,
+              records: {...life.records, finished.id: finished},
+              snapshot: s.snapshot,
+              writer: s.writer,
+              actions: s.actions,
+              visible: s.visible,
+            );
+          },
+          hub: lifeHubOf(session),
+          id: finished.id,
+        ),
+        platform: windows,
+        width: 1200,
+      );
+      expect(
+        find.text('Finished and archived tasks don’t remind you.'),
+        findsOneWidget,
+      );
+      expect(find.text('Add a due date to get a reminder.'), findsNothing);
     });
 
     testWidgets('on hold shows once, and its count lines up', (tester) async {

@@ -103,7 +103,7 @@ At text scale ≥ 150%, drop one column class.
   - **Then, scrolling when the window is short:**
     - **Profile card:** the initial and the name on one line. It opens the profile menu. The sync state is in the title bar; without the custom frame, the card shows it on a second line with its icon.
     - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
-    - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event. Shared Expenses: Add shared expense, Log a payment between members. Hidden on the rail.
+    - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event, Add a learning goal. Shared Expenses: Add shared expense, Log a payment between members. Hidden on the rail.
     - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
   - **Bottom, fixed:**
     - Settings (opens Profile and settings) and Help. Without the title bar, Hide amounts (a small switch) comes first; with it, Hide amounts is in the title bar.
@@ -406,7 +406,7 @@ Five-second questions. People: who's in this group, and what can each of them do
 
 ### Life A: Calendar (Chat 12, stage 12a)
 
-`lib/life/life_data.dart` (display-only derivations, `LifeSource`, `LifeWriter`), `life_hub.dart` (what Life is showing, the real source and writer), `life_header.dart`, `life_cards.dart`, `calendar_tab.dart`, `agenda_page.dart`, `life_pages_detail.dart`, `life_forms.dart`, `life_demo.dart`; tested in `test/life_data_test.dart`, `life_dashboard_test.dart` and `life_form_test.dart`. `lib/features/life/presentation/life_screen.dart` is the frame, and holds Tasks until 12b and Learning, Books and Career until Chat 13.
+`lib/life/life_data.dart` (display-only derivations, `LifeSource`, `LifeWriter`), `life_hub.dart` (what Life is showing, the real source and writer), `life_header.dart`, `life_cards.dart`, `calendar_tab.dart`, `agenda_page.dart`, `life_pages_detail.dart`, `life_forms.dart`, `life_demo.dart`; tested in `test/life_data_test.dart`, `life_dashboard_test.dart` and `life_form_test.dart`. `lib/features/life/presentation/life_screen.dart` is the frame.
 
 Five-second question: what's coming up, what's today, and is anything late?
 
@@ -422,7 +422,7 @@ Five-second question: what's coming up, what's today, and is anything late?
   - **Android order:** Today, This week + Overdue, Next up, Overdue, Month, the day, Coming up.
 - **Rows.** A row says what it is, when, and how late. An all-day event reads "All day", a due date reads "Due", and neither ever shows a time. An event in another timezone shows both: "8:00 AM · 9:00 AM in Tokyo".
 - **Money rows** are reminders of records, never instructions. They read as the rest of the app does ("Debt · Due Tue, 3 Nov", the amount, a pill), with "Reminders of your records. Salapiya doesn't pay anything." once per card, and have no Log link. They read the same records as Debts, waiting work included, so the two agree; notifications stay on accepted records (`p5_agenda_test`). A row opens its own page: a debt's, a statement's, a plan's or a recurring item's. Recurring dates not added yet don't show.
-- **What's late.** Tasks, due dates and money dues. An event that has gone by isn't: few people mark one done, so it only reads Past, and its page offers Mark as done (owner, 2026-11-01).
+- **What's late.** Tasks, due dates, follow-ups and money dues. An event that has gone by isn't: few people mark one done, so it only reads Past, and its page offers Mark as done (owner, 2026-11-01).
 - **Today** is `civilToday()`, as on Debts and the Overview. Timed events sit on their date in the display timezone.
 - **Event page** (`LifeEventPage`, a `SectionPage`): the title, a pill unless it's simply scheduled, and "Event · ‹date› · ‹time›", then Edit event and a More menu that offers only what applies: Mark as done, Cancel event, Archive event, Mark as not done, Restore event. **When** (the accent, 8), with both timezones and a clock-change note, beside **About this event** (4), then **Reminder** and **Edit history**: each version's reason, when, and what changed, with ids under View details. Cancelling asks why, and each confirmation says what changes and what stays. Life has no delete.
 - **Shareable lists** (`LifeListPage`, on `ShareableList`): This week, This month or Next month; one day; Overdue. Each has "as of", counts by kind, and every item, with no tabs, actions or money total.
@@ -478,6 +478,70 @@ Five-second question: what will remind me, when, and how do I change that?
 - **Notifications.** "Salapiya reminder", then "You have something coming up. Open Salapiya to see it." With Include the date on, the date replaces "coming up". There's no reminder email in the app; V2-G's email rules are the web build's, and these meet the same default. Tapping one whose item changed opens the Calendar and says "This changed, so its reminder no longer applies."
 - **Preferences** (`LifeSettings`): Show in Life and Timezone beside Show on Calendar. Hiding keeps everything, and Calendar and reminder switches are separate.
 - **Demo build.** Reminders, a reminder's settings and Preferences all work there, with a sample of states, kept in memory. Nothing is delivered, and Send a test says so. It can't show a permission prompt, a real notification, a refusal or what the device does after a restart.
+
+### Life B: Learning and Books (Chat 13, stage 13a)
+
+`lib/life/progress_tab.dart` (both tabs), `progress_pages.dart` (the item page and shareable lists), `progress_forms.dart` (the forms); the derivations are in `life_data.dart`. Tested in `test/progress_data_test.dart`, `progress_dashboard_test.dart` and `progress_form_test.dart`.
+
+Five-second questions. Learning: what am I learning, how far along am I, and what's next? Books: what am I reading, and what's next on my list?
+
+- **Header.** Each tab counts itself: "3 in progress", "2 reading". Android's pill counts that tab's overdue items, else what's due today. Windows has one chip, Add a learning goal or Add a book. Android has none: both are in the + sheet and New, unless the tab is hidden in Preferences.
+- **Learning:** tiles In progress (the accent), Next date, Not started, Finished. **Now learning** (7) beside **What's next** (5), then **All learning** (12). Android: In progress, Next date + Not started, Finished, What's next, Now learning, All learning.
+- **Books:** tiles Reading (the accent), On your list, Finished ("N this year" from recorded dates, else "All time"), at 4 each. **Reading now** (7) beside **Up next** (5), then **Your books** (12), with Author and Rating columns. Android: Reading, On your list + Finished, Reading now, Up next, Your books.
+- **Rows** in progress: the row, a bar, "5 of 12 lessons · 7 left" and Log progress, one tap from the list. The bar has a step per lesson or page up to 24, then is one bar, so a long book is never drawn as finished. An item with no total has no bar and offers Mark as finished instead.
+- **What's next and Up next:** by due date, then in the order added. What's next is anything open with a date, then what hasn't started. Up next is what hasn't started. Nothing on hold. Start and Start reading move an item to In progress with no date, because a date is the user's to give.
+- **Lists:** Active, Finished, Archived, All, and search through titles and the course or author. 25 rows, then Show more. Each tab keeps its own filter (`LifeHub`). Under Finished the date column reads Finished, newest first; otherwise it reads Due.
+- **Counts only.** No rates, averages or page totals: the rules define none. "Pages read" across books would add unrelated things, so it isn't shown.
+- **Item page** (`LifeEntryPage`): the title, a pill and "Book · Rob Walker · Due ‹date›", then Log progress, or Mark as finished with no total, and a More menu with Edit, Start or Pick it up again, Put on hold, and Archive. **Progress** (the accent, 8) beside **About** (4), then **Reminder** and **Edit history**, which now shows progress, totals, ratings and dates started. Archived offers only Restore. A date finished shows only while finished, because a reopened item keeps its old date in its record.
+- **A total of one** is how the rules hold "I don't know": the least total they allow, and their own default. The form leaves Total blank and sends 1. The item then reads as having no total.
+- **Forms** (compact scale; `LifeFormSteps`). Add a learning goal, Add a book and their Edit forms: Title, Course or resource or Author, Total, how far (only with a total), Due date. Under More details: Status, Date started, Date finished (only while finished), Rating (only finished books, or one that has a rating), Notes. Edit asks why. The old form's made-up totals of 12 and 240 are gone: a skipped total sends the rules' default. Status shows Finished; the stored value stays Completed. Operations are unchanged, so older drafts open.
+- **Log progress** (`LifeProgressForm`): how far, Date finished (only at the total, optional and blank), Note. It sends what the old action sent, but under the form's one command id, frozen after a lost answer. Its reason is the note, or "Progress updated" as before. Drafts are `life:progress:‹id›`; an older `life:Log progress · ‹title›` draft still opens from the id kept inside it.
+- **Shareable lists** (`LifeProgressListPage`): Reading list and Learning list. "As of", counts, then what's being read or learned and what's next, with title, author or resource, due date and progress. No notes, ratings, finished items or actions.
+- **States.** Nothing started: an empty state with Add. On hold: a pill; left out of Next, kept in counts. Dropped: archive it, and it reads Archived. No due date: the page says to add one for a reminder. Finished or archived: no reminder. Incomplete Life download: tiles read "Not available yet". Hidden tab: pages, Calendar rows and links still work. Type off in Preferences: the tab is unchanged, because it reads records, not the Calendar's rows. Hide amounts: nothing here is an amount.
+- **Links.** Calendar rows, Reminders, the Overview's Next up and notification taps open the item's page, on both builds.
+- **Demo build.** Tabs, pages and forms all work there, from `demoLife`, replayed through the real rules, with every state above. `DemoLifeWriter` checks with the rules and keeps nothing. It can't show a lost save, waiting sync, or a draft surviving a restart.
+
+### Life B: Career (Chat 13, stage 13b)
+
+`lib/life/career_tab.dart` (the tab), `career_pages.dart` (the application page, the step page and the shareable list), `career_forms.dart` (the forms); the derivations are in `life_data.dart`. Tested in `test/career_data_test.dart`, `career_dashboard_test.dart` and `career_form_test.dart`. `life_screen.dart` is now only the frame, 315 lines.
+
+Five-second question: where do my applications stand, and what's my next step?
+
+- **What it counts.** Current records only: how many are active, at each stage, closed by each outcome, and what's next. No Career reporting exists in this app, and L05 is deferred, so there are no rates, no time in stage and no results by source.
+- **Header.** "5 active". Android's pill counts overdue follow-ups, else what's due today. Windows has one chip, Add an application; on Android it's in the + sheet and New.
+- **Tiles:** Active (the accent, "1 saved, not sent"), Interviewing (Interview, Technical assessment and Final interview), Next step (what comes after anything overdue), Follow-ups due ("Oldest N days").
+- **Where they stand** (8): each open stage with its count and a `SlimBar`, then how many are closed, by outcome. **Next steps** (4): overdue follow-ups first, then by date. An interview that has gone by isn't next. **Your applications** (12): Company and role, Stage, Applied, Next step. Active, Closed, Archived, All; Stage in the corner menu; search through company and role only, because the rest is private. 25 rows, then Show more.
+- **Android order:** Active, Interviewing + Next step, Follow-ups due, Next steps, Where they stand, Your applications.
+- **Follow-ups are due dates.** A Follow-up step past its date is Overdue on Career, the Calendar and Reminders, like an application's follow-up date. Interviews and assessments stay Past. This narrows the owner's rule from Chat 12 for this one kind (decision log).
+- **Application page** (`LifeApplicationPage`): the position, a pill, "Company · Applied ‹date›" or "Not sent yet", then Add a step, Change stage and a More menu with Edit application, Record outcome, Mark follow-up done and Archive. A closed one offers Edit, Reopen and Archive; an archived one only Restore. **Where it stands** (the accent) over **Steps** (8), beside **About** (4), so nothing empty sits beside a long About. Then **Documents**, **Job description**, **Follow-up reminder** and **Edit history**, which shows stage, outcome and every field, with salary hidden as it should be, and stored reasons in plain words (`lifeReasonText`); what's stored doesn't change.
+- **Step page** (`LifeStepPage`): the kind, a pill, then Edit step and a More menu with Mark as done, Cancel step, Mark as not done and Restore step, each only where it applies. **When** (the accent; `LifeWhenCard`, shared with events) beside **About**, then **Reminder** and **Edit history**. A step on a closed or archived application is read-only and says why, because the rules refuse any change. A step that records what happened (Submission, Response, Offer, No response, Note) is always done, so it offers neither Mark as done nor Reopen.
+- **Shareable list** (`LifeApplicationsListPage`): active applications, with company, role, stage, date applied and the next date. No notes, contacts, salary, links or documents.
+- **Private data.** Contact, notes, salary, the posting link and the job description show only on the application's own page and forms. Search never reads them. Notifications stay on the generic words: no title, company, contact, amount or note.
+- **Expected salary** is a money figure in its own currency, and is never summed. `salaryLine` writes it ("₱60,000.00 to ₱80,000.00 a month", "USD 3,000.00 a month"); it doesn't use `amount`, because that's always pesos. With Hide amounts on it reads "Amount hidden" on the page, in Review, in Edit history and in Changes to check. Edit locks a salary already held and keeps it in the command; a lock is decided once, as the form opens, so it can't close on someone typing.
+- **Forms** (compact scale; `LifeFormSteps`; changed structure, shown as rendered samples in 13b's handoff). Add an application: Company, Position, Stage, Date applied (only once sent), In this stage since (only past Applied), Next step, Follow up on. Under More details: Location, Work arrangement, Posting link, Found through, Expected salary (Currency and Paid per only once there's a figure), Technologies, Job description, Contact, Resume used, Notes. Accepted isn't a stage to choose: it comes with its outcome. A company and role already here shows a warning and This is a separate application, only then.
+- **Change stage, Record outcome and Reopen application** (`LifeStageForm`): each asks only what it needs, then Why, and every other field goes along unchanged. Accepted sets its stage as well, so the two can't refuse each other. Leaving Saved asks for the date applied; going back to Saved says that date is cleared, because the rules insist. Review on Record outcome says what stops and what stays. Reopening after Accepted asks for a stage.
+- **Add a step** (`LifeStepForm`): Type, Date, Time (All day only for a follow-up), Which one? when the clocks repeat a time. Under More details: Timezone, Location or link, Preparation notes, How it went (once done). A step that records what happened asks only when, and what happened, and saves as done, so the rules never refuse it. The time fields are shared with Add event (`LifeTimeInputs`).
+- **Saved drafts.** Every form's draft has a real title and opens its form, including drafts the old forms left.
+- **Changes to check.** Use my edit shows only when the rules would take it, so a step on an application that has since closed can only be kept.
+- **Links.** A Calendar row or notification for a step opens its page; one for an application's follow-up date opens the application.
+- **Sync.** Every record works offline and queues as before; saving refuses while a connection is unfinished, with the fields kept. A lost answer freezes the form. Check again recognizes the application it already saved, so it's never refused as a duplicate of itself.
+- **Demo build.** Tab, pages and forms all work there, with every stage and outcome, a step in another timezone, an overdue follow-up and a salary in another currency. It can't show a lost save or waiting sync. Accounts stay on ₱29,300.75.
+
+### Life B: Documents (Chat 13, stage 13c)
+
+`lib/life/career_documents.dart` (`LocalLifeDocuments`, `LifeDocumentsCard`); the interface, `LifeDocuments`, is in `life_data.dart`. Preview and opening in another app are shared with Money's Files (`previewImage`, `openPlainCopy` in `lib/finance/file_access.dart`, same look). Tested in `test/career_documents_test.dart` and `p5_documents_test.dart`.
+
+- **What's different about documents.** A document's details are a Life record, which syncs. The file is encrypted on the device that attached it, and backups hold no files. So the card says where each one is, and what's offered follows from that.
+- **Rows:** the file's name, then type, size and "On this device" or "Not on this device", with a corner menu. Archived links sit behind Show archived.
+- **Menu, only what can work:** Preview (images on this device), Open in another app, Save a copy, Remove from this device, Archive link. A file that isn't here offers Restore from your original and Archive link. An archived link offers Save a copy and Remove from this device if it's here, and Restore link.
+- **Attaching** asks first, with the file's name, type, size, "Not virus-scanned" and what happens to it. Only then does it write the encrypted file, save a draft and link it, so saying no keeps nothing, and being interrupted leaves something to finish.
+- **Not attached yet:** a file interrupted part-way shows on its application with Finish attaching and Let go. If the application changed in between, Finish attaching reads the kept file back and links it afresh, because a file's encryption is tied to the application's version. So nothing has to be chosen again and a draft can't get stuck. This goes further than the plan's Choose the file again.
+- **Confirmations.** Remove from this device says Salapiya keeps the details but not the file, and that there's no cloud copy. Archive link says the file stays. Let go says it was never attached and that the original stays where it is.
+- **Saved drafts:** a half-attached file reads Attach a document, with its file name, and opens its application. Discarding it takes its encrypted file too, because nothing else could ever reach it. A draft whose application has gone says it can't open, and a tap never fails.
+- **Changes to check.** Use my edit shows only when the rules would take it, so a document's refused link can only be kept.
+- **Sync.** Attaching works offline. Its details queue and sync as any Life record; the file never leaves the device. Another device shows Not on this device, as does a profile restored from a backup, and Restore from your original brings it back.
+- **Privacy.** Files are private to the application's page. They're never in a list, shared view, notification or the bell.
+- **Demo build.** The card shows a file here, one on another device and an archived link, built through the rules. Every action says "Files need the encrypted store, so the demo can't open or save them." It can't show the picker, preview, opening a file, a half-attached file or a restore: those need the real build.
 
 ### Section screen standard (the Overview's quality bar)
 
@@ -1009,6 +1073,8 @@ Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same
 
 `kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
 
+`LifeWhenCard` (`life_pages_detail.dart`) and `LifeTimeInputs` (`life_forms.dart`) moved out of the event page and form for Career steps, same look. Chat 13: `AdaptiveRow(narrowBelow:)` keeps a short link beside the text in a narrower row than an amount needs. `FieldInput.rating` takes a number from 0 to 5 with up to four decimals. `AppTabs` brings the selected tab into view when the row doesn't fit; it moves only the row, never the page.
+
 ### Tables with a leading control (Chat 12)
 
 `AppTable(leadWidth:)` reserves a column before the row, and `AppTableRow.lead` puts a control in it, outside the row's target. Tasks' checkbox uses it. Tables that don't pass it don't change.
@@ -1202,6 +1268,24 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Elapsed, suppressed, no automatic resend | Its time passed | Never says it was seen |
 | OS permission denied | Your device is blocking these | |
 | Quiet start, endpoints | Start, End | Quiet hours |
+| Learning preset, goal units | Learning goal, Lessons | Life |
+| Completed (Learning, Books) | Finished | The stored status stays "Completed" |
+| Deadline (Learning, Books) | Due date | Life |
+| Attempt, job application | Application | One attempt at one role |
+| Career event, conversation, milestone | Step | Interviews, assessments, follow-ups and what happened |
+| Submission date | Date applied | |
+| Distinct outcome | Outcome | |
+| Actual stage date | In this stage since, When this happened | |
+| Employer-cancelled opening | Opening cancelled | The stored value stays |
+| Application source | Found through | |
+| Posting URL | Posting link | |
+| Private document, bytes, original bytes | File | Career, as in Files |
+| Export original bytes | Save a copy | |
+| Recover from exact original | Restore from your original | |
+| Keep retained selection, retained link | Not attached yet, Finish attaching, Let go | |
+| Resume version used | Resume used | |
+| Salary minimum, maximum | Lowest and highest expected salary | |
+| Salary period | Paid per | |
 
 ### Tone rules
 
@@ -1287,6 +1371,10 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Life: one row per task, its group, the filters and search, and the counts on the tiles and By priority | `TaskRow`, `taskRows`, `filterTasks`, `TaskCounts` | UI aggregation (Chat 12) |
 | Life: refused edits nobody has dealt with, against what's there now, field by field | `LifeReviewRow`, `lifeReviewRows` | UI aggregation (Chat 12) |
 | Life: each item's reminder state and time on this device; what's coming, nearest first; how many are set; which choices apply | `ReminderView` (`device_reminders.dart`), `ReminderRow`, `comingReminders`, `setReminders`, `reminderChoices` (`reminder_data.dart`) | UI aggregation (Chat 12) |
+| Life: one row per learning item or book, its state, how far along and how much is left; the filters and search; counts by state; what's next, by date; how many were finished in a year, from recorded dates only. No rates, averages or page totals | `ProgressRow`, `progressRows`, `filterProgress`, `ProgressCounts` (`lib/life/life_data.dart`) | UI aggregation (Chat 13) |
+| Life: one row per application with its stage or outcome and next step; the filters and search; how many sit at each stage and each outcome; what's next, overdue follow-ups first, and how old the oldest is. Counts of current records only: no rates, time in stage or results by source (L05 is deferred) | `ApplicationRow`, `applicationRows`, `filterApplications`, `CareerCounts`, `careerRows`, `nextSteps` (`lib/life/life_data.dart`) | UI aggregation (Chat 13) |
+| Life: an application's documents, whether this device holds each file, and files not attached yet | `careerDocuments`, `PendingDocument`, `LifeDocuments.present`, `.pending` (`lib/life/life_data.dart`) | UI aggregation (Chat 13) |
+| Life: one row per Career step, where it stands, and whether it can change; expected salary in words, never from `amount` and never summed across currencies | `StepRow`, `CareerStepState`, `stepState`, `salaryLine` | UI aggregation (Chat 13) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
 ## 9. Redesign roadmap (temporary)
@@ -1308,8 +1396,8 @@ Remove this section when the redesign is finished.
 | 10 | Shared Expenses A: groups, Bills, Payments | Done |
 | 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog. **All three stages built and approved** (Balances, a person, two people, My Records, the private forms and their rule messages, People, History, Manage Group and the group forms) | Done |
 | 12 | Life A: Calendar, Tasks, reminders. Three stages: 12a Calendar, 12b Tasks, 12c Reminders | Done |
-| 13 | Life B: Learning, Books, Career | Next |
-| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Planned |
+| 13 | Life B: Learning, Books, Career. Three stages: 13a Learning and Books, 13b Career, 13c Documents and cleanup | Done |
+| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`) | Next |
 | 15 | Onboarding: welcome, local setup, Google, restore | Planned |
 | 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Planned |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
@@ -1338,11 +1426,11 @@ Error messages written in rule files stay as they are until the chat that works 
 | 10 | `shared_domain.dart`, `shared_repository.dart`, `shared_store.dart` | Done: 15, plus the connected-identity message | The server's reasons stay as they are; `sharedReason` shows them plainly, and a test holds that table to the SQL |
 | 11 | `shared_private_domain.dart` | Done: 21, plus 2 review notes. 5 only a developer can reach stay as they are | `privateRuleFields` puts them on their fields, and a test holds that table to the rules |
 | 12 | `life_domain.dart`, `life_controller.dart`, `device_reminders.dart`, `life_store.dart` | Done: 18, plus Life's reasons on screen through `lifeReason`. 1 was already plain and 18 only a developer can reach stay as they are | `lifeRuleFields` puts them on their fields, and a test holds that table, the 72 calls and the reasons to the rules and the SQL |
-| 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | 28 | "Completion cannot precede the started date.", "Use an HTTP(S) posting URL without credentials." |
+| 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | Done: 28 | `lifeRuleFields` puts them on their fields, and a test holds that table to the rules |
 | 14 | `connected_store.dart`, `local_store.dart`, and `connected_runtime.dart`'s connection messages. Also 7 of Life's that a restore can reach, in `life_domain.dart` and `life_store.dart` | About 35, with Chat 15, and those 7 | "Finish the connection or recovery review before saving connected activity.", "Database integrity check failed. Preserve your files and restore a verified backup.", "Unsupported Life archive coverage." |
 | 15 | `connected_runtime.dart`'s sign-in messages | With Chat 14 | "Finish Google sign-in first.", "Select the Google identity bound to this profile." |
 
-Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 72 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
+Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
 
 ## 10. Decision log
 
@@ -1519,6 +1607,26 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 72 cal
 | 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-02 | Owner review: stage 13c looks good, which finishes Chat 13. | Approved |
+| 2026-11-02 | Owner review: stage 13b looks good. | Approved |
+| 2026-11-02 | A finished task with no due date says finished tasks don't remind you, not to add a date. | Approved |
+| 2026-11-02 | The tests tied to a date now work out what they expect, and were run pinned to the 1st, month end and year end. | Approved |
+| 2026-11-02 | On the application page, Documents takes the full width under Where it stands, Steps and About, because a filled Documents card left a large empty space under Steps. | Done |
+| 2026-11-02 | Career documents: Remove from this device, Preview and Open in another app, as in Money's Files. Preview is on tap only. Opening elsewhere uses the same private temporary copy, removed after 10 minutes. | Approved |
+| 2026-11-02 | Attach asks before writing anything. A half-attached file whose application changed is read back and linked afresh, so nothing is chosen again. This goes further than the plan's Choose the file again. | Done |
+| 2026-11-02 | `LifeForm`, `lifeReviewForm`, `lifeAction`, `LifeHistory`, `LifePages` and `LifeHeader.alwaysActions` are retired, with `life_form.dart`, `life_history.dart` and `life_pages.dart`. | Approved |
+| 2026-11-01 | A Follow-up step past its date is Overdue everywhere, like an application's follow-up date, so Career and the Calendar agree. This narrows the Chat 12 rule that events only go by, for this one kind. | Approved |
+| 2026-11-01 | Career's stage and outcome change through short separate forms, not one long Edit. A Career step has its own page. | Approved |
+| 2026-11-01 | With Hide amounts on, Edit locks a salary already held, reading Amount hidden, and keeps it in the command. | Approved |
+| 2026-11-01 | On the application page each side stacks two cards, because a long About left a large empty space beside a centered accent card. | Done |
+| 2026-11-01 | Owner review: stage 13a looks good. | Approved |
+| 2026-11-01 | Chat 13: Learning is tiles, Now learning 7 beside What's next 5, then every item. Books is three tiles, Reading now 7 beside Up next 5, then every book. Three stages. | Approved |
+| 2026-11-01 | A total is optional. Left blank it sends the rules' default of 1, and that item shows no bar and offers Mark as finished. This changes what a skipped field sends: the old form saved a made-up 12 or 240. | Approved |
+| 2026-11-01 | Log progress shows an optional, blank Date finished at the total. Start reading changes the status only. Dates stay the user's. | Approved |
+| 2026-11-01 | All 28 of Chat 13's rule messages are approved as proposed. Five are in with 13a, the rest with the stages that show them. | Approved |
+| 2026-11-01 | Shareable lists for Learning, Books and applications, with no notes, contacts, salary, links or documents. | Approved |
+| 2026-11-01 | Retiring with Chat 13: the old form, history and pages, the old tabs, and the demo controller's Learning, Books and application seeds. Learning's and Books' seeds went with 13a. | Approved |
+| 2026-11-01 | The Finished tile has no tap: it would change a filter that may be off screen on a phone. Rows with no total offer Mark as finished in one tap, as the page does. | Done |
 | 2026-11-01 | Owner review: stage 11c looks good, which finishes Chat 11. | Approved |
 | 2026-11-01 | Owner review: stage 12a looks good, including Add event's new arrangement, shown as a sample. | Approved |
 | 2026-11-01 | Owner review after commit: a pill under a row's text reads as an afterthought. In a narrow row a lone status pill sits at the end of the title's line; amounts stay under the text. This changes the rule from the Overview's chat for pills only. | Done |

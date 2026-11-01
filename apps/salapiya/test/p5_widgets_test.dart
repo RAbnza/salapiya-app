@@ -5,6 +5,7 @@ import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/local/local_runtime.dart';
+import 'package:salapiya/life/career_pages.dart';
 import 'package:salapiya/life/life_controller.dart';
 import 'package:salapiya/life/life_domain.dart';
 import 'package:salapiya/features/life/application/life_controller.dart';
@@ -75,13 +76,14 @@ void main() {
           await localTap(tester, find.text('Career').first);
           await localTap(tester, find.text('Synthetic salary employer'));
           expect(find.text('12345.67'), findsNothing);
-          expect(find.text('Hidden'), findsWidgets);
+          expect(find.text('Amount hidden'), findsWidgets);
           await tester.runAsync(() async {
             runtime.session!.togglePrivacy();
           });
           await localSettle(tester);
-          expect(find.text('12345.67'), findsWidgets);
-          await localTap(tester, find.byType(BackButton));
+          expect(find.text('From ₱12,345.67 a month'), findsWidgets);
+          Navigator.of(tester.element(find.byType(LifeApplicationPage))).pop();
+          await localSettle(tester);
           await localTap(tester, find.text('Calendar').first);
           expect(find.text('Demo today'), findsNothing);
           expect(tester.takeException(), isNull);

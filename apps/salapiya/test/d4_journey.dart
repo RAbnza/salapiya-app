@@ -113,36 +113,35 @@ Future<void> d4LifeJourney(WidgetTester tester) async {
   await tester.ensureVisible(check);
   await tester.tap(check);
   await tester.pumpAndSettle();
-  expect(s.life.entries.where((e) => e.status == 'Completed').length, 1);
-  expect(
-    s.life.agenda(s.planning, s.finance).any((e) => e.sourceId == 'portfolio'),
-    isFalse,
-  );
+  // The demo's forms check with the real rules and keep nothing.
+  expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
   await tester.ensureVisible(find.text('Books').first);
   await tester.tap(find.text('Books').first);
   await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text('The Art of Noticing'));
-  await tester.tap(find.text('The Art of Noticing'));
+  final book = find.text('The Art of Noticing').first;
+  await tester.ensureVisible(book);
+  await tester.tap(book);
   await tester.pumpAndSettle();
-  final log = find.text('Log progress');
+  final log = find.byKey(const ValueKey('life-entry-log'));
   await tester.ensureVisible(log);
   await tester.tap(log);
   await tester.pumpAndSettle();
-  final field = find.widgetWithText(TextField, 'Pages read');
+  final field = find.descendant(
+    of: find.byKey(const ValueKey('life-field-progress')),
+    matching: find.byType(EditableText),
+  );
   await tester.ensureVisible(field);
-  tester
-      .state<EditableTextState>(
-        find.descendant(of: field, matching: find.byType(EditableText)),
-      )
-      .updateEditingValue(const TextEditingValue(text: '120'));
-  FocusManager.instance.primaryFocus?.unfocus();
-  await tester.ensureVisible(find.text('Review changes'));
-  await tester.tap(find.text('Review changes'));
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text('Apply simulation'));
-  await tester.tap(find.text('Apply simulation'));
-  await tester.pumpAndSettle();
-  expect(s.life.entries.firstWhere((e) => e.id == 'book-1').progress, 120);
+  await tester.enterText(field, '120');
+  await tester.pump();
+  // Details to Review, then Review to saved.
+  for (var step = 0; step < 2; step++) {
+    final button = find.byKey(const ValueKey('life-submit'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+  }
+  expect(find.text('Progress saved'), findsOneWidget);
+  expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
   expect(tester.takeException(), isNull);
   await tester.pumpWidget(const SizedBox());
   s.dispose();

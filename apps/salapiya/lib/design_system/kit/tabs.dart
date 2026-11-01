@@ -39,30 +39,35 @@ class AppTabs<T> extends StatelessWidget {
                 inMutuallyExclusiveGroup: true,
                 label: label,
                 excludeSemantics: true,
-                child: Pressable(
-                  key: ValueKey(value),
-                  onTap: () => onSelected(value),
-                  child: Container(
-                    constraints: BoxConstraints(minHeight: hitTarget(context)),
-                    padding: const EdgeInsets.symmetric(horizontal: Space.xs),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          width: Space.xxs,
-                          color: value == selected
-                              ? c.primary
-                              : Colors.transparent,
+                child: _Reveal(
+                  selected: value == selected,
+                  child: Pressable(
+                    key: ValueKey(value),
+                    onTap: () => onSelected(value),
+                    child: Container(
+                      constraints: BoxConstraints(
+                        minHeight: hitTarget(context),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: Space.xs),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            width: Space.xxs,
+                            color: value == selected
+                                ? c.primary
+                                : Colors.transparent,
+                          ),
                         ),
                       ),
-                    ),
-                    child: Text(
-                      label,
-                      style: style?.copyWith(
-                        color: value == selected ? c.primary : c.secondary,
-                        fontWeight: value == selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                      child: Text(
+                        label,
+                        style: style?.copyWith(
+                          color: value == selected ? c.primary : c.secondary,
+                          fontWeight: value == selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -74,4 +79,40 @@ class AppTabs<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Brings the selected tab into view when the row doesn't fit. It moves only
+/// the row, never the page around it.
+class _Reveal extends StatefulWidget {
+  const _Reveal({required this.selected, required this.child});
+  final bool selected;
+  final Widget child;
+  @override
+  State<_Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<_Reveal> {
+  void reveal() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!mounted || !widget.selected) return;
+    final tab = context.findRenderObject();
+    final row = Scrollable.maybeOf(context)?.position;
+    if (tab != null && row != null && row.hasContentDimensions) {
+      row.ensureVisible(tab, alignment: .5);
+    }
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selected) reveal();
+  }
+
+  @override
+  void didUpdateWidget(_Reveal old) {
+    super.didUpdateWidget(old);
+    if (widget.selected && !old.selected) reveal();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

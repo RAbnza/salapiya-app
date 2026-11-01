@@ -29,7 +29,10 @@ import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
 import '../finance/money_editor.dart';
 import '../life/life_controller.dart';
+import '../life/life_domain.dart' show LifeType;
 import '../life/life_hub.dart';
+import '../life/career_forms.dart' show openApplicationForm;
+import '../life/progress_forms.dart' show openEntryForm;
 import '../local/finance_domain.dart' show civilToday;
 import '../shared/shared_hub.dart';
 import '../shared/shared_pages.dart' show SharedFlows;
@@ -370,6 +373,12 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       AppDestination.life => [
         ('Add task', 'Add task', Icons.check_circle_outline),
         ('Add event', 'Add event', Icons.event_outlined),
+        if (lifeHubOf(session).tabShown('Learning'))
+          ('Add a learning goal', 'Add a learning goal', Icons.school_outlined),
+        if (lifeHubOf(session).tabShown('Books'))
+          ('Add a book', 'Add a book', Icons.auto_stories_outlined),
+        if (lifeHubOf(session).tabShown('Career'))
+          ('Add an application', 'Add an application', Icons.work_outline),
       ],
     };
     return [
@@ -388,6 +397,9 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               'Report payment',
               'Add task',
               'Add event',
+              'Add a learning goal',
+              'Add a book',
+              'Add an application',
             ].contains(item.$1))
           item,
     ];
@@ -400,6 +412,12 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
       editLifeEntry(content, session, LifeKind.task);
     } else if (key == 'Add event') {
       editPersonalEvent(content, session);
+    } else if (key == 'Add a learning goal') {
+      openEntryForm(content, session, LifeType.learning);
+    } else if (key == 'Add a book') {
+      openEntryForm(content, session, LifeType.book);
+    } else if (key == 'Add an application') {
+      openApplicationForm(content, session);
     } else if (key == 'Add shared expense' && session.complete) {
       SharedFlows(sharedHub).addBill(content);
     } else if (key == 'Report payment' && session.complete) {

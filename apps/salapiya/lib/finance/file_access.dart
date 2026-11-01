@@ -67,6 +67,85 @@ String openedName(String title, String? mime) {
   return '${base.isEmpty ? 'file' : base}$extension';
 }
 
+/// Shows an image, fitted and zoomable, with a way to open it elsewhere.
+/// Money's Files and Career's documents share it.
+Future<void> previewImage(
+  BuildContext context, {
+  required String title,
+  required String? mime,
+  required Uint8List bytes,
+  required Future<String?> Function() open,
+}) async {
+  if (mime == 'application/pdf') {
+    reject('PDFs don’t open here. Open it in another app.');
+  }
+  final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+  ui.ImageDescriptor? descriptor;
+  int width;
+  try {
+    descriptor = await ui.ImageDescriptor.encoded(buffer);
+    width = descriptor.width;
+    if (width > 20000 ||
+        descriptor.height > 20000 ||
+        width * descriptor.height > 40000000) {
+      reject('This image is too large to show here. Open it in another app.');
+    }
+  } finally {
+    descriptor?.dispose();
+    buffer.dispose();
+  }
+  if (!context.mounted) return;
+  final size = previewSize(context);
+  final problem = ValueNotifier<String?>(null);
+  await showAppDialog<void>(
+    context,
+    title: title,
+    maxWidth: size.width,
+    primary: ModalAction(
+      'Open in another app',
+      onPressed: () async {
+        problem.value = await open();
+        return false;
+      },
+    ),
+    secondary: const ModalAction('Close'),
+    body: ImagePreview(
+      bytes: bytes,
+      decodeWidth: width > previewDecodeWidth ? previewDecodeWidth : width,
+      height: size.height,
+      problem: problem,
+    ),
+  );
+  problem.dispose();
+}
+
+/// Writes a plain copy where another app can read it, and opens it. Null once
+/// it's opened; otherwise what went wrong. See [clearOpenedCopies].
+Future<String?> openPlainCopy(String title, String? mime, List<int> bytes) async {
+  final folder = Directory(
+    p.join((await _openedFolder()).path, newLocalId()),
+  );
+  await folder.create(recursive: true);
+  final copy = File(p.join(folder.path, openedName(title, mime)));
+  await copy.writeAsBytes(bytes, flush: true);
+  Timer(_openedFor, () => unawaited(_remove(folder)));
+  final opened = Platform.isWindows
+      ? await _openOnWindows(copy)
+      : await _channel.invokeMethod<bool>('open', {
+              'path': copy.path,
+              'mime': mime,
+            }) ??
+            false;
+  if (opened) return null;
+  await _remove(folder);
+  return 'No app on this device can open this file.';
+}
+
+Future<bool> _openOnWindows(File copy) async {
+  await Process.start('explorer.exe', [copy.path]);
+  return true;
+}
+
 /// A real profile's files. Same store, draft and command as ever: a picked
 /// file is saved encrypted and kept as a draft before the review, so a file
 /// that's picked is never lost to a closed page.
@@ -290,47 +369,14 @@ class LocalFileAccess implements FileAccess {
     LocalRevision file,
   ) => _run(context, () async {
     final bytes = await files.read(file.id);
-    if (file.values['mime'] == 'application/pdf') {
-      reject('PDFs don’t open here. Open it in another app.');
-    }
-    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    ui.ImageDescriptor? descriptor;
-    int width;
-    try {
-      descriptor = await ui.ImageDescriptor.encoded(buffer);
-      width = descriptor.width;
-      if (width > 20000 ||
-          descriptor.height > 20000 ||
-          width * descriptor.height > 40000000) {
-        reject('This image is too large to show here. Open it in another app.');
-      }
-    } finally {
-      descriptor?.dispose();
-      buffer.dispose();
-    }
     if (!context.mounted) return null;
-    final size = previewSize(context);
-    final problem = ValueNotifier<String?>(null);
-    await showAppDialog<void>(
+    await previewImage(
       context,
       title: file.title,
-      maxWidth: size.width,
-      primary: ModalAction(
-        'Open in another app',
-        onPressed: () async {
-          problem.value = await _open(file);
-          return false;
-        },
-      ),
-      secondary: const ModalAction('Close'),
-      body: ImagePreview(
-        bytes: bytes,
-        decodeWidth: width > previewDecodeWidth ? previewDecodeWidth : width,
-        height: size.height,
-        problem: problem,
-      ),
+      mime: file.values['mime'],
+      bytes: bytes,
+      open: () => _open(file),
     );
-    problem.dispose();
     return null;
   });
 
@@ -338,35 +384,8 @@ class LocalFileAccess implements FileAccess {
   Future<void> openElsewhere(BuildContext context, LocalRevision file) =>
       _run(context, () => _open(file));
 
-  /// Writes a plain copy where another app can read it, and opens it. Null
-  /// once it's opened; otherwise what went wrong. See [clearOpenedCopies].
-  Future<String?> _open(LocalRevision file) async {
-    final bytes = await files.read(file.id);
-    final folder = Directory(
-      p.join((await _openedFolder()).path, newLocalId()),
-    );
-    await folder.create(recursive: true);
-    final copy = File(
-      p.join(folder.path, openedName(file.title, file.values['mime'])),
-    );
-    await copy.writeAsBytes(bytes, flush: true);
-    Timer(_openedFor, () => unawaited(_remove(folder)));
-    final opened = Platform.isWindows
-        ? await _openOnWindows(copy)
-        : await _channel.invokeMethod<bool>('open', {
-                'path': copy.path,
-                'mime': file.values['mime'],
-              }) ??
-              false;
-    if (opened) return null;
-    await _remove(folder);
-    return 'No app on this device can open this file.';
-  }
-
-  Future<bool> _openOnWindows(File copy) async {
-    await Process.start('explorer.exe', [copy.path]);
-    return true;
-  }
+  Future<String?> _open(LocalRevision file) async =>
+      openPlainCopy(file.title, file.values['mime'], await files.read(file.id));
 
   @override
   Future<void> saveCopy(

@@ -171,16 +171,16 @@ void main() {
         await lifeBack(tester);
 
         await localTap(tester, find.text('Learning').first);
-        await localTap(tester, find.text('New learning goal'));
+        await localAction(tester, 'Add a learning goal');
         await lifeEnter(tester, 'title', 'P5 native learning');
         await lifeEnter(tester, 'total', '12');
         await lifeEnter(tester, 'progress', '3');
-        await lifeSave(tester);
-        await localTap(tester, find.textContaining('Open learning journal'));
-        await localTap(tester, find.text('Log progress'));
+        await lifeSaveForm(tester, 'Learning goal saved');
+        await localTap(tester, find.text('P5 native learning').first);
+        await localTap(tester, find.byKey(const ValueKey('life-entry-log')));
         await lifeEnter(tester, 'progress', '12');
         await lifeEnter(tester, 'note', 'Completed explicit progress');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Progress saved');
         expect(
           c.entries.where((r) => r.title == 'P5 native learning').single.status,
           'Completed',
@@ -188,13 +188,15 @@ void main() {
         await lifeBack(tester);
 
         await localTap(tester, find.text('Books').first);
-        await localTap(tester, find.text('Add book'));
+        await localAction(tester, 'Add a book');
         await lifeEnter(tester, 'title', 'P5 native book');
         await lifeEnter(tester, 'detail', 'Synthetic author');
         await lifeEnter(tester, 'total', '256');
         await lifeEnter(tester, 'progress', '32');
+        await localTap(tester, find.text('More details'));
+        await lifeSelect(tester, 'select-status', 'Finished');
         await lifeEnter(tester, 'rating', '4.1250');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Book saved');
         expect(
           c.records.values.whereType<BookRecord>().single.author,
           'Synthetic author',
@@ -205,36 +207,47 @@ void main() {
         );
 
         await localTap(tester, find.text('Career').first);
-        await localTap(tester, find.text('New application'));
+        await localAction(tester, 'Add an application');
         await lifeEnter(tester, 'company', 'P5 synthetic company');
         await lifeEnter(tester, 'position', 'Native engineer');
-        await lifeEnter(tester, 'contact', 'Private synthetic recruiter');
         await lifeEnter(tester, 'followUp', tomorrow);
-        await lifeSave(tester);
-        await localTap(tester, find.text('P5 synthetic company'));
-        await localTap(tester, find.text('Edit / change stage'));
+        await localTap(tester, find.text('More details'));
+        await lifeEnter(tester, 'contact', 'Private synthetic recruiter');
+        await lifeSaveForm(tester, 'Application saved');
+        await localTap(tester, find.text('P5 synthetic company').first);
+        await localTap(
+          tester,
+          find.byKey(const ValueKey('life-application-stage')),
+        );
+        await lifeSelect(tester, 'select-stage', 'Applied');
         await lifeEnter(tester, 'date', date);
-        await lifeSelect(tester, 'stage', 'Applied');
         await lifeEnter(tester, 'reason', 'Submitted today');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Stage saved');
         expect(
           c.records.values.whereType<ApplicationRecord>().single.stage,
           'Applied',
         );
-        await localTap(tester, find.text('Add interview / follow-up'));
+        await localTap(
+          tester,
+          find.byKey(const ValueKey('life-application-step')),
+        );
         await lifeEnter(tester, 'date', tomorrow);
         await lifeEnter(tester, 'time', '10:00');
+        await localTap(tester, find.text('More details'));
         await lifeEnter(tester, 'location', 'https://example.test/meeting');
-        await lifeSave(tester);
+        await lifeSaveForm(tester, 'Step saved');
         expect(c.records.values.whereType<CareerEventRecord>().length, 1);
         if (const bool.fromEnvironment('P5_PICK_DOCUMENT')) {
           debugPrint(
             'P5_NATIVE_DOCUMENT: select the synthetic p4_receipt.png in the actual platform picker.',
           );
-          await localTap(tester, find.text('Select private Career document'));
+          await localTap(
+            tester,
+            find.byKey(const ValueKey('life-document-attach')),
+          );
           for (
             var i = 0;
-            i < 600 && find.text('Attach private document?').evaluate().isEmpty;
+            i < 600 && find.text('Attach this file?').evaluate().isEmpty;
             i++
           ) {
             await tester.runAsync(
@@ -242,8 +255,8 @@ void main() {
             );
             await tester.pump();
           }
-          expect(find.text('Attach private document?'), findsOneWidget);
-          await localTap(tester, find.text('Attach').last);
+          expect(find.text('Attach this file?'), findsOneWidget);
+          await localTap(tester, find.text('Attach file').last);
           await tester.runAsync(c.reload);
           final document = c.records.values
               .whereType<CareerDocumentRecord>()

@@ -277,6 +277,64 @@ class DurableLifeController extends LifeController {
         oldVersion: records[old]?.version,
       );
 
+  /// The same for an application.
+  LifeCommand applicationCommand(Map<String, String> v, {String? old}) {
+    if (old == null) lifeCheckDuplicate(records, v);
+    return lifeCommandFor(
+      store.owner,
+      LifeType.application,
+      v,
+      lifeApplicationData(v),
+      current: fields(old),
+      oldId: old,
+      oldVersion: records[old]?.version,
+    );
+  }
+
+  /// The same for a step on [application].
+  LifeCommand stepCommand(
+    Map<String, String> v,
+    String application, {
+    String? old,
+  }) => lifeCommandFor(
+    store.owner,
+    LifeType.careerEvent,
+    v,
+    lifeStepData(v, application),
+    current: fields(old),
+    oldId: old,
+    oldVersion: records[old]?.version,
+  );
+
+  /// The same for a learning item or book.
+  LifeCommand entryCommand(
+    LifeType type,
+    Map<String, String> v, {
+    String? old,
+  }) => lifeCommandFor(
+    store.owner,
+    type,
+    v,
+    lifeEntryData(type, v),
+    current: fields(old),
+    oldId: old,
+    oldVersion: records[old]?.version,
+  );
+
+  /// New progress from a form, which brings its own command id.
+  LifeCommand progressCommand(Map<String, String> v, String id) {
+    final r = records[id];
+    if (r is! ProgressRecord) {
+      lifeReject('This record isn’t available any more.');
+    }
+    return lifeProgressCommand(store.owner, r, v);
+  }
+
+  Future<void> saveProgress(Map<String, String> v, String id) async {
+    await store.commitLife(progressCommand(v, id), draft: v['__draft']);
+    await reload();
+  }
+
   /// The command a form's values make, for checking them before Review.
   LifeCommand eventCommand(Map<String, String> v, {String? old}) =>
       lifeCommandFor(
@@ -314,29 +372,11 @@ class DurableLifeController extends LifeController {
     Map<String, String> v, {
     CareerApplication? old,
   }) async {
-    if (old == null &&
-        v['duplicateConsent'] != 'true' &&
-        records.values.whereType<ApplicationRecord>().any(
-          (r) =>
-              r.company.trim().toLowerCase() ==
-                  v['company']!.trim().toLowerCase() &&
-              r.position.toLowerCase() == v['position']!.trim().toLowerCase(),
-        )) {
-      lifeReject(
-        'A company/role match exists. Confirm a separate application attempt; valid reapplications are allowed.',
-      );
-    }
+    if (old == null) lifeCheckDuplicate(records, v);
     await _save(
       LifeType.application,
       v,
-      {
-        for (final key in lifeDefaults(LifeType.application).keys)
-          if (v.containsKey(key)) key: v[key]!,
-        'title': v['position']!,
-        'pipelineStage': v['stage']!,
-        'outcome': v['outcome'] ?? '',
-        'status': (v['outcome'] ?? '').isEmpty ? v['stage']! : v['outcome']!,
-      },
+      lifeApplicationData(v),
       oldId: old?.id,
       oldVersion: old?.version,
     );
@@ -350,14 +390,7 @@ class DurableLifeController extends LifeController {
   }) => _save(
     LifeType.careerEvent,
     v,
-    {
-      for (final key in lifeDefaults(LifeType.careerEvent).keys)
-        if (v.containsKey(key)) key: v[key]!,
-      'title': v['kind']!,
-      'eventKind': v['kind']!,
-      'application': a.id,
-      'utc': '',
-    },
+    lifeStepData(v, a.id),
     oldId: old?.id,
     oldVersion: old?.version,
   );
@@ -382,7 +415,9 @@ class DurableLifeController extends LifeController {
   @override
   Future<void> progress(LifeEntry e, int value, String note) async {
     if (e.archived || value < 0 || value > e.total) {
-      lifeReject('Choose valid progress on an active record.');
+      lifeReject(
+        'Enter progress from 0 up to the total. Restore an archived item first.',
+      );
     }
     await change(e.id, e.version, {
       if (e.kind != LifeKind.task) 'progress': '$value',
@@ -522,6 +557,81 @@ LifeCommand lifeCommandFor(
       : 'Created',
   recordedAt: DateTime.tryParse(values['__recordedAt'] ?? ''),
 );
+
+/// What Log progress sends, as [DurableLifeController.progress] does, under the
+/// form's own command id. A date finished is the user's; it's never worked out.
+LifeCommand lifeProgressCommand(
+  String owner,
+  ProgressRecord r,
+  Map<String, String> v,
+) {
+  final value = int.tryParse(v['progress'] ?? '') ?? -1;
+  if (r.archived || value < 0 || value > r.total) {
+    lifeReject(
+      'Enter progress from 0 up to the total. Restore an archived item first.',
+    );
+  }
+  final note = (v['note'] ?? '').trim();
+  return lifeCommandFor(
+    owner,
+    r.type,
+    {...v, 'reason': note.isEmpty ? 'Progress updated' : note},
+    {
+      'progress': '$value',
+      'status': value == r.total ? 'Completed' : 'In progress',
+      if (value == r.total && (v['completed'] ?? '').isNotEmpty)
+        'completed': v['completed']!,
+    },
+    current: r.fields,
+    oldId: r.id,
+    oldVersion: r.version,
+  );
+}
+
+/// Refuses a second application to the same company and role until the user
+/// says it's a separate one. A later attempt is fine; it just can't be silent.
+void lifeCheckDuplicate(Map<String, LifeRecord> records, Map<String, String> v) {
+  if (v['duplicateConsent'] != 'true' && lifeIsDuplicate(records, v)) {
+    lifeReject(
+      'You already have this company and role. Confirm this is a separate application.',
+    );
+  }
+}
+
+/// A form's own record isn't a duplicate of itself: checking again after a
+/// lost answer finds it there.
+bool lifeIsDuplicate(Map<String, LifeRecord> records, Map<String, String> v) =>
+    records.values.whereType<ApplicationRecord>().any(
+      (r) =>
+          r.id != v['__record'] &&
+          r.company.trim().toLowerCase() ==
+              (v['company'] ?? '').trim().toLowerCase() &&
+          r.position.toLowerCase() ==
+              (v['position'] ?? '').trim().toLowerCase(),
+    );
+
+/// What an application form's values put in a command. An older closed record
+/// has no recorded stage, so a form that leaves it alone sends none.
+Map<String, String> lifeApplicationData(Map<String, String> v) => {
+  for (final key in lifeDefaults(LifeType.application).keys)
+    if (v.containsKey(key)) key: v[key]!,
+  'title': v['position']!,
+  if (v.containsKey('stage')) ...{
+    'pipelineStage': v['stage']!,
+    'outcome': v['outcome'] ?? '',
+    'status': (v['outcome'] ?? '').isEmpty ? v['stage']! : v['outcome']!,
+  },
+};
+
+/// What a Career step form's values put in a command. The rules work out `utc`.
+Map<String, String> lifeStepData(Map<String, String> v, String application) => {
+  for (final key in lifeDefaults(LifeType.careerEvent).keys)
+    if (v.containsKey(key)) key: v[key]!,
+  'title': v['kind']!,
+  'eventKind': v['kind']!,
+  'application': application,
+  'utc': '',
+};
 
 /// What a task, learning or book form's values put in a command.
 Map<String, String> lifeEntryData(LifeType type, Map<String, String> v) => {

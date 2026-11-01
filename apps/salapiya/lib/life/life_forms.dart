@@ -16,7 +16,9 @@ import 'life_cards.dart' show lifeClock;
 import 'life_controller.dart' show tzTime;
 import 'life_data.dart';
 import 'life_domain.dart';
+import 'career_forms.dart';
 import 'life_hub.dart';
+import 'progress_forms.dart';
 
 /// Rules that name no field are matched by their words, first match first, so
 /// a refusal lands on its field (§6). `rule_messages_test` holds these to the
@@ -29,6 +31,22 @@ const lifeRuleFields = [
   ('doesn’t happen on this date', 'time'),
   ('happens twice', 'fold'),
   ('Say why', 'reason'),
+  ('date finished can’t be', 'completed'),
+  ('Enter progress', 'progress'),
+  ('Enter a rating', 'rating'),
+  ('Enter the company', 'company'),
+  ('stage from the list', 'stage'),
+  ('no date applied', 'date'),
+  ('stage date can’t be', 'stageDate'),
+  ('work arrangement from', 'arrangement'),
+  ('Choose a currency', 'currency'),
+  ('Enter the salary', 'salaryMin'),
+  ('lowest salary', 'salaryMax'),
+  ('posting’s web address', 'postingUrl'),
+  ('type from the list', 'kind'),
+  ('need a time', 'time'),
+  ('already happened', 'kind'),
+  ('separate application', 'duplicateConsent'),
 ];
 
 String? lifeRuleField(String message) {
@@ -72,6 +90,9 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
 
   /// Saves the frozen values.
   Future<void> save();
+
+  /// The field a refusal belongs on.
+  String? ruleField(String message) => lifeRuleField(message);
 
   bool loading = true, busy = false, dirty = false, reviewing = false;
   bool saved = false, unknown = false, stale = false, draftFailed = false;
@@ -153,7 +174,7 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
       }
     } on FormatException catch (e) {
       problem = e.message;
-      field = lifeRuleField(problem);
+      field = ruleField(problem);
       // Refused: nothing was kept, so the next try is a new command.
       if (reviewing) values['__command'] = newLocalId();
       if (field != null) reviewing = false;
@@ -187,7 +208,7 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
     } on FormatException catch (e) {
       // An answer at last: it was refused, and nothing was kept.
       errorMessage = e.message;
-      errorField = lifeRuleField(e.message);
+      errorField = ruleField(e.message);
       unknown = false;
       reviewing = false;
       values
@@ -322,78 +343,13 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
   );
 }
 
-/// Add event, or Edit event with [id]. The same keys and defaults the rules
-/// have always had; only the fields changed.
-Future<void> openEventForm(
-  BuildContext context,
-  PrototypeSession session, {
-  String? id,
-}) => openDemoPage<void>(
-  context,
-  LifeEventForm(writer: lifeSource(context, session).writer, id: id),
-  'life/editor',
-  title: id == null ? 'Add event' : 'Edit event',
-);
-
-class LifeEventForm extends StatefulWidget {
-  const LifeEventForm({super.key, required this.writer, this.id});
-  final LifeWriter writer;
-
-  /// The event being edited.
-  final String? id;
-  @override
-  State<LifeEventForm> createState() => _LifeEventFormState();
-}
-
-class _LifeEventFormState extends State<LifeEventForm>
-    with FormInputs, LifeFormSteps {
-  @override
-  String get fieldPrefix => 'life-field-';
-  @override
-  LifeWriter get writer => widget.writer;
-  @override
-  String? get recordId => widget.id;
-  @override
-  String get operation => 'life:${widget.id ?? 'new-event'}';
-
-  PersonalRecord? get record => writer.record(widget.id) as PersonalRecord?;
-
-  @override
-  late final Map<String, String> values = () {
-    final r = record;
-    return <String, String>{
-      'title': r?.title ?? '',
-      'date': r?.date ?? writer.today,
-      'time': r == null ? '09:00' : r.time,
-      'timezone': r?.timezone ?? 'Asia/Manila',
-      'archived': r?.fields['archived'] ?? 'false',
-      'fold': r?.fields['fold'] ?? '',
-      'status': r?.status ?? 'Scheduled',
-      'location': r?.fields['location'] ?? '',
-      'notes': r?.notes ?? '',
-      if (r != null) 'reason': '',
-      ...meta(r?.id, r?.version ?? 0),
-    };
-  }();
-
+/// The time fields events and Career steps share. A time that doesn't exist
+/// errors as it's picked, and one that happens twice asks which.
+mixin LifeTimeInputs<T extends StatefulWidget> on FormInputs<T>, LifeFormSteps<T> {
   /// The time to come back to when All day is turned off.
   late String lastTime = values['time']!.isEmpty ? '09:00' : values['time']!;
 
   bool get allDay => answer('time').isEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(restore());
-  }
-
-  @override
-  void dispose() {
-    for (final field in fields.values) {
-      field.dispose();
-    }
-    super.dispose();
-  }
 
   /// When this date, time and timezone happen: none in a clock-change gap,
   /// two when the clocks go back. Null for an all-day event.
@@ -433,22 +389,6 @@ class _LifeEventFormState extends State<LifeEventForm>
     super.changed(key, value);
     if (key == 'date') clockChanged();
   }
-
-  @override
-  void check() {
-    if (answer('title').isEmpty) lifeReject('Enter a title of at most 200 characters.');
-    if (answer('date').isEmpty) {
-      lifeReject('Choose a date between 1900 and 2200.');
-    }
-    if (widget.id != null && answer('reason').isEmpty) {
-      lifeReject('Say why you’re changing this, in up to 2,000 characters.');
-    }
-    writer.eventCommand(Map.unmodifiable(values), old: widget.id);
-  }
-
-  @override
-  Future<void> save() =>
-      writer.saveEvent(Map.unmodifiable(values), old: widget.id);
 
   String zoneLine(BuildContext context) {
     final there = matches;
@@ -522,6 +462,104 @@ class _LifeEventFormState extends State<LifeEventForm>
     ),
   );
 
+  Widget foldInput() => pickInput(
+    'fold',
+    'Which one?',
+    const {'Earlier': 'The earlier one', 'Later': 'The later one'},
+    descriptions: const {
+      'Earlier': 'Before the clocks change.',
+      'Later': 'After the clocks change.',
+    },
+    required: true,
+    helper: 'The clocks change on this date, so this time happens twice.',
+    style: PickerStyle.radio,
+  );
+}
+
+/// Add event, or Edit event with [id]. The same keys and defaults the rules
+/// have always had; only the fields changed.
+Future<void> openEventForm(
+  BuildContext context,
+  PrototypeSession session, {
+  String? id,
+}) => openDemoPage<void>(
+  context,
+  LifeEventForm(writer: lifeSource(context, session).writer, id: id),
+  'life/editor',
+  title: id == null ? 'Add event' : 'Edit event',
+);
+
+class LifeEventForm extends StatefulWidget {
+  const LifeEventForm({super.key, required this.writer, this.id});
+  final LifeWriter writer;
+
+  /// The event being edited.
+  final String? id;
+  @override
+  State<LifeEventForm> createState() => _LifeEventFormState();
+}
+
+class _LifeEventFormState extends State<LifeEventForm>
+    with FormInputs, LifeFormSteps, LifeTimeInputs {
+  @override
+  String get fieldPrefix => 'life-field-';
+  @override
+  LifeWriter get writer => widget.writer;
+  @override
+  String? get recordId => widget.id;
+  @override
+  String get operation => 'life:${widget.id ?? 'new-event'}';
+
+  PersonalRecord? get record => writer.record(widget.id) as PersonalRecord?;
+
+  @override
+  late final Map<String, String> values = () {
+    final r = record;
+    return <String, String>{
+      'title': r?.title ?? '',
+      'date': r?.date ?? writer.today,
+      'time': r == null ? '09:00' : r.time,
+      'timezone': r?.timezone ?? 'Asia/Manila',
+      'archived': r?.fields['archived'] ?? 'false',
+      'fold': r?.fields['fold'] ?? '',
+      'status': r?.status ?? 'Scheduled',
+      'location': r?.fields['location'] ?? '',
+      'notes': r?.notes ?? '',
+      if (r != null) 'reason': '',
+      ...meta(r?.id, r?.version ?? 0),
+    };
+  }();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(restore());
+  }
+
+  @override
+  void dispose() {
+    for (final field in fields.values) {
+      field.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  void check() {
+    if (answer('title').isEmpty) lifeReject('Enter a title of at most 200 characters.');
+    if (answer('date').isEmpty) {
+      lifeReject('Choose a date between 1900 and 2200.');
+    }
+    if (widget.id != null && answer('reason').isEmpty) {
+      lifeReject('Say why you’re changing this, in up to 2,000 characters.');
+    }
+    writer.eventCommand(Map.unmodifiable(values), old: widget.id);
+  }
+
+  @override
+  Future<void> save() =>
+      writer.saveEvent(Map.unmodifiable(values), old: widget.id);
+
   Widget details() {
     firstField = true;
     final twice = (matches?.length ?? 0) > 1;
@@ -534,20 +572,7 @@ class _LifeEventFormState extends State<LifeEventForm>
         dateInput('date', 'Date', required: true),
         allDayInput(),
         if (!allDay) timeInput(),
-        if (twice)
-          pickInput(
-            'fold',
-            'Which one?',
-            const {'Earlier': 'The earlier one', 'Later': 'The later one'},
-            descriptions: const {
-              'Earlier': 'Before the clocks change.',
-              'Later': 'After the clocks change.',
-            },
-            required: true,
-            helper:
-                'The clocks change on this date, so this time happens twice.',
-            style: PickerStyle.radio,
-          ),
+        if (twice) foldInput(),
         FormMoreDetails(
           open: inMore,
           children: [
@@ -779,9 +804,9 @@ class _LifeTaskFormState extends State<LifeTaskForm>
   return switch (key) {
     'new-task' => (title: 'Add task', form: 'task'),
     'new-event' => (title: 'Add event', form: 'event'),
-    'new-learning' => (title: 'Add a learning goal', form: null),
-    'new-book' => (title: 'Add a book', form: null),
-    'new-career' => (title: 'Add an application', form: null),
+    'new-learning' => (title: 'Add a learning goal', form: 'learning'),
+    'new-book' => (title: 'Add a book', form: 'book'),
+    'new-career' => (title: 'Add an application', form: 'application'),
     'reminder-timing' => (title: 'Reminder timing', form: null),
     'calendar-timezone' => (title: 'Calendar timezone', form: null),
     _ when key.startsWith('review:') => (
@@ -789,12 +814,43 @@ class _LifeTaskFormState extends State<LifeTaskForm>
       form: null,
     ),
     _ when key.startsWith('new-career-event-') => (
-      title: 'Add a career step',
-      form: null,
+      title: 'Add a step',
+      form: 'step',
+    ),
+    _ when key.startsWith('stage:') => (title: 'Change stage', form: 'stage'),
+    _ when key.startsWith('outcome:') => (
+      title: 'Record outcome',
+      form: 'outcome',
+    ),
+    _ when key.startsWith('reopen:') => (
+      title: 'Reopen application',
+      form: 'reopen',
+    ),
+    // The old form named its draft after the item, and kept the id inside.
+    _ when key.startsWith('progress:') || key.startsWith('Log progress') => (
+      title: 'Log progress',
+      form: 'progress',
     ),
     _ when values.containsKey('priority') => (
       title: 'Edit task',
       form: 'edit-task',
+    ),
+    _ when values.containsKey('company') => (
+      title: 'Edit application',
+      form: 'edit-application',
+    ),
+    // A step has a timezone too, so this comes before an event.
+    _ when values.containsKey('kind') => (
+      title: 'Edit step',
+      form: 'edit-step',
+    ),
+    _ when values.containsKey('rating') => (
+      title: 'Edit book',
+      form: 'edit-entry',
+    ),
+    _ when values.containsKey('total') => (
+      title: 'Edit learning goal',
+      form: 'edit-entry',
     ),
     _ when values.containsKey('timezone') => (
       title: 'Edit event',
@@ -802,6 +858,21 @@ class _LifeTaskFormState extends State<LifeTaskForm>
     ),
     _ => (title: 'Finish this draft', form: null),
   };
+}
+
+String _after(String text, String start) =>
+    text.startsWith(start) ? text.substring(start.length) : text;
+
+/// The item a Log progress draft is for, if it's still here.
+String? progressDraftRecord(
+  LifeWriter writer,
+  String key,
+  Map<String, String> values,
+) {
+  final id = key.startsWith('progress:')
+      ? key.substring('progress:'.length)
+      : values['__record'];
+  return writer.record(id) is ProgressRecord ? id : null;
 }
 
 /// Opens a saved Life draft's form. False when it can't: its record is gone,
@@ -820,6 +891,40 @@ Future<bool> openLifeDraft(
       await openTaskForm(context, session);
     case 'event':
       await openEventForm(context, session);
+    case 'learning':
+      await openEntryForm(context, session, LifeType.learning);
+    case 'book':
+      await openEntryForm(context, session, LifeType.book);
+    case 'application':
+      await openApplicationForm(context, session);
+    case 'edit-application' when writer.record(id) is ApplicationRecord:
+      await openApplicationForm(context, session, id: id);
+    case 'edit-step' when writer.record(id) is CareerEventRecord:
+      await openStepForm(
+        context,
+        session,
+        (writer.record(id)! as CareerEventRecord).applicationId,
+        id: id,
+      );
+    case 'step' when writer.record(_after(id, 'new-career-event-')) != null:
+      await openStepForm(context, session, _after(id, 'new-career-event-'));
+    case 'stage' || 'outcome' || 'reopen'
+        when writer.record(id.split(':').last) is ApplicationRecord:
+      await openStageForm(
+        context,
+        session,
+        id.split(':').last,
+        StageChange.values.byName(kind!),
+      );
+    case 'edit-entry' when writer.record(id) is ProgressRecord:
+      await openEntryForm(context, session, writer.record(id)!.type, id: id);
+    case 'progress' when progressDraftRecord(writer, id, values) != null:
+      await openProgressForm(
+        context,
+        session,
+        progressDraftRecord(writer, id, values)!,
+        draft: operation,
+      );
     case 'edit-task' when writer.record(id) is TaskRecord:
       await openTaskForm(context, session, id: id);
     case 'edit-event' when writer.record(id) is PersonalRecord:

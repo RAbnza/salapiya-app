@@ -11,9 +11,14 @@ import '../prototype/scenarios.dart';
 import 'life_controller.dart'
     show
         lifeAgendaItems,
+        lifeApplicationData,
+        lifeCheckDuplicate,
         lifeCommandFor,
         lifeEntryData,
         lifeEventData,
+        lifeIsDuplicate,
+        lifeProgressCommand,
+        lifeStepData,
         sortedAgenda;
 import 'life_data.dart';
 import 'life_domain.dart';
@@ -22,6 +27,10 @@ import 'life_forms.dart';
 import 'life_hub.dart';
 import 'life_pages_detail.dart';
 import 'life_settings.dart';
+import 'career_forms.dart';
+import 'career_pages.dart';
+import 'progress_forms.dart';
+import 'progress_pages.dart';
 import 'reminder_data.dart';
 import 'tasks_tab.dart' show openLifeTask;
 
@@ -139,7 +148,7 @@ DemoLife _build(String today, bool empty) {
     timezone: 'Asia/Tokyo',
     location: 'Online',
   );
-  event(4, 'Book club', 4, '19:00', location: 'Maginhawa');
+  event(4, 'Book club', 1, '19:00', location: 'Maginhawa');
   event(5, 'Mom’s birthday', 6, '');
   event(6, 'Eye check', -3, '15:00', location: 'Ortigas');
   event(7, 'Car service', 8, '08:30', status: 'Cancelled');
@@ -168,39 +177,459 @@ DemoLife _build(String today, bool empty) {
   task(26, 'Book the car service', -6, status: 'Completed');
   task(27, 'Old errand', -30, archived: 'true');
 
-  // Due dates and a career step, so every module shows.
-  save(30, LifeType.learning, {
-    'title': 'Thoughtful interfaces with Flutter',
-    'detail': 'Self-paced course',
-    'due': day(14),
-    'total': '12',
-    'progress': '5',
+  void learning(
+    int record,
+    String title,
+    String detail, {
+    int? due,
+    int total = 1,
+    int progress = 0,
+    String status = 'In progress',
+    int? finished,
+    String archived = 'false',
+  }) => save(record, LifeType.learning, {
+    'title': title,
+    'detail': detail,
+    'due': due == null ? '' : day(due),
+    'total': '$total',
+    'progress': '$progress',
+    'status': status,
+    'completed': finished == null ? '' : day(finished),
+    'archived': archived,
   });
-  save(31, LifeType.book, {
-    'title': 'The Art of Noticing',
-    'detail': 'Rob Walker',
-    'due': day(20),
-    'total': '256',
-    'progress': '96',
+  void book(
+    int record,
+    String title,
+    String author, {
+    int? due,
+    int total = 1,
+    int progress = 0,
+    String status = 'In progress',
+    int? finished,
+    String rating = '',
+    String archived = 'false',
+  }) => save(record, LifeType.book, {
+    'title': title,
+    'detail': author,
+    'due': due == null ? '' : day(due),
+    'total': '$total',
+    'progress': '$progress',
+    'status': status,
+    'completed': finished == null ? '' : day(finished),
+    'rating': rating,
+    'archived': archived,
   });
-  save(40, LifeType.application, {
-    'title': 'Product designer',
-    'company': 'Amihan Studio',
-    'status': 'Interview',
-    'pipelineStage': 'Interview',
+
+  // Learning: in progress, late, no total, not started, on hold, finished.
+  learning(
+    30,
+    'Thoughtful interfaces with Flutter',
+    'Self-paced course',
+    due: 14,
+    total: 12,
+    progress: 4,
+  );
+  save(
+    30,
+    LifeType.learning,
+    {'progress': '5', 'status': 'In progress'},
+    reason: 'Finished the layout lesson',
+    daysAgo: 2,
+  );
+  learning(
+    32,
+    'Everyday Spanish',
+    'Practice sessions',
+    due: -2,
+    total: 30,
+    progress: 8,
+  );
+  learning(33, 'Public speaking', 'Toastmasters club');
+  learning(
+    34,
+    'Data storytelling',
+    'Online workshop',
+    status: 'Not started',
+    due: 40,
+    total: 6,
+  );
+  learning(35, 'Basic accounting', 'Library course', status: 'Not started');
+  learning(
+    36,
+    'Watercolor basics',
+    'Weekend class',
+    total: 8,
+    progress: 3,
+    status: 'On hold',
+  );
+  learning(
+    37,
+    'Intro to Dart',
+    'Official tour',
+    total: 10,
+    progress: 10,
+    status: 'Completed',
+    finished: -21,
+  );
+  learning(
+    38,
+    'First aid refresher',
+    'Red Cross',
+    status: 'Completed',
+    progress: 1,
+  );
+  learning(
+    39,
+    'Old typing course',
+    '',
+    total: 20,
+    progress: 2,
+    archived: 'true',
+  );
+
+  // Books: reading, on the list, on hold, finished, abandoned.
+  book(
+    31,
+    'The Art of Noticing',
+    'Rob Walker',
+    due: 20,
+    total: 256,
+    progress: 96,
+  );
+  book(
+    42,
+    'A Field Guide to Getting Lost',
+    'Rebecca Solnit',
+    total: 224,
+    progress: 32,
+  );
+  book(43, 'Piranesi', 'Susanna Clarke', status: 'Not started', due: 45);
+  book(
+    44,
+    'Noli Me Tangere',
+    'José Rizal',
+    status: 'Not started',
+    total: 480,
+  );
+  book(45, 'The Overstory', 'Richard Powers', status: 'Not started');
+  book(
+    46,
+    'Middlemarch',
+    'George Eliot',
+    total: 880,
+    progress: 120,
+    status: 'On hold',
+  );
+  book(
+    47,
+    'Dekada ’70',
+    'Lualhati Bautista',
+    total: 216,
+    progress: 216,
+    status: 'Completed',
+    finished: -12,
+    rating: '4.5',
+  );
+  book(
+    48,
+    'Four Thousand Weeks',
+    'Oliver Burkeman',
+    total: 272,
+    progress: 272,
+    status: 'Completed',
+  );
+  book(
+    49,
+    'A Very Long Saga',
+    'Anonymous',
+    total: 900,
+    progress: 40,
+    archived: 'true',
+  );
+
+  void application(
+    int record,
+    String company,
+    String position,
+    String stage, {
+    int? applied,
+    int? moved,
+    Map<String, String> more = const {},
+  }) => save(record, LifeType.application, {
+    'title': position,
+    'company': company,
+    'status': stage,
+    'pipelineStage': stage,
     'outcome': '',
-    'date': day(-14),
-    'stageDate': day(-7),
-    'location': 'Metro Manila',
+    'date': applied == null ? '' : day(applied),
+    'stageDate': day(moved ?? applied ?? -10),
+    ...more,
   });
-  save(41, LifeType.careerEvent, {
-    'title': 'Interview',
-    'eventKind': 'Interview',
-    'application': _id(40),
-    'date': day(3),
-    'time': '10:00',
-    'timezone': 'Asia/Manila',
+  void step(
+    int record,
+    int on,
+    String kind,
+    int offset, {
+    String time = '',
+    String timezone = 'Asia/Manila',
+    String status = 'Scheduled',
+    String location = '',
+    String notes = '',
+    String outcome = '',
+  }) => save(record, LifeType.careerEvent, {
+    'title': kind,
+    'eventKind': kind,
+    'application': _id(on),
+    'date': day(offset),
+    'time': time,
+    'timezone': timezone,
+    'status': status,
+    'location': location,
+    'notes': notes,
+    'outcome': outcome,
   });
+
+  /// Closes an application the way the Record outcome form does.
+  void close(int record, String outcome, int offset, {String? stage}) => save(
+    record,
+    LifeType.application,
+    {
+      'status': outcome,
+      'pipelineStage': stage ?? records[_id(record)]!.fields['pipelineStage']!,
+      'outcome': outcome,
+      'stageDate': day(offset),
+    },
+    reason: 'Heard back',
+    daysAgo: 1,
+  );
+
+  // Career: every stage and outcome, a step in another timezone, an overdue
+  // follow-up, a salary in another currency, and a step that was cancelled.
+  application(
+    40,
+    'Amihan Studio',
+    'Product designer',
+    'Interview',
+    applied: -14,
+    moved: -7,
+    more: {
+      'location': 'Metro Manila',
+      'arrangement': 'hybrid',
+      'source': 'A friend at the studio',
+      'postingUrl': 'https://example.com/careers/product-designer',
+      'technologies': 'Figma, Flutter',
+      'description':
+          'Design and ship the mobile product with a small team. Portfolio review, then two interviews.',
+      'contact': 'Tala Reyes, recruiter · tala@example.com',
+      'resume': 'Resume v4',
+      'salaryMin': '60000',
+      'salaryMax': '80000',
+      'nextAction': 'Prepare the portfolio walkthrough',
+      'notes': 'They liked the case study.',
+    },
+  );
+  step(
+    41,
+    40,
+    'Interview',
+    3,
+    time: '10:00',
+    location: 'Online',
+    notes: 'Portfolio conversation.',
+  );
+  step(
+    70,
+    40,
+    'Interview',
+    -6,
+    time: '14:00',
+    status: 'Completed',
+    outcome: 'Went well',
+    notes: 'First conversation.',
+  );
+  step(
+    71,
+    40,
+    'Response',
+    -9,
+    status: 'Completed',
+    notes: 'They asked for an interview.',
+  );
+  application(
+    50,
+    'North & Co.',
+    'UX engineer',
+    'Saved',
+    more: {'nextAction': 'Ask Tala about the team'},
+  );
+  application(
+    51,
+    'Bayan Digital',
+    'Flutter developer',
+    'Applied',
+    applied: -12,
+    more: {
+      'followUp': day(-3),
+      'nextAction': 'Check how the application is going',
+      'location': 'Taguig',
+      'arrangement': 'remote',
+      'source': 'Job board',
+    },
+  );
+  application(
+    52,
+    'Sinag Labs',
+    'Mobile engineer',
+    'Screening',
+    applied: -20,
+    moved: -6,
+  );
+  step(72, 52, 'Follow-up', 1, notes: 'Ask about the next round.');
+  application(
+    53,
+    'Tala Systems',
+    'Senior designer',
+    'Technical assessment',
+    applied: -25,
+    moved: -4,
+  );
+  step(73, 53, 'Assessment', -2, time: '09:00', notes: 'Take-home task.');
+  step(
+    74,
+    53,
+    'Interview',
+    9,
+    time: '11:00',
+    status: 'Cancelled',
+    notes: 'They moved to a written round.',
+  );
+  application(
+    54,
+    'Kapwa Health',
+    'Product lead',
+    'Final interview',
+    applied: -30,
+    moved: -3,
+  );
+  step(
+    75,
+    54,
+    'Interview',
+    2,
+    time: '09:00',
+    timezone: 'Australia/Sydney',
+    location: 'Video call',
+  );
+  application(
+    55,
+    'Alon & Co.',
+    'Design manager',
+    'Offer',
+    applied: -40,
+    moved: -1,
+    more: {
+      'salaryMin': '3000',
+      'salaryMax': '3500',
+      'currency': 'USD',
+      'nextAction': 'Reply by Friday',
+    },
+  );
+  step(76, 55, 'Offer', -1, status: 'Completed', notes: 'Offer by email.');
+  application(
+    56,
+    'Liwanag Studio',
+    'Designer',
+    'Offer',
+    applied: -90,
+    moved: -60,
+  );
+  close(56, 'Accepted', -50, stage: 'Accepted');
+  application(
+    57,
+    'Hangin Tech',
+    'Frontend developer',
+    'Applied',
+    applied: -34,
+  );
+  step(
+    77,
+    57,
+    'No response',
+    -13,
+    status: 'Completed',
+    notes: 'Three weeks, nothing yet.',
+  );
+  close(57, 'Rejected', -8);
+  application(
+    58,
+    'Bukid Foods',
+    'Product designer',
+    'Screening',
+    applied: -50,
+    moved: -44,
+  );
+  close(58, 'Withdrawn', -30);
+  application(
+    59,
+    'Daloy Works',
+    'UX lead',
+    'Offer',
+    applied: -70,
+    moved: -55,
+  );
+  close(59, 'Declined offer', -52);
+  application(
+    60,
+    'Palay Inc.',
+    'Designer',
+    'Offer',
+    applied: -80,
+    moved: -66,
+  );
+  close(60, 'Expired offer', -56);
+  application(
+    61,
+    'Sampaguita Co.',
+    'Researcher',
+    'Interview',
+    applied: -100,
+    moved: -80,
+  );
+  close(61, 'Employer-cancelled opening', -70);
+  application(
+    62,
+    'Ilog Partners',
+    'Designer',
+    'Applied',
+    applied: -200,
+    more: {'archived': 'true'},
+  );
+
+  // Documents: here, on another device, and an archived link.
+  void document(
+    int record,
+    String name,
+    String mime,
+    int size, {
+    String archived = 'false',
+  }) => save(
+    record,
+    LifeType.document,
+    {
+      'title': name,
+      'application': _id(40),
+      'sourceVersion': '1',
+      'status': 'Linked',
+      'mime': mime,
+      'size': '$size',
+      'checksum': 'a' * 64,
+      'archived': archived,
+    },
+    reason: 'Attached private Career document metadata',
+  );
+  document(80, 'Resume v4.pdf', 'application/pdf', 182400);
+  document(81, 'Portfolio cover.png', 'image/png', 920000);
+  document(82, 'Old resume.pdf', 'application/pdf', 164000, archived: 'true');
   return DemoLife(records, log);
 }
 
@@ -308,6 +737,81 @@ class DemoLifeWriter implements LifeWriter {
   Future<void> saveTask(Map<String, String> v, {String? old}) async =>
       applyLifeCommand(life.records, taskCommand(v, old: old));
   @override
+  LifeCommand entryCommand(
+    LifeType type,
+    Map<String, String> v, {
+    String? old,
+  }) => lifeCommandFor(
+    _owner,
+    type,
+    v,
+    lifeEntryData(type, v),
+    current: record(old)?.fields ?? const {},
+    oldId: old,
+    oldVersion: record(old)?.version,
+  );
+  @override
+  Future<void> saveEntry(
+    LifeType type,
+    Map<String, String> v, {
+    String? old,
+  }) async => applyLifeCommand(life.records, entryCommand(type, v, old: old));
+  @override
+  LifeCommand applicationCommand(Map<String, String> v, {String? old}) {
+    if (old == null) lifeCheckDuplicate(life.records, v);
+    return lifeCommandFor(
+      _owner,
+      LifeType.application,
+      v,
+      lifeApplicationData(v),
+      current: record(old)?.fields ?? const {},
+      oldId: old,
+      oldVersion: record(old)?.version,
+    );
+  }
+
+  @override
+  Future<void> saveApplication(Map<String, String> v, {String? old}) async =>
+      applyLifeCommand(life.records, applicationCommand(v, old: old));
+  @override
+  bool duplicateApplication(Map<String, String> v) =>
+      lifeIsDuplicate(life.records, v);
+  @override
+  LifeCommand stepCommand(
+    Map<String, String> v,
+    String application, {
+    String? old,
+  }) => lifeCommandFor(
+    _owner,
+    LifeType.careerEvent,
+    v,
+    lifeStepData(v, application),
+    current: record(old)?.fields ?? const {},
+    oldId: old,
+    oldVersion: record(old)?.version,
+  );
+  @override
+  Future<void> saveStep(
+    Map<String, String> v,
+    String application, {
+    String? old,
+  }) async => applyLifeCommand(
+    life.records,
+    stepCommand(v, application, old: old),
+  );
+  @override
+  LifeCommand progressCommand(Map<String, String> v, String id) {
+    final r = record(id);
+    if (r is! ProgressRecord) {
+      lifeReject('This record isn’t available any more.');
+    }
+    return lifeProgressCommand(_owner, r, v);
+  }
+
+  @override
+  Future<void> saveProgress(Map<String, String> v, String id) async =>
+      applyLifeCommand(life.records, progressCommand(v, id));
+  @override
   Future<void> useEdit(LifeCommand command, String original) async =>
       applyLifeCommand(life.records, command);
   @override
@@ -320,6 +824,41 @@ class DemoLifeWriter implements LifeWriter {
     for (final (at, c) in life.log)
       if (c.recordId == id) (at, c),
   ];
+}
+
+/// The demo has no encrypted store, so its files are only their details.
+class DemoDocuments implements LifeDocuments {
+  const DemoDocuments();
+  static const _nothing = 'Files need the encrypted store, so the demo can’t open or save them.';
+
+  @override
+  bool get demo => true;
+
+  /// One sample file is on another device, so that state shows.
+  @override
+  Future<bool> present(String id) async => id != _id(81);
+  @override
+  Future<List<PendingDocument>> pending(String application) async => const [];
+  @override
+  Future<String?> attach(BuildContext context, String application) async =>
+      _nothing;
+  @override
+  Future<String?> finish(PendingDocument pending) async => _nothing;
+  @override
+  Future<String?> letGo(PendingDocument pending) async => _nothing;
+  @override
+  Future<String?> preview(
+    BuildContext context,
+    CareerDocumentRecord record,
+  ) async => _nothing;
+  @override
+  Future<String?> openElsewhere(CareerDocumentRecord record) async => _nothing;
+  @override
+  Future<String?> saveCopy(CareerDocumentRecord record) async => _nothing;
+  @override
+  Future<String?> restore(CareerDocumentRecord record) async => _nothing;
+  @override
+  Future<String?> removeCopy(CareerDocumentRecord record) async => _nothing;
 }
 
 /// What could remind the user, from the sample, 90 days either way.
@@ -489,6 +1028,8 @@ LifeSource demoLifeSource(BuildContext context, PrototypeSession session) {
   void open(String module, String id) => switch (module) {
     'Personal' => openLifeEvent(context, session, id),
     'Tasks' => openLifeTask(context, session, id),
+    'Learning' || 'Books' => openLifeEntry(context, session, id),
+    'Career' => openLifeApplication(context, session, id),
     'Debts' => openDebtDue(demoDebtsSource(context, session), id),
     'Cards' || 'Recurring' => demoMoneySource(
       context,
@@ -509,6 +1050,7 @@ LifeSource demoLifeSource(BuildContext context, PrototypeSession session) {
     waiting: session.pending ? 1 : 0,
     reviews: session.needsReview ? demoReviews(life) : const [],
     reminders: hub.demoReminders..items = demoReminderItems(life, s, today),
+    documents: const DemoDocuments(),
     actions: LifeActions(
       addEvent: () => openEventForm(context, session),
       addTask: () => openTaskForm(context, session),
@@ -516,8 +1058,34 @@ LifeSource demoLifeSource(BuildContext context, PrototypeSession session) {
       openEvent: (id) => openLifeEvent(context, session, id),
       editTask: (id) => openTaskForm(context, session, id: id),
       openTask: (id) => openLifeTask(context, session, id),
-      openRow: (row) => open(row.module, row.sourceId),
-      openItem: (item) => open(item.kind, item.sourceId),
+      addEntry: (type) => openEntryForm(context, session, type),
+      openEntry: (id) => openLifeEntry(context, session, id),
+      editEntry: (id) => openEntryForm(
+        context,
+        session,
+        life.records[id]!.type,
+        id: id,
+      ),
+      logProgress: (id) => openProgressForm(context, session, id),
+      addApplication: () => openApplicationForm(context, session),
+      openApplication: (id) => openLifeApplication(context, session, id),
+      editApplication: (id) => openApplicationForm(context, session, id: id),
+      changeStage: (id) =>
+          openStageForm(context, session, id, StageChange.stage),
+      recordOutcome: (id) =>
+          openStageForm(context, session, id, StageChange.outcome),
+      reopenApplication: (id) =>
+          openStageForm(context, session, id, StageChange.reopen),
+      addStep: (id) => openStepForm(context, session, id),
+      openStep: (id) => openCareerStep(context, session, id),
+      editStep: (application, id) =>
+          openStepForm(context, session, application, id: id),
+      openRow: (row) => row.module == 'Career'
+          ? openCareerItem(context, session, row.id, row.sourceId)
+          : open(row.module, row.sourceId),
+      openItem: (item) => item.kind == 'Career'
+          ? openCareerItem(context, session, item.id, item.sourceId)
+          : open(item.kind, item.sourceId),
       openList: (page, title) =>
           openDemoPage<void>(context, page, 'life/list', title: title),
       reminders: () => openLifeReminders(context, session),

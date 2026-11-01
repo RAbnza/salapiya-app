@@ -351,6 +351,7 @@ enum FieldInput {
   amount(r'^\d*(\.\d{0,2})?$', money: true),
   signedAmount(r'^-?\d*(\.\d{0,2})?$', money: true),
   wholeNumber(r'^\d*$'),
+  rating(r'^\d?(\.\d{0,4})?$'),
   numberList(r'^[\d,\s]*$'),
   date(r'^\d{0,4}(-\d{0,2}(-\d{0,2})?)?$');
 
@@ -367,6 +368,7 @@ enum FieldInput {
   /// Why [text] was refused, in a few plain words.
   String reason(String text) => switch (this) {
     FieldInput.wholeNumber => 'Whole numbers only.',
+    FieldInput.rating => 'A number from 0 to 5, like 4.5.',
     FieldInput.numberList => 'Numbers and commas only.',
     FieldInput.date => 'Dates only, like 2026-10-30.',
     FieldInput.amount when text.contains('-') =>
@@ -574,7 +576,8 @@ class HelpTextField extends StatelessWidget {
       keyboardType:
           keyboardType ??
           switch (guarded) {
-            FieldInput.amount => const TextInputType.numberWithOptions(
+            FieldInput.amount ||
+            FieldInput.rating => const TextInputType.numberWithOptions(
               decimal: true,
             ),
             FieldInput.signedAmount => const TextInputType.numberWithOptions(
