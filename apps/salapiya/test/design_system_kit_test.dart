@@ -45,6 +45,118 @@ bool infoFocused() =>
     FocusManager.instance.primaryFocus?.debugLabel == 'InfoControl';
 
 void main() {
+  group('a narrow row', () {
+    Future<void> show(
+      WidgetTester tester,
+      Widget? trailing, {
+      Widget? pill,
+      double width = 300,
+      double scale = 1,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          themeAnimationDuration: Duration.zero,
+          theme: SalapiyaTheme.build(
+            Brightness.light,
+            platform: TargetPlatform.android,
+          ),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: width,
+                  child: AdaptiveRow(
+                    title: 'Rent',
+                    subtitle: 'Due Fri, 30 Oct',
+                    trailing: trailing,
+                    pill: pill,
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('its pill stays on the title’s line', (tester) async {
+      await show(tester, const StatusPill.overdue());
+      final title = tester.getRect(find.text('Rent'));
+      final pill = tester.getRect(find.byType(StatusPill));
+      final details = tester.getRect(find.text('Due Fri, 30 Oct'));
+      expect(pill.bottom, lessThanOrEqualTo(details.top));
+      expect(pill.top, lessThan(title.bottom));
+      expect(pill.left, greaterThan(title.right - Space.xxs));
+      expect(
+        tester.getRect(find.byType(Row).first).right,
+        greaterThanOrEqualTo(pill.right),
+      );
+    });
+
+    testWidgets('large text moves the pill under, so the title stays whole', (
+      tester,
+    ) async {
+      await show(tester, const StatusPill.overdue(), scale: 2);
+      expect(
+        tester.getTopLeft(find.byType(StatusPill)).dy,
+        greaterThanOrEqualTo(
+          tester.getBottomLeft(find.text('Due Fri, 30 Oct')).dy,
+        ),
+      );
+    });
+
+    testWidgets('an amount stays under the text, whole', (tester) async {
+      await show(tester, const Text('₱1,234,567.89'));
+      expect(
+        tester.getTopLeft(find.text('₱1,234,567.89')).dy,
+        greaterThanOrEqualTo(
+          tester.getBottomLeft(find.text('Due Fri, 30 Oct')).dy,
+        ),
+      );
+    });
+
+    testWidgets('with an amount, only the amount moves under', (tester) async {
+      const amount = '₱1,000.00';
+      await show(tester, const Text(amount), pill: const StatusPill.overdue());
+      final details = tester.getRect(find.text('Due Fri, 30 Oct'));
+      expect(
+        tester.getRect(find.byType(StatusPill)).bottom,
+        lessThanOrEqualTo(details.top),
+      );
+      expect(
+        tester.getTopLeft(find.text(amount)).dy,
+        greaterThanOrEqualTo(details.bottom),
+      );
+    });
+
+    testWidgets('a wide row keeps an amount above its pill', (tester) async {
+      const amount = '₱1,000.00';
+      await show(
+        tester,
+        const Text(amount),
+        pill: const StatusPill.overdue(),
+        width: 500,
+      );
+      final pill = tester.getRect(find.byType(StatusPill));
+      final figure = tester.getRect(find.text(amount));
+      expect(figure.bottom, lessThanOrEqualTo(pill.top));
+      expect(figure.right, moreOrLessEquals(pill.right, epsilon: 0.5));
+    });
+
+    testWidgets('a wide row keeps it beside the text, centered', (
+      tester,
+    ) async {
+      await show(tester, const StatusPill.overdue(), width: 500);
+      expect(
+        tester.getCenter(find.byType(StatusPill)).dy,
+        tester.getCenter(find.byType(AdaptiveRow)).dy,
+      );
+    });
+  });
+
   group('switches', () {
     Future<void> show(
       WidgetTester tester,
@@ -135,6 +247,80 @@ void main() {
         expect(taps, 1);
       }
       semantics.dispose();
+    });
+
+    testWidgets('a card\'s switch doesn\'t push its content down', (
+      tester,
+    ) async {
+      var taps = 0;
+      Widget card({Widget? toggle}) => SizedBox(
+        width: 360,
+        child: OverviewCard(
+          title: 'This device',
+          toggle: toggle,
+          child: const Text('Below'),
+        ),
+      );
+      await show(tester, TargetPlatform.android, card());
+      final plain =
+          tester.getTopLeft(find.text('Below')).dy -
+          tester.getTopLeft(find.text('This device')).dy;
+
+      await show(
+        tester,
+        TargetPlatform.android,
+        card(
+          toggle: AppSwitch(
+            key: const ValueKey('s'),
+            label: 'Reminders',
+            value: false,
+            onChanged: (_) => taps++,
+          ),
+        ),
+      );
+      final title = find.text('This device');
+      expect(
+        tester.getTopLeft(find.text('Below')).dy - tester.getTopLeft(title).dy,
+        plain,
+      );
+      expect(
+        tester.getCenter(find.byType(Switch)).dy,
+        moreOrLessEquals(tester.getCenter(title).dy, epsilon: 0.5),
+      );
+
+      // The target stays 48 and stays inside the card, so the top of it works.
+      final area = tester.getRect(find.byKey(const ValueKey('s')));
+      expect(area.height, greaterThanOrEqualTo(Space.target));
+      expect(
+        tester.getRect(find.byType(OverviewCard)).contains(area.topCenter),
+        isTrue,
+      );
+      await tester.tapAt(area.topCenter + const Offset(0, 1));
+      await tester.tapAt(area.bottomCenter - const Offset(0, 1));
+      await tester.pump(kDoubleTapTimeout);
+      expect(taps, 2);
+    });
+
+    testWidgets('on Windows it stays in the header', (tester) async {
+      await show(
+        tester,
+        TargetPlatform.windows,
+        SizedBox(
+          width: 360,
+          child: OverviewCard(
+            title: 'This device',
+            toggle: AppSwitch(value: false, onChanged: (_) {}),
+            child: const Text('Below'),
+          ),
+        ),
+      );
+      expect(
+        find.descendant(
+          of: find.byType(OverviewCard),
+          matching: find.byType(Stack),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('a switch alone says what it does', (tester) async {

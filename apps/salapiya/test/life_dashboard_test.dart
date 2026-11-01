@@ -217,9 +217,8 @@ void main() {
       final s = PrototypeSession();
       addTearDown(s.dispose);
       late ReminderRow row;
-      row = lifeHubOf(session).demoReminders.rows.firstWhere(
-        (r) => r.title == title,
-      );
+      row = lifeHubOf(session).demoReminders.rows
+          .firstWhere((r) => r.title == title);
       return row;
     }
 
@@ -284,6 +283,21 @@ void main() {
       expect(find.textContaining('Show more'), findsOneWidget);
     });
 
+    testWidgets('Android: a title sits right above its card\'s content', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      await app(tester, reminders(session), platform: android, width: 412);
+      final gap =
+          tester.getTopLeft(find.textContaining('Reminders are on')).dy -
+          tester.getBottomLeft(find.text('This device')).dy;
+      expect(gap, Space.md);
+      await tester.tap(find.byKey(const ValueKey('life-reminders-quiet-on')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('nothing empty sits under the side cards', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
@@ -295,7 +309,8 @@ void main() {
         find.byKey(const ValueKey('life-reminders-show')),
       );
       expect(side.dy, list.dy);
-      final gap = list.dy -
+      final gap =
+          list.dy -
           tester
               .getBottomLeft(
                 find.textContaining('company names, contacts and notes'),
@@ -468,7 +483,10 @@ void main() {
       );
       await tester.pump();
       expect(find.textContaining('Reminds you'), findsOneWidget);
-      expect(find.byKey(const ValueKey('life-change-reminder')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('life-change-reminder')),
+        findsOneWidget,
+      );
       expect(find.text('Inherited'), findsNothing);
     });
 
@@ -712,6 +730,28 @@ void main() {
       expect(starts, hasLength(1));
     });
 
+    testWidgets('Android: a pill stays beside its task, not under it', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      await app(tester, tasks(session), platform: android, width: 412);
+      final row = find
+          .ancestor(
+            of: find.text('Call the insurer').first,
+            matching: find.byType(AdaptiveRow),
+          )
+          .first;
+      final title = tester.getRect(
+        find.descendant(of: row, matching: find.text('Call the insurer')),
+      );
+      final pill = tester.getRect(
+        find.descendant(of: row, matching: find.byType(StatusPill)),
+      );
+      expect(pill.top, lessThan(title.bottom));
+      expect(pill.bottom, greaterThan(title.top));
+    });
+
     testWidgets('the first thing can be completed in one tap', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
@@ -804,9 +844,7 @@ void main() {
       addTearDown(session.dispose);
       for (final (platform, width) in sizes) {
         await app(tester, life(session), platform: platform, width: width);
-        final week = tester.getTopLeft(
-          find.byKey(const ValueKey('life-week')),
-        );
+        final week = tester.getTopLeft(find.byKey(const ValueKey('life-week')));
         final late = tester.getTopLeft(
           find.byKey(const ValueKey('life-overdue')),
         );
@@ -970,7 +1008,11 @@ void main() {
   });
 
   group('event page', () {
-    Future<String> open(WidgetTester tester, PrototypeSession session, String title) async {
+    Future<String> open(
+      WidgetTester tester,
+      PrototypeSession session,
+      String title,
+    ) async {
       final id = demoLife(civilToday()).records.values
           .firstWhere((r) => r.title == title)
           .id;

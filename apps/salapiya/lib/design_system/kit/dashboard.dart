@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -8,6 +10,7 @@ import 'focus_ring.dart';
 import 'money.dart';
 import 'rows.dart';
 import 'states.dart';
+import 'status.dart';
 import 'surfaces.dart';
 
 /// The compact dashboard kit, moved from the Overview unchanged (§2 Section
@@ -70,6 +73,8 @@ class AppSwitch extends StatelessWidget {
       label: label,
       child: TouchArea(
         onTap: change == null ? null : () => change(!value),
+        // Flush with the content above and below it, not inset by the area.
+        alignment: AlignmentDirectional.centerEnd,
         child: SizedBox(
           height: isDesktop(context) ? Space.xl - Space.xs : Space.xl,
           child: FittedBox(
@@ -852,6 +857,7 @@ bool narrowAt(BuildContext context, double width, [double base = rowBase]) =>
 /// a card's header control moves above its content, and a table or a
 /// side-by-side card layout turns into a list.
 const rowBase = Space.xxxl * 7,
+    titleBase = Space.xxxl + Space.xxl,
     periodBase = Space.xxxl * 6 + Space.lg,
     tableBase = Space.xxxl * 11;
 
@@ -864,30 +870,70 @@ class AdaptiveRow extends StatelessWidget {
     this.subtitle,
     this.leading,
     this.trailing,
+    this.pill,
     this.onTap,
   });
   final String title;
   final String? subtitle;
   final IconData? leading;
   final Widget? trailing;
+
+  /// A status pill. It sits under [trailing], or on the title's line in a
+  /// narrow row, so only an amount ever moves under the text. A [trailing]
+  /// that is itself a pill is treated the same way.
+  final Widget? pill;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => ListRow(
-      title: title,
-      subtitle: subtitle,
-      leading: leading,
-      trailing: trailing,
-      onTap: onTap,
-      stackTrailing: narrowAt(context, box.maxWidth),
-    ),
+    builder: (context, box) {
+      final status = pill ?? (trailing is StatusPill ? trailing : null);
+      final rest = identical(status, trailing) ? null : trailing;
+      final narrow = narrowAt(context, box.maxWidth);
+      final onTitle = narrow && _fits(context, box.maxWidth, status);
+      return ListRow(
+        title: title,
+        subtitle: subtitle,
+        leading: leading,
+        titleEnd: onTitle ? status : null,
+        trailing: onTitle || status == null
+            ? rest
+            : rest == null
+            ? status
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  rest,
+                  const SizedBox(height: Space.captionGap),
+                  status,
+                ],
+              ),
+        onTap: onTap,
+        stackTrailing: narrow,
+      );
+    },
   );
+
+  /// Whether the title keeps a readable width with a pill on its line.
+  bool _fits(BuildContext context, double width, Widget? status) {
+    if (status is! StatusPill) return false;
+    final icons = ListRow.leadingSize(context);
+    final room =
+        width -
+        ListRow.horizontalPadding * 2 -
+        (leading == null ? 0 : icons + ListRow.leadingGap) -
+        (onTap == null ? 0 : icons + Space.sm) -
+        Space.sm -
+        status.widthIn(context);
+    return !narrowAt(context, room, titleBase);
+  }
 }
 
 /// A dashboard card: a compact `titleSmall` header with an optional caption
 /// and a small trailing control, which moves above the content when the card
 /// is narrower than [stackBelow] at the current text size. [corner] (an icon
-/// button) always stays at the header's end.
+/// button) always stays at the header's end. Use [toggle] for an [AppSwitch]
+/// that belongs to the whole card, instead of [corner].
 class OverviewCard extends StatelessWidget {
   const OverviewCard({
     super.key,
@@ -896,6 +942,7 @@ class OverviewCard extends StatelessWidget {
     this.caption,
     this.trailing,
     this.corner,
+    this.toggle,
     this.stackBelow = rowBase,
     this.accent = false,
     this.centered = false,
@@ -904,6 +951,10 @@ class OverviewCard extends StatelessWidget {
   final String title;
   final String? caption;
   final Widget? trailing, corner;
+
+  /// Level with the title. On Android its touch target lies over the card's
+  /// padding, so the target doesn't push the content down.
+  final Widget? toggle;
   final Widget child;
   final double stackBelow;
   final bool accent;
@@ -919,6 +970,9 @@ class OverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     final text = Theme.of(context).textTheme;
+    final toggle = this.toggle;
+    final floating = toggle != null && !isDesktop(context);
+    final corner = floating ? this.corner : this.corner ?? toggle;
     final heading = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -940,6 +994,7 @@ class OverviewCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: heading),
+                if (floating) const SizedBox(width: Space.target),
                 // Centered on each other: a link is shorter than an icon
                 // button.
                 if ((trailing != null && !stack) || corner != null) ...[
@@ -974,7 +1029,7 @@ class OverviewCard extends StatelessWidget {
         final minimum = (centered || fill) && box.minHeight > inset
             ? box.minHeight - inset
             : 0.0;
-        return SurfaceCard(
+        final card = SurfaceCard(
           accent: accent,
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: minimum),
@@ -995,6 +1050,21 @@ class OverviewCard extends StatelessWidget {
                     ],
                   ),
           ),
+        );
+        if (!floating) return card;
+        final style = text.titleSmall!;
+        final line = MediaQuery.textScalerOf(context)
+            .scale(style.fontSize! * (style.height ?? 1));
+        return Stack(
+          fit: StackFit.passthrough,
+          children: [
+            card,
+            PositionedDirectional(
+              top: math.max(0, (inset + line - Space.target) / 2),
+              end: inset / 2,
+              child: toggle,
+            ),
+          ],
         );
       },
     );

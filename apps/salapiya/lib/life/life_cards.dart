@@ -85,23 +85,13 @@ Widget lifeRowTile(
   ValueChanged<LifeRow> onOpen, {
   bool date = true,
 }) {
-  final pill = lifePill(r);
   return AdaptiveRow(
     key: ValueKey('life-row-${r.id}'),
     leading: lifeIcon(r),
     title: r.title,
     subtitle: detailLine(lifeDetails(context, r, date: date)),
-    trailing: r.money
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              MoneyAmount(amount(r.amount!)),
-              const SizedBox(height: Space.captionGap),
-              ?pill,
-            ],
-          )
-        : pill,
+    trailing: r.money ? MoneyAmount(amount(r.amount!)) : null,
+    pill: lifePill(r),
     onTap: () => onOpen(r),
   );
 }
@@ -123,9 +113,8 @@ class LifeMoneyNote extends StatelessWidget {
     padding: const EdgeInsets.only(top: Space.sm),
     child: Text(
       'Reminders of your records. Salapiya doesn’t pay anything.',
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: CraftTheme.of(context).secondary,
-      ),
+      style: Theme.of(context).textTheme.bodySmall
+          ?.copyWith(color: CraftTheme.of(context).secondary),
     ),
   );
 }
@@ -213,7 +202,9 @@ class LifeTable extends StatelessWidget {
     final muted = text.bodySmall?.copyWith(color: c.secondary);
     AppTableRow row(LifeRow r) {
       // Its own column, so a due today says so even without a pill beside it.
-      final when = r.event ? lifeWhen(context, r, date: false).join(' · ') : 'Due';
+      final when = r.event
+          ? lifeWhen(context, r, date: false).join(' · ')
+          : 'Due';
       final pill = lifePill(r);
       return AppTableRow(
         id: r.id,

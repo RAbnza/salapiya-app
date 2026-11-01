@@ -148,7 +148,7 @@ class _LifeRemindersTabState extends State<LifeRemindersTab> {
       key: const ValueKey('life-reminders-status'),
       title: 'This device',
       accent: true,
-      corner: !r.available
+      toggle: !r.available
           ? null
           : AppSwitch(
               key: const ValueKey('life-reminders-on'),
@@ -265,7 +265,7 @@ class _LifeRemindersTabState extends State<LifeRemindersTab> {
       key: const ValueKey('life-reminders-quiet'),
       title: 'Quiet hours',
       caption: 'Reminders wait until these end',
-      corner: AppSwitch(
+      toggle: AppSwitch(
         key: const ValueKey('life-reminders-quiet-on'),
         label: 'Quiet hours',
         value: prefs['quiet'] == true,

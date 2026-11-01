@@ -233,7 +233,7 @@ Approved 2026-10-30. Android gets the title bar's features in its own places; th
   - From 688: tiles and account cards two to a row; everything else full width.
   - Narrower, and always on Android: one column in priority order (Summary: tiles, At a glance, dues, hero, activity, Life, Shared). Tiles and account cards pair up when the column is at least 336 wide.
   - Cards in a row match the tallest (`_EqualHeightRow`). The grid owns the gap.
-  - **Narrow cards and large text:** row amounts and pills, a card's header control and label amounts move below the text under 336 × the text scale (640 for a header with a segmented control); the donut, gauge and tables switch to stacked layouts; segmented controls and the tab row scroll sideways rather than shrink text.
+  - **Narrow cards and large text:** row amounts, a card's header control and label amounts move below the text under 336 × the text scale, and a row's status pill moves to the end of the title's line, or below the text only if the title would have under 80 × the text scale left (640 for a header with a segmented control); the donut, gauge and tables switch to stacked layouts; segmented controls and the tab row scroll sideways rather than shrink text.
 - **Demo build:** the same dashboard, filled by a sample profile replayed in memory through the real rules (`planLocal`), dated relative to today: three accounts that end today on the demo balances (₱29,300.75 in all, as Money shows), two months of spending and income, six debts (one due soon, one 3 days overdue, one paid off, one with no schedule, one closed by an early payoff, and one with varied amounts, a partial payment and a payment without a breakdown), a card statement due in 5 days and three budgets. Demo scenarios (empty, incomplete, waiting changes, review) and hidden amounts apply. Nothing is stored. The previous demo Overview layout and its files are removed.
 
 ### Debts (Chat 7)
@@ -855,7 +855,7 @@ Each option is a `PickerOption` with a short noun-phrase label and an optional o
 | Radio list | Up to 5 options that differ in effect | Always visible under each label. The whole row is the target. |
 | Dropdown | 6 or more options, or long lists such as accounts and categories | Two-line menu items, visible in the open menu before choosing. The selected option's description becomes the helper text. |
 
-Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Windows and 24 on Android, in step with compact fields, with a 48 hit area on Android. `SwitchRow` is a label and its switch, read as one control and kept to a row's height. A switch with help goes inside a `HelpField`. Older screens keep the stock size until their chats.
+Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Windows and 24 on Android, in step with compact fields, with a 48 hit area on Android. `SwitchRow` is a label and its switch, read as one control and kept to a row's height. A switch for a whole card goes in `OverviewCard`'s `toggle`, level with the title: on Android its target lies over the card's padding, so it never pushes the content down. A switch with help goes inside a `HelpField`. Older screens keep the stock size until their chats.
 
 ### Dialogs and sheets (`showAdaptiveModal`, `showAppDialog`, `showAppSheet`, `ModalScaffold`)
 
@@ -910,6 +910,7 @@ Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Wi
 - **Trailing:** usually an amount or a status pill. It is centered vertically on the row, like the leading icon and the chevron.
 - **Tappable rows:** they get a chevron and hover, pressed and focus states.
 - **`stackTrailing`:** puts the trailing item under the text, end-aligned, for rows too narrow to hold both (the caller decides, because `ListRow` sits inside intrinsic-height layouts and can't measure itself).
+- **`titleEnd`:** sits at the end of the title's first line, on the title's baseline, so the subtitle keeps the row's width. `AdaptiveRow` uses it for a status pill in a narrow row: pass the pill as `pill` beside an amount in `trailing`, or as `trailing` alone. Only the amount moves under the text, so it's never cut.
 - **`ListGroup`:** hairline dividers inset to the text start, with none after the last row.
 
 ### Status (`StatusPill`, `InlineNotice`)
@@ -1520,6 +1521,8 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 72 cal
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
 | 2026-11-01 | Owner review: stage 11c looks good, which finishes Chat 11. | Approved |
 | 2026-11-01 | Owner review: stage 12a looks good, including Add event's new arrangement, shown as a sample. | Approved |
+| 2026-11-01 | Owner review after commit: a pill under a row's text reads as an afterthought. In a narrow row a lone status pill sits at the end of the title's line; amounts stay under the text. This changes the rule from the Overview's chat for pills only. | Done |
+| 2026-11-01 | Owner review after commit: on Android, a card's switch left a gap under the title, because its 48 target set the header's height. `OverviewCard` gains `toggle`, whose target lies over the card's padding, and a switch ends flush with the content. | Done |
 | 2026-11-01 | Owner review: stage 12c looks good with the compact switches. Chat 12 is approved. | Approved |
 | 2026-11-01 | Owner review of 12c: the stock switches were too big beside the compact controls. `AppSwitch` is 20 tall on Windows and 24 on Android, with a 48 hit area on Android, matching the sidebar's small switch. | Done |
 | 2026-11-01 | Owner review: stage 12b looks good. | Approved |

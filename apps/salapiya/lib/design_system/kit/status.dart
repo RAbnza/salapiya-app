@@ -46,6 +46,21 @@ class StatusPill extends StatelessWidget {
   final IconData icon;
   final PillTone tone;
 
+  /// How wide it draws at the current text size.
+  double widthIn(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: Theme.of(context).textTheme.labelMedium,
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return Space.pillPadding.horizontal + Space.lg + Space.xs + width;
+  }
+
   static (Color, Color) colors(CraftTheme c, PillTone tone) => switch (tone) {
     PillTone.overdue => c.overdue,
     PillTone.neutral => c.tone(NoticeTone.neutral),

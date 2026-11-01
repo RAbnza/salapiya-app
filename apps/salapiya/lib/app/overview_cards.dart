@@ -104,15 +104,8 @@ Widget dueRow(
       civilLabel(item.date),
       if (item.days < 0) '${_plural(-item.days, 'day')} overdue',
     ]),
-    trailing: Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        MoneyAmount(amount(item.amount)),
-        const SizedBox(height: Space.captionGap),
-        duePill(item.status),
-      ],
-    ),
+    trailing: MoneyAmount(amount(item.amount)),
+    pill: duePill(item.status),
     onTap: () => onOpen(item.source),
   );
 }

@@ -16,6 +16,7 @@ class ListRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.stackTrailing = false,
+    this.titleEnd,
   });
   final String title;
   final String? subtitle;
@@ -25,6 +26,10 @@ class ListRow extends StatelessWidget {
   /// Puts [trailing] under the text, end-aligned, for rows too narrow to
   /// hold both side by side (e.g. at 200% text). Amounts are never cut.
   final bool stackTrailing;
+
+  /// At the end of the title's first line, so the subtitle keeps the row's
+  /// width. For a status pill in a narrow row.
+  final Widget? titleEnd;
 
   /// Adds a chevron and makes the row one target.
   final VoidCallback? onTap;
@@ -75,7 +80,20 @@ class ListRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: text.titleSmall),
+                      if (titleEnd != null)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Expanded(
+                              child: Text(title, style: text.titleSmall),
+                            ),
+                            const SizedBox(width: Space.sm),
+                            titleEnd!,
+                          ],
+                        )
+                      else
+                        Text(title, style: text.titleSmall),
                       if (twoLine)
                         Text(
                           subtitle!,
