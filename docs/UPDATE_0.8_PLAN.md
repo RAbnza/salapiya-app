@@ -21,6 +21,7 @@ The ideas below aren't final. The planning session can solidify them, push back 
 - Turn a Shared Expenses group into a real shared space for a household or any group doing something together, not just a place to split bills. Right now my brothers and I plan our house renovation in Google Sheets; I want that to live in the app.
 - Clean up the parts of the app that grew awkward: quick actions on Android, where Profile and Settings live, where reminders live, landscape on Android, moving between tabs, and editing records after they exist.
 - Make signing in and opening the app feel safer and more like one app: Google sign-in inside the app, "Continue to Salapiya", and an optional app lock.
+- Make updating easy: the app tells me about new releases and, if possible, installs them itself.
 - Keep everything consistent with the design system, so the new parts look like they were always there.
 
 ## 2. Ground rules
@@ -187,6 +188,21 @@ It isn't only for renovations. It should work for any group project or household
 - What happens if I forget it, without weakening the existing encrypted profile and recovery rules.
 - Whether Windows Hello or fingerprint can unlock it too. That would probably need a package such as `local_auth`, which follows the UI package rule.
 
+### 3.19 Check for updates inside the app
+
+**What I want.** Starting with the release after this update, the app checks GitHub Releases for a newer version and tells me when there is one. If it's possible, I can also download and install the update from inside the app, so publishing a release on GitHub is all I have to do. I don't know yet how this should work, so the plan should work it out.
+
+**What's there now.** Updates are manual: download the new Windows installer or APK from the release and install it over the old one. The installers are on [GitHub Releases](https://github.com/RAbnza/salapiya-app/releases) (from `0.7.0`), with `SHA256SUMS.txt`. The Windows installer is unsigned. The APK is signed with my existing release key, so a newer versionCode updates in place. OPERATIONS_AND_RELEASE §16 says "do not build a custom updater before demonstrating a need", and the accepted limitations list a custom updater as out of scope. This idea changes that decision.
+
+**To settle.**
+- **Checking:** where the app reads the latest release from (the public GitHub API, which has rate limits without sign-in), how often it checks (on launch, once a day, manually from Help), and that it only checks when online and never sends anything about me or my data. It needs a setting to turn it off.
+- **Telling me:** where the notice shows, what it says (version and the release notes), and that it never interrupts something I'm in the middle of.
+- **Android:** downloading the APK and handing it to Android's installer. That needs the "install unknown apps" permission. Android checks that the signature matches, so only my signed builds can update it.
+- **Windows:** downloading the installer, checking it against `SHA256SUMS.txt` before running it, then closing the app and running setup over the existing install. Check whether an unsigned installer makes this awkward, and what SmartScreen does.
+- **Safety:** only downloads from this repository's releases, over HTTPS, with the hash checked. It never downgrades, and it suggests a backup before installing. If anything fails, the current install stays as it is.
+- **Releases:** the naming and version conventions the checker relies on (tag `salapiya-vX.Y.Z`, asset names, versionCode), written down so future releases follow them.
+- Whether it can be built entirely in this update, or the check ships first and in-app install later.
+
 ## 4. Open for suggestions
 
 The planning session should add ideas that fit the goals in §1, mark them as suggestions, and leave them for my approval. Good places to look: groceries and meals, group tools, and anything that makes everyday logging faster.
@@ -214,3 +230,4 @@ Each milestone's section below the table covers:
 | --- | --- |
 | 2026-11-03 | Started the 0.8 update on `update/0.8`. Ideas captured in §3; the plan comes next. |
 | 2026-11-03 | Added ideas 3.13–3.18: one-time debt payments, where reminders live, in-app Google sign-in, "Continue to Salapiya", editing debts and other records, app lock. |
+| 2026-11-03 | Added idea 3.19: check for updates (and, if possible, install them) from GitHub Releases inside the app. This reverses the "no custom updater" decision in OPERATIONS_AND_RELEASE §16 once the plan is approved. |
