@@ -98,7 +98,7 @@ flutter run -d windows
 
 The app starts offline and creates an encrypted profile on your device. Without Google configuration, the sign-in option explains that it's unavailable; everything else works.
 
-Release builds (a Windows installer and a signed APK) are shared privately and aren't published here. How they're installed, updated and restored is in [Operations and release](docs/OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure).
+Or skip the build: the [latest release](https://github.com/RAbnza/Personal-Management-Platform/releases/latest) has a Windows installer and an Android APK. How they're installed, updated and restored is in [Operations and release](docs/OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure).
 
 <details>
 <summary>Running the web reference app</summary>

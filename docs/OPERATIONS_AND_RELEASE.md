@@ -275,10 +275,21 @@ The first public GitHub release, tagged `salapiya-v0.7.0`. It's the same app as
 `0.6.1+8` with the full UI redesign and the [design system](DESIGN_SYSTEM.md)
 on top: a new shell and navigation on both platforms, rebuilt Overview, Money,
 Debts, Shared Expenses, Life and Profile screens, and light, dark and high-contrast
-themes. Financial rules, data, sync and backups are unchanged. The release is
-source only; I haven't built or signed `0.7.0` binaries yet, and installers stay
-private as before. Builds from this version need its higher versionCode `9` to
-update an existing `0.6.1+8` install.
+themes. Financial rules, data, sync and backups are unchanged.
+
+This is also the first time I've published the installers on GitHub, which changes
+the earlier "binaries stay local" decision. The release has the unsigned Inno Setup
+installer `Salapiya-0.7.0-windows-x64-setup.exe` (SHA-256
+`071545a679897f007f9a72e024acc0faac78ef8b1dcc052dd70a5a465e00cad5`), the APK signed
+with the existing release key `Salapiya-0.7.0-android.apk` (versionName `0.7.0`,
+versionCode `9`, SHA-256
+`8c0ac7b605f3e1534a564a65a2b5ef32e0fc8965c5ca7ee20d3a64cdc2acde86`) and
+`SHA256SUMS.txt`. The packaging wrapper checked the Windows version and payload, and
+apksigner verified the APK against the approved certificate. I didn't rerun the
+installer upgrade test (`test-windows-installer.ps1` still expects `0.6.1+8`) or an
+on-device update for this build. The local copies are under
+`apps/salapiya/build/private-release/`. Version code `9` updates an existing
+`0.6.1+8` install in place.
 
 ### 0.6.1+8 — 29 October 2026
 
