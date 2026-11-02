@@ -7,7 +7,7 @@
 <p align="center">Keep track of your money and your day, on Windows and Android, even offline.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-0.6.1%2B8-7c3aed" alt="Release 0.6.1+8">
+  <img src="https://img.shields.io/badge/release-0.7.0-7c3aed" alt="Release 0.7.0">
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Android-informational" alt="Platforms: Windows and Android">
   <img src="https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.7">
   <a href="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml"><img src="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml/badge.svg" alt="Salapiya Flutter validation"></a>
@@ -178,7 +178,7 @@ An unknown or mixed environment refuses to connect and stays usable offline. Sig
 - [x] Salapiya on Windows and Android: Money, Debts, Shared Expenses, Life, sync and backups
 - [x] Private release `0.6.1+8` (29 October 2026)
 - [x] Debt payment scheduling and urgency
-- [x] Full UI redesign and design system (November 2026)
+- [x] Full UI redesign and design system, released as `0.7.0` (3 November 2026)
 - [ ] Next major update: new features and changes built on the design system
 - [ ] Trusted Windows code signing and a wider range of tested phones
 

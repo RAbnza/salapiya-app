@@ -269,6 +269,17 @@ maintenance/product decisions and do not reopen this approved full release.
 
 ## Salapiya release history
 
+### 0.7.0+9 — 3 November 2026
+
+The first public GitHub release, tagged `salapiya-v0.7.0`. It's the same app as
+`0.6.1+8` with the full UI redesign and the [design system](DESIGN_SYSTEM.md)
+on top: a new shell and navigation on both platforms, rebuilt Overview, Money,
+Debts, Shared Expenses, Life and Profile screens, and light, dark and high-contrast
+themes. Financial rules, data, sync and backups are unchanged. The release is
+source only; I haven't built or signed `0.7.0` binaries yet, and installers stay
+private as before. Builds from this version need its higher versionCode `9` to
+update an existing `0.6.1+8` install.
+
 ### 0.6.1+8 — 29 October 2026
 
 **APPROVED FULL RELEASE. Development COMPLETE.**
