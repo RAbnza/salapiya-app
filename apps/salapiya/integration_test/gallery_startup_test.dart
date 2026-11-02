@@ -110,7 +110,6 @@ void main() {
       GallerySection.typography,
       GallerySection.finance,
       GallerySection.branding,
-      GallerySection.navigation,
       GallerySection.feedback,
     ]) {
       settings.change(() {

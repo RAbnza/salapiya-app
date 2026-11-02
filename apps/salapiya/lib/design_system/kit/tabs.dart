@@ -34,6 +34,8 @@ class AppTabs<T> extends StatelessWidget {
             for (final (i, (value, label)) in tabs.indexed) ...[
               if (i > 0) const SizedBox(width: Space.md),
               Semantics(
+                container: true,
+                onTap: () => onSelected(value),
                 button: true,
                 selected: value == selected,
                 inMutuallyExclusiveGroup: true,

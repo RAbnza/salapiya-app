@@ -220,6 +220,8 @@ class DuesList extends StatelessWidget {
             for (final (n, i) in items.indexed) ...[
               if (n > 0) Divider(height: 1, color: c.divider),
               Semantics(
+                container: true,
+                onTap: () => onOpen(i.source),
                 button: true,
                 label: [
                   i.source.title,
@@ -1442,6 +1444,8 @@ class ActivityCard extends StatelessWidget {
       for (final r in rows) r.amount,
     ]);
     Widget tableRow(ActivityRow r) => Semantics(
+      container: true,
+      onTap: r.onTap,
       button: true,
       label:
           '${r.title}, ${civilLabel(r.date)}, ${r.category}, ${r.amount ?? MoneyAmount.unknown}',

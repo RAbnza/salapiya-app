@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../app/demo_routes.dart';
 import '../../../app/shell_navigation.dart';
-import '../../../design_system/editorial.dart';
 import '../../../design_system/kit/kit.dart';
 import '../../../design_system/theme.dart';
 import '../../../finance/card_tab.dart';
@@ -21,12 +19,7 @@ import '../../../finance/report_tab.dart';
 import '../../../local/finance_domain.dart' show financeType;
 import '../../../local/local_finance_controller.dart';
 import '../../../prototype/scenarios.dart';
-import '../../supporting/presentation/files_screen.dart'
-    show SupportingFilesLink;
 import '../application/financial_controller.dart';
-import '../contracts/financial_models.dart';
-import 'financial_editor.dart';
-import 'financial_widgets.dart';
 
 /// Money's tabs (§2 Money).
 const moneyTabs = [
@@ -243,147 +236,6 @@ class _MoneyScreenState extends State<MoneyScreen> {
           else
             FilesTab(key: const ValueKey('money-files-tab'), source: money),
         ],
-      );
-    },
-  );
-}
-
-/// The demo's record page, for the demo's Cards, Planning and Reports.
-class TransactionDetail extends StatelessWidget {
-  const TransactionDetail({super.key, required this.session, required this.id});
-  final PrototypeSession session;
-  final String id;
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: session.finance,
-    builder: (context, _) {
-      final c = session.finance, r = c.records.firstWhere((r) => r.id == id);
-      return FinancePage(
-        title: 'Transaction detail',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FinanceHeading(
-              'ACTIVITY / ${r.kind.toUpperCase()}',
-              r.title,
-              '${r.date} · ${r.category} · ${r.status}',
-            ),
-            FinanceColumns(
-              main: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ValueBlock(
-                    'ORIGINAL AMOUNT',
-                    session.amount(r.amount),
-                    'Evidence $id · immutable record',
-                    color: Palette.lilac,
-                  ),
-                  const SizedBox(height: 24),
-                  const SectionHeading('Financial meaning'),
-                  for (final e in r.cash.entries)
-                    FinancialLine(
-                      c.account(e.key).name,
-                      'Actual cash movement',
-                      value: session.amount(e.value),
-                    ),
-                  FinancialLine(
-                    'Card liability',
-                    'Separate from liquid funds',
-                    value: session.amount(r.card),
-                  ),
-                  FinancialLine(
-                    'Recognized spending',
-                    'Transfer principal and card repayments excluded',
-                    value: session.amount(r.spending),
-                  ),
-                  if (r.note.trim().isNotEmpty)
-                    FinanceNotice(
-                      session.hideAmounts ? 'Evidence amounts hidden.' : r.note,
-                    ),
-                ],
-              ),
-              aside: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SectionHeading('Contextual actions'),
-                  if ([
-                    'expense',
-                    'income',
-                    'cardPurchase',
-                  ].contains(r.kind)) ...[
-                    for (final a in [
-                      FinancialAction.correction,
-                      if (r.kind != 'income') FinancialAction.refund,
-                      FinancialAction.reversal,
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: OutlinedButton(
-                          onPressed: () => openFinancialEditor(
-                            context,
-                            c,
-                            a,
-                            sourceId: r.id,
-                          ),
-                          child: Text(a.label),
-                        ),
-                      ),
-                    if (r.kind != 'income')
-                      OutlinedButton(
-                        onPressed: () => openFinancialEditor(
-                          context,
-                          c,
-                          FinancialAction.adoption,
-                          initial: {
-                            'funding': 'Existing purchase',
-                            'existing': r.id,
-                          },
-                        ),
-                        child: const Text('Share this purchase'),
-                      ),
-                  ] else
-                    const FinanceNotice(
-                      'This action belongs to its source workflow. Linked financial evidence cannot be changed through an ordinary expense form.',
-                    ),
-                  const SizedBox(height: 24),
-                  const SectionHeading('Evidence trail'),
-                  SupportingFilesLink(
-                    session: session,
-                    source: 'action:${r.id}',
-                  ),
-                  if (r.sourceId != null)
-                    FinancialLine(
-                      'Original source',
-                      r.sourceId!,
-                      onTap: c.records.any((x) => x.id == r.sourceId)
-                          ? () => openDemoPage<void>(
-                              context,
-                              TransactionDetail(
-                                session: session,
-                                id: r.sourceId!,
-                              ),
-                              'money/source',
-                            )
-                          : null,
-                    ),
-                  for (final child in c.records.where(
-                    (x) => x.sourceId == r.id,
-                  ))
-                    FinancialLine(
-                      child.kind,
-                      '${child.date} · ${session.amount(child.amount)}',
-                      key: ValueKey('evidence-${child.id}'),
-                      onTap: () => openDemoPage<void>(
-                        context,
-                        TransactionDetail(session: session, id: child.id),
-                        'money/evidence',
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
       );
     },
   );

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import '../design_system/workspace.dart' show FormExitGuard;
+import '../design_system/kit/review.dart' show FormExitGuard;
 import '../finance/debt_cards.dart' show civilDay;
 import '../finance/form_mechanics.dart';
 import '../local/finance_domain.dart';

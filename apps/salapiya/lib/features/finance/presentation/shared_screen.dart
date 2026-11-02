@@ -127,14 +127,7 @@ class _SharedScreenState extends State<SharedScreen> {
           live: true,
         ),
       if (source.needsReview)
-        InlineNotice(
-          source.syncLabel,
-          title: 'Sync needs review',
-          tone: NoticeTone.warning,
-          action: source.onReview == null
-              ? null
-              : AppButton.secondary('Review', onPressed: source.onReview!),
-        ),
+        SyncReviewNotice(onReview: source.onReview),
       if (g != null && !g.active(me))
         const InlineNotice(
           'You’ve left this group, so these are only your earlier records.',

@@ -105,7 +105,7 @@ At text scale ≥ 150%, drop one column class.
     - **Profile card:** the initial and the name on one line. It opens the profile menu. The sync state is in the title bar; without the custom frame, the card shows it on a second line with its icon.
     - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
     - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event, Add a learning goal. Shared Expenses: Add shared expense, Log a payment between members. Hidden on the rail.
-    - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync", "Sync needs you to sign in" (signed out) and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
+    - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" (Money, Life and group changes, as the sync status counts them; Chat 16), "Sync needs you to sign in" (signed out) and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
   - **Bottom, fixed:**
     - Settings (opens Profile and settings) and Help. Without the title bar, Hide amounts (a small switch) comes first; with it, Hide amounts is in the title bar.
     - Then a full-width Light | Dark switch, with an icon and a label on each segment. It shows the theme in use, including what System is giving. Choosing one sets the profile's theme. System stays available in Profile and settings.
@@ -175,7 +175,7 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
 - **Five-second questions.** App bar: where am I, and how do I get somewhere fast? Status row: is my data synced, and are my amounts hidden? Bell: does anything need me? Go to: where do I want to go? Calculator: can I work something out without leaving what I'm doing?
 - **What the standard doesn't cover here.** This is chrome, not a section, so there are no tabs, KPI tiles, charts, tables, grid, Show values, shareable views or accent card, and no demo sample of its own: it reads the shell's counts. Tokens, 48 targets, nothing cut at 200%, both themes, every state, the glossary, no wasted space, `ListEnd` on Go to's list and the sweep all apply.
 - **App bar** (`_AppBarRow`, at least 48 tall): the logo mark on Overview, the title, then Go to (search), the bell and the profile button, 48 each. Phones (Compact width) use the dock's names ("Shared"), so the bar keeps one row at normal text; wider screens use the full name. When the title doesn't fit beside the actions (at large text), it drops to its own line under them, with the logo staying on the actions' row. It never wraps inside a word or ends in "…".
-- **Status row** (48 tall): the sync pill (`SyncStatusButton`) at the start, with a 48 hit area, wrapping at large text, and the Hide amounts eye (`HideAmountsButton`, a toggle to screen readers) at the end. The pill opens Profile › Connection, or Profile and settings in the demo. Its spare height under the pill is the header's bottom gap, so the space above the content is as before.
+- **Status row** (48 tall): the sync pill (`SyncStatusButton`) at the start, with a 48 hit area, wrapping at large text, and the Hide amounts eye (`HideAmountsButton`, a toggle to screen readers) at the end. The pill opens Profile › Connection, or Profile and settings in the demo. Its spare height under the pill is the header's bottom gap, and the page starts `Space.xs` below it, as pages do, instead of the page top (owner review, Chat 16: the date sat too far under the pill).
 - **Go to:** the search button opens a full-screen page on the root navigator: a back arrow and the "Go to…" field, focused, then one card per group (Sections, Tabs, New, Profile and settings), the last closing with `ListEnd`. Typing filters inside the groups and empty ones go; with no match it says "Nothing matches" and that Go to finds places, not records. Enter or a row closes the page and opens the place. Back closes it and changes nothing.
 - **Bell:** the same rows as Windows, with the count badge. It opens a "Needs attention" sheet whose rows (icons in their tone, `ListRow.leadingColor`) go where each item is handled, with Close. With none, the sheet says "Nothing needs attention" and what shows there.
 - **Calculator:** the + sheet's last row, "Calculator", opens it as a sheet (`showCalculatorSheet`, the same one amount fields use, without Use result) with Copy and Close, the same exact engine and "≈" rule.
@@ -580,7 +580,7 @@ Five-second question: where do my applications stand, and what's my next step?
 - **Restore** isn't offered with a profile in use, because the rules refuse it. The tab says where it happens.
 - **Privacy.** The Google email shows on Connection only. Device names are platform names. Ids sit under View details. This section has no shareable views.
 - **Offline.** Profile, Help, saving and checking a backup, removing the profile and pausing all work. Sync now, Devices, Revoke, Connect, Delete account and Send this change need a connection.
-- **Demo build.** The same tabs from a sample, with Demo tools on Profile and a demo-only Show a state menu on Connection, Devices and Backup & recovery, covering each state above. Actions show their confirmation, then say nothing happened. It can't show real Google sign-in, sync, revoking, deleting, the system's save and open windows, a real secret or a real restore. `ProfileExperience` stays for the d4 tests, until Chat 16.
+- **Demo build.** The same tabs from a sample, with Demo tools on Profile and a demo-only Show a state menu on Connection, Devices and Backup & recovery, covering each state above. Actions show their confirmation, then say nothing happened. It can't show real Google sign-in, sync, revoking, deleting, the system's save and open windows, a real secret or a real restore. `ProfileExperience` was retired in Chat 16.
 
 ### Onboarding (Chat 15)
 
@@ -653,6 +653,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
 - **Demo data:** the section's demo build shows populated, realistic content. It follows `overview_demo.dart`: a sample replayed through the real rules, dated relative to today, and agreeing with the demo's other screens. The owner reviews populated screens.
 - **Tests:**
   - **Sweep test:** every tab at Android 320, 360 and 412 and Windows 720, 1200 and 1440 wide, at 100% and 200% text, in light and dark, plus hidden amounts, incomplete and empty states. The test app sets `themeAnimationDuration: Duration.zero`, so each platform really renders.
+  - **The app-level sweep** (`test/consistency_sweep_test.dart`, Chat 16): the shell and every section's first tab, plus Profile and settings, at the same widths and text sizes in light, dark and both high-contrast themes, with no exception or overflow, and every semantics button pressable. Its source checks fail on a §4 literal, a legacy color or an older-kit import in real-use code. A new section adds nothing there; a new real-use file is checked by its path.
   - **Alignment tests:** for tables, rows and tiles.
   - **Demo sample test:** the sample replays on week, month and year edges.
 - **Reuse:**
@@ -854,13 +855,14 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 - **Allowed exceptions:** `0`, a 1-px hairline, layout math derived from tokens, and OS or provider-branding values (window controls, Google button) defined in one place.
 - **Check:** `grep -rEn "EdgeInsets\.[a-zA-Z]+\([^)]*[0-9]|SizedBox\((height|width): [0-9]|BorderRadius\.circular\([0-9]|fontSize: [0-9]|Color\(0x" <changed files>` returns nothing outside `design_system/theme.dart`.
 - **Baseline before the redesign** (all of `lib/`, approx.): 139 `EdgeInsets` literals, 353 `SizedBox` literals, 73 `fontSize` literals, 38 radius literals, 80 hex colors (21 outside theme, gallery and p0), 133 inline `TextStyle(`. Spacing tokens are used 6 times.
+- **Chat 16 recount** (the check above on the nine production paths, plus `lib/features`): 125 and 112 hits before the sweep, 75 and 23 after retiring the old demo screens, 45 and 22 after moving the Review step to tokens. Real-use code has none left: 6 are the allowed exceptions (`0` in token insets, Google's branding) and the rest are in the demo editor, `DemoActionPage`, `FinancePage` and the gallery's older kit. Real-use code has no `fontSize` literal (about 70 in Chat 4b) and no radius literal.
 
 ### Page
 
 | Rule | Compact | Medium / Expanded | Wide |
 | --- | --- | --- | --- |
 | Page gutter (left and right) | 16 | 24 | 32 |
-| Page top padding (below the title bar or app bar) | 16 | 24 | 24 |
+| Page top padding (below the title bar or app bar) | 16; 4 on Android, below the status row | 24 | 24 |
 | Page header (title and actions) to the first content | 16 | 24 | 24 |
 | Gap between sections (groups of cards) | 24 | 32 | 32 |
 | Bottom padding | dock height + 24 | 32 | 32 |
@@ -904,10 +906,11 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 7. Tables keep their columns aligned, and tiles in a set keep their values aligned.
 8. The demo build shows the section populated.
 9. The section's sweep test covers both platforms, both text sizes, both themes and the hidden, incomplete and empty states.
+10. `consistency_sweep_test` passes.
 
 ## 5. Component rules
 
-The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit.dart`. Every component reads tokens only, works in light, dark and high contrast, and follows the platform from `Theme.of(context).platform`. The older widgets in `components.dart`, `workspace.dart`, `editorial.dart` and `form_presentation.dart` stay until each section chat replaces their uses.
+The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit.dart`. Every component reads tokens only, works in light, dark and high contrast, and follows the platform from `Theme.of(context).platform`. The older widgets in `components.dart`, `workspace.dart`, `editorial.dart` and `form_presentation.dart` stay only for what still uses them: the demo editor (`FinancialEditor`), `DemoActionPage`, `FinancePage` and the gallery. No real-use screen imports them. Chat 16 retired `form_presentation.dart` (its parts moved to [`kit/review.dart`](#review-step-kitreviewdart-chat-16)), `floating_actions.dart` (`FloatingActionMenu`), `navigation.dart`, the gallery's Navigation studies section, `IconTile` and `workspace.dart`'s unused widgets.
 
 ### Shared interaction
 
@@ -915,6 +918,7 @@ The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit
 - **Focus ring:** 2 px `focus`, drawn 2 px outside the component and following its radius (`FocusRing`). It shows for keyboard focus only. Stock buttons draw it as a 2 px border from the theme.
 - **Targets:** at least 48×48 on Android. On Windows, 32 (`Space.pointerTarget`) for buttons, fields, segmented controls, icon buttons and the info control; rows are 36 ([§3 Windows density](#windows-density-compact-scale)).
 - **Activation:** Enter and Space activate anything focusable. Esc closes the top overlay.
+- **Screen readers:** a control read as one button (`Semantics(button: true, excludeSemantics: true)` over a `Pressable`) passes the same callback as `onTap` and sets `container: true`. Excluding the child drops the `Pressable`'s tap otherwise, so the button can be heard but not pressed. Chat 16 fixed this in `AppTabs`, `CardLink`, `MiniSegmented`, `ChipButton`, `MonthGrid`, `FormMoreDetails`, the calculator keys, the Google button, `AppTable` rows, the shell's rail buttons, profile card, Go to field and New, and the Overview, Debts, Planning, Shared, Life and Help rows that did the same.
 
 ### Buttons (`AppButton`, `AppIconButton`)
 
@@ -1060,6 +1064,7 @@ Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Wi
 
   Labels match `DebtDueStatus`. "Settled" is a past-tense state, which [§7](#7-wording-glossary) allows.
 - **`InlineNotice`:** a tinted block with an icon, an optional title and the message. Use it for information, success, warning, error and neutral notes inside a page or form. A notice that reports a change is a live region.
+- **`SyncReviewNotice`** (Chat 16): "Sync needs review" in one sentence for every section, with Review when the section has somewhere to send it, or naming Profile › Connection when it doesn't. The sync label isn't its body, because it repeats the title.
 - **Toast:** the stock `SnackBar` with the theme's `snackBarTheme`. Use it only for a short confirmation of an action the user just took, and never for errors (they are inline).
 
 ### Amounts (`MoneyAmount`)
@@ -1136,7 +1141,7 @@ Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Wi
 
 ### Dashboard kit (moved from the Overview, Chat 7)
 
-Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same look. New: `CardLink(chevron: false)` for a link in a row with its own chevron, which then ends flush with its text; `ListEnd(onPressed:)` for a list cut short; `detailLine`, whose details break between themselves and never inside one; `LabelAmount(stackBelow:)`; `OverviewCard(fill: true)`, which hands its child the height left under the header.
+Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same look. New: `CardLink(chevron: false)` for a link in a row with its own chevron, which then ends flush with its text; `ListEnd(onPressed:)` for a list cut short; `detailLine`, whose details break between themselves and never inside one (Chat 16: a sign stays on its amount, through a word joiner); `LabelAmount(stackBelow:)`; `OverviewCard(fill: true)`, which hands its child the height left under the header.
 
 `kit/dashboard.dart` (`OverviewCard`, `AdaptiveRow`, `LabelAmount`, `NotAvailable`, `AmountsHidden`, `narrowAt`, `TouchArea`, `CardLink`, `MiniSegmented`, `ChipButton`, `QuickActions`, `IconBadge`, `ChangeLine`, `KpiTile`, `PairCard`, `SlimBar`, `SegmentBar`, `StatStrip`, `moneyColumnWidth`), `kit/dashboard_grid.dart` (`DashboardGrid`) and `kit/charts.dart` (`Sparkline`, `OverviewBarChart`, `OverviewLineChart`, `ChartLegend`, `ChartValues`). Their look is unchanged and they keep their names. Additions, all optional: `KpiTile.compactSpark` keeps the sparkline beside the value in a narrower tile; `SlimBar` and `SegmentBar` take a `track` color for the tinted focal card.
 
@@ -1161,6 +1166,13 @@ Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same
 ### Form exits (`FormExitGuard`)
 
 An optional `discardDraft` adds Discard draft beside Keep draft & close, for forms that bring a draft back on reopening. `MoneyEditor` passes it, and Saved drafts can discard one too. Other forms keep the two choices they had.
+
+### Review step (`kit/review.dart`; Chat 16)
+
+`FormStatus`, `FormSyncStatus`, `ReviewRow`, `SectionHeading`, `FormEvidence`, `ReviewNotes` and `FormExitGuard` moved here from `form_presentation.dart` (now gone), `editorial.dart` and `workspace.dart`, same look on tokens. They are the Review step and saved state of the Money, Debts, Cards, Planning, Files and Shared private forms, and the exit guard of every form.
+- **Tokens:** padding `Space.lg`, rows `Space.sm` apart, label to value `Space.lg`, gaps `Space.xs`/`Space.md`, the status badge `Space.xxl + Space.sm`, icons `Space.xl` (status) and `Space.compactIcon` (disclosure, notes). The status box uses `Radii.controlOf`, as `InlineNotice` does, and gets `InlineNotice`'s high-contrast border, so it doesn't disappear when its tint turns to `surface`. A row stacks under `Space.xxxl * 10` wide or above 150% text.
+- `SectionHeading` lost its unused `trailing`.
+- **Not exported from `kit.dart`:** Profile has its own `ReviewRow` model, so screens import `kit/review.dart` by name.
 
 ### Typed confirmation (`showTypedConfirmation`; Chat 14)
 
@@ -1385,6 +1397,18 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Private space | Salapiya, your profile | |
 | Porcelain, Midnight | Light, Dark | Theme, as on Profile |
 | Local only, Synced · ‹date›, effect awaiting acceptance, Initial download · incomplete, Review needed · private effect (the demo's sync pill) | Demo · On this device only, Synced, Waiting for connection, First download not finished, Needs review | The demo's other screens keep their scenario words |
+| Waiting for synchronization, Accepted by the service, Synchronized, Server change needs review, Current authority needs review (a form's saved state) | Waiting to sync, Reached the service, Synced, Needs review | Chat 16; the messages say what happens next in plain words |
+| Receivable, Payable, Private clearing (Review rows) | Owed to you, You owe, Not in your group balance yet | |
+| Financial effects, Replacement effects, Effects being removed, Previous effects, New effects | What changes, What changes now, What's removed, Before, After | Review headings |
+| ‹amount› · signed posting, Evidence / plan | Changes by ‹amount›, No money moves | Review rows |
+| Reviewed details, Financial review amounts hidden | Details, Amounts hidden | |
+| Original command, Revision, Previous (under View details) | Change, Version, Earlier version | The rules' own notes don't show there |
+| Technical details, View financial evidence | View details | |
+| Nothing has been posted, not a posted action | Nothing was saved, Nothing is logged until you save it | The exit dialog |
+| Connected changes remain pending until server acceptance and complete downloaded reconciliation | On a connected profile, this waits to sync after you save | Review |
+| ‹form title› saved (Debts, Cards, Planning, Files) | The record in the past tense: Debt payment logged, Debt added, Card added; Changes saved for an edit; Saved otherwise | As Money's forms do |
+| The sync label as the body of Sync needs review | A change didn't go through. Review shows what happened and what you can do. | Overview, Money, Debts, Shared Expenses (`SyncReviewNotice`). Without a Review button: "…Profile › Connection shows what happened and what you can do." |
+| My Money (a row label) | Money | Shared record page |
 
 ### Tone rules
 
@@ -1507,7 +1531,7 @@ Remove this section when the redesign is finished.
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`). Two stages: 14a frame, Profile, Help; 14b Connection, Devices, Backup, rule messages | Done |
 | 15 | Onboarding: welcome, local setup, Google, restore. Two stages: 1 frame, opening, startup failure, Welcome, local setup; 2 Google, Restore, demo preview, retirements | Done |
 | 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Done |
-| 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
+| 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text). Four stages: 1 retire demo code, 2 tokens, 3 glossary, 4 the cross-platform sweep | Done, waiting for the owner's review |
 | 17 | Final review | Planned |
 
 Each section chat:
@@ -1714,6 +1738,13 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 cal
 | 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-02 | Chat 16, the owner's picks: stages in the order retire, tokens, glossary, sweep. Retire the old demo screens, the dead preview code, `FloatingActionMenu` with the gallery's navigation study, and the demo controller's group actions. One app-level sweep test with a tap-action check, and every confirmed hit fixed. The Review step's parts move to the kit on the nearest tokens. The Review and saved-state wording, the review notice's one sentence and the bell's single waiting row as proposed. The rules' own notes leave View details. The calculator's backspace becomes an icon. Career's salary fields keep no calculator. Rule messages are reworded only where a person can reach them, after approval. | Approved |
+| 2026-11-02 | Chat 16 stage 1 retires the old demo screens (Credit, CardEvidence, CardLibrary, Planning, its forecast chart, Reports, Files, Import, `ProfileExperience`, `TransactionDetail` and `prototype_form.dart`), the dead preview code (`activity_view.dart`, `DestinationPreview`, `SourcePreviewPage`, `SourceLink`, `UpcomingView` and the shell's unreachable upcoming branch), `FloatingActionMenu`, `navigation.dart`, the gallery's Navigation studies section and the now unused `IconTile`, `FinancialLine`, `ValueBlock` and `ExactBar`. Their tests go with them: the d4 Planning, Profile and Supporting journeys, `d4_layout_test`, `floating_actions_test` (its editorial test moved to `widget_test`), `refinement_test` and its driver. The d4 Life journey stays, because it tests the real Life screen. | Done |
+| 2026-11-02 | Chat 16 stage 2: the Review step's parts and `FormExitGuard` move to `kit/review.dart` on the nearest tokens, `form_presentation.dart` goes, and `workspace.dart` keeps only `WorkspacePanel`, `WorkspaceForm` and `WorkspaceSteps` for the demo editor. The status box gets `InlineNotice`'s high-contrast border. The calculator's backspace key shows the bundled backspace icon instead of "⌫", which Geist lacks. Rendered before and after with Geist. | Done |
+| 2026-11-02 | Chat 16 stage 3: the glossary rows above (Chat 16) are applied. The Review step, the saved state, the exit dialog and the connected Review notice use plain words. Debts', Cards' and Planning's saved titles are the record in the past tense (`savedTitles`). View details holds the change id and version, not the rules' notes. Review groups keep a group gap above their heading. The bell's waiting row counts group changes. "Profile › Connection" never breaks across lines. The four rule messages checked (import staging, the shared card contract, the daylight-saving choice, the upload connector) can't reach a person, so they stay. | Done |
+| 2026-11-02 | Chat 16 stage 4: `test/consistency_sweep_test.dart` answers the sweep's five-second question: the shell and every first tab, and Profile and settings, on both platforms, at Android 320, 360 and 412 and Windows 720, 1200 and 1440, at 100% and 200%, in light, dark and both high-contrast themes, plus the source checks. It found 23 controls a screen reader could hear but not press (tabs, segmented controls, card links, quick actions, table rows, the calendar's days, the rail and more); each now passes its callback as `onTap` with `container: true`. The renders found Money's narrow account rows breaking inside a detail ("This month −" / "₱3,444.50"); they use `detailLine` now, which keeps a sign on its amount. | Done |
+| 2026-11-02 | Owner review of Chat 16: on Android the date sat too far under the sync pill: the status row's spare height, the page's top 16 and the date row's own height added up. The destinations now start `Space.xs` below the status row, as pages do; Windows keeps the page top. | Done |
+| 2026-11-02 | The demo controller's group actions stay for now: `LocalFinancialController`'s constructor resets the base controller and clears its group state, so removing that state changes the real controller. | Needs approval |
 | 2026-11-02 | Owner review: Chat 15b looks good on the emulator, which finishes it. | Approved |
 | 2026-11-02 | Chat 15b, the owner's picks: phones use the dock's names in the app bar, and the title drops under the actions only when it doesn't fit (a wrapped title broke inside a word at 200%); Go to's page groups its entries in cards; one stage. | Approved |
 | 2026-11-02 | While the first download isn't finished, Log expense, Log income, Log a transfer, Add shared expense and Log a payment between members aren't offered anywhere, because they opened a demo page in the real build. Debt, card and Life actions stay. UI only. | Approved |

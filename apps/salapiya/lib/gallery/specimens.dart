@@ -4,7 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../design_system/components.dart';
 import '../design_system/editorial.dart';
 import '../design_system/craft.dart';
-import 'navigation_study.dart';
 import '../design_system/theme.dart';
 import '../prototype/fixtures.dart';
 import 'review_editor.dart';
@@ -65,7 +64,6 @@ class _GallerySpecimensState extends State<GallerySpecimens> {
     GallerySection.typography => typography(),
     GallerySection.actions => actions(),
     GallerySection.finance => finance(),
-    GallerySection.navigation => NavigationStudy(compact: widget.compact),
     GallerySection.overlays => overlays(),
     GallerySection.feedback => feedback(),
     GallerySection.branding => branding(),

@@ -257,7 +257,7 @@ mixin FinanceFormFields<T extends StatefulWidget> on FormInputs<T> {
     if (c.connected) ...[
       SizedBox(height: CompactForm.fieldGap(context)),
       const InlineNotice(
-        'Connected changes remain pending until server acceptance and complete downloaded reconciliation.',
+        'On a connected profile, this waits to sync after you save.',
       ),
     ],
     if (syncBlocked || rechecked || needsLatest)

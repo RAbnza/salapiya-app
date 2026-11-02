@@ -272,6 +272,8 @@ class _DebtsDashboardState extends State<DebtsDashboard> {
     final pillButton = duePill == null
         ? null
         : Semantics(
+            container: true,
+            onTap: () => select(DebtsTab.schedule),
             button: true,
             label: '${duePill.label}. Open Schedule',
             excludeSemantics: true,
@@ -358,14 +360,7 @@ class _DebtsDashboardState extends State<DebtsDashboard> {
           live: true,
         ),
       if (source.needsReview)
-        InlineNotice(
-          source.syncLabel,
-          title: 'Sync needs review',
-          tone: NoticeTone.warning,
-          action: source.onReview == null
-              ? null
-              : AppButton.secondary('Review', onPressed: source.onReview!),
-        ),
+        SyncReviewNotice(onReview: source.onReview),
     ];
 
     // Summary's tiles: the four answers, with the trend hidden with amounts.

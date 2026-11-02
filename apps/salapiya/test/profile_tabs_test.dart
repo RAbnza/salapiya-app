@@ -1388,6 +1388,25 @@ void main() {
       });
     });
 
+    testWidgets('the waiting row counts the group’s changes too', (
+      tester,
+    ) async {
+      await shell(tester, (runtime) async {
+        runtime.connected
+          ..pendingCount = 1
+          ..sharedPendingCount = 2
+          ..changed();
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: find.byType(ShellSidebar),
+            matching: find.text('3 waiting to sync'),
+          ),
+          findsOneWidget,
+        );
+      });
+    });
+
     testWidgets('only Life’s refused edits open Changes to check', (
       tester,
     ) async {

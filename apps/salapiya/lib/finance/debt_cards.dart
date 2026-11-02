@@ -173,6 +173,8 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Semantics(
+            container: true,
+            onTap: () => widget.onOpen(d),
             button: true,
             label: spoken(d),
             excludeSemantics: true,

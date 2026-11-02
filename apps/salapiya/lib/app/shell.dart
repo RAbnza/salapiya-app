@@ -18,13 +18,11 @@ import 'shell_tools.dart';
 import 'title_bar.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_editor.dart';
-import '../features/finance/presentation/financial_widgets.dart';
 import '../features/finance/presentation/money_screen.dart';
 import '../features/finance/presentation/debts_screen.dart';
 import '../features/finance/presentation/shared_screen.dart';
 import '../features/life/presentation/life_screen.dart';
 import '../features/life/application/life_controller.dart';
-import '../local/local_profile_view.dart';
 import '../local/local_runtime.dart';
 import '../local/local_finance_controller.dart';
 import '../finance/finance_screen.dart';
@@ -138,31 +136,6 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
 
   /// Overview links go to the section and tab that hold the source.
   void source(PreviewSource source) {
-    if (session.production &&
-        ![
-          PreviewSource.accounts,
-          PreviewSource.activity,
-          PreviewSource.cards,
-          PreviewSource.planning,
-          PreviewSource.reports,
-          PreviewSource.electricity,
-          PreviewSource.debt,
-          PreviewSource.debtHistory,
-          PreviewSource.group,
-          PreviewSource.settlement,
-          PreviewSource.privateReview,
-          PreviewSource.agenda,
-          PreviewSource.task,
-          PreviewSource.learning,
-          PreviewSource.books,
-          PreviewSource.career,
-        ].contains(source)) {
-      open(
-        FinancePage(title: source.label, child: UpcomingView(source.label)),
-        'upcoming/${source.name}',
-      );
-      return;
-    }
     if (source == PreviewSource.settlement) sharedHub.focusWaiting();
     navigation.select(
       source.destination,
@@ -266,7 +239,12 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
 
   /// What needs the user, from existing counts only.
   List<SidebarNotice> get notices {
-    final waiting = local?.pendingCount ?? (session.pending ? 1 : 0);
+    // Group changes too, as the sync status counts them (Connection splits
+    // them by section).
+    final local = this.local;
+    final waiting = local == null
+        ? (session.pending ? 1 : 0)
+        : local.pendingCount + local.runtime.connected.sharedPendingCount;
     return [
       if (toConfirm > 0)
         SidebarNotice(
@@ -897,9 +875,13 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               child: SingleChildScrollView(
                 key: PageStorageKey('destination-${destination.name}'),
                 controller: scrolls[destination.index],
+                // On Android the status row's spare height under the pill is
+                // most of the gap above the page; 4 more, as pages start
+                // (`SectionPage`), keeps it at large text, where the pill
+                // fills the row.
                 padding: EdgeInsets.fromLTRB(
                   inset,
-                  Space.pageTop(width),
+                  isDesktop(context) ? Space.pageTop(width) : Space.xs,
                   inset,
                   Space.pageBottom(width) + (showDock ? dockHeight : 0),
                 ),

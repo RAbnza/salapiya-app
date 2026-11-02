@@ -383,6 +383,7 @@ class _CalculatorPanelState extends State<CalculatorPanel> {
                 ),
                 _Key(
                   '⌫',
+                  icon: Icons.backspace_outlined,
                   semantics: 'Backspace',
                   kind: _KeyKind.operator,
                   onTap: () => run(engine.backspace),
@@ -454,6 +455,8 @@ class _Key extends StatelessWidget {
     return Expanded(
       flex: flex,
       child: Semantics(
+        container: true,
+        onTap: onTap,
         button: true,
         label: semantics ?? label,
         excludeSemantics: true,

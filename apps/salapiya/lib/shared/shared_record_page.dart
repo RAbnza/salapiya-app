@@ -107,7 +107,7 @@ class _RecordPage extends StatelessWidget {
           FactRow('Date', civilDay(record?.date ?? r.date)),
           if (account != null) FactRow('Account', account),
           if (record == null)
-            const FactRow('My Money', 'Unchanged. Adding it is up to you.'),
+            const FactRow('Money', 'Unchanged. Adding it is up to you.'),
         ],
       ),
     );

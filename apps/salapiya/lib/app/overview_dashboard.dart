@@ -488,14 +488,7 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
           live: true,
         ),
       if (source.needsReview)
-        InlineNotice(
-          source.syncLabel,
-          title: 'Sync needs review',
-          tone: NoticeTone.warning,
-          action: source.onReview == null
-              ? null
-              : AppButton.secondary('Review', onPressed: source.onReview!),
-        ),
+        SyncReviewNotice(onReview: source.onReview),
     ];
 
     // KPI tiles: value, change and sparkline (hidden with amounts).

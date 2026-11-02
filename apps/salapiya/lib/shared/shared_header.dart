@@ -123,6 +123,8 @@ class SharedHeader extends StatelessWidget {
       final pill = toConfirm == 0
           ? null
           : Semantics(
+              container: true,
+              onTap: onToConfirm,
               button: true,
               label: '$toConfirm to confirm. Open Payments',
               excludeSemantics: true,
@@ -394,6 +396,8 @@ class _GroupSwitcher extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final android = !isDesktop(context);
     Widget name(VoidCallback onTap) => Semantics(
+      container: true,
+      onTap: onTap,
       button: true,
       label: 'Group: ${group.name}. Change group',
       excludeSemantics: true,

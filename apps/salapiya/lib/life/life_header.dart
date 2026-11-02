@@ -52,6 +52,8 @@ class LifeHeader extends StatelessWidget {
       final Widget? badge = pill == null || onPill == null
           ? pill
           : Semantics(
+              container: true,
+              onTap: onPill,
               button: true,
               label: pill!.label,
               excludeSemantics: true,

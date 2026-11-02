@@ -146,6 +146,8 @@ class CardLink extends StatelessWidget {
       onTap: onPressed,
       alignment: chevron ? Alignment.center : AlignmentDirectional.centerEnd,
       child: Semantics(
+        container: true,
+        onTap: onPressed,
         button: true,
         label: label,
         excludeSemantics: true,
@@ -231,6 +233,8 @@ class MiniSegmented<T> extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(Space.xxs),
                       child: Semantics(
+                        container: true,
+                        onTap: () => onSelected(value),
                         button: true,
                         selected: value == selected,
                         inMutuallyExclusiveGroup: true,
@@ -290,6 +294,8 @@ class ChipButton extends StatelessWidget {
     return TouchArea(
       onTap: onPressed,
       child: Semantics(
+        container: true,
+        onTap: onPressed,
         button: true,
         label: label,
         excludeSemantics: true,
@@ -712,9 +718,16 @@ class ListEnd extends StatelessWidget {
 }
 
 /// A row's details, joined with dots. Each detail stays whole, so a long line
-/// breaks between details and never inside one, as in "in 72 days".
-String detailLine(Iterable<String> details) =>
-    details.map((d) => d.replaceAll(' ', '\u00A0')).join('\u00A0· ');
+/// breaks between details and never inside one, as in "in 72 days". A word
+/// joiner keeps a sign on its amount ("−₱3,444.50"), where the text engine
+/// would otherwise break.
+String detailLine(Iterable<String> details) => details
+    .map(
+      (d) => d
+          .replaceAll(' ', '\u00A0')
+          .replaceAllMapped(RegExp('[−+](?=₱)'), (m) => '${m[0]}\u2060'),
+    )
+    .join('\u00A0· ');
 
 /// One figure in a [StatStrip]: a label, its value and an optional detail.
 typedef Stat = ({String label, String value, String? detail});

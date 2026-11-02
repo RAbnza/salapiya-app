@@ -235,6 +235,8 @@ class AppTable extends StatelessWidget {
                     SizedBox(width: leadWidth, child: r.lead),
                   Expanded(
                     child: Semantics(
+                      container: true,
+                      onTap: r.onTap,
                       button: r.onTap != null,
                       label: r.spoken,
                       excludeSemantics: true,

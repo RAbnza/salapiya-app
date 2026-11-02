@@ -906,6 +906,8 @@ class _RailButton extends StatelessWidget {
       child: Tooltip(
         message: tooltip,
         child: Semantics(
+          container: true,
+          onTap: onTap,
           button: true,
           selected: selected,
           label: tooltip,
@@ -1331,6 +1333,8 @@ class _ProfileCard extends StatelessWidget {
                   ? 'Profile and settings'
                   : 'Profile and settings · ${status.label}',
               child: Semantics(
+                container: true,
+                onTap: toggle,
                 button: true,
                 label: semantics,
                 excludeSemantics: true,
@@ -1350,6 +1354,8 @@ class _ProfileCard extends StatelessWidget {
           );
         }
         return Semantics(
+          container: true,
+          onTap: toggle,
           button: true,
           label: semantics,
           excludeSemantics: true,
@@ -1438,6 +1444,8 @@ class GoToField extends StatelessWidget {
       ),
     );
     return Semantics(
+      container: true,
+      onTap: onTap,
       button: true,
       label: 'Go to, Ctrl+K',
       excludeSemantics: true,
@@ -1491,6 +1499,8 @@ class AppBarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
     return Semantics(
+      container: true,
+      onTap: onTap,
       button: true,
       label: label,
       excludeSemantics: true,

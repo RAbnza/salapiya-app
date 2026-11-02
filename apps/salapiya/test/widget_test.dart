@@ -4,6 +4,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/design_system/theme.dart';
+import 'package:salapiya/design_system/craft.dart';
+import 'package:salapiya/design_system/editorial.dart';
 import 'package:salapiya/design_system/components.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/gallery/review_editor.dart';
@@ -266,4 +268,34 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets(
+    'editorial foundations, both themes and optional effects preserve content',
+    (tester) async {
+      final settings = GallerySettings();
+      await tester.pumpWidget(SalapiyaApp(gallery: true, settings: settings));
+      await tester.pumpAndSettle();
+      expect(find.text('Daylight / editorial'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<CraftMotif>(find.byType(CraftMotif))
+            .every((m) => m.lattice),
+        isTrue,
+      );
+      for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+        settings.change(() {
+          settings.themeMode = mode;
+          settings.effects = false;
+        });
+        await tester.pumpAndSettle();
+        final frame = find.byType(EditorialSurface).first;
+        final surface = tester.widget<Padding>(
+          find.descendant(of: frame, matching: find.byType(Padding)).first,
+        );
+        expect(surface.padding, const EdgeInsets.all(20));
+        expect(find.text('Made with care.\nClear by design.'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 }

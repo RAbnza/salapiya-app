@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'buttons.dart';
 
 enum PillTone { neutral, information, success, warning, error, overdue }
 
@@ -175,4 +176,23 @@ class InlineNotice extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Sync needs review", in the same words wherever a section shows it. The
+/// sync label isn't its body: it repeats the title ("Needs review"). Without
+/// a Review button it names where to look instead.
+class SyncReviewNotice extends StatelessWidget {
+  const SyncReviewNotice({super.key, this.onReview});
+  final VoidCallback? onReview;
+  @override
+  Widget build(BuildContext context) => InlineNotice(
+    onReview == null
+        ? 'A change didn’t go through. Profile › Connection shows what happened and what you can do.'
+        : 'A change didn’t go through. Review shows what happened and what you can do.',
+    title: 'Sync needs review',
+    tone: NoticeTone.warning,
+    action: onReview == null
+        ? null
+        : AppButton.secondary('Review', onPressed: onReview!),
+  );
 }

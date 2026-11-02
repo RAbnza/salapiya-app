@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../connected/financial_contract.dart' show applyFinancialPlan;
-import '../design_system/form_presentation.dart';
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import '../design_system/workspace.dart' show FormExitGuard;
+import '../design_system/kit/review.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_review.dart';
 import '../local/finance_domain.dart';
@@ -1123,7 +1122,7 @@ class _MoneyEditorState extends State<MoneyEditor>
                 ),
         ),
         if (unknown)
-          FormEvidence(children: [SelectableText('Original command: $id')]),
+          FormEvidence(children: [SelectableText('Change: $id')]),
       ],
     ],
   );

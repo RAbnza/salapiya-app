@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../design_system/form_presentation.dart' show FormStatus;
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import '../design_system/workspace.dart' show FormExitGuard;
+import '../design_system/kit/review.dart' show FormExitGuard, FormStatus;
 import '../features/finance/contracts/financial_models.dart' show DemoOutcome;
 import '../features/finance/presentation/financial_review.dart';
 import '../finance/debt_cards.dart' show civilDay;

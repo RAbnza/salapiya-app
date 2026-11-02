@@ -7,8 +7,6 @@ import 'package:path_provider/path_provider.dart';
 
 import '../app/demo_routes.dart';
 import '../app/shell.dart';
-import '../design_system/theme.dart';
-import '../features/finance/presentation/financial_widgets.dart';
 import '../gallery/settings.dart';
 import '../onboarding/google_page.dart';
 import '../onboarding/greeting_page.dart';
@@ -184,26 +182,4 @@ class _LocalBootstrapState extends State<LocalBootstrap>
       },
     );
   }
-}
-
-class UpcomingView extends StatelessWidget {
-  const UpcomingView(this.title, {super.key});
-  final String title;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      FinanceHeading(
-        'SALAPIYA / COMING LATER',
-        title,
-        'A little more room for what comes next.',
-      ),
-      const ValueBlock(
-        'PLANNED WORKFLOW',
-        'Your space is ready to grow.',
-        'This feature will become available in a later milestone. Your everyday Money records remain available offline.',
-        color: Palette.lilac,
-      ),
-    ],
-  );
 }

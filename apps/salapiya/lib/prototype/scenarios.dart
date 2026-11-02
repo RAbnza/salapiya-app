@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'fixtures.dart';
 import '../features/finance/application/financial_controller.dart';
 import '../features/planning/application/planning_controller.dart';
-import '../features/common/prototype_form.dart';
 import '../features/life/application/life_controller.dart';
 import '../features/profile/application/profile_controller.dart';
 
@@ -85,7 +84,6 @@ class PrototypeSession extends ChangeNotifier {
     profile.name = name;
     profile.generation++;
     profile.profileId = 'demo-profile-${profile.generation}';
-    prototypeDrafts.clear();
     profile.changed();
     notifyListeners();
   }
@@ -199,7 +197,6 @@ class PrototypeSession extends ChangeNotifier {
       old.$3.dispose();
     }
     recoveryCopies.clear();
-    prototypeDrafts.clear();
     scenario = OverviewScenario.local;
     hideAmounts = false;
     notifyListeners();

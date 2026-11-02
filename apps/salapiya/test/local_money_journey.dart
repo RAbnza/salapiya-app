@@ -6,34 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
-import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/local/local_runtime.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/gallery/settings.dart';
 
-/// Follow the approved task group's visible action or its real More menu.
+/// Follow the visible action, or open New for it.
 /// This never invokes a controller or bypasses review/confirmation.
 Future<void> localAction(WidgetTester tester, String label) async {
   final target = find.text(label);
   if (target.evaluate().isEmpty) {
-    final groups = find.byWidgetPredicate(
-      (widget) =>
-          widget is WorkspaceActionGroup &&
-          widget.actions.values.contains(label),
-    );
-    if (groups.evaluate().isNotEmpty) {
-      await localTap(
-        tester,
-        find.descendant(
-          of: groups.first,
-          matching: find.byWidgetPredicate(
-            (widget) => widget is PopupMenuButton<String>,
-          ),
-        ),
-      );
-    } else {
-      await localTap(tester, find.byKey(const ValueKey('shell-new')));
-    }
+    await localTap(tester, find.byKey(const ValueKey('shell-new')));
   }
   await localTap(tester, target.first);
 }

@@ -28,8 +28,8 @@ import '../design_system/kit/kit.dart'
         PickerStyle,
         SectionPage,
         SurfaceCard;
+import '../design_system/kit/review.dart';
 import 'planning_data.dart' show lastDay;
-import '../features/finance/presentation/financial_widgets.dart';
 import '../local/finance_domain.dart';
 import '../local/local_finance_controller.dart';
 import '../p0/exact_money.dart';
@@ -243,6 +243,40 @@ const formTitles = {
   'recurrenceLink': 'Link a record',
   'recurrenceUnlink': 'Remove a link',
   'fileDetach': 'Archive file link',
+};
+
+/// The saved state's title, per form: the record in the past tense, as
+/// Money's forms say it (§7).
+const savedTitles = {
+  'debtPayment': 'Debt payment logged',
+  'debtImport': 'Debt added',
+  'borrowing': 'New loan logged',
+  'debtClassification': 'Payment broken down',
+  'debtPayoff': 'Early payoff logged',
+  'debtAdjustment': 'Lender charge or waiver logged',
+  'debtSchedule': 'Schedule saved',
+  'creditCard': 'Card added',
+  'cardPurchase': 'Card purchase logged',
+  'cardPayment': 'Card payment logged',
+  'cardFee': 'Card fee logged',
+  'cardInterest': 'Card interest logged',
+  'cardRefund': 'Card refund logged',
+  'cardAuthorization': 'Pending charge logged',
+  'statement': 'Statement added',
+  'statementLink': 'Activity matched to a statement',
+  'cardAllocation': 'Payment matched to a statement',
+  'installment': 'Installment plan added',
+  'installmentApplication': 'Payment matched to an installment',
+  'budget': 'Budget added',
+  'savingsGoal': 'Goal added',
+  'reservation': 'Money set aside',
+  'savingsReallocation': 'Moved to another goal',
+  'recurrence': 'Recurring item added',
+  'recurrenceGenerate': 'Added to Upcoming',
+  'occurrenceOverride': 'Date changed',
+  'recurrenceLink': 'Record linked',
+  'recurrenceUnlink': 'Link removed',
+  'fileDetach': 'File link archived',
 };
 
 /// Time zones a recurring item can use.
@@ -1191,8 +1225,8 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         await saveEmbeddedSchedule();
         await saveRecurringDates();
         result = c.connected
-            ? 'Saved on this device. Server acceptance and downloaded reconciliation are still required.'
-            : 'Saved locally.';
+            ? 'Saved on this device. It’s waiting to sync.'
+            : 'Saved on this device.';
       }
     } catch (e) {
       // Stays on Review with everything kept, ready to try again.
@@ -1202,7 +1236,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         try {
           if (await c.store.hasReceipt(id)) {
             await c.reload();
-            result = 'The original command is saved. Check synchronization status for connected records.';
+            result = 'It’s saved. Profile › Connection shows whether it synced.';
           } else {
             reviewed = null;
             plan = null;
@@ -1219,7 +1253,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
           problem = e.message;
           problemField = 'date';
         } else {
-          error = 'The save could not be verified. Input and original command identity are retained.';
+          error = 'Couldn’t confirm the save. What you entered is kept, so check before saving again.';
         }
       }
     }
@@ -2848,7 +2882,9 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         const LinearProgressIndicator()
       else if (result != null) ...[
         FormStatus(
-          title: '${widget.title} saved',
+          title: widget.replacing != null
+              ? 'Changes saved'
+              : savedTitles[widget.operation] ?? 'Saved',
           message: 'Saved securely on this device.',
           tone: NoticeTone.success,
         ),
@@ -2872,7 +2908,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
             quietNotes: true,
           ),
         if (plan == null)
-          FormEvidence(children: [SelectableText('Original command: $id')]),
+          FormEvidence(children: [SelectableText('Change: $id')]),
         SizedBox(height: CompactForm.groupGap(context)),
         actions(
           FilledButton(
@@ -2889,7 +2925,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
                 ? 'Draft needs attention'
                 : 'Could not save',
             message: unknown
-                ? '$error Reopen this profile to inspect the original command before submitting changed values.'
+                ? '$error Reopen this profile and check whether it saved before changing anything.'
                 : error!,
             tone: unknown || draftFailed
                 ? NoticeTone.warning
@@ -2959,7 +2995,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
                 ),
         ),
         if (unknown)
-          FormEvidence(children: [SelectableText('Original command: $id')]),
+          FormEvidence(children: [SelectableText('Change: $id')]),
       ],
     ],
   );

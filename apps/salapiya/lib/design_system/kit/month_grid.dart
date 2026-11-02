@@ -47,6 +47,8 @@ class MonthGrid extends StatelessWidget {
       final isToday = date == today, isSelected = date == selected;
       final late = day.late, count = day.count;
       return Semantics(
+        container: true,
+        onTap: () => onSelected(date),
         button: true,
         selected: isSelected,
         label: spoken(day),

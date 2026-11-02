@@ -103,14 +103,7 @@ List<Widget> moneyNotices(MoneySource source) => [
       live: true,
     ),
   if (source.needsReview)
-    InlineNotice(
-      source.syncLabel,
-      title: 'Sync needs review',
-      tone: NoticeTone.warning,
-      action: source.onReview == null
-          ? null
-          : AppButton.secondary('Review', onPressed: source.onReview!),
-    ),
+    SyncReviewNotice(onReview: source.onReview),
 ];
 
 /// "How much do I have, where is it, what changed, and does anything need

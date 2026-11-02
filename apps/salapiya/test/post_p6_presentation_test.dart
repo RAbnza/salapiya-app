@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/design_system/theme.dart';
+import 'package:salapiya/design_system/kit/review.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
 import 'package:salapiya/finance/finance_screen.dart';
 import 'package:salapiya/finance/money_editor.dart';
@@ -179,15 +180,16 @@ Future<void> polishFormJourney(WidgetTester tester) async {
     expect(find.text('None'), findsOneWidget);
     expect(find.textContaining('card liability: -25.00'), findsNothing);
     await localTap(tester, find.text('View details'));
-    expect(find.textContaining('card liability: -25.00 PHP'), findsOneWidget);
-    expect(find.text('Original command: $id'), findsOneWidget);
+    // View details holds the change id and version, not the rules' notes.
+    expect(find.textContaining('card liability: -25.00 PHP'), findsNothing);
+    expect(find.text('Change: $id'), findsOneWidget);
     await localTap(tester, find.text('View details'));
     await localTap(tester, find.text('Edit'));
     expect(find.byKey(const ValueKey('native-amount')), findsOneWidget);
     expect(controller!.snapshot.balance(wallet), BigInt.from(50000));
     await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
     await localTap(tester, find.text('Save reviewed values'));
-    expect(find.text('Card fee saved'), findsOneWidget);
+    expect(find.text('Card fee logged'), findsOneWidget);
     expect(controller!.snapshot.balance(wallet), BigInt.from(50000));
     expect(
       financeBalance(controller!.snapshot, 'card_liability', 'card', card),

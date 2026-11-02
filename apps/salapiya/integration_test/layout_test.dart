@@ -94,22 +94,6 @@ void main() {
       }
     }
     await binding.setSurfaceSize(null);
-    settings.change(() {
-      settings.section = GallerySection.navigation;
-      settings.textScale = 1;
-      settings.themeMode = ThemeMode.light;
-      settings.compact = false;
-    });
-    await tester.pumpAndSettle();
-    for (final concept in ['Android A · anchored', 'Android B · floating']) {
-      await Scrollable.ensureVisible(
-        tester.element(find.text(concept)),
-        alignment: .1,
-      );
-      await capture(
-        concept.startsWith('Android A') ? 'navigation-a' : 'navigation-b',
-      );
-    }
     binding.reportData = {
       'platform': Platform.operatingSystem,
       'screenshots': shots,

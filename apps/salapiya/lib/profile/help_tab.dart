@@ -130,6 +130,8 @@ class _Question extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
+          container: true,
+          onTap: onToggle,
           button: true,
           expanded: open,
           label: entry.question,

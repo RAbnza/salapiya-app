@@ -404,6 +404,8 @@ class _GoalRow extends StatelessWidget {
     final g = goal;
     final line = hidden ? null : goalLine(g, amount);
     final body = Semantics(
+      container: true,
+      onTap: onOpen,
       button: true,
       label: [
         g.goal.title,

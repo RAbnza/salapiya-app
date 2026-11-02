@@ -94,6 +94,8 @@ class ProviderSignInButton extends StatelessWidget {
     // The artwork stays 40 tall; on touch platforms the margin around it
     // still counts as the button, so the target is 48.
     return Semantics(
+      container: true,
+      onTap: enabled ? onPressed : null,
       button: true,
       enabled: enabled,
       label: brand.label,

@@ -189,6 +189,8 @@ class _FormMoreDetailsState extends State<FormMoreDetails> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
+          container: true,
+          onTap: () => setState(() => open = !open),
           button: true,
           expanded: open,
           label: widget.label,

@@ -319,7 +319,7 @@ void main() {
         findsOneWidget,
       );
       await localTap(tester, find.text('Save reviewed values'));
-      expect(find.text('Set schedule saved'), findsOneWidget);
+      expect(find.text('Schedule saved'), findsOneWidget);
 
       final saved = controller.snapshot.current.firstWhere(
         (r) =>
@@ -441,7 +441,7 @@ void main() {
         await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
         expect(find.textContaining('3 payments of ₱2,000.00'), findsOneWidget);
         await localTap(tester, find.text('Save reviewed values'));
-        expect(find.text('Add existing debt saved'), findsOneWidget);
+        expect(find.text('Debt added'), findsOneWidget);
         expect(find.text('Schedule saved'), findsOneWidget);
 
         final s = controller.snapshot;
@@ -491,7 +491,7 @@ void main() {
       await enter(tester, 'amount', '100.00');
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
       await localTap(tester, find.text('Save reviewed values'));
-      expect(find.text('Add existing debt saved'), findsOneWidget);
+      expect(find.text('Debt added'), findsOneWidget);
       expect(find.text('Schedule saved'), findsNothing);
       final debt = controller.snapshot.current.firstWhere(
         (r) => r.title == 'Plain loan',

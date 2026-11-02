@@ -8,7 +8,7 @@ import '../app/overview_cards.dart' show civilLabel;
 import '../app/overview_dashboard.dart' show overviewLongDate;
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import '../design_system/workspace.dart' show FormExitGuard;
+import '../design_system/kit/review.dart' show FormExitGuard;
 import '../finance/form_mechanics.dart';
 import '../local/finance_domain.dart' show newLocalId;
 import '../prototype/scenarios.dart';

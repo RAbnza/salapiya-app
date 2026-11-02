@@ -11,11 +11,13 @@ import 'money_data.dart';
 /// Money cards (Chat 8). Each card shows values it is given; the screens read
 /// the source and `money_data.dart` derives the rest.
 
-String _account(AccountRow a) => [
+List<String> _accountParts(AccountRow a) => [
   a.account.kind,
   if (a.account.archived) 'Archived',
   if (a.checked != null) 'Checked ${civilLabel(a.checked!)}',
-].join(' · ');
+];
+
+String _account(AccountRow a) => _accountParts(a).join(' · ');
 
 /// A change in money: "+₱500.00", or "−₱185.50" as the formatter gives it.
 String signedAmount(BigInt value, Amount amount, {required bool hidden}) =>
@@ -118,11 +120,11 @@ class _AccountsCardState extends State<AccountsCard> {
         child: AdaptiveRow(
           leading: accountIcon(a.account.kind),
           title: a.account.name,
-          subtitle: [
-            _account(a),
+          subtitle: detailLine([
+            ..._accountParts(a),
             if (!hidden && share != null) percentLabel(share),
             if (!hidden) 'This month $change',
-          ].join(' · '),
+          ]),
           trailing: MoneyAmount(balance),
           onTap: () => widget.onOpen(a.account.id),
         ),

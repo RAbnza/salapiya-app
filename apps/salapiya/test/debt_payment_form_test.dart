@@ -726,7 +726,7 @@ void main() {
         await localSettle(tester);
         await localTap(tester, submit());
         await localTap(tester, submit());
-        expect(find.text('Add a debt saved'), findsOneWidget);
+        expect(find.text('Debt added'), findsOneWidget);
         expect(find.text('Schedule not saved'), findsOneWidget);
         expect(
           find.textContaining('it needs a connection to check your latest'),
