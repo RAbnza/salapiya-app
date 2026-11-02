@@ -13,6 +13,7 @@ class ListRow extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.leading,
+    this.leadingColor,
     this.trailing,
     this.onTap,
     this.stackTrailing = false,
@@ -21,6 +22,9 @@ class ListRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final IconData? leading;
+
+  /// The leading icon's color, such as a status tone; `secondary` if null.
+  final Color? leadingColor;
   final Widget? trailing;
 
   /// Puts [trailing] under the text, end-aligned, for rows too narrow to
@@ -73,7 +77,11 @@ class ListRow extends StatelessWidget {
             child: Row(
               children: [
                 if (leading != null) ...[
-                  Icon(leading, size: iconSize, color: c.secondary),
+                  Icon(
+                    leading,
+                    size: iconSize,
+                    color: leadingColor ?? c.secondary,
+                  ),
                   const SizedBox(width: leadingGap),
                 ],
                 Expanded(

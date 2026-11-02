@@ -676,22 +676,7 @@ class _AmountFieldState extends State<AmountField> {
     widget.onChanged?.call(value);
   }
 
-  Future<void> openSheet() async {
-    await showAppSheet<void>(
-      context,
-      title: 'Calculator',
-      body: Builder(
-        builder: (sheet) => CalculatorPanel(
-          onUse: (value, wasRounded) {
-            use(value, wasRounded);
-            Navigator.of(sheet).pop();
-          },
-        ),
-      ),
-      primary: null,
-      secondary: const ModalAction.cancel(label: 'Close'),
-    );
-  }
+  Future<void> openSheet() => showCalculatorSheet(context, onUse: use);
 
   @override
   Widget build(BuildContext context) => HelpTextField(

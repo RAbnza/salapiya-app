@@ -14,6 +14,7 @@ import 'overview.dart';
 import 'previews.dart';
 import 'profile_utilities.dart';
 import 'shell_navigation.dart';
+import 'shell_tools.dart';
 import 'title_bar.dart';
 import '../features/finance/contracts/financial_models.dart';
 import '../features/finance/presentation/financial_editor.dart';
@@ -285,6 +286,13 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           icon: Icons.cloud_upload_outlined,
           onTap: () => utilities('Connection'),
         ),
+      if (local != null && !session.local && session.syncLabel == 'Signed out')
+        SidebarNotice(
+          'Sync needs you to sign in',
+          icon: Icons.no_accounts_outlined,
+          tone: PillTone.warning,
+          onTap: () => utilities('Connection'),
+        ),
       if (session.needsReview)
         SidebarNotice(
           'Sync needs review',
@@ -310,6 +318,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           destination.label,
           icon: destinationIcon(destination),
           id: 'choose-${destination.name}',
+          group: 'Sections',
           onSelected: () => select(destination),
         ),
       for (final MapEntry(key: destination, value: tabs) in sectionTabs.entries)
@@ -318,15 +327,18 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
             tab,
             where: destination.label,
             icon: destinationIcon(destination),
+            group: 'Tabs',
             onSelected: () => navigation.select(destination, tab: tab),
           ),
       for (final destination in AppDestination.values)
         for (final item in newItemsFor(destination))
-          if (created.add(item.$1))
+          // One entry per label: Debts' and Money's debt payment share one.
+          if (created.add(item.$2))
             GoToEntry(
               item.$2,
               where: 'New',
               icon: item.$3,
+              group: 'New',
               onSelected: () => runNew(item),
             ),
       for (final link in profileLinks)
@@ -336,6 +348,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               ? null
               : 'Profile and settings',
           icon: link.icon,
+          group: 'Profile and settings',
           onSelected: link.onSelected,
         ),
       if (local != null)
@@ -343,6 +356,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
           'Help',
           where: 'Profile and settings',
           icon: Icons.help_outline,
+          group: 'Profile and settings',
           onSelected: () => utilities('Help'),
         ),
     ];
@@ -394,27 +408,38 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     };
     return [
       for (final item in items)
-        if (!session.production ||
-            [
-              'Add expense',
-              'Record income',
-              'Transfer money',
-              'Record payment',
-              'Record debt payment',
-              'Add existing debt',
-              'Record borrowing',
-              'Pay credit card',
-              'Add shared expense',
-              'Report payment',
-              'Add task',
-              'Add event',
-              'Add a learning goal',
-              'Add a book',
-              'Add an application',
-            ].contains(item.$1))
+        if ((session.complete || !_needDownload.contains(item.$1)) &&
+            (!session.production ||
+                [
+                  'Add expense',
+                  'Record income',
+                  'Transfer money',
+                  'Record payment',
+                  'Record debt payment',
+                  'Add existing debt',
+                  'Record borrowing',
+                  'Pay credit card',
+                  'Add shared expense',
+                  'Report payment',
+                  'Add task',
+                  'Add event',
+                  'Add a learning goal',
+                  'Add a book',
+                  'Add an application',
+                ].contains(item.$1)))
           item,
     ];
   }
+
+  /// These open no form until the first download has finished, so they
+  /// aren't offered before then.
+  static const _needDownload = {
+    'Add expense',
+    'Record income',
+    'Transfer money',
+    'Add shared expense',
+    'Report payment',
+  };
 
   void runNew(NewItem item) {
     final (key, label, _) = item;
@@ -438,9 +463,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     }
   }
 
-  /// Android: the + button's bottom sheet.
+  /// Android: the + button's bottom sheet, with the calculator at the end.
   Future<void> showNewSheet() async {
     final items = newItems;
+    const calculator = -1;
     final chosen = await showAppSheet<int>(
       context,
       title: 'New',
@@ -455,11 +481,22 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
                 leading: icon,
                 onTap: () => Navigator.pop(context, i),
               ),
+            ListRow(
+              key: const ValueKey('new-calculator'),
+              title: 'Calculator',
+              leading: Icons.calculate_outlined,
+              onTap: () => Navigator.pop(context, calculator),
+            ),
           ],
         ),
       ),
     );
-    if (chosen != null && mounted) runNew(items[chosen]);
+    if (chosen == null || !mounted) return;
+    if (chosen == calculator) {
+      await showCalculatorSheet(context);
+    } else {
+      runNew(items[chosen]);
+    }
   }
 
   Widget actionPage(String key, String label) {
@@ -528,28 +565,46 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     }
   }
 
-  ShellStatus get status => !session.production
-      ? (
-          label: 'Demo · ${session.syncLabel}',
-          icon: Icons.science_outlined,
-          tone: PillTone.neutral,
-        )
-      : session.local
-      ? (
-          label: 'On this device only',
-          icon: Icons.lock_outline,
-          tone: PillTone.neutral,
-        )
-      : (
-          label: session.syncLabel,
-          icon: session.needsReview
-              ? Icons.error_outline
-              : Icons.cloud_outlined,
-          tone: session.needsReview ? PillTone.warning : PillTone.neutral,
-        );
-
-  Widget syncStatus() =>
-      StatusPill(status.label, icon: status.icon, tone: status.tone);
+  /// The sync state: the connection's label with an icon for each state.
+  /// The demo names the state its scenario shows, in the same words.
+  ShellStatus get status {
+    final label = !session.production
+        ? !session.complete
+              ? 'First download not finished'
+              : session.needsReview
+              ? 'Needs review'
+              : session.local
+              ? 'On this device only'
+              : session.pending || session.scenario == OverviewScenario.waiting
+              ? 'Waiting for connection'
+              : 'Synced'
+        : session.local
+        ? 'On this device only'
+        : session.syncLabel;
+    final (icon, tone) = session.needsReview
+        ? (Icons.error_outline, PillTone.warning)
+        : switch (label) {
+            'On this device only' => (Icons.lock_outline, PillTone.neutral),
+            'Synced' => (Icons.cloud_done_outlined, PillTone.neutral),
+            'Syncing' => (Icons.cloud_sync_outlined, PillTone.neutral),
+            'Waiting for connection' => (
+              Icons.cloud_off_outlined,
+              PillTone.neutral,
+            ),
+            'Sync paused' => (Icons.pause_circle_outline, PillTone.neutral),
+            'Signed out' => (Icons.no_accounts_outlined, PillTone.neutral),
+            'First download not finished' => (
+              Icons.cloud_download_outlined,
+              PillTone.warning,
+            ),
+            _ => (Icons.cloud_outlined, PillTone.neutral),
+          };
+    return (
+      label: session.production ? label : 'Demo · $label',
+      icon: icon,
+      tone: tone,
+    );
+  }
 
   /// The title bar's sync status opens the sync details.
   void syncDetails() => local == null ? utilities() : utilities('Connection');
@@ -603,8 +658,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
   );
 
   /// Windows: the location and New above the content; Go to and the sync
-  /// state are in the title bar when it is shown ([titleBar]). Android: the
-  /// top app bar.
+  /// state are in the title bar when it is shown ([titleBar]). Android, and
+  /// Windows below 600: the app bar, then the status row (§2 Android parity).
   Widget header(
     BuildContext context, {
     required bool desktop,
@@ -615,81 +670,10 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
     final text = Theme.of(context).textTheme;
     final width = WidthClass.of(context);
     final crumbs = navigation.breadcrumb;
-    final title = desktop
-        ? Text.rich(
-            TextSpan(
-              children: [
-                for (final (i, crumb) in crumbs.indexed)
-                  TextSpan(
-                    text: '${i == 0 ? '' : ' › '}${crumb.label}',
-                    style: TextStyle(
-                      color: i == crumbs.length - 1 ? c.text : c.secondary,
-                    ),
-                  ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.bodyMedium,
-          )
-        : Row(
-            children: [
-              if (navigation.destination == AppDestination.overview) ...[
-                const BrandMark(size: Space.xl),
-                const SizedBox(width: Space.sm),
-              ],
-              Expanded(
-                child: Text(
-                  navigation.destination.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleLarge,
-                ),
-              ),
-            ],
-          );
-    final heading = Semantics(header: true, child: title);
-    // With the sidebar, Hide amounts, the profile and the sync state live in
-    // it; the header keeps the location and New.
-    final actions = [
-      const SizedBox(width: Space.sm),
-      if (desktop) newButton(width == WidthClass.compact),
-      if (!rail) ...[
-        if (desktop) const SizedBox(width: Space.sm),
-        // On Windows the title bar has Hide amounts when it is shown.
-        if (!(desktop && titleBar))
-          AppIconButton(
-            key: const ValueKey('shell-hide-amounts'),
-            tooltip: session.hideAmounts ? 'Show amounts' : 'Hide amounts',
-            onPressed: session.togglePrivacy,
-            icon: session.hideAmounts
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-          ),
-        Tooltip(
-          message: 'Profile and settings',
-          child: Semantics(
-            button: true,
-            label: 'Profile and settings',
-            excludeSemantics: true,
-            child: SizedBox.square(
-              dimension: hitTarget(context),
-              child: Pressable(
-                key: const ValueKey('shell-profile'),
-                onTap: utilities,
-                radius: Radii.pill,
-                child: Center(
-                  child: ProfileInitial(name: session.profile.name),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ];
     if (rail) {
       // Windows with the sidebar: an app bar level with the sidebar's logo
-      // row, with its own divider, below the title bar.
+      // row, with its own divider, below the title bar. Hide amounts, the
+      // profile and the sync state live in the sidebar or the title bar.
       return Container(
         height: Space.appBarHeight,
         padding: EdgeInsets.symmetric(horizontal: Space.pageGutter(width)),
@@ -726,38 +710,126 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         ),
       );
     }
-    // The bottom gap keeps the header clear of content scrolling under it.
+    final profile = Tooltip(
+      message: 'Profile and settings',
+      excludeFromSemantics: true,
+      child: Semantics(
+        container: true,
+        button: true,
+        label: 'Profile and settings',
+        onTap: utilities,
+        excludeSemantics: true,
+        child: SizedBox.square(
+          dimension: hitTarget(context),
+          child: Pressable(
+            key: const ValueKey('shell-profile'),
+            onTap: utilities,
+            radius: Radii.pill,
+            child: Center(child: ProfileInitial(name: session.profile.name)),
+          ),
+        ),
+      ),
+    );
+    // Windows keeps New and its menu button for Go to; Android has the
+    // search button. On Windows the title bar has the bell when it is shown.
+    final actions = [
+      if (desktop) ...[
+        newButton(width == WidthClass.compact),
+        const SizedBox(width: Space.sm),
+      ],
+      if (!desktop)
+        AppIconButton(
+          key: const ValueKey('shell-goto'),
+          icon: Icons.search,
+          tooltip: 'Go to',
+          onPressed: goTo,
+        ),
+      if (!(desktop && titleBar)) NotificationsButton(notices: notices),
+      profile,
+    ];
+    final bar = desktop
+        ? Row(
+            children: [
+              AppIconButton(
+                key: const ValueKey('shell-destinations'),
+                icon: Icons.menu,
+                tooltip: 'Go to (Ctrl+K)',
+                onPressed: goTo,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  header: true,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        for (final (i, crumb) in crumbs.indexed)
+                          TextSpan(
+                            text: '${i == 0 ? '' : ' › '}${crumb.label}',
+                            style: TextStyle(
+                              color: i == crumbs.length - 1
+                                  ? c.text
+                                  : c.secondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              ...actions,
+            ],
+          )
+        : _AppBarRow(
+            // Phones use the dock's names, so the bar keeps one row.
+            title: width == WidthClass.compact
+                ? dockLabel(navigation.destination)
+                : navigation.destination.label,
+            logo: navigation.destination == AppDestination.overview,
+            actions: actions,
+          );
+    // The status row is as tall as its targets, and its spare height under
+    // the pill is the header's gap on Android. On Windows the title bar
+    // shows the sync state and Hide amounts instead, so the row is dropped.
+    final statusRow = !(desktop && titleBar);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         Space.pageGutter(width),
         Space.sm,
         Space.pageGutter(width),
-        Space.md,
+        statusRow && !desktop ? 0 : Space.md,
       ),
-      // Without the sidebar, the sync pill gets its own full-width row,
-      // unless the Windows title bar shows it.
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              if (desktop && !rail) ...[
-                AppIconButton(
-                  key: const ValueKey('shell-destinations'),
-                  icon: Icons.menu,
-                  tooltip: 'Go to (Ctrl+K)',
-                  onPressed: goTo,
-                ),
-                const SizedBox(width: Space.sm),
-              ],
-              Expanded(child: heading),
-              ...actions,
-            ],
-          ),
-          if (!(desktop && titleBar)) ...[
-            const SizedBox(height: Space.xs),
-            syncStatus(),
-          ],
+          bar,
+          if (statusRow)
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: hitTarget(context)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: SyncStatusButton(
+                        status: status,
+                        onTap: syncDetails,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  HideAmountsButton(
+                    hidden: session.hideAmounts,
+                    onPressed: session.togglePrivacy,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -1063,4 +1135,62 @@ class _CloseMenu extends DismissAction {
   bool isEnabled(DismissIntent intent) => menu.isOpen;
   @override
   void invoke(DismissIntent intent) => menu.close();
+}
+
+/// Android's app bar row: the logo on Overview, the title, and the actions
+/// at the end. When the title doesn't fit beside them (at large text), it
+/// drops to its own line under them, rather than being cut or broken.
+class _AppBarRow extends StatelessWidget {
+  const _AppBarRow({
+    required this.title,
+    required this.logo,
+    required this.actions,
+  });
+  final String title;
+  final bool logo;
+  final List<Widget> actions;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final style = Theme.of(context).textTheme.titleLarge;
+      final painter = TextPainter(
+        text: TextSpan(text: title, style: style),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+        maxLines: 1,
+      )..layout();
+      final needed =
+          (logo ? Space.xl + Space.sm : 0) +
+          painter.width +
+          Space.sm +
+          actions.length * hitTarget(context);
+      painter.dispose();
+      final heading = Semantics(
+        container: true,
+        header: true,
+        child: Text(title, style: style),
+      );
+      const mark = BrandMark(size: Space.xl);
+      if (needed <= box.maxWidth) {
+        return ConstrainedBox(
+          constraints: BoxConstraints(minHeight: hitTarget(context)),
+          child: Row(
+            children: [
+              if (logo) ...[mark, const SizedBox(width: Space.sm)],
+              Expanded(child: heading),
+              const SizedBox(width: Space.sm),
+              ...actions,
+            ],
+          ),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [if (logo) mark, const Spacer(), ...actions]),
+          heading,
+        ],
+      );
+    },
+  );
 }

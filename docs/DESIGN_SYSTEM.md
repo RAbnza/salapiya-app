@@ -63,10 +63,10 @@ At text scale ≥ 150%, drop one column class.
 
 | Concern | Windows | Android |
 | --- | --- | --- |
-| Window chrome | A custom title bar across the full window width, above the sidebar and the app bar ([below](#windows-title-bar-chat-5)). The native caption is removed; the sides and bottom keep the native frame. | System status bar. Top app bar with the section title (the logo mark leads it on Overview), Hide amounts and the profile button, with the sync status pill under the title. |
+| Window chrome | A custom title bar across the full window width, above the sidebar and the app bar ([below](#windows-title-bar-chat-5)). The native caption is removed; the sides and bottom keep the native frame. | System status bar. Top app bar with the section title (the logo mark leads it on Overview), Go to, the bell and the profile button, then a status row with the sync pill and Hide amounts ([Android parity](#android-parity-with-the-windows-title-bar-chat-15b)). |
 | Primary navigation | Sidebar panel flush with the window's left edge: logo, profile card, Go to, five destinations with their tabs, Needs attention, utilities ([App shell](#app-shell-chat-4)) | Floating bottom dock with five labelled destinations ("Shared" is the short label for Shared Expenses); a separate + action above it |
 | Back / forward | Title-bar buttons, Alt+← / Alt+→, mouse back/forward buttons | System back gesture or button; no forward |
-| Location | Breadcrumb in the app bar, below the title bar (Section › Tab › Page) | Screen title in the app bar; tabs below it |
+| Location | Breadcrumb in the app bar, below the title bar (Section › Tab › Page) | Screen title in the app bar (the dock's names on phones); tabs below it |
 | Create actions | "New" menu button in the shell header (Ctrl+N) | + button above the dock opens a bottom sheet |
 | Info control ([§6](#6-form-help-pattern)) | A tooltip on hover and keyboard focus; a click pins it as a popover | Tap opens an anchored popover |
 | Dialogs | Centered, width-bounded modal | Centered dialog for confirmations; bottom sheet for choices and short forms; full-screen page for long forms |
@@ -74,6 +74,7 @@ At text scale ≥ 150%, drop one column class.
 | Row density | Single-line rows may be 40 px when pointer-only; hover state on rows | Rows at least 48 px; no hover |
 | Hover | Required on every interactive element | Not used; pressed state only |
 | Keyboard | Every action reachable; Esc closes the top overlay; Ctrl+N opens New; Ctrl+K opens Go to; Ctrl+H hides or shows amounts | Hardware keyboard works; not required to be optimized |
+| Go to, bell, calculator | Title bar: the Go to field, the bell's menu, the calculator's popover | App bar: Go to's full-screen page and the bell's sheet; the calculator is the + sheet's last row |
 
 ### App shell (Chat 4)
 
@@ -88,7 +89,7 @@ At text scale ≥ 150%, drop one column class.
     - Left: the breadcrumb (`ShellBreadcrumb`), with chevrons between segments. Earlier segments are muted and go back; the last one is the current place.
     - Right: New. Go to and the sync state are in the title bar. Hide amounts and the profile live in the sidebar.
     - Without the custom frame (an older runner, or tests that don't turn it on), the app bar keeps the Chat 4 layout: the Go to field (224 wide; a search icon at Medium width) before New, and the sync line in the profile card.
-  - **Android, and Windows below 600:** the title or location, Hide amounts, the profile button, and the sync `StatusPill` on its own row. On Windows the title bar shows the sync state instead, so that row is dropped.
+  - **Android, and Windows below 600:** the app bar, then the status row ([Android parity](#android-parity-with-the-windows-title-bar-chat-15b)). Windows below 600 keeps its menu button for Go to and New, and the title bar has the bell, Hide amounts and the sync state, so the header adds neither the bell nor the status row; without the title bar it shows both.
   - A 12 bottom gap keeps the header clear of content scrolling under it.
 - **Windows sidebar** (`ShellSidebar`), after the owner's reference images:
   - **Panel:** `surface` on the canvas, flush with the window's left, top and bottom edges. It has square corners and a hairline (`divider`, or `text` in high contrast) along its right edge. Mica was deferred in Chat 5, so the panel stays solid.
@@ -104,13 +105,13 @@ At text scale ≥ 150%, drop one column class.
     - **Profile card:** the initial and the name on one line. It opens the profile menu. The sync state is in the title bar; without the custom frame, the card shows it on a second line with its icon.
     - **The five destinations.** A separator (12 above and below) splits Overview, the dashboard, from the working sections. Money, Shared Expenses and Life show their tabs under them, joined by a crisp hairline tree. Only the current section is open (an accordion). Pressing it again folds its tabs. A tab row goes straight to that tab. The selected tab's fill stops short of the panel edge.
     - **Quick create** (with the title bar): the current section's first three New actions as rows, one click each, the Windows counterpart of Android's + button. Overview and Money: Log expense, Log income, Log a transfer. Debts: Log a debt payment, Add a debt, Log a new loan. Life: Add task, Add event, Add a learning goal. Shared Expenses: Add shared expense, Log a payment between members. Hidden on the rail.
-    - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync" and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
+    - **Needs attention** (without the title bar; with it, these rows are in the title bar's bell): rows built from existing counts, each going to where it's handled: "N payments to confirm" (Shared Expenses › Payments), "N waiting to sync", "Sync needs you to sign in" (signed out) and "Sync needs review" (Profile › Connection). With none, it shows "Nothing needs attention". Shared Expenses also shows the to-confirm count as a badge in both cases.
   - **Bottom, fixed:**
     - Settings (opens Profile and settings) and Help. Without the title bar, Hide amounts (a small switch) comes first; with it, Hide amounts is in the title bar.
     - Then a full-width Light | Dark switch, with an icon and a label on each segment. It shows the theme in use, including what System is giving. Choosing one sets the profile's theme. System stays available in Profile and settings.
   - **Selected item:** a `subtle` fill and a medium-weight `text` label. Only the icon is `primary`. High contrast adds a `text` outline.
   - **Rail:** 40 × 40 icon cells with tooltips. The profile initial opens its menu. Sections with tabs open a flyout beside the item. It has a header (the section's icon and name), then the tabs on the same tree line as the expanded sidebar, with the current tab highlighted. The flyout is level 2, with a `control` radius and a hairline border. The badge sits on the icon. The footer is icon cells: Hide amounts (only without the title bar), Settings, Help, and the theme (switches to the other one).
-- **Go to (Ctrl+K):** a dialog near the top of the window. Typing filters; Enter opens the first match. It lists the sections, every tab ("Activity · Money"), the create actions and the profile pages. It jumps to places; it doesn't search records. It opens from the title bar's Go to field (a search button at Medium width), or from the header's menu button on Windows below 600.
+- **Go to (Ctrl+K):** a dialog near the top of the window on Windows, and a full-screen page on Android, from the same entries (`goToEntries`, filtered by `goToMatches`). Typing filters; Enter opens the first match of what's typed. It lists the sections, every tab ("Activity · Money"), the create actions (one per label) and the profile pages. It jumps to places; it doesn't search records. It opens from the title bar's Go to field (a search button at Medium width), from the header's menu button on Windows below 600, or from the app bar's search button on Android.
 - **Pages:** they open on a navigator inside the content area.
   - Windows: the sidebar and header stay visible.
   - Android: the app bar and dock hide while a page is open.
@@ -133,7 +134,7 @@ At text scale ≥ 150%, drop one column class.
 
 ### Windows title bar (Chat 5)
 
-`lib/app/title_bar.dart` (the bar and the runner bridge), `lib/app/title_bar_tools.dart` (clock, bell, calculator), `lib/app/window_chrome.dart` (where it sits), and the runner in `apps/salapiya/windows/runner/`. The decision log has the history; this is the current design.
+`lib/app/title_bar.dart` (the bar and the runner bridge), `lib/app/title_bar_tools.dart` (the clock), `lib/app/shell_tools.dart` (the bell, the sync status and Hide amounts, which Android shares), the kit's `calculator.dart`, `lib/app/window_chrome.dart` (where it sits), and the runner in `apps/salapiya/windows/runner/`. The decision log has the history; this is the current design.
 
 - **One custom bar across the full window width**, `Space.titleBarHeight` (40), on `titleBar` with a hairline below the content column. The sidebar and the app bar start under it; the sidebar's logo row (56) stays level with the app bar.
 - **It frames every screen.** `WindowChrome` puts it above the app's navigator, so welcome, loading and recovery screens have window controls too. Outside the shell, it shows only drag space and the window controls.
@@ -143,10 +144,10 @@ At text scale ≥ 150%, drop one column class.
   - Back and Forward: kit `AppIconButton`s (32), `Space.xs` apart, `Space.sm` past the sidebar's edge (or from the window's edge without one). They are neutral navigation chrome: `text` when enabled, `secondary` when there is no history; the tools on the right keep the accent. Tooltips "Back (Alt+←)" and "Forward (Alt+→)".
   - **Go to**, moved from the app bar. From 1000 wide it is the `GoToField`, `Space.goToWidth` (320) wide and centered on the window. It narrows rather than overlap either side and keeps at least 48 of drag space beside it. At Medium width it is a search button after Forward. Below 600 the header's menu button stays, because there it is the way to navigate.
   - Drag space: everything else.
-  - **Bell:** what needs the user, from the existing counts (payments to confirm, waiting to sync, sync needs review), with a `primary` count badge. It opens a menu headed "Needs attention" whose rows go where each item is handled; with none it says "Nothing needs attention". It replaces the sidebar's Needs attention group.
+  - **Bell:** what needs the user, from the existing counts (payments to confirm, waiting to sync, signed out, sync needs review), with a `primary` count badge that counts the rows and keeps its size at large text. It opens a menu headed "Needs attention" whose rows go where each item is handled; with none it says "Nothing needs attention". It replaces the sidebar's Needs attention group.
   - **Calculator:** a popover with a keypad (C, Backspace, Copy, the four operators, digits, the decimal point, =). Typing works while it's open (digits, + − * / or x, Enter or =, Backspace, Delete or C, Ctrl+C, and the numpad); Esc closes it. Arithmetic is on exact fractions, left to right as in Windows' standard mode. A result that doesn't end within 10 decimals shows rounded to centavos and marked "≈" (DOMAIN_RULES §49: rounding is never silent); Copy puts the plain value (for example `416.67`) on the clipboard. It saves nothing. Hidden below 600.
   - **Hide amounts:** an eye button, "Hide amounts (Ctrl+H)" or "Show amounts (Ctrl+H)", reported as a toggle. It replaces the sidebar footer's row, the rail's cell and, below 600, the header's button.
-  - **Sync status**, moved from the sidebar's profile card. It shows the shell's existing status labels ("On this device only", "Synced", "Syncing", "Waiting for connection", or "Demo · …"), in warning tone when sync needs review. It opens Profile › Connection, or Profile and settings in the demo. Below 600 it is icon-only, with the label in its tooltip.
+  - **Sync status**, moved from the sidebar's profile card. It shows the connection's labels with an icon for each state: "On this device only" (lock), "Synced", "Syncing", "Waiting for connection", "Sync paused", "Signed out", "First download not finished" and "Needs review". The last two are in the warning tone. The demo says "Demo · " and the same words for the state its scenario shows. It opens Profile › Connection, or Profile and settings in the demo. Below 600 it is icon-only, with the label in its tooltip.
   - **Window controls:** minimize, maximize or restore, and close (`CaptionButtons`, 46 wide, full height).
 - **Not in the bar:** the logo and app name (they stay in the sidebar) and the breadcrumb (it stays in the app bar).
 - **Colors:** see [§3](#charts-title-bar-high-contrast-and-legacy-colors). Close uses the system red on hover, an allowed exception to the purple accent.
@@ -167,23 +168,32 @@ At text scale ≥ 150%, drop one column class.
 - **High contrast:** the app switches to its high-contrast theme and the native border uses the system colors. Flutter doesn't expose the user's high-contrast palette, so the bar itself uses the app's high-contrast roles.
 - **Back/forward history is UI-layer state** over the existing navigation (destination switches and pushed pages). Routes and route names do not change.
 
-### Android parity with the Windows title bar (planned)
+### Android parity with the Windows title bar (Chat 15b)
 
-Approved 2026-10-30. Android gets the title bar's features in its own places; there is no title bar on Android. Built across stages (see [§9](#9-redesign-roadmap-temporary)), from the same sources as Windows.
+Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features in its own places; there is no title bar on Android. Each part reads the same source as Windows: `goToEntries`, `notices`, `status` and `syncDetails` in `shell.dart`, and `NotificationsButton`, `SyncStatusButton` and `HideAmountsButton` in `lib/app/shell_tools.dart`, which show as compact pointer controls in the title bar and at touch size here. Tested in `test/shell_parity_test.dart`.
 
-- **App bar:** the title (the logo mark leads it on Overview), then three actions: Go to (search), the bell and the profile button.
-- **Status row** (today's sync pill row): the sync pill on the left, now tappable (opens Profile › Connection, as on Windows), and the Hide amounts eye on the right, moved from the app bar.
-- **Go to:** the search icon opens a full-screen Go to page with the same `GoToEntry` list (sections, tabs, create actions, profile pages), filtered as you type.
-- **Bell:** a count badge; it opens a bottom sheet with the same Needs attention rows as the Windows bell, each going where the item is handled.
-- **Date and calendar:** no clock (the status bar shows it). The date in Overview's header is tappable and opens a calendar sheet with "Open Life › Calendar".
-- **Calculator:** a "Calculator" row at the bottom of the + sheet opens it as a bottom sheet with Copy (the same exact engine and "≈" rule). As each form is redesigned, amount fields get a calculator button whose "Use result" fills the field, on both platforms (`AmountField`, §5).
-- **Unchanged:** system Back (no Forward), the + sheet as Quick create's counterpart, the dock.
+- **Five-second questions.** App bar: where am I, and how do I get somewhere fast? Status row: is my data synced, and are my amounts hidden? Bell: does anything need me? Go to: where do I want to go? Calculator: can I work something out without leaving what I'm doing?
+- **What the standard doesn't cover here.** This is chrome, not a section, so there are no tabs, KPI tiles, charts, tables, grid, Show values, shareable views or accent card, and no demo sample of its own: it reads the shell's counts. Tokens, 48 targets, nothing cut at 200%, both themes, every state, the glossary, no wasted space, `ListEnd` on Go to's list and the sweep all apply.
+- **App bar** (`_AppBarRow`, at least 48 tall): the logo mark on Overview, the title, then Go to (search), the bell and the profile button, 48 each. Phones (Compact width) use the dock's names ("Shared"), so the bar keeps one row at normal text; wider screens use the full name. When the title doesn't fit beside the actions (at large text), it drops to its own line under them, with the logo staying on the actions' row. It never wraps inside a word or ends in "…".
+- **Status row** (48 tall): the sync pill (`SyncStatusButton`) at the start, with a 48 hit area, wrapping at large text, and the Hide amounts eye (`HideAmountsButton`, a toggle to screen readers) at the end. The pill opens Profile › Connection, or Profile and settings in the demo. Its spare height under the pill is the header's bottom gap, so the space above the content is as before.
+- **Go to:** the search button opens a full-screen page on the root navigator: a back arrow and the "Go to…" field, focused, then one card per group (Sections, Tabs, New, Profile and settings), the last closing with `ListEnd`. Typing filters inside the groups and empty ones go; with no match it says "Nothing matches" and that Go to finds places, not records. Enter or a row closes the page and opens the place. Back closes it and changes nothing.
+- **Bell:** the same rows as Windows, with the count badge. It opens a "Needs attention" sheet whose rows (icons in their tone, `ListRow.leadingColor`) go where each item is handled, with Close. With none, the sheet says "Nothing needs attention" and what shows there.
+- **Calculator:** the + sheet's last row, "Calculator", opens it as a sheet (`showCalculatorSheet`, the same one amount fields use, without Use result) with Copy and Close, the same exact engine and "≈" rule.
+- **Date and calendar:** no clock (the status bar shows it). The date in Overview's header opens a calendar sheet with "Open Life › Calendar" (Chat 6).
+- **States:**
+  - An unfinished first download: the pill reads "First download not finished" in the warning tone. Log expense, Log income, Log a transfer, Add shared expense and Log a payment between members open no form until it finishes, so the + sheet, Go to, the Windows New menu, Quick create and the quick actions don't offer them. Debt, card and Life actions stay.
+  - Signed out: the pill says so and the bell adds "Sync needs you to sign in", which opens Connection.
+  - Hidden amounts: the eye is crossed out and its tooltip reads "Show amounts".
+  - A page open: the app bar, the status row and the dock hide, as before; pages have their own back row.
+- **Windows below 600** uses the same header: with the title bar, its menu button, the title, New and the profile, and nothing the bar already has; without it, the bell and the status row too.
+- **Unchanged:** system Back (no Forward), the + sheet as Quick create's counterpart, the dock. As each form is redesigned, amount fields get the calculator button with "Use result" (`AmountField`, §5); Career's salary fields don't, because a salary has its own currency.
 - **Ideas needing approval later:** Android launcher shortcuts and the Windows taskbar jump list (native code), and the Android 14+ predictive-back animation.
+- **Demo build:** shows the app bar, Go to, the bell (a payment to confirm, plus review or waiting in those scenarios), the calculator, Hide amounts and each scenario's pill. It can't show the real sync labels (Syncing, Signed out, Sync paused), the pill opening Connection, or the signed-out row.
 
 ```
 │ 9:41                  ▴ ▮ 100% │  status bar
 │ ◆ Overview        ⌕   🔔1  (A)  │  app bar
-│ (☁ Synced ›)              👁   │  status row
+│ (☁ Synced)                 👁   │  status row
 ├────────────────────────────────┤
 │ Fri, 30 October  ›             │  Overview header (opens the calendar)
 ```
@@ -1160,6 +1170,10 @@ An optional `discardDraft` adds Discard draft beside Keep draft & close, for for
 
 `SecretField` in `kit/secret_field.dart` and `ModalParagraphs` in `kit/modals.dart`, moved from `backup_pages.dart` and `connection_tab.dart`, same look. `showConnectionDisclosure` and `WhatIsShared` moved to `connection_pages.dart`, same words, so every path that connects says the same; `lead` adds what a path does. `openBackup` in `profile_actions.dart` keeps a wrong secret's handling in one place. `HelpTextField` gains `textCapitalization`.
 
+### Shell tools and the calculator sheet (Chat 15b)
+
+`showCalculatorSheet` in `kit/calculator.dart` is the calculator as a bottom sheet with Close, for amount fields (`onUse`) and the + sheet. In a sheet the panel takes the sheet's padding, and the expression line shows only when there is one; the popover on Windows is unchanged. `ListRow.leadingColor`, optional, colors the leading icon, such as a status tone; rows that don't pass it don't change. The bell, the sync status and Hide amounts moved from the title bar to `lib/app/shell_tools.dart`, same look on Windows, so Android shares them.
+
 ### Section page (`SectionPage`; Chat 7)
 
 A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
@@ -1370,6 +1384,7 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 | Recovery coverage, committed commands, Archive format | What comes back, What doesn't come back | Restore's review. The format and profile id never show |
 | Private space | Salapiya, your profile | |
 | Porcelain, Midnight | Light, Dark | Theme, as on Profile |
+| Local only, Synced · ‹date›, effect awaiting acceptance, Initial download · incomplete, Review needed · private effect (the demo's sync pill) | Demo · On this device only, Synced, Waiting for connection, First download not finished, Needs review | The demo's other screens keep their scenario words |
 
 ### Tone rules
 
@@ -1491,7 +1506,7 @@ Remove this section when the redesign is finished.
 | 13 | Life B: Learning, Books, Career. Three stages: 13a Learning and Books, 13b Career, 13c Documents and cleanup | Done |
 | 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`). Two stages: 14a frame, Profile, Help; 14b Connection, Devices, Backup, rule messages | Done |
 | 15 | Onboarding: welcome, local setup, Google, restore. Two stages: 1 frame, opening, startup failure, Welcome, local setup; 2 Google, Restore, demo preview, retirements | Done |
-| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Next |
+| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Done |
 | 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text) | Planned |
 | 17 | Final review | Planned |
 
@@ -1699,6 +1714,14 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 cal
 | 2026-10-31 | History is full width, so a long list has nothing empty beside it. Copy group history is off while amounts are hidden, because the copy holds them. | Done |
 | 2026-10-31 | Saved work shows on its own tab. People and group changes left Bills' Needs your attention. | Approved |
 | 2026-10-31 | `_SharedForm`, `NativeSharedScreen`, `group_lifecycle.dart` and the frame's old demo tab bodies are retired. The demo controller's group actions wait for Chat 16. | Approved |
+| 2026-11-02 | Owner review: Chat 15b looks good on the emulator, which finishes it. | Approved |
+| 2026-11-02 | Chat 15b, the owner's picks: phones use the dock's names in the app bar, and the title drops under the actions only when it doesn't fit (a wrapped title broke inside a word at 200%); Go to's page groups its entries in cards; one stage. | Approved |
+| 2026-11-02 | While the first download isn't finished, Log expense, Log income, Log a transfer, Add shared expense and Log a payment between members aren't offered anywhere, because they opened a demo page in the real build. Debt, card and Life actions stay. UI only. | Approved |
+| 2026-11-02 | The sync status gets an icon per state, and "First download not finished" the warning tone, on both platforms. The demo's pill says its state in the real labels. | Approved |
+| 2026-11-02 | The bell adds "Sync needs you to sign in" when signed out, opening Connection, read from the existing label. | Approved |
+| 2026-11-02 | Screen readers can press the profile button, the sync status, the Windows clock and the Overview's date and dues pill; each had a button label with no tap action. The eye is a toggle on Android too. | Approved |
+| 2026-11-02 | Found while building 15b: Go to listed "Log a debt payment" twice (Money's and Debts' keys share the label), and Enter could open the previous keystroke's match. Go to keeps one entry per label and matches what's submitted. | Done |
+| 2026-11-02 | Windows below 600 keeps its menu button for Go to and New in the shared header; it gets no search button. | Done |
 | 2026-11-02 | Chat 15's frame is "Where your records live": a live map of This device, Salapiya's service, Google and a backup file, beside the choices on Windows and slim above them on Android. It replaces the side panel and its slogans. A lit place on a solid line holds records; a quiet one on a dashed line doesn't, and every place says so in words. | Approved |
 | 2026-11-02 | Owner review of the sample: no empty space. The choices sit tight at the top of their card with "Your profile and your privacy" under them (`SideStack`), the map fills its card, each box is as tall as its text, and the words under it are one line. Screen readers hear the full sentence. | Approved |
 | 2026-11-02 | Welcome is three rows with a "Best if" line, and shows only what the rules allow: a read-only look at the saved stage and the profile's folder turns Start on this device off, with why, when an earlier profile's files are still there. It never holds the key. | Approved |

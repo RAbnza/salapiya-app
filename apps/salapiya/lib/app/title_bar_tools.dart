@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
-import 'shell_navigation.dart';
 
-// The Windows title bar's tools (§2): the date and clock with a month
-// calendar, the notifications bell, and the quick calculator.
+// The Windows title bar's clock and its month calendar (§2). The bell, the
+// sync status and Hide amounts are in shell_tools.dart, which Android shares;
+// the calculator is in the kit.
 
 /// The clock's time source; tests replace it.
 abstract final class TitleBarClock {
@@ -89,8 +89,11 @@ class _ClockButtonState extends State<ClockButton> {
         message: '$date · $time',
         excludeFromSemantics: true,
         child: Semantics(
+          container: true,
           button: true,
           label: '$date, $time. Open the calendar',
+          onTap: () =>
+              controller.isOpen ? controller.close() : controller.open(),
           excludeSemantics: true,
           child: SizedBox(
             height: Space.pointerTarget,
@@ -178,70 +181,4 @@ class _CalendarPanel extends StatelessWidget {
       onDateChanged: (_) {},
     ),
   );
-}
-
-/// The bell: what needs the user (payments to confirm, waiting to sync,
-/// sync needs review), each row going where it's handled. It replaces the
-/// sidebar's Needs attention group while the title bar is shown.
-class NotificationsButton extends StatelessWidget {
-  const NotificationsButton({super.key, required this.notices});
-  final List<SidebarNotice> notices;
-  @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    final count = notices.length;
-    return MenuAnchor(
-      alignmentOffset: const Offset(0, Space.xs),
-      menuChildren: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Space.md,
-            Space.sm,
-            Space.md,
-            Space.xs,
-          ),
-          child: Text(
-            'NEEDS ATTENTION',
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: c.secondary),
-          ),
-        ),
-        if (notices.isEmpty)
-          const MenuItemButton(
-            leadingIcon: Icon(Icons.check_circle_outline),
-            child: Text('Nothing needs attention'),
-          )
-        else
-          for (final notice in notices)
-            MenuItemButton(
-              key: ValueKey('notice-${notice.label}'),
-              leadingIcon: Icon(
-                notice.icon,
-                color: StatusPill.colors(c, notice.tone).$1,
-              ),
-              onPressed: notice.onTap,
-              child: Text(notice.label),
-            ),
-      ],
-      builder: (context, controller, _) => IconButton(
-        key: const ValueKey('titlebar-notifications'),
-        tooltip: count == 0
-            ? 'Notifications'
-            : 'Notifications, $count need attention',
-        onPressed: () =>
-            controller.isOpen ? controller.close() : controller.open(),
-        icon: Badge(
-          isLabelVisible: count > 0,
-          label: Text('$count'),
-          backgroundColor: c.primary,
-          textColor: c.onPrimary,
-          child: Icon(
-            count == 0
-                ? Icons.notifications_none_outlined
-                : Icons.notifications_outlined,
-          ),
-        ),
-      ),
-    );
-  }
 }

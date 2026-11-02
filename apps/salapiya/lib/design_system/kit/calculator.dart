@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import 'buttons.dart';
 import 'focus_ring.dart';
+import 'modals.dart';
 
 /// An exact fraction of two BigInts.
 @immutable
@@ -213,6 +214,28 @@ class CalculatorButton extends StatelessWidget {
   );
 }
 
+/// Android: the calculator as a bottom sheet with Close, from an amount
+/// field ([onUse] fills it) or the + sheet.
+Future<void> showCalculatorSheet(
+  BuildContext context, {
+  void Function(String value, bool rounded)? onUse,
+}) => showAppSheet<void>(
+  context,
+  title: 'Calculator',
+  body: Builder(
+    builder: (sheet) => CalculatorPanel(
+      onUse: onUse == null
+          ? null
+          : (value, rounded) {
+              onUse(value, rounded);
+              Navigator.of(sheet).pop();
+            },
+    ),
+  ),
+  primary: null,
+  secondary: const ModalAction.cancel(label: 'Close'),
+);
+
 /// The keypad. With [onUse], a "Use result" button hands the value to the
 /// amount field that opened it, rounded to centavos if it has to be.
 class CalculatorPanel extends StatefulWidget {
@@ -303,14 +326,18 @@ class _CalculatorPanelState extends State<CalculatorPanel> {
       kind: _KeyKind.operator,
       onTap: () => run(() => engine.operator(o)),
     );
+    // In a sheet on Android it takes the sheet's width and padding, and the
+    // expression line shows only when there is one; the sheet grows upward,
+    // so the keys stay put.
+    final popover = isDesktop(context);
+    final line = copied ? 'Copied' : engine.expression;
     return Focus(
       autofocus: true,
       onKeyEvent: key,
       child: SizedBox(
-        // In a sheet on Android it takes the sheet's width.
-        width: isDesktop(context) ? Space.sidebarWidth + Space.xxl : null,
+        width: popover ? Space.sidebarWidth + Space.xxl : null,
         child: Padding(
-          padding: const EdgeInsets.all(Space.sm),
+          padding: popover ? const EdgeInsets.all(Space.sm) : EdgeInsets.zero,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -323,12 +350,13 @@ class _CalculatorPanelState extends State<CalculatorPanel> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      copied ? 'Copied' : engine.expression,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall?.copyWith(color: c.secondary),
-                    ),
+                    if (popover || line.isNotEmpty)
+                      Text(
+                        line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall?.copyWith(color: c.secondary),
+                      ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(

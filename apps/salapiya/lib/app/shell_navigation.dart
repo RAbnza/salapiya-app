@@ -1615,6 +1615,7 @@ class GoToEntry {
     required this.onSelected,
     this.where,
     this.id,
+    this.group,
   });
   final String label;
 
@@ -1625,19 +1626,41 @@ class GoToEntry {
 
   /// A stable key for tests, e.g. `choose-money`.
   final String? id;
+
+  /// The card it sits in on Android's Go to page, e.g. "Tabs".
+  final String? group;
+}
+
+/// The entries whose label or place contains [query], in their order.
+List<GoToEntry> goToMatches(List<GoToEntry> entries, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return entries;
+  return [
+    for (final entry in entries)
+      if ('${entry.label} ${entry.where ?? ''}'.toLowerCase().contains(q))
+        entry,
+  ];
 }
 
 /// Go to (Ctrl+K): type to filter, Enter opens the first match. It jumps to
-/// places in the app; it doesn't search records.
+/// places in the app; it doesn't search records. A dialog on Windows, and a
+/// full-screen page on Android, from the same entries.
 Future<void> showGoTo(BuildContext context, List<GoToEntry> entries) async {
   final chosen = await restoringFocus(
-    () => showDialog<GoToEntry>(
-      context: context,
-      animationStyle: Motion.of(context, Motion.medium) == Duration.zero
-          ? AnimationStyle.noAnimation
-          : null,
-      builder: (context) => _GoToDialog(entries),
-    ),
+    () => isDesktop(context)
+        ? showDialog<GoToEntry>(
+            context: context,
+            animationStyle: Motion.of(context, Motion.medium) == Duration.zero
+                ? AnimationStyle.noAnimation
+                : null,
+            builder: (context) => _GoToDialog(entries),
+          )
+        : Navigator.of(context, rootNavigator: true).push<GoToEntry>(
+            MaterialPageRoute(
+              settings: const RouteSettings(name: 'goto'),
+              builder: (context) => _GoToPage(entries),
+            ),
+          ),
   );
   chosen?.onSelected();
 }
@@ -1651,20 +1674,11 @@ class _GoToDialog extends StatefulWidget {
 
 class _GoToDialogState extends State<_GoToDialog> {
   String query = '';
-  List<GoToEntry> get matches {
-    final q = query.trim().toLowerCase();
-    if (q.isEmpty) return widget.entries;
-    return [
-      for (final entry in widget.entries)
-        if ('${entry.label} ${entry.where ?? ''}'.toLowerCase().contains(q))
-          entry,
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
     final c = CraftTheme.of(context);
-    final found = matches;
+    final found = goToMatches(widget.entries, query);
     return Dialog(
       alignment: Alignment.topCenter,
       insetPadding: const EdgeInsets.fromLTRB(
@@ -1689,8 +1703,11 @@ class _GoToDialogState extends State<_GoToDialog> {
                   prefixIcon: Icon(Icons.search),
                 ),
                 onChanged: (value) => setState(() => query = value),
-                onSubmitted: (_) {
-                  if (found.isNotEmpty) Navigator.pop(context, found.first);
+                // The submitted text, not the last build's list: Enter can
+                // come before the frame that shows the last keystroke.
+                onSubmitted: (value) {
+                  final first = goToMatches(widget.entries, value).firstOrNull;
+                  if (first != null) Navigator.pop(context, first);
                 },
               ),
             ),
@@ -1720,6 +1737,129 @@ class _GoToDialogState extends State<_GoToDialog> {
                               leading: entry.icon,
                               onTap: () => Navigator.pop(context, entry),
                             ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Android's Go to: a back arrow and the search field, then the entries in a
+/// card per group (Sections, Tabs, New, Profile and settings), closing with
+/// [ListEnd]. Typing filters inside the groups; empty ones go.
+class _GoToPage extends StatefulWidget {
+  const _GoToPage(this.entries);
+  final List<GoToEntry> entries;
+  @override
+  State<_GoToPage> createState() => _GoToPageState();
+}
+
+class _GoToPageState extends State<_GoToPage> {
+  String query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final width = WidthClass.of(context);
+    final gutter = Space.pageGutter(width);
+    final found = goToMatches(widget.entries, query);
+    final groups = <String, List<GoToEntry>>{};
+    for (final entry in found) {
+      (groups[entry.group ?? ''] ??= []).add(entry);
+    }
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                0,
+                Space.xs,
+                gutter,
+                Space.xs,
+              ),
+              child: Row(
+                children: [
+                  const BackButton(),
+                  Expanded(
+                    child: TextField(
+                      key: const ValueKey('goto-field'),
+                      autofocus: true,
+                      textInputAction: TextInputAction.go,
+                      decoration: const InputDecoration(
+                        hintText: 'Go to…',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) => setState(() => query = value),
+                      onSubmitted: (value) {
+                        final first = goToMatches(
+                          widget.entries,
+                          value,
+                        ).firstOrNull;
+                        if (first != null) Navigator.pop(context, first);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: found.isEmpty
+                  ? SingleChildScrollView(
+                      padding: EdgeInsets.all(gutter),
+                      child: EmptyState(
+                        icon: Icons.search,
+                        title: 'Nothing matches "${query.trim()}"',
+                        message: 'Go to finds sections, tabs, actions and settings, not records.',
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        gutter,
+                        Space.sm,
+                        gutter,
+                        Space.pageBottom(width),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final (i, MapEntry(key: group, value: entries))
+                              in groups.entries.indexed) ...[
+                            if (i > 0)
+                              SizedBox(height: Space.cardGapOf(context)),
+                            OverviewCard(
+                              key: ValueKey('goto-group-$group'),
+                              title: group,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  ListGroup(
+                                    leading: true,
+                                    children: [
+                                      for (final entry in entries)
+                                        ListRow(
+                                          key: entry.id == null
+                                              ? null
+                                              : ValueKey<String>(entry.id!),
+                                          title: entry.label,
+                                          subtitle: entry.group == 'Tabs'
+                                              ? entry.where
+                                              : null,
+                                          leading: entry.icon,
+                                          onTap: () =>
+                                              Navigator.pop(context, entry),
+                                        ),
+                                    ],
+                                  ),
+                                  if (i == groups.length - 1) const ListEnd(),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

@@ -354,8 +354,10 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
             tone: PillTone.information,
           );
     final dateButton = Semantics(
+      container: true,
       button: true,
       label: '${overviewLongDate(today)}. Open the calendar',
+      onTap: () => _calendar(context, today),
       excludeSemantics: true,
       child: Pressable(
         key: const ValueKey('overview-date'),
@@ -392,8 +394,10 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
     final pillButton = duesPill == null
         ? null
         : Semantics(
+            container: true,
             button: true,
             label: '${duesPill.label}. Open Debts & Dues',
+            onTap: () => setState(() => tab = OverviewTab.debts),
             excludeSemantics: true,
             child: TouchArea(
               onTap: () => setState(() => tab = OverviewTab.debts),

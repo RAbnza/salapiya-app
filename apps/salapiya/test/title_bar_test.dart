@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -115,7 +117,19 @@ void main() {
     // Go to moved out of the app bar: centered on the window, 320 wide.
     expect(goTo, findsOneWidget);
     expect(find.descendant(of: bar, matching: goTo), findsOneWidget);
-    expect(tester.getCenter(goTo).dx, 1536 / 2);
+    // It gives way to the tools on the right, keeping 48 of drag space. The
+    // test font is wider than Geist, so the demo's sync label ("Demo · On
+    // this device only") reaches it here; with Geist it sits centered.
+    final tools = tester
+        .getRect(find.byKey(const ValueKey('titlebar-notifications')))
+        .left;
+    expect(
+      tester.getCenter(goTo).dx,
+      moreOrLessEquals(
+        math.min(1536 / 2, tools - Space.xxxl - Space.goToWidth / 2),
+        epsilon: Space.xs,
+      ),
+    );
     expect(tester.getSize(find.byType(GoToField)).width, Space.goToWidth);
 
     // The sync state moved out of the profile card.

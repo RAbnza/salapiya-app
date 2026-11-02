@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
 import 'shell_navigation.dart';
+import 'shell_tools.dart';
 import 'title_bar_tools.dart';
 
 /// The maximize button's pointer state. The runner owns that button's input
@@ -411,21 +412,10 @@ class _TitleBarState extends State<TitleBar> {
                                 const CalculatorButton(),
                                 const SizedBox(width: Space.xs),
                               ],
-                              MergeSemantics(
-                                child: Semantics(
-                                  toggled: items.hideAmounts,
-                                  child: AppIconButton(
-                                    key: const ValueKey('shell-hide-amounts'),
-                                    icon: items.hideAmounts
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    tooltip: items.hideAmounts
-                                        ? 'Show amounts (Ctrl+H)'
-                                        : 'Hide amounts (Ctrl+H)',
-                                    onPressed: () => widget.controller.items
-                                        ?.onHideAmounts(),
-                                  ),
-                                ),
+                              HideAmountsButton(
+                                hidden: items.hideAmounts,
+                                onPressed: () =>
+                                    widget.controller.items?.onHideAmounts(),
                               ),
                             ],
                           ),
@@ -434,7 +424,7 @@ class _TitleBarState extends State<TitleBar> {
                         app(
                           KeyedSubtree(
                             key: status,
-                            child: _SyncButton(
+                            child: SyncStatusButton(
                               status: items.status,
                               compact: width == WidthClass.compact,
                               onTap: () => widget.controller.items?.onStatus(),
@@ -555,63 +545,6 @@ class _TitleBarLayout extends MultiChildLayoutDelegate {
   @override
   bool shouldRelayout(_TitleBarLayout oldDelegate) =>
       oldDelegate.segment != segment || oldDelegate.leadX != leadX;
-}
-
-/// The sync status, as a pill that opens the sync details. Icon-only below
-/// 600 wide, with the label in its tooltip.
-class _SyncButton extends StatelessWidget {
-  const _SyncButton({
-    required this.status,
-    required this.compact,
-    required this.onTap,
-  });
-  final ShellStatus status;
-  final bool compact;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    final c = CraftTheme.of(context);
-    return Tooltip(
-      message: 'Sync status: ${status.label}',
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        label: 'Sync status, ${status.label}',
-        excludeSemantics: true,
-        child: SizedBox(
-          height: Space.pointerTarget,
-          width: compact ? Space.pointerTarget : null,
-          child: Pressable(
-            key: const ValueKey('titlebar-sync'),
-            onTap: onTap,
-            radius: Radii.pill,
-            padding: compact
-                ? EdgeInsets.zero
-                : const EdgeInsets.symmetric(horizontal: Space.xs),
-            child: Center(
-              widthFactor: compact ? null : 1,
-              child: compact
-                  ? Icon(
-                      status.icon,
-                      size: Space.compactControlIcon,
-                      color: StatusPill.colors(c, status.tone).$1,
-                    )
-                  : ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: Space.popoverMaxWidth,
-                      ),
-                      child: StatusPill(
-                        status.label,
-                        icon: status.icon,
-                        tone: status.tone,
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// A Windows 11 caption button: full bar height, 46 wide, Segoe glyphs.
