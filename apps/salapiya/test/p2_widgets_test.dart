@@ -66,23 +66,31 @@ void main() {
           await tester.pumpAndSettle();
           expect(runtime.session!.accepted, BigInt.from(10000));
           expect(runtime.session!.projected, BigInt.from(9001));
+          // The waiting purchase counts once: 100.00 less 9.99.
           expect(
-            find.textContaining('includes waiting work once'),
+            find.textContaining('available money is ₱90.01'),
             findsOneWidget,
           );
           expect(find.textContaining('Pending outflow'), findsNothing);
           expect(find.textContaining('LOCAL ONLY'), findsNothing);
           expect(tester.takeException(), isNull);
-          final profile = find.byTooltip('Profile & utilities').first;
+          final profile = find.byKey(const ValueKey('shell-profile'));
           await tester.ensureVisible(profile);
           await tester.tap(profile);
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('Connection'));
-          await tester.tap(find.text('Connection'));
+          // Windows opens a menu; a phone goes straight to the page's tabs.
+          final menu = find.byKey(const ValueKey('profile-menu-Connection'));
+          await tester.tap(
+            menu.evaluate().isNotEmpty
+                ? menu
+                : find.byKey(const ValueKey('Connection')),
+          );
           await tester.pumpAndSettle();
-          expect(find.text('Your money, across devices.'), findsOneWidget);
-          expect(find.textContaining('1 waiting'), findsOneWidget);
-          expect(find.text('Sync now'), findsOneWidget);
+          // A test build can't reach the service, so it offers nothing to
+          // press, and what's waiting still shows.
+          expect(find.text('Can’t connect in this build'), findsOneWidget);
+          expect(find.textContaining('1\u00A0waiting'), findsOneWidget);
+          expect(find.byKey(const ValueKey('connection-syncNow')), findsNothing);
           expect(tester.takeException(), isNull);
         } finally {
           debugDefaultTargetPlatformOverride = null;

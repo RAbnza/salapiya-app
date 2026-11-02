@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
@@ -188,8 +189,8 @@ void main() {
         ),
       );
       await localSettle(tester);
-      expect(find.text('Your day, in balance.'), findsOneWidget);
-      expect(find.text('Create a local offline profile'), findsNothing);
+      expect(find.byType(OverviewDashboard), findsOneWidget);
+      expect(find.text('Start on this device'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await localSettle(tester);

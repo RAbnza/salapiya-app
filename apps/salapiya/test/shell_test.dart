@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/gallery/settings.dart';
+import 'package:salapiya/life/life_forms.dart';
 import 'package:salapiya/prototype/scenarios.dart';
-import 'package:salapiya/features/common/prototype_form.dart';
 import 'package:salapiya/app/shell_navigation.dart';
 
 import 'shell_journey.dart';
@@ -56,10 +58,10 @@ void main() {
                 isNull,
                 reason: '$platform $size $scale $theme',
               );
-              await tester.tap(find.byTooltip('Quick actions'));
+              await tester.tap(find.byKey(const ValueKey('shell-new')));
               await tester.pumpAndSettle();
               await tapVisible(tester, find.text('Add task'));
-              expect(find.byType(PrototypeForm), findsOneWidget);
+              expect(find.byType(LifeTaskForm), findsOneWidget);
               await tester.binding.handlePopRoute();
               await tester.pumpAndSettle();
               expect(tester.takeException(), isNull);
@@ -100,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
       final original = controller.offset;
       final footerTop = tester.getTopLeft(find.byType(ShellBottomBar)).dy;
-      final finalText = find.textContaining('Next: interview on 23 Oct');
+      final finalText = find.textContaining('Tala logged');
       expect(tester.getBottomLeft(finalText).dy, lessThan(footerTop));
       await tester.tap(find.byKey(const ValueKey('nav-money')));
       await tester.pumpAndSettle();
@@ -110,27 +112,46 @@ void main() {
       tester.view.physicalSize = const Size(800, 600);
       await tester.pumpAndSettle();
       expect(controller.offset, greaterThan(0));
-      await tapVisible(tester, find.text('Demo household'));
-      await tapVisible(tester, find.text('Tala reported a payment'));
-      expect(find.text('Review payment confirmation'), findsWidgets);
+      await tapVisible(tester, find.text('1 payment to confirm'));
+      expect(find.text('Payments'), findsWidgets);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.text('Demo household'), findsWidgets);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
+      expect(find.text('1 payment to confirm'), findsWidgets);
       expect(controller.offset, greaterThan(0));
       final moneyPoint = tester.getCenter(
         find.byKey(const ValueKey('nav-money')),
       );
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
       await tester.tapAt(moneyPoint);
       await tester.pumpAndSettle();
-      expect(find.text('Money Today'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quick-actions-menu')), findsNothing);
+      expect(find.text('Available money'), findsOneWidget);
+      expect(newItem('Log expense'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('New offers Log a card payment in Money only', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1280, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = PrototypeSession();
+    addTearDown(session.dispose);
+    await tester.pumpWidget(SalapiyaApp(session: session));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('shell-new')));
+    await tester.pumpAndSettle();
+    expect(find.text('Log a debt payment'), findsWidgets);
+    expect(find.text('Log a card payment'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('nav-money')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('shell-new')));
+    await tester.pumpAndSettle();
+    expect(find.text('Log a card payment'), findsOneWidget);
+  });
 
   testWidgets(
     'utilities, all scenarios, enlarged text and keyboard-safe task',
@@ -145,7 +166,7 @@ void main() {
         SalapiyaApp(settings: settings, session: session),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Profile & utilities').last);
+      await tester.tap(find.byKey(const ValueKey('shell-profile')));
       await tester.pumpAndSettle();
       for (final scenario in OverviewScenario.values) {
         session.select(scenario);
@@ -153,29 +174,35 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       await tapVisible(tester, find.text('First-run preview'));
+      await tapVisible(tester, find.text('Get started'));
       await tapVisible(tester, find.text('Restore from backup'));
-      expect(find.text('Restore deliberately'), findsOneWidget);
+      expect(find.text('Choose backup file'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
       await tapVisible(tester, find.text('Add task'));
-      final taskTitle = find.widgetWithText(TextField, 'Title');
+      final taskTitle = find.descendant(
+        of: find.byKey(const ValueKey('life-field-title')),
+        matching: find.byType(EditableText),
+      );
       await tester.ensureVisible(taskTitle);
       await tester.enterText(taskTitle, 'Review the weekly plan');
       FocusManager.instance.primaryFocus?.unfocus();
       tester.view.viewInsets = const FakeViewPadding(bottom: 220);
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('Review changes'));
-      expect(find.byType(PrototypeForm), findsOneWidget);
-      await tester.ensureVisible(find.text('Apply simulation'));
-      expect(
-        tester.getBottomLeft(find.text('Apply simulation')).dy,
-        lessThanOrEqualTo(348),
-      );
+      final submit = find.byKey(const ValueKey('life-submit'));
+      await tapVisible(tester, submit);
+      expect(find.byType(LifeTaskForm), findsOneWidget);
+      await tester.ensureVisible(submit);
+      expect(tester.getBottomLeft(submit).dy, lessThanOrEqualTo(348));
       expect(tester.takeException(), isNull);
     },
   );
@@ -191,13 +218,20 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final destination in AppDestination.values) {
-      await tester.tap(find.text('Navigation'));
+      // The dock keeps all five icons (labels hidden) at narrow 200% text.
+      await tester.tap(find.byKey(ValueKey('nav-${destination.name}')));
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text(destination.label).last);
       expect(tester.takeException(), isNull, reason: destination.label);
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Close quick actions'), findsOneWidget);
+      // The sheet's title. Income's change line can say "New" too.
+      expect(
+        find.descendant(
+          of: find.byType(ModalScaffold<int>),
+          matching: find.text('New'),
+        ),
+        findsOneWidget,
+      );
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
     }

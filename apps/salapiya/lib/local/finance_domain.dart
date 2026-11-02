@@ -49,6 +49,26 @@ String civilDate(String value) {
 
 String phpDecimal(BigInt value) =>
     '${value.isNegative ? '-' : ''}${value.abs() ~/ BigInt.from(100)}.${(value.abs() % BigInt.from(100)).toString().padLeft(2, '0')}';
+
+/// "14 Oct 2026" and "₱1,200.00", for messages people read.
+String _shownDate(String date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final d = DateTime.parse(date);
+  return '${d.day} ${months[d.month - 1]} ${d.year}';
+}
+
+String _shownPeso(BigInt value) {
+  final digits = (value.abs() ~/ BigInt.from(100)).toString().replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+$)'),
+    (m) => '${m[1]},',
+  );
+  final cents = (value.abs() % BigInt.from(100)).toString().padLeft(2, '0');
+  return '${value.isNegative ? '−' : ''}₱$digits.$cents';
+}
+
 BigInt signedPhp(String value) =>
     value.startsWith('-') ? -parsePhp(value.substring(1)) : parsePhp(value);
 BigInt sumMinor(Iterable<BigInt> values) =>
@@ -159,13 +179,18 @@ class LocalSnapshot {
   );
   LocalRevision revision(String id) =>
       revisions.where((r) => r.id == id).firstOrNull ??
-      (reject('The source is unavailable in this profile.'));
+      (reject('This record isn’t available any more.'));
   LocalAccount account(String id) =>
       accounts.where((a) => a.id == id).firstOrNull ??
-      (reject('Choose an account in this profile.'));
+      (reject('Choose one of your accounts.'));
   LocalCategory category(String id, String kind) {
     final c = categories.where((c) => c.id == id && c.kind == kind).firstOrNull;
-    return c ?? (reject('Choose an appropriate $kind category.'));
+    return c ??
+        (reject(
+          kind == 'income'
+              ? 'Choose an income category.'
+              : 'Choose a spending category.',
+        ));
   }
 }
 
@@ -230,7 +255,7 @@ class LocalPlan {
 LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   if (cmd.owner != s.owner) reject('This command belongs to another profile.');
   if (cmd.expectedVersion != s.version) {
-    reject('Financial sources changed. Review a fresh preview.');
+    reject('Your records changed. Review this again.');
   }
   if (!RegExp(r'^[0-9a-f-]{36}$').hasMatch(cmd.id)) {
     reject('Invalid command identity.');
@@ -239,7 +264,9 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   String value(String key) => (v[key] ?? '').trim();
   String requiredText(String key, {int max = 2000}) {
     final x = value(key);
-    if (x.isEmpty || x.length > max) reject('Enter $key (1–$max characters).');
+    if (x.isEmpty || x.length > max) {
+      reject('This field is required, up to $max characters.', field: key);
+    }
     return x;
   }
 
@@ -247,11 +274,11 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         (x) => x.length > (cmd.kind == 'cashImportChunk' ? 40000 : 20000),
       ) ||
       v.length > 512) {
-    reject('The form exceeds the supported size.');
+    reject('This form holds too much text. Shorten it and try again.');
   }
   if (v['financeContract'] != null && v['financeContract'] != '1') {
     reject(
-      'Unsupported financial recipe version. Preserve the original intent and update Salapiya.',
+      'This record needs a newer Salapiya. Update the app. What you entered is kept.',
     );
   }
   if ([
@@ -287,14 +314,14 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       value('source').isNotEmpty &&
       s.revision(value('source')).values.containsKey('financeType')) {
     reject(
-      'Use this financial source’s dedicated correction or refund workflow.',
+      'Open this record’s own page to change it.',
     );
   }
   if (['correction', 'reversal', 'refund'].contains(cmd.kind) &&
       value('source').isNotEmpty &&
       s.revision(value('source')).values.containsKey('sharedGroup')) {
     reject(
-      'Use explicit Shared Expenses private reconciliation for linked money.',
+      'This record is linked to Shared Expenses, so it’s changed there.',
     );
   }
   BigInt amount(String key, {bool zero = false, bool signed = false}) {
@@ -303,10 +330,14 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       if (zero && x == BigInt.zero) return x;
       return component(x, positive: !signed);
     } on FormatException {
-      reject('Enter $key as an exact PHP amount with at most two decimals.');
+      reject(
+        'Enter an amount in pesos with up to two decimals, like 1500.00.',
+        field: key,
+      );
     } on RangeError {
       reject(
-        '$key must be ${zero ? 'zero or ' : ''}${signed ? 'a signed' : 'a positive'} amount within PHP 1 billion.',
+        'Enter an amount up to ₱1 billion.',
+        field: key,
       );
     }
   }
@@ -334,10 +365,10 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
     final name = requiredText('name', max: 200);
     final classification = value('classification');
     if (!['expense', 'income'].contains(classification)) {
-      reject('Choose income or expense classification.');
+      reject('Choose whether this is for spending or income.');
     }
     if (s.categories.any((c) => c.name.toLowerCase() == name.toLowerCase())) {
-      reject('That category name already exists.');
+      reject('You already have a category with this name.');
     }
     return LocalPlan(
       category: LocalCategory(cmd.id, name, classification),
@@ -358,10 +389,10 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   if (['correction', 'reversal'].contains(kind)) {
     replaced = s.revision(value('source'));
     if (!s.current.any((r) => r.id == replaced!.id)) {
-      reject('Choose the current source revision.');
+      reject('This record changed. Open its current version.');
     }
     if (value('sourceVersion') != '${replaced.number}') {
-      reject('The source version changed. Review the current record.');
+      reject('This record changed. Open its current version.');
     }
     if (![
       'expense',
@@ -371,7 +402,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       'adjustment',
       'opening',
     ].contains(replaced.kind)) {
-      reject('This source requires its own workflow.');
+      reject('Open this record’s own page to change it.');
     }
     requiredText('reason');
     if (s.current.any(
@@ -380,9 +411,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           financeType(r) != 'financialFile' &&
           s.revision(r.source!).actionId == replaced!.actionId,
     )) {
-      reject(
-        'Resolve dependent refund/adjustment evidence before changing this source.',
-      );
+      reject('This record has a refund or an adjustment. Reverse that first.');
     }
     previous = replaced.id;
     actionId = replaced.actionId;
@@ -407,11 +436,11 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   void cash(String id, BigInt x, String on, {bool opening = false}) {
     final a = s.account(id);
     if (a.archived && replaced == null) {
-      reject('New activity requires an active account.');
+      reject('Choose an active account.');
     }
     if (!opening && on.compareTo(a.cutoff) <= 0) {
       reject(
-        'Activity must occur after ${a.name}’s opening cutoff ${a.cutoff}.',
+        'Choose a date after ${_shownDate(a.cutoff)}. ${a.name}’s balance starts from that day.',
       );
     }
     if (x != BigInt.zero) {
@@ -438,10 +467,10 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           'Checking',
           'Savings',
         ].contains(type)) {
-          reject('Choose a supported account type.');
+          reject('Choose an account type.');
         }
         if (s.accounts.any((a) => a.name.toLowerCase() == name.toLowerCase())) {
-          reject('That account name already exists.');
+          reject('You already have an account with this name.');
         }
         date = civilDate(value('cutoff'));
         total = amount('amount', zero: true);
@@ -475,13 +504,13 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
             'reward',
             'other',
           ].contains(value('incomeClass'))) {
-            reject('Choose an income classification.');
+            reject('Choose the type of income.');
           }
           classified('income', value('category'), -total, date);
         } else if (value('split') == 'true') {
           final count = int.tryParse(value('splitCount')) ?? 2;
           if (count < 2 || count > 100) {
-            reject('Use 2–100 positive category splits.');
+            reject('Split this into 2 to 100 categories.');
           }
           final first = amount('splitAmount');
           classified('expense', value('category'), first, date);
@@ -493,7 +522,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           }
           if (allocated >= total) {
             reject(
-              'Every split must be positive and the exact parts must equal the total. Leave a positive remainder.',
+              'Each split must be more than zero, and they must add up to less than the total, so something is left for the last category.',
             );
           }
           classified(
@@ -511,14 +540,14 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
             ? 'Account transfer'
             : requiredText('name');
         if (value('account') == value('destination')) {
-          reject('Choose different source and destination accounts.');
+          reject('Choose two different accounts.');
         }
         // Entered principal is the amount arriving, per the web transfer contract.
         cash(value('account'), -total, date);
         cash(value('destination'), total, date);
         final feeCount = int.tryParse(value('feeCount')) ?? 1;
         if (feeCount < 1 || feeCount > 20) {
-          reject('A transfer supports at most 20 explicit fees.');
+          reject('A transfer can have up to 20 fees.');
         }
         var withheld = BigInt.zero;
         for (var i = 0; i < feeCount; i++) {
@@ -539,7 +568,9 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
               ? date
               : civilDate(value(key('Date')));
           if (treatment == 'withheld' && feeDate != date) {
-            reject('A withheld fee must use the transfer date.');
+            reject(
+              'A fee taken out of the amount has to use the transfer date.',
+            );
           }
           if (treatment == 'withheld') withheld += fee;
           final bearing = treatment == 'separate'
@@ -553,7 +584,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         }
         if (total + withheld > maxComponent) {
           reject(
-            'Transfer principal plus withheld fees exceeds the component limit.',
+            'The amount plus fees is over the ₱1 billion limit.',
           );
         }
         effects.add(
@@ -563,14 +594,14 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         final original = s.revision(replaced?.source ?? value('source'));
         if (!s.current.contains(original) ||
             !['expense', 'transfer'].contains(original.kind)) {
-          reject('Refunds require a current purchase or transfer fee source.');
+          reject('Choose the purchase or transfer fee this refund is for.');
         }
         if (replaced == null &&
             value('sourceVersion') != '${original.number}') {
           reject('The purchase changed. Review its current version.');
         }
         if (date.compareTo(original.date) < 0) {
-          reject('A refund cannot precede its source.');
+          reject('A refund can’t be dated before the purchase.');
         }
         source = original.id;
         total = amount('amount');
@@ -581,7 +612,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         final multiple = value('refundMultiple') == 'true';
         final count = multiple ? int.tryParse(value('refundCount')) ?? 2 : 1;
         if (count < 1 || count > 100) {
-          reject('Allocate 1–100 original purchase/fee portions.');
+          reject('Apply this refund to 1 to 100 parts of the purchase.');
         }
         final allocations = <Map<String, String>>[];
         final selected = <String>{};
@@ -603,12 +634,12 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
               )
               .toList();
           if (eligible.length != 1) {
-            reject('Choose an eligible original purchase or fee portion.');
+            reject('Choose a part of this purchase that can be refunded.');
           }
           final portion = eligible.single, category = portion.value.category!;
           final postingId = '${original.id}-p${portion.key + 1}';
           if (!selected.add(postingId)) {
-            reject('Allocate each original purchase or fee portion once.');
+            reject('Apply the refund to each part only once.');
           }
           final part = multiple
               ? amount(i == 0 ? 'refundFirstAmount' : 'refund${i}Amount')
@@ -634,7 +665,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           final available = portion.value.amount - refunded;
           if (part > available) {
             reject(
-              'Refund exceeds the remaining original purchase/fee portion (${phpDecimal(available)} PHP).',
+              'That’s more than is left to refund here. ${_shownPeso(available)} is left.',
             );
           }
           allocations.add({
@@ -646,7 +677,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           classified('expense', category, -part, date);
         }
         if (allocated != total) {
-          reject('Refund allocations must equal the exact total received.');
+          reject('The parts must add up to the amount you got back.');
         }
         data['refundPosting'] = allocations.first['posting']!;
         data['refundCategory'] = allocations.first['category']!;
@@ -658,7 +689,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       case 'reconcile':
         final a = s.account(value('account'));
         if (date.compareTo(a.cutoff) < 0) {
-          reject('A comparison cannot precede the opening cutoff.');
+          reject('Choose a date on or after the day this account’s balance starts.');
         }
         final BigInt observed;
         try {
@@ -666,7 +697,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           sqliteInteger(observed);
         } catch (_) {
           reject(
-            'Enter an exact signed PHP balance within the supported 64-bit minor-unit range.',
+            'Enter a balance in pesos, like 1500.00. Use a minus sign if it’s below zero.',
           );
         }
         final calculated = s.balance(a.id, through: date);
@@ -704,7 +735,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         final original = s.revision(replaced?.source ?? value('source'));
         if (original.kind != 'reconcile' ||
             original.values['account'] != value('account')) {
-          reject('Choose a reconciliation for this account.');
+          reject('Choose a balance check on this account.');
         }
         if (s.current.any(
           (r) =>
@@ -712,7 +743,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
               r.source == original.id &&
               r.id != replaced?.id,
         )) {
-          reject('This comparison already has an adjustment.');
+          reject('This balance check was already adjusted.');
         }
         final observed = signedPhp(original.values['amount']!);
         final calculated = s.balance(
@@ -732,10 +763,10 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
             .length;
         if (calculated != expected ||
             '$count' != original.values['sourceCount']) {
-          reject('Reconciliation sources changed. Record a fresh comparison.');
+          reject('Records changed since this check. Check the balance again.');
         }
         if (date != original.date) {
-          reject('A linked adjustment must use the comparison date.');
+          reject('This adjustment must use the balance check’s date.');
         }
         source = original.id;
         total = observed - calculated;
@@ -749,7 +780,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         );
       case 'opening':
         if (replaced == null) {
-          reject('Opening evidence belongs to account creation.');
+          reject('An account’s starting balance is set when you add it.');
         }
         final originalAccount = replaced.postings
             .firstWhere((p) => p.ledger == 'cash')
@@ -758,7 +789,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
             date != replaced.date ||
             date != s.account(originalAccount).cutoff) {
           reject(
-            'Opening corrections retain their original account and cutoff. Coverage changes require rebaselining.',
+            'A starting balance keeps its account and date. To change those, import earlier history.',
           );
         }
         total = amount('amount');
@@ -777,7 +808,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   for (final on in postings.map((p) => p.date).toSet()) {
     if (sumMinor(postings.where((p) => p.date == on).map((p) => p.amount)) !=
         BigInt.zero) {
-      reject('The financial evidence does not balance.');
+      reject('This record doesn’t add up. Check the amounts.');
     }
   }
   for (final p in postings) {
@@ -823,7 +854,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         );
         if (value('acknowledge') != 'true') {
           reject(
-            'This action produces a negative tracked balance on $on. Explicitly acknowledge it before saving.',
+            'This would take the account to a negative balance on $on. Confirm that’s right to go on.',
           );
         }
       }

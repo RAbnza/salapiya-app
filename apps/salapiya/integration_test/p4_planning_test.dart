@@ -40,9 +40,10 @@ void main() {
           ),
         );
         await localSettle(tester);
-        await localAction(tester, 'Create a local offline profile');
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        await localAction(tester, 'Start on this device');
         await tester.enterText(find.byType(TextField), 'P4 planning owner');
-        await localAction(tester, 'Create local profile');
+        await localAction(tester, 'Create profile');
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localAction(tester, 'Add account');
@@ -52,10 +53,10 @@ void main() {
         final c = runtime.session!.localFinance,
             account = c.snapshot.accounts.single.id;
         await localAction(tester, 'Planning');
-        await localAction(tester, 'Create savings goal');
+        await localTap(tester, find.byKey(const ValueKey('goals-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native buffer');
         await nativeEnter(tester, 'amount', '1000.00');
@@ -63,52 +64,51 @@ void main() {
         final goal = c.snapshot.current
             .singleWhere((r) => financeType(r) == 'savingsGoal')
             .actionId;
-        await localAction(tester, 'Reserve / release cash');
+        await localTap(tester, find.byKey(ValueKey('goal-aside-$goal')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Reserve actual cash');
-        await debtSelect(tester, 'goal', 'Native buffer ·');
         await debtSelect(tester, 'account', 'Planning wallet');
         await nativeEnter(tester, 'amount', '1000.00');
         await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(100000));
         expect(savingsReserved(c.snapshot), BigInt.from(100000));
-        await localAction(tester, 'Create budget');
+        await localTap(tester, find.byKey(const ValueKey('budgets-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native zero budget');
+        await debtSelect(tester, 'category', 'Food');
         await nativeEnter(tester, 'amount', '0.00');
         await nativeEnter(tester, 'start', '2026-10-01');
-        await nativeEnter(tester, 'endExclusive', '2026-11-01');
+        await nativeEnter(tester, 'lastDay', '2026-10-31');
         await nativeSave(tester);
-        await localAction(tester, 'Add recurring activity');
+        await localTap(tester, find.byKey(const ValueKey('recurring-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native recurring bill');
         await nativeEnter(tester, 'amount', '100.00');
-        await debtSelect(tester, 'frequency', 'Daily');
+        await debtSelect(tester, 'frequency', 'Every day');
         await nativeEnter(tester, 'count', '2');
         await debtSelect(tester, 'account', 'Planning wallet');
         await nativeSave(tester);
         final rule = c.snapshot.current
             .singleWhere((r) => financeType(r) == 'recurrence')
             .id;
-        await localAction(tester, 'Generate occurrences');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+        // Saving the item added its next 90 days.
+        expect(
+          c.snapshot.current.where(
+            (r) => financeType(r) == 'recurrenceGenerate',
+          ),
+          hasLength(1),
         );
-        await nativeEnter(tester, 'name', 'Native explicit generation');
-        await debtSelect(tester, 'rule', 'Native recurring bill ·');
-        await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(100000));
-        await localAction(tester, 'Add expense');
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', 'Actual native purchase');
         await localEnter(tester, 'amount', '500.00');
         await localConfirm(tester);
@@ -117,14 +117,13 @@ void main() {
           BigInt.from(50000),
           BigInt.from(50000),
         ));
-        await localAction(tester, 'Link actual evidence');
+        await localTap(tester, find.text('Native recurring bill').first);
+        await localTap(tester, find.byKey(const ValueKey('recurring-link')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native partial actual link');
-        await debtSelect(tester, 'rule', 'Native recurring bill ·');
-        await nativeEnter(tester, 'logicalDate', civilToday());
         await nativeEnter(tester, 'amount', '50.00');
         await debtSelect(tester, 'actual', 'Actual native purchase ·');
         await nativeSave(tester);
@@ -142,13 +141,16 @@ void main() {
           ),
           BigInt.from(5000),
         );
-        await localAction(tester, 'Reverse actual link');
+        final link = c.snapshot.current.singleWhere(
+          (r) => financeType(r) == 'recurrenceLink',
+        );
+        await localTap(tester, find.byTooltip('Actions for this date').first);
+        await localTap(tester, find.byKey(ValueKey('date-unlink-${link.id}')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native exact link reversal');
-        await debtSelect(tester, 'link', 'Native partial actual link ·');
         await nativeEnter(
           tester,
           'reason',

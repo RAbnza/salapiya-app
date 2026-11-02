@@ -106,8 +106,9 @@ void main() {
             ),
           );
           await localSettle(tester);
+          await localTap(tester, find.byKey(const ValueKey('greeting-start')));
           await localTap(tester, find.text('Continue with Google'));
-          await localTap(tester, find.text('Select Google account'));
+          await localTap(tester, find.byKey(const ValueKey('google-sign-in')));
           debugPrint(
             'P3_GOOGLE_SELECT_DEVELOPMENT_ACCOUNT_${clients.length + 1}',
           );

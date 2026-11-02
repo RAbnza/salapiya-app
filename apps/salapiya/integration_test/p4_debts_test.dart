@@ -19,6 +19,25 @@ Future<void> debtSelect(WidgetTester tester, String key, String choice) async {
   await localTap(tester, find.textContaining(choice).last);
 }
 
+/// A create action from the shell's New menu or + sheet.
+Future<void> debtNew(WidgetTester tester, String label) async {
+  await localTap(tester, find.byKey(const ValueKey('shell-new')));
+  await localTap(tester, find.text(label).last);
+}
+
+/// One of a debt's actions, from the More menu on its page.
+Future<void> debtMenu(WidgetTester tester, String debt, String key) async {
+  await localTap(tester, find.byKey(const ValueKey('nav-debts')));
+  await localTap(tester, find.text(debt).first);
+  await localTap(tester, find.byKey(const ValueKey('debt-more')));
+  await localTap(tester, find.byKey(ValueKey(key)));
+}
+
+Future<void> formReady(WidgetTester tester) => localWait(
+  tester,
+  () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
@@ -42,9 +61,10 @@ void main() {
           ),
         );
         await localSettle(tester);
-        await localAction(tester, 'Create a local offline profile');
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        await localAction(tester, 'Start on this device');
         await tester.enterText(find.byType(TextField), 'P4 debt owner');
-        await localAction(tester, 'Create local profile');
+        await localAction(tester, 'Create profile');
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localAction(tester, 'Add account');
@@ -54,11 +74,8 @@ void main() {
         final c = runtime.session!.localFinance,
             account = c.snapshot.accounts.single.id;
         await localTap(tester, find.byKey(const ValueKey('nav-debts')));
-        await localAction(tester, 'Add existing debt');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtNew(tester, 'Add a debt');
+        await formReady(tester);
         await nativeEnter(tester, 'name', 'Imported native debt');
         await nativeEnter(tester, 'lender', 'Synthetic provider');
         await nativeEnter(tester, 'amount', '6400.00');
@@ -67,7 +84,7 @@ void main() {
             .singleWhere((r) => financeType(r) == 'debtImport')
             .actionId;
         expect(c.snapshot.balance(account), BigInt.from(1000000));
-        await localAction(tester, 'Provider schedule');
+        await debtMenu(tester, 'Imported native debt', 'debt-edit-schedule');
         await localWait(
           tester,
           () => find
@@ -75,27 +92,19 @@ void main() {
               .evaluate()
               .isNotEmpty,
         );
-        await debtSelect(tester, 'debt', 'Imported native debt ·');
+        await debtSelect(tester, 'debt', 'Imported native debt');
         await debtSelect(tester, 'frequency', 'Monthly');
         await nativeEnter(tester, 'firstDue', '2026-11-20');
         await nativeEnter(tester, 'installmentCount', '2');
         await nativeSave(tester);
-        await localAction(tester, 'Record debt payment');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
-        await nativeEnter(tester, 'name', 'Unknown native payment');
-        await debtSelect(tester, 'debt', 'Imported native debt ·');
-        await debtSelect(tester, 'account', 'Debt wallet');
+        await debtNew(tester, 'Log a debt payment');
+        await formReady(tester);
+        await debtSelect(tester, 'debt', 'Imported native debt');
+        await debtSelect(tester, 'paymentRow', 'Installment 1');
         await nativeEnter(tester, 'amount', '1000.00');
-        await nativeEnter(tester, 'clearing', '1000.00');
-        await debtSelect(
-          tester,
-          'scheduleSource',
-          'Imported native debt payment schedule ·',
-        );
-        await nativeEnter(tester, 'allocations', 'Installment 1,1000.00');
+        await debtSelect(tester, 'account', 'Debt wallet');
+        await localTap(tester, find.byKey(const ValueKey('form-more-details')));
+        await nativeEnter(tester, 'name', 'Unknown native payment');
         await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(900000));
         expect(
@@ -106,13 +115,11 @@ void main() {
           financeBalance(c.snapshot, 'debt_clearing', 'debt', debt),
           BigInt.from(100000),
         );
-        await localAction(tester, 'Classify payment');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtMenu(tester, 'Imported native debt', 'debt-break-down');
+        await formReady(tester);
+        await localTap(tester, find.byKey(const ValueKey('form-more-details')));
         await nativeEnter(tester, 'name', 'Known provider breakdown');
-        await debtSelect(tester, 'debt', 'Imported native debt ·');
+        await debtSelect(tester, 'debt', 'Imported native debt');
         await debtSelect(tester, 'payment', 'Unknown native payment ·');
         await nativeEnter(tester, 'reduction', '900.00');
         await nativeEnter(tester, 'interest', '100.00');
@@ -123,12 +130,8 @@ void main() {
           financeBalance(c.snapshot, 'debt_clearing', 'debt', debt),
           BigInt.zero,
         );
-        await localAction(tester, 'Imported native debt payment schedule');
-        await localAction(tester, 'Correct with reason');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtMenu(tester, 'Imported native debt', 'debt-edit-schedule');
+        await formReady(tester);
         await nativeEnter(
           tester,
           'schedule',
@@ -142,20 +145,17 @@ void main() {
         );
         await nativeSave(tester);
         await localTap(tester, find.byType(BackButton).first);
-        await localAction(tester, 'Early settlement');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtMenu(tester, 'Imported native debt', 'debt-early-payoff');
+        await formReady(tester);
+        await localTap(tester, find.byKey(const ValueKey('form-more-details')));
         await nativeEnter(tester, 'name', 'Reconciled native payoff');
-        await debtSelect(tester, 'debt', 'Imported native debt ·');
+        await debtSelect(tester, 'debt', 'Imported native debt');
         await debtSelect(tester, 'account', 'Debt wallet');
         await nativeEnter(tester, 'amount', '5500.00');
-        await nativeEnter(tester, 'providerPayoff', '5500.00');
         await nativeEnter(tester, 'reduction', '5500.00');
         await nativeEnter(tester, 'reference', 'Provider closure');
         await nativeEnter(tester, 'reason', 'Exact provider payoff');
-        await debtSelect(tester, 'verified', 'I confirm these provider facts');
+        await debtSelect(tester, 'verified', 'I confirmed this with my lender');
         await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(350000));
         expect(
@@ -163,11 +163,8 @@ void main() {
           BigInt.zero,
         );
         expect(c.recognizedSpending, BigInt.from(10000));
-        await localAction(tester, 'Add existing debt');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtNew(tester, 'Add a debt');
+        await formReady(tester);
         await nativeEnter(tester, 'name', 'Native component loan');
         await nativeEnter(tester, 'lender', 'Provider');
         await nativeEnter(tester, 'amount', '1000.00');
@@ -183,33 +180,27 @@ void main() {
           String amount, {
           String? source,
         }) async {
-          await localAction(tester, 'Provider charge / waiver / residual');
-          await localWait(
-            tester,
-            () =>
-                find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-          );
+          await debtMenu(tester, 'Native component loan', 'debt-lender-charge');
+          await formReady(tester);
           await nativeEnter(tester, 'name', name);
-          await debtSelect(tester, 'debt', 'Native component loan ·');
+          await debtSelect(tester, 'debt', 'Native component loan');
           await nativeEnter(tester, 'amount', amount);
           await debtSelect(
             tester,
             'adjustmentKind',
             {
-              'recognized_charge': 'New recognized charge',
-              'recognized_waiver': 'Waive existing recognized liability',
-              'rounding_charge': 'Provider-confirmed residual charge',
-              'rounding_waiver': 'Provider-confirmed residual waiver',
-              'avoided_future': 'Avoided future unposted charge (no money)',
+              'recognized_charge': 'A charge from your lender',
+              'recognized_waiver': 'A waiver from your lender',
+              'rounding_charge': 'A small rounding charge',
+              'rounding_waiver': 'A small rounding waiver',
+              'avoided_future': 'A future charge you avoided',
             }[kind]!,
           );
-          await debtSelect(tester, 'category', 'Fees');
+          if (kind.endsWith('charge')) {
+            await debtSelect(tester, 'category', 'Fees');
+          }
           if (source != null) {
-            await debtSelect(
-              tester,
-              'waiverBasis',
-              'Original recognized charge source',
-            );
+            await debtSelect(tester, 'waiverBasis', 'A charge you logged');
             await debtSelect(tester, 'chargeSource', '$source ·');
           }
           await nativeEnter(
@@ -221,7 +212,7 @@ void main() {
           await debtSelect(
             tester,
             'verified',
-            'I confirm these provider facts',
+            'I confirmed this with my lender',
           );
           await nativeSave(tester);
           return c.snapshot.current.singleWhere((r) => r.title == name).id;
@@ -232,25 +223,18 @@ void main() {
           'recognized_charge',
           '100.00',
         );
-        await localAction(tester, 'Record debt payment');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
-        await nativeEnter(tester, 'name', 'Native known components');
-        await debtSelect(tester, 'debt', 'Native component loan ·');
+        await debtNew(tester, 'Log a debt payment');
+        await formReady(tester);
+        await debtSelect(tester, 'debt', 'Native component loan');
         await debtSelect(tester, 'account', 'Debt wallet');
         await nativeEnter(tester, 'amount', '300.00');
+        await localTap(tester, find.text('I have the exact breakdown'));
         await nativeEnter(tester, 'reduction', '250.00');
         await nativeEnter(tester, 'principalReduction', '200.00');
-        await nativeEnter(tester, 'reductionSources', '$charge,50.00');
         await nativeEnter(tester, 'interest', '50.00');
-        await nativeEnter(tester, 'unapplied', '300.00');
-        await debtSelect(
-          tester,
-          'certainty',
-          'Confirmed individual components',
-        );
+        await localTap(tester, find.byKey(const ValueKey('form-more-details')));
+        await nativeEnter(tester, 'name', 'Native known components');
+        await nativeEnter(tester, 'reductionSources', '$charge,50.00');
         await nativeSave(tester);
         expect(
           debtPrincipalRange(
@@ -278,16 +262,13 @@ void main() {
           '0.01',
           source: 'Native residual charge',
         );
-        await localAction(tester, 'Early settlement');
-        await localWait(
-          tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
-        );
+        await debtMenu(tester, 'Native component loan', 'debt-early-payoff');
+        await formReady(tester);
+        await localTap(tester, find.byKey(const ValueKey('form-more-details')));
         await nativeEnter(tester, 'name', 'Native component closure');
-        await debtSelect(tester, 'debt', 'Native component loan ·');
+        await debtSelect(tester, 'debt', 'Native component loan');
         await debtSelect(tester, 'account', 'Debt wallet');
         await nativeEnter(tester, 'amount', '800.00');
-        await nativeEnter(tester, 'providerPayoff', '800.00');
         await nativeEnter(tester, 'reduction', '800.00');
         await nativeEnter(
           tester,
@@ -295,7 +276,7 @@ void main() {
           'Reconciled after explicit source waiver and residual',
         );
         await nativeEnter(tester, 'reference', 'Component closure');
-        await debtSelect(tester, 'verified', 'I confirm these provider facts');
+        await debtSelect(tester, 'verified', 'I confirmed this with my lender');
         await nativeSave(tester);
         expect(c.snapshot.balance(account), BigInt.from(240000));
         expect(

@@ -31,7 +31,7 @@ List<RecurringOccurrence> recurringOccurrences(
       .toList();
   if (rules.length > 1000 ||
       rules.map((r) => r.actionId).toSet().length > 500) {
-    reject('Recurring source coverage exceeds the supported bound.');
+    reject('You have more recurring items than Salapiya can work out (500).');
   }
   final candidates = <String, (LocalRevision, String, bool)>{};
   String? boundary(LocalRevision rule) {
@@ -55,7 +55,9 @@ List<RecurringOccurrence> recurringOccurrences(
         in (jsonDecode(generation.values['dates']!) as List).cast<String>()) {
       candidates[occurrenceIdentity(rule, logical)] = (rule, logical, true);
       if (candidates.length > 10000) {
-        reject('Stored occurrence coverage exceeds 10,000 sources.');
+        reject(
+          'There are more than 10,000 dates on record, so this can’t be shown in full.',
+        );
       }
     }
   }
@@ -121,7 +123,7 @@ List<RecurringOccurrence> recurringOccurrences(
       ),
     );
     if (result.length > 5000) {
-      reject('Occurrence projection exceeds 5,000 complete candidates.');
+      reject('There are more than 5,000 dates here. Choose a shorter period.');
     }
   }
   result.sort((a, b) {
@@ -308,6 +310,9 @@ class ForecastContribution {
   final BigInt amount;
 }
 
+/// Ends the note for an item the user left out; its page lists those apart.
+const forecastLeftOutByYou = 'you left this out.';
+
 class FinanceForecast {
   const FinanceForecast(
     this.opening,
@@ -342,13 +347,15 @@ FinanceForecast financialForecast(
   if (from.compareTo(today) <= 0 ||
       through.compareTo(from) < 0 ||
       end.difference(clock).inDays > 366) {
-    reject('Forecast from tomorrow through at most 366 days ahead.');
+    reject('A forecast starts tomorrow or later and ends within 366 days.');
   }
   if (adjustments.length > 20 ||
       cardStatements.length + cardInstallments.length > 100 ||
       excludedSources.length > 100 ||
       s.current.where((r) => financeType(r) == 'creditCard').length > 100) {
-    reject('Forecast input exceeds supported complete coverage bounds.');
+    reject(
+      'That’s too many choices for one forecast: up to 20 what-ifs, 100 card choices and 100 left-out items.',
+    );
   }
   final posts = s.current
       .expand((r) => r.postings)
@@ -359,7 +366,7 @@ FinanceForecast financialForecast(
   );
   final contributions = <ForecastContribution>[],
       excluded = <String>[
-        'Debt schedules, future unrecorded living costs and unknown provider rules are not automatic cash projections.',
+        'Debt schedules, future living costs and your card issuer’s rules aren’t included.',
       ];
   for (final r in s.current) {
     for (final p in r.postings.where(
@@ -425,7 +432,7 @@ FinanceForecast financialForecast(
     final statement = financeSource(s, id, {'statement'}),
         card = statement.values['card']!;
     if (!selectedCards.add(card)) {
-      reject('Select at most one verified statement per card.');
+      reject('Choose one statement for each card.');
     }
     final credits = s.current.where(
       (r) =>
@@ -467,7 +474,7 @@ FinanceForecast financialForecast(
         amount <= BigInt.zero ||
         due.compareTo(today) <= 0) {
       excluded.add(
-        '${statement.title}: missing eligible due/credit/allocation evidence; no cash outflow assumed.',
+        '${statement.title}: needs a confirmed due date and matched payments, so no payment is assumed.',
       );
       continue;
     }
@@ -487,7 +494,7 @@ FinanceForecast financialForecast(
     final card = financeSource(s, cardId, {'creditCard'});
     if (!selectedCards.add(card.actionId)) {
       reject(
-        'Choose either one statement or the installment basis for each card.',
+        'For each card, choose a statement or its installment plans, not both.',
       );
     }
     final plans = s.current
@@ -499,7 +506,7 @@ FinanceForecast financialForecast(
         .toList();
     if (plans.isEmpty || unresolvedCard(card.actionId, applications: true)) {
       excluded.add(
-        '${card.title}: installment basis lacks eligible schedules, positive liability or fully resolved payment/application evidence.',
+        '${card.title}: its installment plans need a balance owed and every payment matched, so no payment is assumed.',
       );
       continue;
     }
@@ -507,7 +514,7 @@ FinanceForecast financialForecast(
       if (plan.values['verified'] != 'true' ||
           plan.values['status'] == 'suspended') {
         excluded.add(
-          '${plan.title}: unverified or suspended installment schedule.',
+          '${plan.title}: this plan isn’t confirmed, or it’s suspended.',
         );
         continue;
       }
@@ -537,7 +544,7 @@ FinanceForecast financialForecast(
           );
         } else if (remaining > BigInt.zero && row.date.compareTo(today) <= 0) {
           excluded.add(
-            '${plan.title} / ${row.id}: overdue remaining installment is not assigned a guessed future payment date.',
+            '${plan.title}, ${row.id}: this payment is overdue, so no date is guessed for it.',
           );
         }
       }
@@ -568,10 +575,10 @@ FinanceForecast financialForecast(
         overlap && !independentRecurring) {
       excluded.add(
         '${o.rule.title}: ${account == null
-            ? 'no active cash suggestion'
+            ? 'it has no active account'
             : o.rule.values['timezone'] != 'Asia/Manila'
-            ? 'different source calendar'
-            : 'overlap needs explicit independence review'}.',
+            ? 'it uses another time zone'
+            : 'it may be the same money as something already included'}.',
       );
       continue;
     }
@@ -590,19 +597,17 @@ FinanceForecast financialForecast(
       (r) => r.source == id && r.basis == 'Recorded future cash',
     )) {
       reject(
-        'Recorded future cash cannot be excluded; correct its actual source instead.',
+        'This is a record you logged, so it stays in. Correct the record to change it.',
       );
     }
     final matches = contributions
         .where((r) => r.source == id && r.basis != 'Recorded future cash')
         .toList();
     if (matches.isEmpty) {
-      excluded.add(
-        '$id: excluded expected source is absent or ineligible in this snapshot.',
-      );
+      excluded.add('Something you left out isn’t in this forecast any more.');
     }
     for (final r in matches) {
-      excluded.add('${r.label}: explicitly excluded expected source $id.');
+      excluded.add('${r.label}: $forecastLeftOutByYou');
     }
     contributions.removeWhere(
       (r) => r.source == id && r.basis != 'Recorded future cash',
@@ -614,7 +619,7 @@ FinanceForecast financialForecast(
         adjustment.date.compareTo(through) > 0 ||
         adjustment.label.trim().isEmpty) {
       reject(
-        'Hypotheticals require a future covered date, label and exact nonzero amount.',
+        'Each what-if needs a date in this forecast, a name and an amount.',
       );
     }
     component(adjustment.amount);
@@ -629,9 +634,7 @@ FinanceForecast financialForecast(
     );
   }
   if (contributions.length > 5000) {
-    reject(
-      'Forecast exceeds 5,000 complete candidates; no sources were truncated.',
-    );
+    reject('There’s too much for one forecast. Choose a shorter period.');
   }
   var closing = opening, windowOpening = opening;
   final daily = <String, BigInt>{};

@@ -41,15 +41,14 @@ Future<void> financialJourney(WidgetTester tester) async {
   final session = PrototypeSession();
   await tester.pumpWidget(SalapiyaApp(session: session));
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Quick actions'));
+  await tester.tap(find.byKey(const ValueKey('shell-new')));
   await tester.pumpAndSettle();
-  await financialTap(tester, find.text('Add expense').last);
+  await financialTap(tester, find.text('Log expense').last);
   expect(find.byType(FinancialEditor), findsOneWidget);
   await financialEnter(tester, 'field-name', 'Demo lunch');
+  // A third decimal is refused as it's typed.
   await financialEnter(tester, 'field-amount', '185.501');
-  FocusManager.instance.primaryFocus?.unfocus();
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  expect(find.textContaining('at most two decimals'), findsOneWidget);
+  expect(find.text('Up to two decimals.'), findsOneWidget);
   await tester.ensureVisible(find.byKey(const ValueKey('field-amount')));
   await financialEnter(tester, 'field-amount', '185.50');
   await tester.pumpAndSettle();
@@ -86,33 +85,44 @@ Future<void> financialJourney(WidgetTester tester) async {
   await financialTap(tester, find.byKey(const ValueKey('nav-money')));
   expect(find.text('Money'), findsWidgets);
   await financialTap(tester, find.text('Cards').first);
-  expect(find.text('EVERYDAY CREDIT'), findsOneWidget);
-  await financialTap(tester, find.text('Record card purchase'));
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
-  await financialTap(tester, find.text('Done'));
-  expect(session.finance.cardBalance, BigInt.from(600000));
+  expect(find.text('Your cards'), findsOneWidget);
   await financialTap(tester, find.byKey(const ValueKey('nav-debts')));
-  expect(find.text('One step closer.'), findsOneWidget);
-  await financialTap(tester, find.text('Add existing debt'));
+  expect(find.text('Your debts'), findsOneWidget);
+  await financialTap(tester, find.byKey(const ValueKey('shell-new')));
+  await financialTap(tester, find.text('Add a debt'));
   await financialTap(tester, find.byKey(const ValueKey('review-action')));
   await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
   await financialTap(tester, find.text('Done'));
   expect(session.finance.debts.length, 2);
   await financialTap(tester, find.byKey(const ValueKey('nav-shared')));
-  await financialTap(tester, find.text('Add shared expense'));
-  await financialTap(tester, find.byKey(const ValueKey('review-action')));
-  expect(find.textContaining('paid ₱1,200.00'), findsOneWidget);
-  await financialTap(tester, find.byKey(const ValueKey('simulate-action')));
-  await financialTap(tester, find.text('Done'));
-  expect(session.finance.bills.length, 2);
+  if (find.text('Add shared expense').evaluate().isEmpty) {
+    await financialTap(tester, find.byKey(const ValueKey('shell-new')));
+  }
+  await financialTap(tester, find.text('Add shared expense').first);
+  await tester.enterText(
+    find.descendant(
+      of: find.byKey(const ValueKey('native-name')),
+      matching: find.byType(TextField),
+    ),
+    'Dinner with friends',
+  );
+  await tester.enterText(
+    find.descendant(
+      of: find.byKey(const ValueKey('native-total')),
+      matching: find.byType(TextField),
+    ),
+    '1200.00',
+  );
+  await tester.pumpAndSettle();
+  await financialTap(tester, find.byKey(const ValueKey('shared-submit')));
+  expect(find.text('₱1,200.00'), findsWidgets);
+  await financialTap(tester, find.byKey(const ValueKey('shared-submit')));
+  expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
+  await financialTap(tester, find.byKey(const ValueKey('shared-done')));
   await financialTap(tester, find.byKey(const ValueKey('nav-money')));
   await financialTap(tester, find.text('Import').first);
-  await financialTap(tester, find.text('Market groceries'));
-  await financialTap(tester, find.text('Review selected records'));
-  await financialTap(tester, find.text('Simulate import'));
-  expect(find.textContaining('2 accepted demo rows'), findsOneWidget);
-  expect(session.finance.liquid, BigInt.from(3155025));
+  // Chat 9's tab reports on imports; `money_b_dashboard_test` covers it.
+  expect(find.byKey(const ValueKey('import-waiting')), findsOneWidget);
   expect(tester.takeException(), isNull);
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpAndSettle();

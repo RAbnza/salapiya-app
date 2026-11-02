@@ -92,12 +92,6 @@ class AgendaItem {
       sourceGeneration ?? '$id:$version:$date:$time:$amount';
 }
 
-class ReminderChoice {
-  ReminderChoice(this.generation, this.mode, this.state);
-  final String generation;
-  String mode, state;
-}
-
 class LifeController extends ChangeNotifier {
   LifeController({bool demo = true}) {
     if (demo) reset();
@@ -105,10 +99,6 @@ class LifeController extends ChangeNotifier {
   final List<LifeEntry> entries = [];
   final List<PersonalEvent> events = [];
   final List<CareerApplication> applications = [];
-  final Map<String, ReminderChoice> reminders = {};
-  final List<String> reminderHistory = [];
-  bool permission = true, quietHours = true, sensitiveContent = false;
-  String quietStart = '22:00', quietEnd = '07:00';
   int serial = 0, revision = 0;
   void changed() {
     revision++;
@@ -119,11 +109,6 @@ class LifeController extends ChangeNotifier {
     entries.clear();
     events.clear();
     applications.clear();
-    reminders.clear();
-    reminderHistory.clear();
-    permission = true;
-    quietHours = true;
-    sensitiveContent = false;
     if (!empty) {
       entries.addAll([
         LifeEntry(
@@ -150,42 +135,6 @@ class LifeController extends ChangeNotifier {
           due: '2026-10-21',
           priority: 'Low',
         ),
-        LifeEntry(
-          'dart',
-          LifeKind.learning,
-          'Thoughtful interfaces with Flutter',
-          detail: 'Self-paced course · 12 lessons',
-          due: '2026-11-15',
-          total: 12,
-          progress: 5,
-        ),
-        LifeEntry(
-          'spanish',
-          LifeKind.learning,
-          'Everyday Spanish',
-          detail: 'Practice sessions',
-          due: '2026-12-01',
-          total: 30,
-          progress: 8,
-        ),
-        LifeEntry(
-          'book-1',
-          LifeKind.book,
-          'The Art of Noticing',
-          detail: 'Rob Walker',
-          due: '2026-11-10',
-          total: 256,
-          progress: 96,
-        ),
-        LifeEntry(
-          'book-2',
-          LifeKind.book,
-          'A Field Guide to Getting Lost',
-          detail: 'Rebecca Solnit',
-          due: '2026-12-01',
-          total: 224,
-          progress: 32,
-        ),
       ]);
       events.add(
         PersonalEvent(
@@ -197,49 +146,6 @@ class LifeController extends ChangeNotifier {
           'Bring the appointment card.',
         ),
       );
-      applications.addAll([
-        CareerApplication(
-            'studio',
-            'Amihan Studio',
-            'Product designer',
-            '2026-10-16',
-            stage: 'Interview',
-            notes: 'Fictional team · design systems and thoughtful products',
-          )
-          ..events.add(
-            CareerEvent(
-              'interview',
-              'Interview',
-              '2026-10-23',
-              '10:00',
-              'Portfolio conversation · online',
-            ),
-          )
-          ..history.add('Applied 16 Oct → interview invitation 20 Oct'),
-        CareerApplication(
-            'bayan',
-            'Bayan Digital',
-            'Flutter developer',
-            '2026-10-19',
-            notes: 'Fictional company · hybrid',
-          )
-          ..events.add(
-            CareerEvent(
-              'follow-up',
-              'Follow-up',
-              '2026-10-29',
-              '14:00',
-              'Check the application status.',
-            ),
-          ),
-        CareerApplication(
-          'north',
-          'North & Co.',
-          'UX engineer',
-          '2026-10-20',
-          stage: 'Saved',
-        ),
-      ]);
     }
     changed();
   }
@@ -329,7 +235,7 @@ class LifeController extends ChangeNotifier {
 
   static void validateTime(String value) {
     if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(value)) {
-      throw const FormatException('Use a 24-hour time (HH:MM).');
+      throw const FormatException('Enter a time, like 14:30.');
     }
   }
 
@@ -480,22 +386,6 @@ class LifeController extends ChangeNotifier {
       (a, b) => '${a.date} ${a.time}'.compareTo('${b.date} ${b.time}'),
     );
     return result;
-  }
-
-  String reminderState(AgendaItem item) {
-    if (!permission) return 'Permission denied · in-app only';
-    final r = reminders[item.id];
-    if (r != null && r.generation != item.generation) {
-      return 'Old reminder cancelled · source changed';
-    }
-    if (r?.mode == 'Off') return 'Reminder off';
-    return r?.state ?? 'Planned on this device · demo only';
-  }
-
-  FutureOr<void> reminder(AgendaItem item, String mode, String action) {
-    reminders[item.id] = ReminderChoice(item.generation, mode, action);
-    reminderHistory.add('${item.title} · $mode · $action · ${item.generation}');
-    changed();
   }
 
   FutureOr<void> cancelEvent(PersonalEvent e, String reason) {

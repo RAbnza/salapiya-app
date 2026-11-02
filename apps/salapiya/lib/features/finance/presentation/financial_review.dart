@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../design_system/form_presentation.dart';
-import '../../../design_system/editorial.dart';
+import '../../../design_system/kit/kit.dart' show DateField;
+import '../../../design_system/kit/review.dart';
 import '../../../local/finance_domain.dart';
 
 /// Reads the validated plan. Never parses prose or recalculates a command.
@@ -14,6 +14,8 @@ class FinancialReview extends StatelessWidget {
     this.hidden = false,
     this.commandId,
     this.details = const {},
+    this.quietNotes = false,
+    this.title,
   });
   final LocalPlan plan;
   final LocalSnapshot snapshot;
@@ -22,18 +24,25 @@ class FinancialReview extends StatelessWidget {
   final String? commandId;
   final Map<String, String> details;
 
+  /// Keeps the rules' own notes inside the details disclosure.
+  final bool quietNotes;
+
+  /// The record's title for the eye, when it differs from the stored one.
+  final String Function(LocalRevision)? title;
+
   static const labels = {
     'cash': 'Cash movement',
-    'expense': 'Recognized expense',
-    'income': 'Recognized income',
-    'card_liability': 'Card liability',
-    'debt_liability': 'Debt liability',
-    'receivable': 'Receivable',
-    'shared_receivable': 'Private shared receivable',
-    'shared_payable': 'Private shared payable',
-    'payable': 'Payable',
-    'equity': 'Opening / adjustment equity',
-    'private_clearing': 'Private clearing',
+    'expense': 'Spending',
+    'income': 'Income',
+    'card_liability': 'Card debt',
+    'debt_liability': 'What you owe',
+    'receivable': 'Owed to you',
+    'shared_receivable': 'Owed to you in a group',
+    'shared_payable': 'You owe in a group',
+    'shared_clearing': 'Group payments not counted yet',
+    'payable': 'You owe',
+    'equity': 'Opening balance',
+    'private_clearing': 'Not in your group balance yet',
   };
   static const credits = {
     'income',
@@ -43,6 +52,8 @@ class FinancialReview extends StatelessWidget {
     'shared_payable',
     'equity',
   };
+
+  static String _day(String date) => DateField.format(DateTime.parse(date));
 
   String accountName(String id) => plan.account?.id == id
       ? plan.account!.name
@@ -61,11 +72,11 @@ class FinancialReview extends StatelessWidget {
           ? 'Amounts hidden'
           : known
           ? '${value.isNegative ? 'Decreases by' : 'Increases by'} ${amount(value.abs())}'
-          : '${amount(p.amount)} · signed posting',
+          : 'Changes by ${amount(p.amount)}',
       detail: [
         if (p.account != null) accountName(p.account!),
         ?category,
-        p.date,
+        _day(p.date),
       ].join(' · '),
     );
   }
@@ -90,78 +101,76 @@ class FinancialReview extends StatelessWidget {
       children: [
         if (r != null) ...[
           ReviewRow(
-            r.title,
+            title?.call(r) ?? r.title,
             hidden
                 ? 'Amounts hidden'
                 : r.postings.isEmpty && r.amount == BigInt.zero
-                ? 'Evidence / plan'
+                ? 'No money moves'
                 : amount(r.amount),
             emphasis: true,
-            detail: 'Transaction date · ${r.date}',
+            detail: 'Date · ${_day(r.date)}',
           ),
-          for (final key in ['card', 'debt', 'destination'])
+          // A form's defaults can fill these on records they don't apply to.
+          for (final key in [
+            if (financeType(r).startsWith('card')) 'card',
+            'debt',
+            if (financeType(r) == 'transfer') 'destination',
+          ])
             if (r.values[key] case final String id when id.isNotEmpty)
               ReviewRow(
                 switch (key) {
                   'card' => 'Card',
                   'debt' => 'Debt',
-                  _ => 'Destination',
+                  _ => 'To',
                 },
-                snapshot.revisions
+                snapshot.accounts.where((x) => x.id == id).firstOrNull?.name ??
+                    snapshot.revisions
                         .where((x) => x.actionId == id || x.id == id)
                         .lastOrNull
                         ?.title ??
-                    snapshot.accounts
-                        .where((x) => x.id == id)
-                        .firstOrNull
-                        ?.name ??
                     id,
               ),
           const Divider(height: 24),
           SectionHeading(
             r.change == 'replace'
-                ? 'Replacement effects'
+                ? 'What changes now'
                 : r.change == 'reverse'
-                ? 'Effects being removed'
-                : 'Financial effects',
+                ? 'What’s removed'
+                : 'What changes',
+            spaced: false,
           ),
           if (prior != null) ...[
             Text(
               r.change == 'reverse'
-                  ? 'The original effects below are removed at their original dates. Every revision stays in history.'
-                  : 'These values replace the previous effects; they are not an additional transaction.',
+                  ? 'These come off on their original dates. The earlier version stays in Edit history.'
+                  : 'These replace the earlier values. It isn’t logged as a new record.',
             ),
-            if (r.change == 'replace') ...[
-              const SizedBox(height: 12),
-              const SectionHeading('Previous effects'),
-            ],
+            if (r.change == 'replace') const SectionHeading('Before'),
             for (final p in prior.postings) posting(p),
-            if (r.change == 'replace') const SectionHeading('New effects'),
+            if (r.change == 'replace') const SectionHeading('After'),
           ],
           for (final p in r.postings) posting(p),
           if (prior == null && !r.postings.any((p) => p.ledger == 'cash'))
             const ReviewRow('Cash movement', 'None'),
         ],
         if (!hidden && details.isNotEmpty) ...[
-          const SectionHeading('Reviewed details'),
+          const SectionHeading('Details'),
           for (final entry in details.entries)
             ReviewRow(entry.key, entry.value),
         ],
         if (hidden)
-          const Text('Financial review amounts hidden.')
-        else
+          const Text('Amounts hidden.')
+        else if (!quietNotes)
           ReviewNotes(plan.effects.where((e) => !generated.contains(e))),
+        // The change id and version only: the rules' own notes repeat the
+        // rows above in their terms.
         FormEvidence(
-          title: 'View financial evidence',
           children: [
-            if (commandId != null)
-              SelectableText('Original command: $commandId'),
+            if (commandId != null) SelectableText('Change: $commandId'),
             if (r != null)
               SelectableText(
-                'Revision: ${r.number}\nPrevious: ${r.previous ?? 'None'}\nSource: ${r.source ?? 'None'}',
+                'Version: ${r.number}\nEarlier version: ${r.previous ?? 'None'}\nSource: ${r.source ?? 'None'}',
               ),
-            if (!hidden)
-              for (final effect in plan.effects) SelectableText(effect),
           ],
         ),
       ],

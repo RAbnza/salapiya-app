@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:salapiya/design_system/kit/kit.dart'
+    show AmountField, DateField, HelpTextField, OptionPicker;
 import 'package:salapiya/design_system/theme.dart';
 import 'package:salapiya/features/finance/presentation/financial_widgets.dart';
+import 'package:salapiya/finance/debt_data.dart';
 import 'package:salapiya/finance/debt_screen.dart';
 import 'package:salapiya/finance/finance_screen.dart';
 import 'package:salapiya/local/finance_domain.dart';
@@ -82,8 +85,10 @@ void main() {
           ),
         );
         await localSettle(tester);
-        double top(String title) =>
-            tester.getTopLeft(find.text(title).first).dy;
+        final table = find.byKey(const ValueKey('debts-table'));
+        Finder inTable(String text) =>
+            find.descendant(of: table, matching: find.text(text));
+        double top(String title) => tester.getTopLeft(inTable(title)).dy;
         final order = [
           'Overdue loan',
           'Today loan',
@@ -94,24 +99,25 @@ void main() {
         for (var i = 0; i + 1 < order.length; i++) {
           expect(top(order[i]), lessThan(top(order[i + 1])), reason: order[i]);
         }
-        expect(find.text('Overdue'), findsWidgets);
-        expect(find.text('Due today'), findsOneWidget);
-        expect(find.text('Due soon'), findsOneWidget);
-        expect(find.text('Upcoming'), findsNWidgets(2)); // filter tab + badge
-        expect(find.text('Schedule not set'), findsNWidgets(2));
-        expect(find.textContaining('5 days overdue'), findsOneWidget);
-        expect(find.textContaining('Next due ${_offset(-5)}'), findsOneWidget);
-        expect(find.text('Monthly'), findsOneWidget);
-        expect(find.text('Scheduled installment'), findsOneWidget);
+        expect(inTable('Overdue'), findsOneWidget);
+        expect(inTable('Due today'), findsOneWidget);
+        expect(inTable('Due soon'), findsOneWidget);
+        expect(inTable('Upcoming'), findsOneWidget);
+        expect(inTable('Schedule not set'), findsOneWidget);
+        expect(find.textContaining('5 days overdue'), findsWidgets);
+        expect(inTable('No payment schedule yet'), findsOneWidget);
         expect(find.text('Set schedule'), findsOneWidget);
 
-        await localTap(tester, find.widgetWithText(TextButton, 'Overdue'));
-        expect(find.text('Due today'), findsNothing);
-        expect(find.text('Schedule not set'), findsNothing);
-        expect(find.text('Overdue'), findsWidgets);
-        await localTap(tester, find.widgetWithText(TextButton, 'Unscheduled'));
-        expect(find.text('Schedule not set'), findsNWidgets(2));
-        expect(find.text('Due soon'), findsNothing);
+        await localTap(tester, find.byKey(const ValueKey(DebtFilter.overdue)));
+        expect(inTable('Due today'), findsNothing);
+        expect(inTable('Schedule not set'), findsNothing);
+        expect(inTable('Overdue'), findsOneWidget);
+        await localTap(
+          tester,
+          find.byKey(const ValueKey(DebtFilter.noSchedule)),
+        );
+        expect(inTable('Schedule not set'), findsOneWidget);
+        expect(inTable('Due soon'), findsNothing);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -138,11 +144,18 @@ void main() {
           ),
         );
         await localSettle(tester);
-        expect(find.text('Edit schedule'), findsOneWidget);
-        expect(find.text('Next installment'), findsOneWidget);
-        expect(find.text('Final scheduled installment'), findsOneWidget);
-        expect(find.text(_offset(25)), findsWidgets);
+        expect(find.text('Log a payment'), findsOneWidget);
+        expect(find.text('Next payment'), findsOneWidget);
+        expect(find.text('Last scheduled payment'), findsOneWidget);
+        expect(find.text('Not a payoff date'), findsOneWidget);
+        expect(
+          find.text(DateField.format(DateTime.parse(_offset(25)))),
+          findsWidgets,
+        );
         expect(find.text('Monthly'), findsOneWidget);
+        await localTap(tester, find.byKey(const ValueKey('debt-more')));
+        expect(find.text('Edit schedule'), findsOneWidget);
+        await localTap(tester, find.byKey(const ValueKey('debt-more')));
 
         await tester.pumpWidget(
           _app(
@@ -155,7 +168,7 @@ void main() {
         await localSettle(tester);
         expect(find.text('Schedule not set'), findsWidgets);
         expect(find.text('Set schedule'), findsOneWidget);
-        expect(find.text('Final scheduled installment'), findsNothing);
+        expect(find.text('Last scheduled payment'), findsNothing);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -182,28 +195,29 @@ void main() {
   }
 
   Future<void> enter(WidgetTester tester, String key, String value) async {
-    await tester.ensureVisible(find.byKey(ValueKey('native-$key')));
-    await tester.enterText(find.byKey(ValueKey('native-$key')), value);
+    final field = find.byKey(ValueKey('native-$key'));
+    await tester.ensureVisible(field);
+    final widget = tester.widget(field);
+    if (widget is DateField) {
+      widget.onChanged!(DateTime.parse(value));
+    } else {
+      await tester.enterText(field, value);
+    }
     await tester.pumpAndSettle();
   }
 
-  /// Dismiss the error popup, after checking its text.
-  Future<void> dismissProblem(WidgetTester tester, String contains) async {
-    expect(find.text('Please check the form'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.textContaining(contains),
-      ),
-      findsOneWidget,
-    );
-    await localTap(tester, find.text('OK'));
+  /// A problem shows in place, never as a popup (§6).
+  void expectProblem(String contains) {
     expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining(contains), findsWidgets);
   }
+
+  DateTime? dateOf(WidgetTester tester, String key) =>
+      tester.widget<DateField>(find.byKey(ValueKey('native-$key'))).value;
 
   bool splitEnabled(WidgetTester tester) =>
       tester
-          .widget<DropdownButtonFormField<String>>(
+          .widget<OptionPicker<String>>(
             find.byKey(const ValueKey('native-select-splitMode')),
           )
           .onChanged !=
@@ -263,7 +277,7 @@ void main() {
       );
 
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-      await dismissProblem(tester, 'Enter the date of your next payment.');
+      expectProblem('Enter the date of your next payment.');
       expect(
         find.text('Enter the date of your next payment.'),
         findsOneWidget,
@@ -280,7 +294,7 @@ void main() {
       expect(splitEnabled(tester), isTrue);
       expect(
         find.text(
-          'Your debt of 1000.00 PHP will be paid in 3 payments of 333.33 PHP, with the last payment 333.34 PHP so the total is exact.',
+          'Your debt of ₱1,000.00 will be paid in 3 payments of ₱333.33, with the last payment ₱333.34 so the total is exact.',
         ),
         findsOneWidget,
       );
@@ -288,14 +302,11 @@ void main() {
       await choose(tester, 'Custom');
       await enter(tester, 'intervalDays', '0');
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-      await dismissProblem(tester, '1 to 3660');
+      expectProblem('1 to 3660');
       expect(find.textContaining('1 to 3660'), findsOneWidget);
       expect(
-        tester
-            .widget<TextField>(find.byKey(const ValueKey('native-firstDue')))
-            .controller!
-            .text,
-        '2026-11-30',
+        dateOf(tester, 'firstDue'),
+        DateTime.parse('2026-11-30'),
         reason: 'entered values survive a failed validation',
       );
 
@@ -303,12 +314,12 @@ void main() {
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
       expect(
         find.textContaining(
-          '3 payments totaling 1000.00 PHP (333.33 to 333.34 each)',
+          '3 payments totaling ₱1,000.00 (₱333.33 to ₱333.34 each)',
         ),
         findsOneWidget,
       );
       await localTap(tester, find.text('Save reviewed values'));
-      expect(find.text('Set schedule saved'), findsOneWidget);
+      expect(find.text('Schedule saved'), findsOneWidget);
 
       final saved = controller.snapshot.current.firstWhere(
         (r) =>
@@ -384,7 +395,7 @@ void main() {
       await enter(tester, 'installmentCount', '3');
       expect(
         find.text(
-          'Your debt of 600.00 PHP will be paid in 3 equal payments of 200.00 PHP.',
+          'Your debt of ₱600.00 will be paid in 3 equal payments of ₱200.00.',
         ),
         findsOneWidget,
       );
@@ -423,17 +434,14 @@ void main() {
         await tester.pump();
         expect(
           find.text(
-            'Your debt of 6000.00 PHP will be paid in 3 equal payments of 2000.00 PHP.',
+            'Your debt of ₱6,000.00 will be paid in 3 equal payments of ₱2,000.00.',
           ),
           findsOneWidget,
         );
         await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-        expect(
-          find.textContaining('3 payments of 2000.00 PHP'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('3 payments of ₱2,000.00'), findsOneWidget);
         await localTap(tester, find.text('Save reviewed values'));
-        expect(find.text('Add existing debt saved'), findsOneWidget);
+        expect(find.text('Debt added'), findsOneWidget);
         expect(find.text('Schedule saved'), findsOneWidget);
 
         final s = controller.snapshot;
@@ -483,7 +491,7 @@ void main() {
       await enter(tester, 'amount', '100.00');
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
       await localTap(tester, find.text('Save reviewed values'));
-      expect(find.text('Add existing debt saved'), findsOneWidget);
+      expect(find.text('Debt added'), findsOneWidget);
       expect(find.text('Schedule saved'), findsNothing);
       final debt = controller.snapshot.current.firstWhere(
         (r) => r.title == 'Plain loan',
@@ -500,7 +508,7 @@ void main() {
     }
   });
 
-  testWidgets('a missing debt amount opens a popup and marks that field red', (
+  testWidgets('a missing debt amount shows on that field, with no popup', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1000, 5000);
@@ -515,17 +523,18 @@ void main() {
       await enter(tester, 'name', 'Forgot the amount');
       await enter(tester, 'lender', 'Synthetic lender');
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-      await dismissProblem(tester, 'This amount is required.');
+      expectProblem('This amount is required.');
       expect(find.text('Could not save'), findsNothing);
       expect(find.text('This amount is required.'), findsOneWidget);
-      final decoration = tester
-          .widget<TextField>(find.byKey(const ValueKey('native-amount')))
-          .decoration!;
-      expect(decoration.errorText, 'This amount is required.');
       expect(
         tester
-            .widget<TextField>(find.byKey(const ValueKey('native-name')))
-            .decoration!
+            .widget<AmountField>(find.byKey(const ValueKey('native-amount')))
+            .errorText,
+        'This amount is required.',
+      );
+      expect(
+        tester
+            .widget<HelpTextField>(find.byKey(const ValueKey('native-name')))
             .errorText,
         isNull,
       );
@@ -563,35 +572,31 @@ void main() {
       await enter(tester, 'installmentCount', '3');
       await chooseSplit(tester, 'Different amount each time');
       expect(find.byKey(const ValueKey('native-payment-2')), findsOneWidget);
-      expect(find.textContaining('Payment 2 · due 2026-02-28'), findsOneWidget);
+      expect(find.textContaining('Payment 2 · due'), findsOneWidget);
       expect(
-        find.textContaining('add up to the whole debt of 3000.00 PHP'),
+        find.textContaining('add up to the whole debt of ₱3,000.00'),
         findsOneWidget,
       );
 
       await enter(tester, 'payment-0', '2000.00');
       await enter(tester, 'payment-1', '400.00');
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-      await dismissProblem(tester, 'Enter the amount for payment 3');
+      expectProblem('Enter the amount for payment 3');
       expect(
         tester
-            .widget<TextField>(find.byKey(const ValueKey('native-payment-2')))
-            .decoration!
+            .widget<AmountField>(find.byKey(const ValueKey('native-payment-2')))
             .errorText,
         contains('payment 3'),
       );
 
       await enter(tester, 'payment-2', '500.00');
       expect(
-        find.textContaining('3 of 3 amounts entered · total 2900.00 PHP'),
+        find.textContaining('3 of 3 amounts entered · total ₱2,900.00'),
         findsOneWidget,
       );
-      expect(find.textContaining('100.00 PHP still to assign'), findsOneWidget);
+      expect(find.textContaining('₱100.00 still to assign'), findsOneWidget);
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
-      await dismissProblem(
-        tester,
-        'add up to 2900.00 PHP, but the debt is 3000.00 PHP',
-      );
+      expectProblem('add up to ₱2,900.00, but the debt is ₱3,000.00');
       expect(
         find.textContaining('The payments must add up to the debt exactly.'),
         findsOneWidget,
@@ -603,7 +608,7 @@ void main() {
       await localTap(tester, find.widgetWithText(FilledButton, 'Review'));
       expect(
         find.textContaining(
-          '3 payments totaling 3000.00 PHP (500.00 to 2000.00 each)',
+          '3 payments totaling ₱3,000.00 (₱500.00 to ₱2,000.00 each)',
         ),
         findsOneWidget,
       );
@@ -709,17 +714,14 @@ void main() {
       await localSettle(tester);
       expect(find.text('Installment 1'), findsOneWidget);
       expect(find.byKey(const ValueKey('amount-0')), findsNothing);
-      expect(
-        find.textContaining('Still owed: 1000.00 PHP · scheduled: 1000.00 PHP'),
-        findsOneWidget,
-      );
+      expect(find.text('Still owed'), findsOneWidget);
+      expect(find.text('Adds up'), findsOneWidget);
       await tester.enterText(find.byKey(const ValueKey('amount-1')), '700.00');
       await tester.pump();
+      expect(find.text('₱200.00 too much'), findsOneWidget);
+      await tester.pump();
       await localTap(tester, find.widgetWithText(FilledButton, 'Save amounts'));
-      await dismissProblem(
-        tester,
-        'add up to 1200.00 PHP, but you still owe 1000.00 PHP',
-      );
+      expectProblem('add up to ₱1,200.00, but you still owe ₱1,000.00');
       expect(find.text('Amounts saved'), findsNothing);
 
       await tester.enterText(find.byKey(const ValueKey('amount-2')), '300.00');
@@ -794,10 +796,18 @@ void main() {
           ),
         );
         await localSettle(tester);
+        expect(find.text('Each payment has its own amount'), findsOneWidget);
+        expect(find.text('Check amounts'), findsOneWidget);
+
+        final debt = controller.snapshot.current.firstWhere(
+          (r) => r.title == 'Soon varied loan',
+        );
+        await tester.pumpWidget(
+          _app(NativeDebtDetail(controller: controller, debtId: debt.id)),
+        );
+        await localSettle(tester);
         expect(
-          find.textContaining(
-            'Check that 600.00 PHP is right for ${_offset(3)}',
-          ),
+          find.textContaining('Check that ₱600.00 is right'),
           findsOneWidget,
         );
         expect(find.text('Update amounts'), findsOneWidget);
@@ -832,13 +842,7 @@ void main() {
         ),
       );
       await localSettle(tester);
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const ValueKey('native-firstDue')))
-            .controller!
-            .text,
-        _offset(-5),
-      );
+      expect(dateOf(tester, 'firstDue'), DateTime.parse(_offset(-5)));
       expect(find.text('Monthly'), findsOneWidget);
       expect(find.byKey(const ValueKey('native-intervalDays')), findsNothing);
       expect(tester.takeException(), isNull);

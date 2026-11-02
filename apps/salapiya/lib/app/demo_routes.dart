@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import '../design_system/kit/section_page.dart';
+import '../features/finance/presentation/financial_widgets.dart';
+
+export '../design_system/kit/section_page.dart' show RouteEscape;
 
 /// A single SDK stack for detail/task/utility routes. Primary tabs never push.
 /// Await removal before unlocking callers and restoring their focus.
+/// The page title travels as the route arguments for the shell's breadcrumb.
 Future<T?> openDemoPage<T>(
   BuildContext context,
   Widget page,
-  String name,
-) async {
+  String name, {
+  String? title,
+}) async {
   if (!(ModalRoute.of(context)?.isCurrent ?? true)) return null;
   final origin = FocusManager.instance.primaryFocus;
   final reduced = MediaQuery.disableAnimationsOf(context);
   final route = PageRouteBuilder<T>(
-    settings: RouteSettings(name: name),
+    settings: RouteSettings(
+      name: name,
+      arguments:
+          title ??
+          switch (page) {
+            FinancePage(:final title) ||
+            DemoPage(:final title) ||
+            SectionPage(:final title) => title,
+            _ => null,
+          },
+    ),
     transitionDuration: reduced
         ? Duration.zero
         : const Duration(milliseconds: 160),
@@ -27,22 +43,6 @@ Future<T?> openDemoPage<T>(
   await route.completed;
   if (origin?.context != null) origin!.requestFocus();
   return result;
-}
-
-/// Escape uses the current Navigator route so dialogs keep dismissal priority.
-class RouteEscape extends StatelessWidget {
-  const RouteEscape({super.key, required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => CallbackShortcuts(
-    bindings: {
-      const SingleActivator(LogicalKeyboardKey.escape): () =>
-          Navigator.of(context).maybePop(),
-      const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
-          Navigator.of(context).maybePop(),
-    },
-    child: Focus(autofocus: true, child: child),
-  );
 }
 
 class DemoPage extends StatelessWidget {

@@ -21,8 +21,9 @@ class LocalFinancialController extends FinancialController {
   BigInt acceptedLiquid = BigInt.zero;
   String? lastError;
   bool connected = false;
-  bool Function()? privacyHidden;
-  bool get amountsHidden => privacyHidden?.call() ?? false;
+
+  /// Runs the existing sync, for a change that needs the latest records.
+  Future<void> Function()? syncLatest;
   String decimal(BigInt value) => amountsHidden ? '••••' : phpDecimal(value);
   final Map<String, String> synchronizationStates = {};
   @override

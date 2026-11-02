@@ -90,6 +90,7 @@ class LocalRuntime extends ChangeNotifier {
     session!.profile.devices['This installation'] =
         'Local only · encrypted storage';
     session!.hideAmounts = preferences['hideAmounts'] == 'true';
+    session!.sharedDefaultGroup = preferences['sharedDefaultGroup'];
     await life.startReminders(
       session!.finance,
       complete: () => session?.complete ?? false,
@@ -110,6 +111,7 @@ class LocalRuntime extends ChangeNotifier {
       'compact': '${settings.compact}',
       'textScale': '${settings.textScale}',
       'hideAmounts': '${s.hideAmounts}',
+      'sharedDefaultGroup': ?s.sharedDefaultGroup,
     };
     final name = s.profile.name;
     _preferences = _preferences
@@ -143,7 +145,7 @@ class LocalRuntime extends ChangeNotifier {
 
   Future<void> removeLocalProfile(String expectedOwner) async {
     if (session?.localFinance.store.owner != expectedOwner) {
-      reject('The active profile changed. Review local removal again.');
+      reject('This profile changed. Open Remove again and check it.');
     }
     settings.removeListener(_persist);
     await flushPreferences();
@@ -174,9 +176,14 @@ class LocalSession extends PrototypeSession {
     DurableLifeController life,
   ) : super(financial: controller, lifeController: life, production: true) {
     controller.privacyHidden = () => hideAmounts;
+    controller.syncLatest = runtime.connected.syncNow;
     runtime.connected.addListener(notifyListeners);
   }
   final LocalRuntime runtime;
+
+  /// The connected account was deleted while this app was open. Not saved:
+  /// nothing on the device records it, so a restart can't know.
+  bool accountDeleted = false;
   LocalFinancialController get localFinance =>
       finance as LocalFinancialController;
   @override
@@ -196,7 +203,9 @@ class LocalSession extends PrototypeSession {
   @override
   BigInt? get projected => pending && complete ? finance.liquid : null;
   @override
-  bool get needsReview => runtime.connected.reviewCount > 0;
+  bool get needsReview =>
+      runtime.connected.reviewCount > 0 ||
+      runtime.connected.lifeReviewCount > 0;
   @override
   String get syncLabel => runtime.connected.label;
   @override
@@ -205,7 +214,13 @@ class LocalSession extends PrototypeSession {
             ? 'Initial download incomplete. Complete balances are unavailable.'
             : '${finance.accounts.length} accounts · accepted history and $pendingCount waiting commands · PHP · Asia/Manila'
       : super.coverage;
-  int get pendingCount => runtime.connected.pendingCount;
+  int get pendingCount =>
+      runtime.connected.pendingCount + runtime.connected.lifePendingCount;
+
+  /// Everything to review is a Life edit, so Life is where to look.
+  bool get lifeOnlyReview =>
+      runtime.connected.reviewCount == 0 &&
+      runtime.connected.lifeReviewCount > 0;
   @override
   void dispose() {
     runtime.connected.removeListener(notifyListeners);

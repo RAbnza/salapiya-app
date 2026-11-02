@@ -71,7 +71,7 @@ String lifeDate(String value, {bool optional = false}) {
       parsed.year < 1900 ||
       parsed.year > 2200 ||
       parsed.toIso8601String().substring(0, 10) != value) {
-    lifeReject('Choose a valid civil date between 1900 and 2200.');
+    lifeReject('Choose a date between 1900 and 2200.');
   }
   return value;
 }
@@ -91,7 +91,7 @@ class LifeTime {
     try {
       return tz.getLocation(name);
     } catch (_) {
-      lifeReject('Choose a supported IANA timezone.');
+      lifeReject('Choose a timezone from the list.');
     }
   }
 
@@ -103,7 +103,7 @@ class LifeTime {
   static List<DateTime> candidates(String date, String time, String timezone) {
     lifeDate(date);
     if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(time)) {
-      lifeReject('Use a 24-hour time (HH:MM).');
+      lifeReject('Enter a time, like 14:30.');
     }
     final location = zone(timezone), wall = DateTime.parse('${date}T$time:00Z');
     final result = <DateTime>[];
@@ -131,12 +131,12 @@ class LifeTime {
     final matches = candidates(date, time, timezone);
     if (matches.isEmpty) {
       lifeReject(
-        'That local time falls in a daylight-saving gap. Choose another time.',
+        'That time doesn’t happen on this date, because the clocks change. Choose another time.',
       );
     }
     if (matches.length > 1 && !['Earlier', 'Later'].contains(fold)) {
       lifeReject(
-        'That local time occurs twice. Explicitly choose Earlier or Later.',
+        'That time happens twice on this date, because the clocks change. Choose the earlier or later one.',
       );
     }
     return fold == 'Later' ? matches.last : matches.first;
@@ -353,7 +353,7 @@ Map<String, String> validateLifeFields(
     if (entry.value.length >
             (['notes', 'description'].contains(entry.key) ? 20000 : 2000) ||
         entry.value.contains('\u0000')) {
-      lifeReject('A field exceeds its supported limit.');
+      lifeReject('One of these is too long. Shorten it and try again.');
     }
   }
   v['title'] = v['title']!.trim();
@@ -373,7 +373,7 @@ Map<String, String> validateLifeFields(
     if ((v['started'] ?? '').isNotEmpty &&
         v['completed']!.isNotEmpty &&
         v['completed']!.compareTo(v['started']!) < 0) {
-      lifeReject('Completion cannot precede the started date.');
+      lifeReject('The date finished can’t be before the date started.');
     }
     if (type == LifeType.task) {
       if (!['High', 'Normal', 'Low'].contains(v['priority'])) {
@@ -389,7 +389,7 @@ Map<String, String> validateLifeFields(
           progress < 0 ||
           progress > total) {
         lifeReject(
-          'Progress must be between zero and the positive total (at most 1,000,000).',
+          'Enter progress from 0 up to the total, and a total from 1 to 1,000,000.',
         );
       }
       v['total'] = '$total';
@@ -398,7 +398,7 @@ Map<String, String> validateLifeFields(
         final rating = v['rating']!;
         if (!RegExp(r'^-?(0|[1-9]\d{0,11})(\.\d{1,4})?$').hasMatch(rating)) {
           lifeReject(
-            'Rating must be an exact decimal from 0 to 5, with at most four decimal places.',
+            'Enter a rating from 0 to 5, with up to four decimal places.',
           );
         }
         final negative = rating.startsWith('-'),
@@ -410,7 +410,7 @@ Map<String, String> validateLifeFields(
           scaled = -scaled;
         }
         if (scaled < BigInt.zero || scaled > BigInt.from(50000)) {
-          lifeReject('Rating must be between 0 and 5.');
+          lifeReject('Enter a rating from 0 to 5.');
         }
       }
     }
@@ -428,14 +428,14 @@ Map<String, String> validateLifeFields(
         sourceVersion < 1 ||
         sourceVersion > 1000000 ||
         RegExp(r'[\\/:\x00-\x1f\x7f]').hasMatch(v['title']!)) {
-      lifeReject('Invalid bounded private Career document metadata.');
+      lifeReject('This file’s name can’t be used. Rename it and try again.');
     }
   } else if (type == LifeType.application) {
     if (!careerStages.contains(v['status'])) {
-      lifeReject('Choose a supported Career stage or outcome.');
+      lifeReject('Choose a stage from the list.');
     }
     if (v['company']!.trim().isEmpty || v['company']!.length > 200) {
-      lifeReject('Enter the company (at most 200 characters).');
+      lifeReject('Enter the company, in up to 200 characters.');
     }
     final phase = v['pipelineStage'] ?? v['status']!;
     if (v.containsKey('pipelineStage') || v.containsKey('outcome')) {
@@ -445,18 +445,18 @@ Map<String, String> validateLifeFields(
           outcome.isNotEmpty && !careerOutcomes.contains(outcome) ||
           (phase == 'Accepted') != (outcome == 'Accepted') ||
           v['status'] != (outcome.isEmpty ? phase : outcome)) {
-        lifeReject('Record the Career stage and distinct outcome explicitly.');
+        lifeReject('Choose a stage and an outcome that fit together.');
       }
     }
     lifeDate(v['date']!, optional: phase == 'Saved');
     if (phase == 'Saved' && v['date']!.isNotEmpty) {
       lifeReject(
-        'A saved opportunity is not submitted and has no application date.',
+        'A saved application hasn’t been sent, so it has no date applied.',
       );
     }
     lifeDate(v['stageDate']!);
     if (v['date']!.isNotEmpty && v['stageDate']!.compareTo(v['date']!) < 0) {
-      lifeReject('The stage date cannot precede submission.');
+      lifeReject('The stage date can’t be before the date applied.');
     }
     lifeDate(v['followUp']!, optional: true);
     if (![
@@ -465,17 +465,17 @@ Map<String, String> validateLifeFields(
       'remote',
       'unspecified',
     ].contains(v['arrangement'])) {
-      lifeReject('Choose a supported work arrangement.');
+      lifeReject('Choose a work arrangement from the list.');
     }
     if (!RegExp(r'^[A-Z]{3}$').hasMatch(v['currency']!) ||
         !['hour', 'month', 'year'].contains(v['salaryPeriod'])) {
-      lifeReject('Choose a salary currency and period.');
+      lifeReject('Choose a currency, as three letters like PHP, and a salary period.');
     }
     for (final key in ['salaryMin', 'salaryMax']) {
       if (v[key]!.isNotEmpty &&
           !RegExp(r'^(0|[1-9]\d{0,11})(\.\d{1,2})?$').hasMatch(v[key]!)) {
         lifeReject(
-          'Use a nonnegative exact salary value with at most two decimal places.',
+          'Enter the salary as an amount with up to two decimal places.',
         );
       }
     }
@@ -488,7 +488,7 @@ Map<String, String> validateLifeFields(
     if (v['salaryMin']!.isNotEmpty &&
         v['salaryMax']!.isNotEmpty &&
         salary(v['salaryMin']!) > salary(v['salaryMax']!)) {
-      lifeReject('Salary minimum exceeds maximum.');
+      lifeReject('The lowest salary can’t be more than the highest.');
     }
     if (v['postingUrl']!.isNotEmpty) {
       final uri = Uri.tryParse(v['postingUrl']!);
@@ -496,7 +496,9 @@ Map<String, String> validateLifeFields(
           !['http', 'https'].contains(uri.scheme) ||
           uri.host.isEmpty ||
           uri.userInfo.isNotEmpty) {
-        lifeReject('Use an HTTP(S) posting URL without credentials.');
+        lifeReject(
+          'Enter the posting’s web address, starting with https:// or http://, with no sign-in details in it.',
+        );
       }
     }
   } else {
@@ -525,11 +527,11 @@ Map<String, String> validateLifeFields(
     if (type == LifeType.careerEvent) {
       lifeId(v['application']!);
       if (!careerEventKinds.contains(v['eventKind'])) {
-        lifeReject('Choose a supported Career event kind.');
+        lifeReject('Choose a type from the list.');
       }
       if (['Interview', 'Assessment'].contains(v['eventKind']) &&
           v['time']!.isEmpty) {
-        lifeReject('Interviews and assessments require a time and timezone.');
+        lifeReject('Interviews and assessments need a time.');
       }
       if ([
             'No response',
@@ -539,9 +541,7 @@ Map<String, String> validateLifeFields(
             'Offer',
           ].contains(v['eventKind']) &&
           v['status'] != 'Completed') {
-        lifeReject(
-          'An observation is completed dated evidence, not an inferred outcome.',
-        );
+        lifeReject('This has already happened, so it’s saved as done.');
       }
     }
   }
@@ -575,7 +575,7 @@ class LifeCommand {
         expectedVersion > 1000000 ||
         reason.trim().isEmpty ||
         reason.length > 2000) {
-      lifeReject('A supported source version and reason are required.');
+      lifeReject('Say why you’re changing this, in up to 2,000 characters.');
     }
   }
   final String id, owner, recordId, reason;
@@ -625,7 +625,7 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
   if ((old?.version ?? 0) != c.expectedVersion ||
       old != null && (old.type != c.type || old.owner != c.owner)) {
     lifeReject(
-      'This source changed. Review the current record and preserve your draft.',
+      'This changed while you were working. Check it, then try again. What you entered is kept.',
     );
   }
   if (c.type == LifeType.careerEvent) {
@@ -634,10 +634,14 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
         parent.owner != c.owner ||
         parent.archived ||
         parent.terminal) {
-      lifeReject('Choose an active owned Career application.');
+      lifeReject(
+        'This application is closed or archived, so it can’t take steps. Reopen or restore it first.',
+      );
     }
     if (old != null && old.fields['application'] != parent.id) {
-      lifeReject('A Career event cannot move between attempts.');
+      lifeReject(
+        'A step stays with its application. Add a new step to the other one.',
+      );
     }
   }
   if (c.type == LifeType.document) {
@@ -645,7 +649,9 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
     if (parent is! ApplicationRecord ||
         parent.owner != c.owner ||
         old == null && '${parent.version}' != c.fields['sourceVersion']) {
-      lifeReject('Choose the current owned Career application.');
+      lifeReject(
+        'This application changed while you were attaching the file. Choose the file again.',
+      );
     }
     if (old != null &&
         old.fields.entries.any(
@@ -654,7 +660,7 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
               c.fields[entry.key] != entry.value,
         )) {
       lifeReject(
-        'Document byte/source metadata is immutable. Select a new original for a new link.',
+        'A document’s file can’t be changed. Attach the new file as another document.',
       );
     }
     final docs = current.values.whereType<CareerDocumentRecord>();
@@ -664,7 +670,7 @@ LifeRecord applyLifeCommand(Map<String, LifeRecord> current, LifeCommand c) {
                     int.parse(c.fields['size']!) >
                 1073741824)) {
       lifeReject(
-        'Career document metadata exceeds the 1,000 object / 1 GiB limit.',
+        'You’ve reached 1,000 documents or 1 GB, and archived ones still count.',
       );
     }
   }
@@ -690,7 +696,7 @@ void validateLifeArchive(
       (life['revisions'] as List).length > 20000 ||
       (life['intents'] as List).length > 20000 ||
       !connected && (life['intents'] as List).isNotEmpty) {
-    lifeReject('Unsupported Life archive coverage.');
+    lifeReject('This version of Salapiya can’t read this backup’s Life records. Nothing was restored.');
   }
   final records = <String, LifeRecord>{}, payloads = <String, String>{};
   for (final raw in life['revisions'] as List) {
@@ -699,7 +705,7 @@ void validateLifeArchive(
     if (c.owner != owner ||
         payloads.containsKey(c.id) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('Invalid Life archive history.');
+      lifeReject('This backup’s Life history is damaged or incomplete. Nothing was restored.');
     }
     records[c.recordId] = applyLifeCommand(records, c);
     payloads[c.id] = c.payload;
@@ -718,7 +724,7 @@ void validateLifeArchive(
           'review',
           'restored',
         ].contains(row['state'])) {
-      lifeReject('Invalid original Life recovery intent.');
+      lifeReject('A saved Life change in this backup can’t be read. Nothing was restored.');
     }
     // Rejected/conflicting intent is retained as evidence, never applied to the
     // replacement graph or automatically granted authority by an archive.
@@ -732,7 +738,7 @@ void validateLifeArchive(
             !payloads.containsKey(row['replacement_id']) &&
             !intentIds.contains(row['replacement_id']) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('Invalid retained Life review decision.');
+      lifeReject('A saved Life decision in this backup can’t be read. Nothing was restored.');
     }
   }
   if (life['viewPreferences'] case final Map prefs) {

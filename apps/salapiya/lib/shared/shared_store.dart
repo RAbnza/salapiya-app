@@ -86,7 +86,7 @@ extension SharedLocalStore on LocalStore {
     if (binding == null ||
         binding['remote_owner'] != actor ||
         binding['phase'] != 'connected') {
-      reject('Current connected identity required.');
+      reject('Connect this profile with Google to use shared groups.');
     }
     final old = await tx.getAll(
       'SELECT payload FROM shared_intent WHERE id=?',

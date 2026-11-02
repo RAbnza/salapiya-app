@@ -28,7 +28,7 @@ class FinancialFileStore {
     final bytes = base64Url.decode(await databaseKey());
     if (bytes.length != 32) {
       reject(
-        'Protected file key is unavailable; existing files are preserved.',
+        'This profile’s file key isn’t available. Your files are safe. Reopen your profile.',
       );
     }
     return Hkdf(hmac: Hmac.sha256(), outputLength: 32).deriveKey(
@@ -50,7 +50,7 @@ class FinancialFileStore {
   );
   static String validateFormat(String name, List<int> bytes) {
     if (bytes.isEmpty || bytes.length > maxBytes) {
-      reject('Supporting files must be nonempty and at most 10 MiB.');
+      reject('Choose a file that isn’t empty, up to 10 MB.');
     }
     final extension = p.extension(name).toLowerCase();
     final pdf =
@@ -71,7 +71,7 @@ class FinancialFileStore {
     if (['.jpg', '.jpeg'].contains(extension) && jpeg) return 'image/jpeg';
     if (extension == '.png' && png) return 'image/png';
     reject(
-      'Extension and format hints must agree for PDF, JPEG or PNG. They do not establish that a file is safe or scanned.',
+      'This file’s name and contents don’t match. Choose a real PDF, JPEG or PNG.',
     );
   }
 
@@ -83,7 +83,7 @@ class FinancialFileStore {
     if (validateFormat(metadata['name']!, bytes) != metadata['mime'] ||
         '${bytes.length}' != metadata['size'] ||
         sha256.convert(bytes).toString() != metadata['checksum']) {
-      reject('Selected bytes differ from the immutable attachment metadata.');
+      reject('This isn’t the same file. Choose the original.');
     }
     await directory.create(recursive: true);
     final target = object(id);
@@ -101,7 +101,7 @@ class FinancialFileStore {
     if (objects >= 1000 ||
         storedBytes + bytes.length + header.length + 28 > 1024 * 1024 * 1024) {
       reject(
-        'This device’s retained file objects exceed the 1,000-object / 1 GiB storage bound. Existing and orphan bytes are preserved. Export and explicitly remove reviewed local copies before adding another.',
+        'This device has reached 1,000 files or 1 GB. Save copies and remove some before adding another.',
       );
     }
     final box = await cipher.encrypt(
@@ -124,14 +124,12 @@ class FinancialFileStore {
   ) async {
     final target = object(id);
     if (!await target.exists()) {
-      reject(
-        'Attachment bytes are absent on this device. Cloud download is unavailable.',
-      );
+      reject('This file isn’t on this device. Restore it from your original.');
     }
     final size = await target.length();
     if (size < header.length + 28 || size > maxBytes + header.length + 28) {
       reject(
-        'Private file framing or size is invalid. Preserve it for recovery.',
+        'This file looks damaged. Keep it, and restore from your original.',
       );
     }
     final bytes = await target.readAsBytes();
@@ -139,7 +137,7 @@ class FinancialFileStore {
       header.length,
       (i) => bytes[i] == header[i],
     ).every((v) => v)) {
-      reject('Unsupported private file format. Preserve the original.');
+      reject('This file can’t be read here. Keep your original.');
     }
     final plain = await cipher.decrypt(
       SecretBox.fromConcatenation(
@@ -153,7 +151,7 @@ class FinancialFileStore {
     if ('${plain.length}' != metadata['size'] ||
         sha256.convert(plain).toString() != metadata['checksum']) {
       reject(
-        'Private file checksum verification failed. No preview or export was allowed.',
+        'This file didn’t pass its check, so it can’t be opened. Restore it from your original.',
       );
     }
     return Uint8List.fromList(plain);
@@ -164,7 +162,7 @@ class FinancialFileStore {
     final file = financeSource(s, id, {'financialFile'});
     if (financialFileDetached(s, id)) {
       reject(
-        'The attachment link is archived. Its encrypted bytes are retained but are not available through an unlinked source. Attach an independently selected original to create a new reviewed link.',
+        'This file’s link is archived. Attach your original again to link it.',
       );
     }
     s.revision(file.values['sourceRevision']!);

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:salapiya/app/overview_dashboard.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
@@ -72,8 +73,8 @@ void main() {
             SalapiyaApp(session: runtime.session, settings: settings),
           );
           await localSettle(tester);
-          expect(find.text('Your day, in balance.'), findsOneWidget);
-          expect(find.textContaining('Tala reported'), findsNothing);
+          expect(find.byType(OverviewDashboard), findsOneWidget);
+          expect(find.textContaining('Tala logged'), findsNothing);
           expect(find.textContaining('DEMO ·'), findsNothing);
           expect(runtime.session!.finance.liquid, BigInt.from(10000));
           expect(find.text('Real receipt'), findsOneWidget);
@@ -95,13 +96,7 @@ void main() {
           });
           await localSettle(tester);
           expect(tester.takeException(), isNull);
-          await tester.tap(
-            mobile
-                ? find.byKey(const ValueKey('navigation-fallback'))
-                : find.byTooltip('Navigation · 5 destinations'),
-          );
-          await localSettle(tester);
-          await tester.tap(find.text('Money'));
+          await tester.tap(find.byKey(const ValueKey('nav-money')));
           await localSettle(tester);
           expect(find.text('Money'), findsWidgets);
           expect(tester.takeException(), isNull);
@@ -139,16 +134,13 @@ void main() {
           ),
         );
         await localSettle(tester);
-        expect(find.text('Create a local offline profile'), findsOneWidget);
+        expect(find.text('Get started'), findsOneWidget);
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        expect(find.text('Start on this device'), findsOneWidget);
         expect(find.text('Continue with Google'), findsOneWidget);
         expect(find.text('Restore from backup'), findsOneWidget);
-        await tester.ensureVisible(find.text('Continue with Google'));
-        await localTap(tester, find.text('Continue with Google'));
-        await localSettle(tester);
-        expect(
-          find.textContaining('This build supports local use.'),
-          findsOneWidget,
-        );
+        // This test build can't connect, so the row says so and goes nowhere.
+        expect(find.textContaining('can’t connect to Google'), findsOneWidget);
         expect(runtime.session, isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());

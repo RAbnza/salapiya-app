@@ -8,6 +8,24 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'life_domain.dart';
 
+const reminderTitle = 'Salapiya reminder';
+
+/// What a notification says. It never holds a title, amount, company or name,
+/// so a locked screen shows nothing private.
+String reminderBody({bool showDate = false, String? date}) => showDate
+    ? 'You have something on ${_plainDate(date!)}. Open Salapiya to see it.'
+    : 'You have something coming up. Open Salapiya to see it.';
+
+/// "2 Nov 2026".
+String _plainDate(String date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final d = DateTime.parse(date);
+  return '${d.day} ${months[d.month - 1]} ${d.year}';
+}
+
 abstract interface class NotificationDevice {
   Future<void> initialize(void Function(String) onTap);
   Future<bool?> permission({bool request = false});
@@ -46,8 +64,8 @@ class NativeNotificationDevice implements NotificationDevice {
     }
     await plugin.show(
       id: 999,
-      title: 'Salapiya reminder',
-      body: 'Private device notification test. Open Salapiya to review.',
+      title: reminderTitle,
+      body: 'This is a test. Reminders will look like this.',
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'salapiya_private_reminders',
@@ -60,10 +78,10 @@ class NativeNotificationDevice implements NotificationDevice {
 
   @override
   String get capability => Platform.isWindows
-      ? 'Windows local toast registration · OS notification settings control display'
+      ? 'Windows shows these, and its notification settings decide how.'
       : Platform.isAndroid
-      ? 'Android inexact alarms · OS/battery settings may delay delivery'
-      : 'Native notifications unavailable on this platform';
+      ? 'Android shows these, and can delay them to save battery.'
+      : 'This device can’t show reminders.';
   @override
   Future<void> initialize(void Function(String) onTap) async {
     _onTap = onTap;
@@ -103,7 +121,7 @@ class NativeNotificationDevice implements NotificationDevice {
         'salapiya_private_reminders',
         'Private reminders',
         description:
-            'Opted-in device reminders. No financial action is performed.',
+            'Reminders you turned on. They never change your records.',
         importance: Importance.defaultImportance,
       ),
     );
@@ -154,10 +172,8 @@ class NativeNotificationDevice implements NotificationDevice {
   }) async {
     await plugin.zonedSchedule(
       id: id,
-      title: 'Salapiya reminder',
-      body: showDate
-          ? 'A private commitment is due on $date. Open Salapiya to review.'
-          : 'A private commitment needs your attention. Open Salapiya to review.',
+      title: reminderTitle,
+      body: reminderBody(showDate: showDate, date: date),
       scheduledDate: tz.TZDateTime.from(at, LifeTime.zone('UTC')),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(

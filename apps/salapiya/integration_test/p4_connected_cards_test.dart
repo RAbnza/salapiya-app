@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:salapiya/app.dart';
+import 'package:salapiya/design_system/kit/kit.dart' show OptionPicker;
+import 'package:salapiya/finance/finance_screen.dart' show recordChoice;
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';
@@ -17,7 +19,7 @@ import 'package:salapiya/shared/shared_domain.dart';
 
 import '../test/local_money_journey.dart';
 import 'p3_native_test.dart'
-    show p3Wait, p3Enter, p3Select, p3Choice, p3Save, p3TapSource;
+    show p3Wait, p3Enter, p3Choice, p3Save, p3TapSource;
 import 'p4_cards_test.dart' show nativeEnter;
 
 Future<void> connectedFinanceSave(WidgetTester tester) async {
@@ -26,6 +28,48 @@ Future<void> connectedFinanceSave(WidgetTester tester) async {
   await localTap(tester, find.text('Save reviewed values'));
   await localWait(tester, () => find.text('Done').evaluate().isNotEmpty);
   await localTap(tester, find.text('Done'));
+}
+
+/// Opens a group: from the chooser, or from the switcher if one is open.
+Future<void> p3OpenGroup(WidgetTester tester, String name) async {
+  final switcher = find.byKey(const ValueKey('shared-switcher'));
+  await localWait(
+    tester,
+    () =>
+        switcher.evaluate().isNotEmpty || find.text(name).evaluate().isNotEmpty,
+  );
+  if (switcher.evaluate().isNotEmpty) await localTap(tester, switcher);
+  await localTap(tester, find.text(name).last);
+}
+
+/// Opens a bill's page from the Bills tab.
+Future<void> p3OpenBill(WidgetTester tester, String name) async {
+  await localTap(tester, find.byKey(const ValueKey('Bills')));
+  await localWait(tester, () => find.text(name).evaluate().isNotEmpty);
+  await localTap(tester, find.text(name).first);
+}
+
+/// A private action, from the More menu on a bill's page.
+Future<void> p3BillMenu(WidgetTester tester, String key) async {
+  await localTap(tester, find.byKey(const ValueKey('bill-menu')));
+  await localTap(tester, find.byKey(ValueKey(key)));
+}
+
+/// Review, then Save, then Done, on a Shared Expenses form.
+Future<void> p3Submit(WidgetTester tester) async {
+  final submit = find.byKey(const ValueKey('shared-submit'));
+  await localTap(tester, submit);
+  await localTap(tester, submit);
+  await localTap(tester, find.byKey(const ValueKey('shared-done')));
+}
+
+/// Picks a saved record in a private form. Its label holds a date and a
+/// formatted amount, so this goes by the record.
+Future<void> p4Pick(WidgetTester tester, String key, String id) async {
+  final field = find.byKey(ValueKey('native-select-$key'));
+  await p3Wait(tester, () => field.evaluate().isNotEmpty);
+  tester.widget<OptionPicker<String>>(field).onChanged!(id);
+  await localSettle(tester);
 }
 
 void main() {
@@ -153,10 +197,11 @@ void main() {
         final cashBefore = c.liquid;
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Cards').first);
-        await localTap(tester, find.text('Add credit card'));
+        await localTap(tester, find.byKey(const ValueKey('cards-add')).first);
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', cardName);
         await nativeEnter(tester, 'issuer', 'Synthetic provider');
@@ -171,7 +216,7 @@ void main() {
         // Genuine SDK disconnect: the ordinary purchase remains durable locally
         // and becomes accepted only through the existing connector and CDC path.
         await tester.runAsync(() => runtime.connected.pause(true));
-        await localAction(tester, 'Add expense');
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', purchaseName);
         await localEnter(tester, 'amount', '1200.00');
         await localTap(tester, find.byKey(const ValueKey('select-funding')));
@@ -209,31 +254,25 @@ void main() {
           hasLength(1),
         );
         await localTap(tester, find.byKey(const ValueKey('nav-shared')));
-        await localTap(
+        await p3OpenGroup(tester, config['name'] as String);
+        final people = (await group()).people;
+        String personNamed(String name) =>
+            people.entries.firstWhere((p) => p.value['name'] == name).key;
+        await localAction(tester, 'Add shared expense');
+        await localEnter(tester, 'name', purchaseName);
+        await localEnter(tester, 'total', '1200.00');
+        await localTap(tester, find.text('Exact amounts'));
+        await localEnter(
           tester,
-          find.byWidgetPredicate(
-            (w) =>
-                w is DropdownButtonFormField<String> &&
-                w.key.toString().contains('group-'),
-          ),
-        );
-        await p3Choice(tester, config['name'] as String);
-        await localTap(tester, find.text('Add shared expense'));
-        await p3Enter(tester, 'Description', purchaseName);
-        await p3Enter(tester, 'Bill total (PHP)', '1200.00');
-        await p3Select(tester, 'method', 'Exact / custom');
-        await p3Enter(tester, 'Native P4 owner · contributed (PHP)', '1200.00');
-        await p3Enter(
-          tester,
-          'Native P4 owner · exact share (PHP; ignored for Equal)',
+          'share:${personNamed('Native P4 owner')}',
           '400.00',
         );
-        await p3Enter(
+        await localEnter(
           tester,
-          'Native P4 consumer · exact share (PHP; ignored for Equal)',
+          'share:${personNamed('Native P4 consumer')}',
           '800.00',
         );
-        await p3Save(tester);
+        await p3Submit(tester);
         await p3Wait(
           tester,
           () async => (await group()).bills.values.any(
@@ -246,11 +285,12 @@ void main() {
                   (b.value['revisions'] as List).last['name'] == purchaseName,
             )
             .key;
-        await p3TapSource(tester, 'Bills', 'private-bill-$bill');
-        await p3Select(tester, 'existing', '$purchaseName · 1200.00 PHP');
-        await p3Enter(
+        await p3OpenBill(tester, purchaseName);
+        await p3BillMenu(tester, 'private-bill-$bill');
+        await p4Pick(tester, 'existing', purchase);
+        await localEnter(
           tester,
-          'Reason / source review',
+          'reason',
           'Adopt genuine native card purchase',
         );
         await p3Save(tester, private: true);
@@ -274,10 +314,11 @@ void main() {
           () async =>
               (await group()).revision(bill)['name'] == '$purchaseName revised',
         );
-        await p3TapSource(tester, 'Bills', 'private-bill-$bill');
-        await p3Enter(
+        await p3OpenBill(tester, purchaseName);
+        await p3BillMenu(tester, 'private-bill-$bill');
+        await localEnter(
           tester,
-          'Reason / source review',
+          'reason',
           'Review corrected source without replaying card funding',
         );
         await p3Save(tester, private: true);
@@ -289,25 +330,20 @@ void main() {
         expect(adopted.actionId, purchase);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
         await localTap(tester, find.text('Cards').first);
-        await localAction(tester, 'Card refund');
+        await localTap(tester, find.text(cardName).first);
+        await localTap(tester, find.byKey(const ValueKey('card-more')));
+        await localTap(tester, find.byKey(const ValueKey('card-log-refund')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-name')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Actual credit $suffix');
         await localTap(
           tester,
-          find.byKey(const ValueKey('native-select-card')),
-        );
-        await p3Choice(tester, '$cardName · ${civilToday()} · v1');
-        await localTap(
-          tester,
           find.byKey(const ValueKey('native-select-purchase')),
         );
-        await p3Choice(
-          tester,
-          '${adopted.title} · ${adopted.date} · v${adopted.number}',
-        );
+        await p3Choice(tester, recordChoice(adopted));
         await nativeEnter(tester, 'amount', '90.00');
         await nativeEnter(tester, 'reason', 'Actual provider card credit');
         await connectedFinanceSave(tester);
@@ -353,14 +389,10 @@ void main() {
             ((await group()).bills[bill]['refunds'] as List).last['id']
                 as String;
         await p3TapSource(tester, 'Bills', 'private-refund-$refund');
-        await p3Select(
+        await p4Pick(tester, 'existingCardRefund', credit.id);
+        await localEnter(
           tester,
-          'existingCardRefund',
-          '${credit.title} · 90.00 PHP · ${credit.date}',
-        );
-        await p3Enter(
-          tester,
-          'Reason / source review',
+          'reason',
           'Adopt actual card credit without another liability movement',
         );
         await p3Save(tester, private: true);

@@ -1,17 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextInputFormatter;
 
 import '../../../app/demo_routes.dart';
 import '../../../design_system/editorial.dart';
+import '../../../design_system/kit/kit.dart' show FieldInput, InputGuard;
+import '../../../design_system/kit/review.dart';
 import '../../../design_system/theme.dart';
 import '../application/financial_controller.dart';
 import '../contracts/financial_models.dart';
 import 'financial_widgets.dart';
-import 'financial_review.dart';
+import '../../../finance/money_editor.dart';
 import '../../../local/local_finance_controller.dart';
-import '../../../local/finance_domain.dart';
-import '../../../shared/shared_screen.dart';
 
 Future<void> openFinancialEditor(
   BuildContext context,
@@ -19,17 +20,36 @@ Future<void> openFinancialEditor(
   FinancialAction action, {
   String? sourceId,
   Map<String, String>? initial,
-}) => openDemoPage<void>(
-  context,
-  FinancialEditor(
-    controller: controller,
-    action: action,
-    sourceId: sourceId,
-    initial: initial,
-  ),
-  'finance/${action.name}',
-);
+}) {
+  if (controller is LocalFinancialController &&
+      moneyFormActions.contains(action)) {
+    final editor = MoneyEditor(
+      controller: controller,
+      action: action,
+      sourceId: sourceId,
+      initial: initial,
+    );
+    return openDemoPage<void>(
+      context,
+      editor,
+      'finance/${action.name}',
+      title: editor.title,
+    );
+  }
+  return openDemoPage<void>(
+    context,
+    FinancialEditor(
+      controller: controller,
+      action: action,
+      sourceId: sourceId,
+      initial: initial,
+    ),
+    'finance/${action.name}',
+  );
+}
 
+/// The demo build's forms. Real profiles use `MoneyEditor` and the native
+/// forms; these stay until their sections are redesigned.
 class FinancialEditor extends StatefulWidget {
   const FinancialEditor({
     super.key,
@@ -54,75 +74,12 @@ class _FinancialEditorState extends State<FinancialEditor> {
   late String command = widget.controller.nextCommand();
   final Map<String, TextEditingController> fields = {};
   FinancialPreview? preview;
-  LocalPlan? reviewPlan;
-  LocalSnapshot? reviewSnapshot;
   DemoOutcome outcome = DemoOutcome.accepted;
   DemoOutcome? result;
   bool reviewing = false, busy = false, dirty = false, allowPop = false;
   FinancialController get c => widget.controller;
   FinancialAction get action => widget.action;
-  String get actionLabel =>
-      c.production &&
-          action == FinancialAction.reconcile &&
-          ['adjustment', 'manual'].contains(values['mode'])
-      ? 'Adjust account balance'
-      : action.label;
-  late final String operation =
-      '${action.name}:${widget.sourceId ?? ''}${c.production && action == FinancialAction.reconcile ? ':${values['mode'] ?? 'compare'}' : ''}';
-  bool restoring = false, restored = false, draftUnavailable = false;
-  String? draftError;
-  int draftRevision = 0, savedDraftRevision = 0;
-  Future<void> draftWork = Future.value();
-  @override
-  void initState() {
-    super.initState();
-    if (c.production) {
-      restoring = true;
-      unawaited(loadDraft());
-    }
-  }
-
-  Future<void> loadDraft() async {
-    try {
-      final draft = await c.restoreDraft(operation);
-      if (!mounted) return;
-      draftUnavailable = false;
-      if (draft != null) {
-        values.addAll(Map<String, String>.from(draft['values'] as Map));
-        command = draft['command'] as String;
-        dirty = true;
-        restored = true;
-      }
-    } catch (_) {
-      draftUnavailable = true;
-      if (mounted) draftError = 'The saved draft could not be read. Reopen this profile before editing.';
-    } finally {
-      if (mounted) setState(() => restoring = false);
-    }
-  }
-
-  void retain() {
-    if (!c.production) return;
-    final revision = ++draftRevision;
-    final frozen = Map<String, String>.from(values), id = command;
-    draftWork = draftWork
-        .then((_) => c.retainDraft(operation, id, frozen))
-        .then((_) {
-          if (mounted) {
-            setState(() {
-              draftError = null;
-              savedDraftRevision = revision;
-            });
-          }
-        })
-        .catchError((Object _) {
-          if (mounted) {
-            setState(
-              () => draftError = 'Draft could not be saved. Keep this screen open and check available storage.',
-            );
-          }
-        });
-  }
+  String get actionLabel => action.label;
 
   @override
   void dispose() {
@@ -132,57 +89,99 @@ class _FinancialEditorState extends State<FinancialEditor> {
     super.dispose();
   }
 
-  Widget text(String key, String label, {String? helper, bool money = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: TextField(
-          key: ValueKey('field-$key'),
-          controller: fields.putIfAbsent(
-            key,
-            () => TextEditingController(text: values[key] ?? ''),
+  /// The problem in the review's list that's about this field, so the field
+  /// shows it in red as well.
+  String? problemFor(String key) => preview?.errors.where((e) {
+    final message = e.toLowerCase();
+    return switch (key) {
+      'amount' => message.startsWith('amount'),
+      'date' => message.contains(' date'),
+      'account' => message.contains('account') || message.contains('balance'),
+      _ => false,
+    };
+  }).firstOrNull;
+
+  Widget text(String key, String label, {String? helper, bool money = false}) {
+    final input = money
+        ? FieldInput.signedAmount
+        : label.contains('YYYY-MM-DD')
+        ? FieldInput.date
+        : null;
+    Widget field(TextInputFormatter? guard) => TextField(
+      key: ValueKey('field-$key'),
+      controller: fields.putIfAbsent(
+        key,
+        () => TextEditingController(text: values[key] ?? ''),
+      ),
+      inputFormatters: guard == null ? null : [guard],
+      keyboardType: money
+          ? const TextInputType.numberWithOptions(decimal: true, signed: true)
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        helperText: helper,
+        helperMaxLines: 4,
+        errorText: problemFor(key),
+        errorMaxLines: 4,
+        prefixText: money ? '₱ ' : null,
+      ),
+      onChanged: (x) => setState(() {
+        values[key] = x;
+        dirty = true;
+      }),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: input == null
+          ? field(null)
+          : InputGuard(input: input, builder: (_, guard) => field(guard)),
+    );
+  }
+
+  Widget select(
+    String key,
+    String label,
+    Map<String, String> choices, {
+    Map<String, String> trailing = const {},
+  }) => Padding(
+    key: ValueKey('select-$key'),
+    padding: const EdgeInsets.only(bottom: 18),
+    child: DropdownButtonFormField<String>(
+      key: ValueKey('$key-${values[key]}'),
+      initialValue: choices.containsKey(values[key]) ? values[key] : null,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: problemFor(key),
+        errorMaxLines: 4,
+      ),
+      items: [
+        for (final e in choices.entries)
+          DropdownMenuItem(
+            value: e.key,
+            child: Row(
+              children: [
+                Expanded(child: Text(e.value, overflow: TextOverflow.ellipsis)),
+                if (trailing[e.key] case final String side) ...[
+                  const SizedBox(width: Space.sm),
+                  Text(
+                    side,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: CraftTheme.of(context).secondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          keyboardType: money
-              ? const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                )
-              : TextInputType.text,
-          decoration: InputDecoration(
-            labelText: label,
-            helperText: helper,
-            helperMaxLines: 4,
-            prefixText: money ? '₱ ' : null,
-          ),
-          onChanged: (x) => setState(() {
-            values[key] = x;
-            dirty = true;
-            retain();
-          }),
-        ),
-      );
-  Widget select(String key, String label, Map<String, String> choices) =>
-      Padding(
-        key: ValueKey('select-$key'),
-        padding: const EdgeInsets.only(bottom: 18),
-        child: DropdownButtonFormField<String>(
-          key: ValueKey('$key-${values[key]}'),
-          initialValue: choices.containsKey(values[key]) ? values[key] : null,
-          isExpanded: true,
-          decoration: InputDecoration(labelText: label),
-          items: [
-            for (final e in choices.entries)
-              DropdownMenuItem(
-                value: e.key,
-                child: Text(e.value, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: (x) => setState(() {
-            values[key] = x ?? '';
-            dirty = true;
-            retain();
-          }),
-        ),
-      );
+      ],
+      onChanged: (x) => setState(() {
+        values[key] = x ?? '';
+        dirty = true;
+      }),
+    ),
+  );
   Widget toggle(String key, String label) => CheckboxListTile(
     contentPadding: EdgeInsets.zero,
     title: Text(label),
@@ -191,7 +190,6 @@ class _FinancialEditorState extends State<FinancialEditor> {
     onChanged: (x) => setState(() {
       values[key] = '$x';
       dirty = true;
-      retain();
     }),
   );
   Widget section(String title, List<Widget> children) => Column(
@@ -207,16 +205,18 @@ class _FinancialEditorState extends State<FinancialEditor> {
     String key = 'account',
     String label = 'Financial account',
     bool card = false,
-  }) => select(key, label, {
-    for (final a in c.activeAccounts) a.id: a.name,
-    if (c.production &&
-        [FinancialAction.correction, FinancialAction.reversal].contains(action))
-      for (final a in c.accounts.where(
-        (a) => a.archived && a.id == values[key],
-      ))
-        a.id: '${a.name} · archived historical account',
-    if (card && !c.production) 'card': 'Everyday credit · liability',
-  });
+  }) => select(
+    key,
+    label,
+    {
+      for (final a in c.activeAccounts) a.id: a.name,
+      if (card) 'card': 'Everyday credit · liability',
+    },
+    trailing: {
+      for (final a in c.activeAccounts)
+        a.id: c.amountsHidden ? 'Amount hidden' : c.amount(a.balance),
+    },
+  );
   Widget amount([String label = 'Amount']) =>
       text('amount', label, money: true);
   Widget date() => text('date', 'Date · YYYY-MM-DD');
@@ -231,7 +231,6 @@ class _FinancialEditorState extends State<FinancialEditor> {
   };
 
   List<Widget> get entryFields {
-    if (c.production) return productionFields;
     switch (action) {
       case FinancialAction.debtClassification:
         return [
@@ -662,382 +661,8 @@ class _FinancialEditorState extends State<FinancialEditor> {
     }
   }
 
-  List<Widget> get productionFields {
-    final local = c as LocalFinancialController;
-    final source = local.snapshot.revisions
-        .where((r) => r.id == values['source'])
-        .firstOrNull;
-    final kind = action == FinancialAction.correction
-        ? source?.kind
-        : action.name;
-    Widget categories(String key, String label, String classification) =>
-        select(key, label, local.categoryChoices(classification));
-    final purchase = source?.kind == 'refund' && source?.source != null
-        ? local.snapshot.revision(source!.source!)
-        : source;
-    Widget refundPortions([
-      String key = 'refundPosting',
-    ]) => select(key, 'Original purchase / fee portion', {
-      for (final e
-          in (purchase?.postings ?? <LocalPosting>[]).asMap().entries.where(
-            (e) => e.value.ledger == 'expense',
-          ))
-        '${purchase!.id}-p${e.key + 1}':
-            '${local.categoryName(e.value.category)} · ${c.amount(e.value.amount)} · ${e.value.date}',
-    });
-    final refundCount = int.tryParse(values['refundCount'] ?? '') ?? 2;
-    List<Widget> refundAllocationFields() => [
-      refundPortions(),
-      if ((purchase?.postings.where((p) => p.ledger == 'expense').length ?? 0) >
-          1) ...[
-        toggle('refundMultiple', 'Allocate refund across original portions'),
-        if (values['refundMultiple'] == 'true') ...[
-          text('refundFirstAmount', 'First portion refund', money: true),
-          for (var i = 1; i < refundCount; i++) ...[
-            refundPortions('refund${i}Posting'),
-            text('refund${i}Amount', 'Portion ${i + 1} refund', money: true),
-          ],
-          Wrap(
-            spacing: 8,
-            children: [
-              TextButton.icon(
-                onPressed: refundCount < 100
-                    ? () => setState(() {
-                        values['refundCount'] = '${refundCount + 1}';
-                        dirty = true;
-                        retain();
-                      })
-                    : null,
-                icon: const Icon(Icons.add),
-                label: const Text('Add refund portion'),
-              ),
-              if (refundCount > 2)
-                TextButton(
-                  onPressed: () => setState(() {
-                    values['refundCount'] = '${refundCount - 1}';
-                    dirty = true;
-                    retain();
-                  }),
-                  child: const Text('Remove last portion'),
-                ),
-            ],
-          ),
-        ],
-      ],
-    ];
-    final splitCount = int.tryParse(values['splitCount'] ?? '') ?? 2;
-    final feeCount = int.tryParse(values['feeCount'] ?? '') ?? 1;
-    void addFee() => setState(() {
-      values.addAll({
-        'feeCount': '${feeCount + 1}',
-        'extraFee${feeCount}Amount': '',
-        'extraFee${feeCount}Treatment': 'source_additional',
-        'extraFee${feeCount}Category': 'category-fees',
-        'extraFee${feeCount}Account': values['account'] ?? '',
-        'extraFee${feeCount}Date': '',
-        'extraFee${feeCount}Label': '',
-      });
-      dirty = true;
-      retain();
-    });
-    void splitNumber(int delta) => setState(() {
-      values['splitCount'] = '${splitCount + delta}';
-      dirty = true;
-      retain();
-    });
-    final details = [
-      text('reference', 'Reference (optional)'),
-      text('notes', 'Notes (optional)'),
-    ];
-    if (action == FinancialAction.reversal) {
-      return [
-        date(),
-        reason(),
-        const FinanceNotice(
-          'The current financial effect is voided at its original dates. Every revision remains visible.',
-        ),
-      ];
-    }
-    if (action == FinancialAction.refund) {
-      return [
-        amount('Refund amount'),
-        account(label: 'Receiving account'),
-        date(),
-        ...refundAllocationFields(),
-        reason(),
-        ...details,
-        const FinanceNotice(
-          'Allocate only the amount returned for the selected original category. Prior refunds reduce its available amount. A refund reduces spending; it is not income.',
-        ),
-      ];
-    }
-    if (action == FinancialAction.reconcile) {
-      if (values['mode'] == 'manual') {
-        return [
-          account(),
-          amount('Signed balance adjustment'),
-          date(),
-          reason(),
-          ...details,
-          const FinanceNotice(
-            'Post a signed adjustment against equity. It is not income or spending. Use reconciliation first when comparing a statement or cash count.',
-          ),
-        ];
-      }
-      return values['mode'] == 'adjustment'
-          ? [
-              account(),
-              date(),
-              reason(),
-              const FinanceNotice(
-                'Post the reviewed comparison difference as an explicit equity adjustment. It is not income or spending. Changed sources require a new comparison.',
-              ),
-            ]
-          : [
-              account(),
-              amount('Observed balance (signed)'),
-              date(),
-              text('reference', 'Statement / evidence reference (optional)'),
-              text('notes', 'Notes (optional)'),
-              const FinanceNotice(
-                'Save a comparison without changing money. Inspect it in account history, then explicitly review an adjustment if needed.',
-              ),
-            ];
-    }
-    switch (kind) {
-      case 'account':
-        return [
-          text('name', 'Account name'),
-          select(
-            'kind',
-            'Account type',
-            choices(['Cash', 'Bank', 'Mobile wallet', 'Checking', 'Savings']),
-          ),
-          amount('Opening balance'),
-          text('cutoff', 'Opening cutoff · YYYY-MM-DD'),
-          text('institution', 'Institution (optional)'),
-          text('notes', 'Notes (optional)'),
-          const FinanceNotice(
-            'This balance is your baseline at the end of the cutoff date, not income. Record new activity strictly after that date.',
-          ),
-        ];
-      case 'category':
-        return [
-          text('name', 'Category name'),
-          select('classification', 'Classification', {
-            'expense': 'Expense',
-            'income': 'Income',
-          }),
-        ];
-      case 'archive':
-        return [
-          account(),
-          reason(),
-          const FinanceNotice(
-            'History and balance are retained. Archiving disables new entries for this account.',
-          ),
-        ];
-      case 'expense':
-      case 'income':
-        return [
-          text('name', 'Description'),
-          amount(),
-          if (kind == 'expense') ...[
-            select('funding', 'Paid with', {
-              'cash': 'Cash / bank / wallet',
-              'card': 'Credit card',
-            }),
-            if (values['funding'] == 'card') ...[
-              select('card', 'Credit card', {
-                for (final r in local.snapshot.current.where(
-                  (r) => financeType(r) == 'creditCard',
-                ))
-                  r.actionId: r.title,
-              }),
-              text('postingDate', 'Provider posting date · YYYY-MM-DD'),
-              const FinanceNotice(
-                'Recognize spending and posted card liability once. Cash stays unchanged.',
-              ),
-            ] else
-              account(),
-          ] else
-            account(),
-          date(),
-          categories('category', 'Category', kind!),
-          if (kind == 'income') ...[
-            select('incomeClass', 'Income classification', {
-              'earned': 'Earned',
-              'gift': 'Gift',
-              'reward': 'Reward',
-              'other': 'Other',
-            }),
-            text('sender', 'Received from (optional)'),
-            text('sourceLabel', 'Income source (optional)'),
-          ],
-          if (kind == 'expense') ...[
-            text('merchant', 'Merchant (optional)'),
-            toggle('split', 'Split across categories'),
-            if (values['split'] == 'true') ...[
-              text('splitAmount', 'First category amount', money: true),
-              for (var i = 2; i < splitCount; i++) ...[
-                text('split${i}Amount', 'Split ${i + 1} amount', money: true),
-                categories(
-                  'split${i}Category',
-                  'Split ${i + 1} category',
-                  'expense',
-                ),
-              ],
-              categories('splitCategory', 'Remainder category', 'expense'),
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: splitCount < 100 ? () => splitNumber(1) : null,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add category split'),
-                  ),
-                  if (splitCount > 2)
-                    TextButton(
-                      onPressed: () => splitNumber(-1),
-                      child: const Text('Remove last split'),
-                    ),
-                ],
-              ),
-            ],
-          ],
-          ...details,
-          if (action == FinancialAction.correction) reason(),
-        ];
-      case 'transfer':
-        return [
-          text('name', 'Description (optional)'),
-          amount('Amount arriving at destination'),
-          account(label: 'From account'),
-          account(key: 'destination', label: 'To account'),
-          date(),
-          text('fee', 'Transfer fee', money: true),
-          select('feeTreatment', 'Fee payment', {
-            'source_additional': 'Paid additionally by source',
-            'withheld': 'Withheld from amount sent',
-            'separate': 'Paid by another account',
-          }),
-          if (values['feeTreatment'] == 'separate')
-            account(key: 'feeAccount', label: 'Fee-bearing account'),
-          categories('feeCategory', 'Fee category', 'expense'),
-          text('feeDate', 'Fee date · YYYY-MM-DD (blank uses transfer date)'),
-          for (var i = 1; i < feeCount; i++) ...[
-            SectionHeading('Additional fee ${i + 1}'),
-            text('extraFee${i}Label', 'Fee label (optional)'),
-            text('extraFee${i}Amount', 'Fee amount', money: true),
-            select('extraFee${i}Treatment', 'Fee payment', {
-              'source_additional': 'Paid additionally by source',
-              'withheld': 'Withheld from amount sent',
-              'separate': 'Paid by another account',
-            }),
-            if (values['extraFee${i}Treatment'] == 'separate')
-              account(key: 'extraFee${i}Account', label: 'Fee-bearing account'),
-            categories('extraFee${i}Category', 'Fee category', 'expense'),
-            text('extraFee${i}Date', 'Fee date (blank uses transfer date)'),
-          ],
-          Wrap(
-            spacing: 8,
-            children: [
-              TextButton.icon(
-                onPressed: feeCount < 20 ? addFee : null,
-                icon: const Icon(Icons.add),
-                label: const Text('Add transfer fee'),
-              ),
-              if (feeCount > 1)
-                TextButton(
-                  onPressed: () => setState(() {
-                    values['feeCount'] = '${feeCount - 1}';
-                    dirty = true;
-                    retain();
-                  }),
-                  child: const Text('Remove last fee'),
-                ),
-            ],
-          ),
-          ...details,
-          if (action == FinancialAction.correction) reason(),
-          const FinanceNotice(
-            'Both principal sides commit together. Fees are recognized once; principal is neither income nor spending.',
-          ),
-        ];
-      case 'refund':
-        return [
-          amount('Corrected refund'),
-          account(label: 'Receiving account'),
-          date(),
-          ...refundAllocationFields(),
-          reason(),
-          ...details,
-        ];
-      case 'opening':
-        return [
-          amount('Corrected opening balance'),
-          date(),
-          reason(),
-          const FinanceNotice(
-            'The original account and coverage cutoff stay fixed. This corrects the baseline and preserves the full original evidence.',
-          ),
-        ];
-      case 'adjustment':
-        return [
-          account(),
-          if (source?.source == null) amount('Signed balance adjustment'),
-          date(),
-          reason(),
-          ...details,
-          const FinanceNotice(
-            'Adjustment corrections preserve equity classification and the original comparison link, when present.',
-          ),
-        ];
-      default:
-        return [
-          const FinanceNotice('Use the source workflow to review this action.'),
-        ];
-    }
-  }
-
   Future<void> back() async {
-    if (busy || restoring) return;
-    if (c.production && dirty && result != DemoOutcome.accepted) {
-      final choice = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Leave this draft?'),
-          content: const Text(
-            'Keep your entries encrypted on this device, or discard this unposted draft.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Keep editing'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'discard'),
-              child: const Text('Discard draft'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, 'keep'),
-              child: const Text('Save draft & leave'),
-            ),
-          ],
-        ),
-      );
-      if (choice == null) return;
-      await draftWork;
-      if (choice == 'discard') {
-        await c.discardDraft(operation);
-      }
-      if (draftError != null && choice == 'keep') return;
-      if (mounted) {
-        setState(() => allowPop = true);
-        Navigator.pop(context);
-      }
-      return;
-    }
+    if (busy) return;
     if (!dirty || result == DemoOutcome.accepted) {
       setState(() => allowPop = true);
       if (mounted) Navigator.pop(context);
@@ -1076,29 +701,13 @@ class _FinancialEditorState extends State<FinancialEditor> {
     setState(() {
       preview = c.preview(action, values, command);
       reviewing = preview!.valid;
-      if (reviewing && c is LocalFinancialController) {
-        final local = c as LocalFinancialController;
-        reviewSnapshot = local.snapshot;
-        reviewPlan = planLocal(
-          reviewSnapshot!,
-          local.command(action, preview!.values, command, preview!.version),
-        );
-      }
       dirty = true;
     });
-    retain();
   }
 
   Future<void> simulate() async {
     setState(() => busy = true);
-    await draftWork;
-    if (c.production && draftError != null) {
-      if (mounted) setState(() => busy = false);
-      return;
-    }
-    if (!c.production) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-    }
+    await Future<void>.delayed(const Duration(milliseconds: 350));
     final committed = await c.commitPreview(preview!, outcome);
     if (!mounted) return;
     setState(() {
@@ -1109,10 +718,7 @@ class _FinancialEditorState extends State<FinancialEditor> {
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop:
-        !busy &&
-        !restoring &&
-        (allowPop || !dirty || result == DemoOutcome.accepted),
+    canPop: !busy && (allowPop || !dirty || result == DemoOutcome.accepted),
     onPopInvokedWithResult: (didPop, _) {
       if (!didPop && !busy) back();
     },
@@ -1149,39 +755,7 @@ class _FinancialEditorState extends State<FinancialEditor> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (restoring)
-                        const Center(child: CircularProgressIndicator()),
-                      if (restored && result == null)
-                        const FinanceNotice(
-                          'Restored encrypted draft. Review current financial effects before saving.',
-                        ),
-                      if (draftError != null)
-                        FinanceNotice(draftError!, warning: true),
-                      if (c.production &&
-                          dirty &&
-                          result == null &&
-                          draftError == null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              savedDraftRevision == draftRevision
-                                  ? 'Draft saved on this device · not posted'
-                                  : 'Saving draft…',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ),
-                      if (draftUnavailable)
-                        TextButton(
-                          onPressed: loadDraft,
-                          child: const Text('Retry reading saved draft'),
-                        ),
-                      if (result == null &&
-                          !reviewing &&
-                          !restoring &&
-                          !draftUnavailable) ...[
+                      if (result == null && !reviewing) ...[
                         ...entryFields,
                         toggle('acknowledge', switch (action) {
                           FinancialAction.payoff => 'I confirm the provider quote and liability closure',
@@ -1212,24 +786,14 @@ class _FinancialEditorState extends State<FinancialEditor> {
                         ),
                       ],
                       if (result == null && reviewing) ...[
-                        if (reviewPlan != null)
-                          FinancialReview(
-                            plan: reviewPlan!,
-                            snapshot: reviewSnapshot!,
-                            amount: c.amount,
-                            hidden:
-                                (c as LocalFinancialController).amountsHidden,
-                            commandId: command,
-                          )
-                        else
-                          ReviewNotes(preview!.effects),
+                        ReviewNotes(preview!.effects),
                         if (busy)
                           const FormStatus(
                             title: 'Saving\u2026',
                             message: 'Your reviewed values are being saved.',
                             busy: true,
                           ),
-                        if (!c.production) selectOutcome(),
+                        selectOutcome(),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 12,
@@ -1254,11 +818,7 @@ class _FinancialEditorState extends State<FinancialEditor> {
                                     )
                                   : const Icon(Icons.check),
                               label: Text(
-                                c.production
-                                    ? (busy ? 'Saving…' : 'Confirm & save')
-                                    : (busy
-                                          ? 'Simulating…'
-                                          : 'Simulate action'),
+                                busy ? 'Simulating…' : 'Simulate action',
                               ),
                             ),
                           ],
@@ -1275,14 +835,8 @@ class _FinancialEditorState extends State<FinancialEditor> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SectionHeading('Before you continue'),
-                        FinanceNotice(
-                          c.production
-                              ? (c is LocalFinancialController &&
-                                        (c as LocalFinancialController)
-                                            .connected
-                                    ? 'A successful save is encrypted on this device. Waiting work is included once in your view and becomes synced after server acceptance and download. Drafts stay on this device.'
-                                    : 'Local only. A successful save is committed to encrypted storage on this device. Drafts are protected and are not posted money.')
-                              : 'Demo only. Changes live in this session and reset when the application closes. No real records are saved or synchronized.',
+                        const FinanceNotice(
+                          'Demo only. Changes live in this session and reset when the application closes. No real records are saved or synchronized.',
                         ),
                       ],
                     ),
@@ -1316,21 +870,14 @@ class _FinancialEditorState extends State<FinancialEditor> {
   List<Widget> resultWidgets() => [
     FormStatus(
       title: switch (result!) {
-        DemoOutcome.accepted =>
-          c.production ? 'Saved on this device' : 'Demo action complete',
-        DemoOutcome.pending =>
-          c.production
-              ? 'Confirmation pending'
-              : 'Awaiting simulated acceptance',
+        DemoOutcome.accepted => 'Demo action complete',
+        DemoOutcome.pending => 'Awaiting simulated acceptance',
         DemoOutcome.stale => 'Review the current source',
         DemoOutcome.unavailable => 'Could not save',
         DemoOutcome.unknown => 'The result is uncertain',
       },
       message: switch (result!) {
-        DemoOutcome.accepted =>
-          c.production
-              ? 'Saved securely on this device. Your original evidence is retained.'
-              : 'Updated in this demo session only.',
+        DemoOutcome.accepted => 'Updated in this demo session only.',
         DemoOutcome.pending => 'Accepted balances have not changed. Check this same command to resolve its status.',
         DemoOutcome.stale => 'No new action was applied by this attempt. Your input is retained; review the current source.',
         DemoOutcome.unavailable =>
@@ -1343,73 +890,16 @@ class _FinancialEditorState extends State<FinancialEditor> {
           ? NoticeTone.error
           : NoticeTone.warning,
     ),
-    if (result == DemoOutcome.accepted &&
-        c is LocalFinancialController &&
-        (c as LocalFinancialController).connected)
-      FormSyncStatus(
-        state: (c as LocalFinancialController).synchronizationStates[command],
-      ),
-    if (c is LocalFinancialController &&
-        (c as LocalFinancialController).lastError != null)
-      ReviewNotes([(c as LocalFinancialController).lastError!]),
-    if (reviewPlan != null)
-      FinancialReview(
-        plan: reviewPlan!,
-        snapshot: reviewSnapshot!,
-        amount: c.amount,
-        hidden: (c as LocalFinancialController).amountsHidden,
-        commandId: command,
-      )
-    else ...[
-      ReviewNotes(preview!.effects),
-      FormEvidence(
-        children: [
-          SelectableText(
-            '${c.production ? 'Local command' : 'Demo receipt'}: $command',
-          ),
-        ],
-      ),
-    ],
+    ReviewNotes(preview!.effects),
+    FormEvidence(children: [SelectableText('Demo receipt: $command')]),
     const SizedBox(height: 20),
     Wrap(
       spacing: 12,
       runSpacing: 12,
       children: [
-        if (c is LocalFinancialController &&
-            action == FinancialAction.expense &&
-            result == DemoOutcome.accepted)
-          OutlinedButton(
-            onPressed: () async {
-              try {
-                await sharePrivatePurchase(
-                  context,
-                  c as LocalFinancialController,
-                  command,
-                );
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        e is LocalRuleException ? e.message : 'Group sharing could not complete. Your private purchase remains saved.',
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Share this purchase'),
-          ),
         if (result == DemoOutcome.pending || result == DemoOutcome.unknown)
           FilledButton(
-            onPressed: () async {
-              final resolved = c is LocalFinancialController
-                  ? await (c as LocalFinancialController).resolveReceipt(
-                      command,
-                    )
-                  : c.checkResult(command);
-              if (mounted) setState(() => result = resolved);
-            },
+            onPressed: () => setState(() => result = c.checkResult(command)),
             child: const Text('Check original result'),
           ),
         if (result == DemoOutcome.stale || result == DemoOutcome.unavailable)
@@ -1417,7 +907,7 @@ class _FinancialEditorState extends State<FinancialEditor> {
             onPressed: () => setState(() {
               result = null;
               reviewing = false;
-              if (!c.production) command = c.nextCommand();
+              command = c.nextCommand();
               preview = c.preview(action, values, command);
             }),
             child: const Text('Return to retained draft'),

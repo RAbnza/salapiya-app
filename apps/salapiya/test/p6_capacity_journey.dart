@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salapiya/finance/reports_screen.dart';
+import 'package:salapiya/finance/report_data.dart';
 import 'package:salapiya/life/life_domain.dart';
 import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_profiles.dart';

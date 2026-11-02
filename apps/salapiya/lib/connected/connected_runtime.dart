@@ -76,24 +76,24 @@ class ConnectedRuntime extends ChangeNotifier {
     if (binding == null) {
       return flow?.pending == true
           ? 'Waiting for Google'
-          : 'Saved on this device';
+          : 'On this device only';
     }
     if (binding!['phase'] == 'restored') return 'Needs review';
-    if (!complete) return 'Initial download incomplete';
+    if (!complete) return 'First download not finished';
     if (reviewCount > 0 || sharedReviewCount > 0 || lifeReviewCount > 0) {
       return 'Needs review';
     }
     if (sessionExpired ||
         (flow != null && flow!.client.auth.currentSession == null)) {
-      return 'Session expired / reconnect required';
+      return 'Signed out';
     }
-    if (binding!['paused'] == 1) return 'Synchronization paused';
+    if (binding!['paused'] == 1) return 'Sync paused';
     final status = _attached?.db.currentStatus;
     if (busy ||
         status?.connecting == true ||
         status?.uploading == true ||
         status?.downloading == true) {
-      return 'Synchronizing';
+      return 'Syncing';
     }
     if (error != null ||
         status?.connected != true ||
@@ -123,7 +123,7 @@ class ConnectedRuntime extends ChangeNotifier {
   Future<void> _initializeAuth() async {
     if (!configured) {
       reject(
-        'Google connection is unavailable in this build. Your local profile remains available. Use the configured Salapiya build.',
+        'This version of Salapiya can’t connect to Google. Your profile keeps working on this device.',
       );
     }
     final auth = await initializeProofAuth(
@@ -163,7 +163,7 @@ class ConnectedRuntime extends ChangeNotifier {
           changed();
         }
       } catch (_) {
-        error = 'Connection is unavailable. Your existing records remain on this device.';
+        error = 'Can’t connect right now. Your records are safe on this device.';
         changed();
       }
     }
@@ -277,7 +277,7 @@ class ConnectedRuntime extends ChangeNotifier {
           if (!reviews.any((r) => r['id'] == row['id'])) {
             reviews.add({
               ...Map<String, dynamic>.from(row),
-              'reason': 'Financial sources changed. This waiting intent is retained and excluded from totals until its outcome is reconciled.',
+              'reason': 'Your records changed since this was saved, so it’s waiting and not in your totals until it’s sorted out.',
             });
           }
         }
@@ -335,7 +335,7 @@ class ConnectedRuntime extends ChangeNotifier {
         }
       }
     } catch (e) {
-      error = e is LocalRuleException ? e.message : 'Synchronization could not be verified. Local records and waiting work are preserved.';
+      error = e is LocalRuleException ? e.message : 'Salapiya couldn’t check your sync. Your records and waiting changes are safe.';
     } finally {
       refreshing = false;
       changed();
@@ -351,14 +351,14 @@ class ConnectedRuntime extends ChangeNotifier {
       await action();
     } on AuthException {
       sessionExpired = true;
-      error = 'Reconnect with the Google identity bound to this profile. Local data remains available.';
+      error = 'Sign in with the Google account this profile uses. Your records are still here.';
     } on PostgrestException catch (e) {
       if (e.code == '42501' || e.code == 'PGRST301') sessionExpired = true;
       error = sessionExpired
-          ? 'Session expired / reconnect required. Local data remains available.'
-          : 'The service could not complete this request. Retry when connected; local data is preserved.';
+          ? 'You’ve been signed out. Sign in again to sync. Your records are still here.'
+          : 'The service couldn’t do that. Try again when you’re connected. Your records are safe.';
     } catch (e) {
-      error = e is LocalRuleException ? e.message : 'Connection interrupted. Your local data and original commands are preserved. Retry when connected.';
+      error = e is LocalRuleException ? e.message : 'The connection dropped. Your records and waiting changes are safe. Try again when you’re connected.';
     } finally {
       busy = false;
       await refresh();
@@ -375,9 +375,9 @@ class ConnectedRuntime extends ChangeNotifier {
     await attach();
     await initializeAuth();
     final user = flow!.client.auth.currentUser;
-    if (user == null) reject('Finish Google sign-in first.');
+    if (user == null) reject('Finish signing in with Google first.');
     if (binding != null && binding!['remote_owner'] != user.id) {
-      reject('Select the Google identity bound to this profile.');
+      reject('Sign in with the Google account this profile uses.');
     }
     cloud = await boundary();
     sessionExpired = false;
@@ -401,10 +401,10 @@ class ConnectedRuntime extends ChangeNotifier {
     await attach();
     await initializeAuth();
     final user = flow!.client.auth.currentUser;
-    if (user == null) reject('Finish Google sign-in first.');
+    if (user == null) reject('Finish signing in with Google first.');
     if (binding != null && binding!['remote_owner'] != user.id) {
       reject(
-        'Reconnect with the Google identity already bound to this profile.',
+        'Sign in with the Google account this profile uses.',
       );
     }
     cloud = await boundary();
@@ -430,7 +430,7 @@ class ConnectedRuntime extends ChangeNotifier {
         if (published['outcome'] != 'published') {
           cloud = await boundary();
           reject(
-            'This identity already owns a profile. Review the existing cloud profile.',
+            'This Google account already has a profile. Review it to carry on.',
           );
         }
         cloud = await boundary();
@@ -439,7 +439,7 @@ class ConnectedRuntime extends ChangeNotifier {
     } else {
       if (cloud != null && cloud!['id'] != store.owner) {
         reject(
-          'This Google identity already owns a different profile. Cancel or preserve your local profile before switching.',
+          'This Google account already has a different profile. Keep this one, or save a backup before switching.',
         );
       }
       if (cloud != null) {
@@ -454,7 +454,7 @@ class ConnectedRuntime extends ChangeNotifier {
         if (previous?['phase'] == 'restored') {
           if (previous?['enrollment_snapshot'] == null) {
             reject(
-              'This connected archive cannot recreate missing cloud history. Recover the bound cloud account; existing local records are preserved.',
+              'This backup can’t bring back history that’s missing from your connected account. Your records here are safe.',
             );
           }
           await store.db.execute(
@@ -478,13 +478,13 @@ class ConnectedRuntime extends ChangeNotifier {
           await store.cancelStaging();
           await attach();
           reject(
-            'This enrollment was cancelled. Your profile remains local. Start a new connection when ready.',
+            'This connection was cancelled. Your profile stays on this device. Connect again when you’re ready.',
           );
         }
         if (!['staged', 'published'].contains(result['outcome'])) {
           cloud = await boundary();
           reject(
-            'A cloud profile already exists. Review the switch or cancel.',
+            'This Google account already has a profile. Review the switch, or cancel.',
           );
         }
         final published = await flow!.client.rpc(
@@ -495,13 +495,13 @@ class ConnectedRuntime extends ChangeNotifier {
           await store.cancelStaging();
           await attach();
           reject(
-            'This enrollment was cancelled. Local records and drafts are unchanged.',
+            'This connection was cancelled. Your records and drafts haven’t changed.',
           );
         }
         if (published['outcome'] != 'published') {
           cloud = await boundary();
           reject(
-            'A cloud profile already exists. Review the switch or cancel.',
+            'This Google account already has a profile. Review the switch, or cancel.',
           );
         }
         await store.db.execute(
@@ -537,11 +537,11 @@ class ConnectedRuntime extends ChangeNotifier {
     cloud = await boundary();
     if (cloud == null ||
         cloud!['id'] == local.session?.localFinance.store.owner) {
-      reject('Review the current cloud profile before switching.');
+      reject('Check the profile on this Google account before switching.');
     }
     if (binding != null && binding!['phase'] != 'staged') {
       reject(
-        'A bound connected profile cannot be reassigned to another identity.',
+        'A connected profile can’t move to another Google account.',
       );
     }
   }
@@ -552,7 +552,7 @@ class ConnectedRuntime extends ChangeNotifier {
       await initializeAuth();
       if (flow!.client.auth.currentUser?.id != state['remote_owner']) {
         reject(
-          'Reconnect with the identity bound to this enrollment before cancelling. Local records remain preserved.',
+          'Sign in with the Google account that started this connection before cancelling. Your records here are safe.',
         );
       }
       // A server-side cancellation fence shares publication's actor lock. A
@@ -565,7 +565,7 @@ class ConnectedRuntime extends ChangeNotifier {
         },
       ) as Map;
       if (result['profile_id'] != state['profile_id']) {
-        reject('Cancellation identity mismatch. Local records are preserved.');
+        reject('Salapiya couldn’t confirm this cancellation. Your records here are safe.');
       }
       if (result['outcome'] == 'published') {
         await local.session!.localFinance.store.db.execute(
@@ -573,12 +573,12 @@ class ConnectedRuntime extends ChangeNotifier {
           [state['profile_id']],
         );
         reject(
-          'Publication completed. Resume synchronization with this profile.',
+          'Your profile has finished connecting. Sync to carry on.',
         );
       }
       if (result['outcome'] != 'cancelled') {
         reject(
-          'Cancellation is not yet verified. Resume connection before recording more activity.',
+          'Salapiya couldn’t confirm the cancellation yet. Finish connecting before logging anything else.',
         );
       }
       await local.session!.localFinance.store.cancelStaging();
@@ -593,13 +593,13 @@ class ConnectedRuntime extends ChangeNotifier {
     final user = flow!.client.auth.currentUser;
     if (user == null || user.id != binding?['remote_owner']) {
       sessionExpired = true;
-      reject('Reconnect with the bound Google identity.');
+      reject('Sign in with the Google account this profile uses.');
     }
     if (binding!['paused'] == 1 || binding!['phase'] == 'staged') return;
     final remote = await boundary();
     if (remote == null || remote['id'] != store.owner) {
       reject(
-        'The connected cloud profile is unavailable. Local data is preserved.',
+        'Your connected profile can’t be reached. Your records here are safe.',
       );
     }
     sessionExpired = false;
@@ -679,8 +679,8 @@ class ConnectedRuntime extends ChangeNotifier {
     }
     reject(
       binding!['phase'] == 'connected'
-          ? 'Synchronization is waiting for the service. Cached records and waiting work remain on this device. Retry Sync now when the service is available.'
-          : 'Initial download incomplete. Existing records remain available; Sync now resumes the download.',
+          ? 'Sync is waiting for the service. Your records and waiting changes are safe on this device. Try Sync now later.'
+          : 'Your first download isn’t finished. Your records are still here. Sync now carries on from where it stopped.',
     );
   }
 
@@ -689,7 +689,7 @@ class ConnectedRuntime extends ChangeNotifier {
     await attach();
     if (binding == null) return;
     if (binding!['phase'] == 'staged') {
-      reject('Review and confirm the staged connection to resume publication.');
+      reject('Review and confirm the connection to finish connecting.');
     }
     await _connect();
   });
@@ -753,7 +753,7 @@ class ConnectedRuntime extends ChangeNotifier {
       ) as Map;
       if (result['id'] != row['id'] ||
           result['owner_id'] != binding!['remote_owner']) {
-        reject('Recovery receipt identity mismatch.');
+        reject('The service’s answer doesn’t match this profile. Nothing changed.');
       }
       final outcome = result['outcome'];
       await store.db.execute(
@@ -773,7 +773,7 @@ class ConnectedRuntime extends ChangeNotifier {
 
   Future<void> resumeMissing(String id) => run(() async {
     if (binding == null || binding!['phase'] != 'connected') {
-      reject('Complete the current cloud download first.');
+      reject('Finish the first download first.');
     }
     final row = await _attached!.db.get(
       "SELECT * FROM connected_intent WHERE id=? AND state='review' AND reason='restored_missing'",
@@ -784,7 +784,7 @@ class ConnectedRuntime extends ChangeNotifier {
       params: {'command_id': id, 'command_payload': row['payload']},
     ) as Map;
     if (result['id'] != id || result['owner_id'] != binding!['remote_owner']) {
-      reject('Recovery receipt identity mismatch.');
+      reject('The service’s answer doesn’t match this profile. Nothing changed.');
     }
     if (result['outcome'] != 'missing') {
       final accepted = result['outcome'] == 'accepted';
@@ -825,7 +825,7 @@ class ConnectedRuntime extends ChangeNotifier {
   Future<void> detachForLocalRemoval() async {
     if (busy) {
       reject(
-        'Wait for the current connection request before removing this profile.',
+        'Wait for the connection to finish, then remove this profile.',
       );
     }
     await _downloads?.cancel();
@@ -862,7 +862,7 @@ class ConnectedRuntime extends ChangeNotifier {
     await initializeAuth();
     if (binding == null ||
         flow!.client.auth.currentUser?.id != binding!['remote_owner']) {
-      reject('Reconnect with the Google identity bound to this profile.');
+      reject('Sign in with the Google account this profile uses.');
     }
     await boundary();
     return [
@@ -883,7 +883,7 @@ class ConnectedRuntime extends ChangeNotifier {
     await initializeAuth();
     if (binding == null ||
         flow!.client.auth.currentUser?.id != binding!['remote_owner']) {
-      reject('Reconnect with the Google identity bound to this profile.');
+      reject('Sign in with the Google account this profile uses.');
     }
     await _attached?.db.disconnect();
     final response = await flow!.client.functions.invoke(
@@ -893,12 +893,12 @@ class ConnectedRuntime extends ChangeNotifier {
     final result = response.data;
     if (result is! Map || result['application_deleted'] != true) {
       reject(
-        'Deletion is not verified. Reauthenticate with Google and review again. Local records are preserved.',
+        'Salapiya couldn’t confirm the deletion. Sign in with Google again and check. Your records here are safe.',
       );
     }
     await _attached?.db.execute('UPDATE connected_profile SET paused=1');
     sessionExpired = true;
-    error = 'Connected application data was deleted. This local copy remains until you remove it separately.';
+    error = 'Your connected account was deleted. This profile stays on this device until you remove it.';
     changed();
     return result['auth_cleanup_pending'] == true;
   }

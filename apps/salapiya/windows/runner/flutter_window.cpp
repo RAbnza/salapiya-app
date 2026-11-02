@@ -84,7 +84,45 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger(), "dev.salapiya/window_chrome",
       &flutter::StandardMethodCodec::GetInstance());
   window_chrome_->SetMethodCallHandler([this](const auto& call, auto result) {
-    if (call.method_name() != "theme") { result->NotImplemented(); return; }
+    const auto& method = call.method_name();
+    if (method == "customFrame") {
+      result->Success(flutter::EncodableValue(EnableCustomFrame()));
+      return;
+    }
+    if (method == "regions") {
+      // Height, maximize button, then interactive rectangles (left, top,
+      // right, bottom), in logical pixels.
+      const auto args = call.arguments() ? std::get_if<flutter::EncodableList>(call.arguments()) : nullptr;
+      std::vector<double> values;
+      if (args) {
+        for (const auto& value : *args) {
+          const auto number = std::get_if<double>(&value);
+          if (!number) { values.clear(); break; }
+          values.push_back(*number);
+        }
+      }
+      if (values.size() < 5 || (values.size() - 5) % 4 != 0) {
+        result->Error("invalid_regions", "Expected title bar regions."); return;
+      }
+      std::vector<LogicalRect> interactive;
+      for (size_t i = 5; i < values.size(); i += 4) {
+        interactive.push_back({values[i], values[i + 1], values[i + 2], values[i + 3]});
+      }
+      SetCaptionRegions(values[0], {values[1], values[2], values[3], values[4]}, std::move(interactive));
+      result->Success();
+      return;
+    }
+    // Window commands go through the system menu's commands, posted so the
+    // window never closes inside this callback.
+    if (method == "minimize" || method == "toggleMaximize" || method == "close") {
+      const WPARAM command = method == "minimize" ? SC_MINIMIZE
+          : method == "close" ? SC_CLOSE
+          : IsZoomed(GetHandle()) ? SC_RESTORE : SC_MAXIMIZE;
+      PostMessage(GetHandle(), WM_SYSCOMMAND, command, 0);
+      result->Success();
+      return;
+    }
+    if (method != "theme") { result->NotImplemented(); return; }
     const auto args = call.arguments() ? std::get_if<flutter::EncodableList>(call.arguments()) : nullptr;
     if (!args || args->size() != 4 || !std::holds_alternative<bool>((*args)[0])) {
       result->Error("invalid_theme", "Expected caption theme colors."); return;
@@ -215,6 +253,17 @@ void FlutterWindow::OnDestroy() {
   }
 
   Win32Window::OnDestroy();
+}
+
+void FlutterWindow::OnFrameStateChanged(bool maximized, bool active,
+                                        CaptionState max_button) {
+  if (!window_chrome_) return;
+  window_chrome_->InvokeMethod(
+      "state", std::make_unique<flutter::EncodableValue>(flutter::EncodableList{
+                   flutter::EncodableValue(maximized),
+                   flutter::EncodableValue(active),
+                   flutter::EncodableValue(static_cast<int32_t>(max_button)),
+               }));
 }
 
 LRESULT

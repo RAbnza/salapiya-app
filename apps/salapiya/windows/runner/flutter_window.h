@@ -23,6 +23,8 @@ class FlutterWindow : public Win32Window {
   void OnDestroy() override;
   LRESULT MessageHandler(HWND window, UINT const message, WPARAM const wparam,
                          LPARAM const lparam) noexcept override;
+  void OnFrameStateChanged(bool maximized, bool active,
+                           CaptionState max_button) override;
 
  private:
   // The project to run.

@@ -11,7 +11,7 @@ void planCard(FinanceRuleContext c) {
           financeType(r) == 'creditCard' &&
           r.title.toLowerCase() == c.title.toLowerCase(),
     )) {
-      reject('That card name already exists.');
+      reject('You already have a card with this name.');
     }
     v['card'] = c.old?.actionId ?? c.command.id;
     c.total = c.money('amount', zero: true, signed: true);
@@ -22,28 +22,28 @@ void planCard(FinanceRuleContext c) {
   final card = c.ref('card', {'creditCard'});
   v['card'] = card.actionId;
   if (c.date.compareTo(card.date) < 0) {
-    reject('Card activity cannot precede its opening evidence.');
+    reject('Choose a date on or after the day this card starts in Salapiya.');
   }
   switch (op) {
     case 'cardAuthorization':
       c.total = c.money('amount');
       c.text('reference');
       c.effects.add(
-        'Pending authorization only; no recognized posted liability or spending.',
+        'A pending charge. It doesn’t count as spending or in what you owe yet.',
       );
     case 'cardPurchase':
     case 'cardFee':
     case 'cardInterest':
       final posted = civilDate(c.text('postingDate'));
       if (posted.compareTo(c.date) < 0) {
-        reject('Posting date cannot precede the transaction date.');
+        reject('The date it posted can’t be before the purchase date.');
       }
       c.total = c.money('amount');
       c.kind = 'expense';
       c.post('card_liability', -c.total);
       if (c.value('split') == 'true') {
         final count = int.tryParse(c.value('splitCount')) ?? 2;
-        if (count < 2 || count > 100) reject('Use 2–100 expense portions.');
+        if (count < 2 || count > 100) reject('Split this into 2 to 100 parts.');
         var allocated = c.money('splitAmount');
         c.expense(allocated);
         for (var i = 2; i < count; i++) {
@@ -52,7 +52,9 @@ void planCard(FinanceRuleContext c) {
           c.expense(part, key: 'split${i}Category');
         }
         if (allocated >= c.total) {
-          reject('Leave a positive final expense portion.');
+          reject(
+            'The splits must add up to less than the total, so something is left for the last category.',
+          );
         }
         c.expense(c.total - allocated, key: 'splitCategory');
       } else {
@@ -64,26 +66,28 @@ void planCard(FinanceRuleContext c) {
             s.current.any(
               (r) => r.id != c.old?.id && r.values['authorization'] == auth.id,
             )) {
-          reject('Authorization already used or belongs to another card.');
+          reject(
+            'That pending charge was already used, or it’s on another card.',
+          );
         }
         c.source = auth.id;
       }
       c.effects.add(
-        'Spending uses the transaction date. Provider posting date is $posted; no cash moves.',
+        'Spending counts on the purchase date. It posted on $posted. No cash moves.',
       );
     case 'cardPayment':
       c.total = c.money('amount');
       c.cash(-c.total);
       c.post('card_liability', c.total);
       c.effects.add(
-        'Repayment is not another purchase expense. Excess payment is noncash card credit.',
+        'This isn’t new spending. Anything above what you owe becomes card credit, which isn’t cash.',
       );
     case 'cardRefund':
       final purchase = c.ref('purchase', {'cardPurchase'});
       if (purchase.values['card'] != card.actionId ||
           purchase.date.compareTo(c.date) > 0) {
         reject(
-          'Use the matching current purchase or Shared Expenses refund workflow.',
+          'Choose a purchase on this card, dated on or before the refund. A shared purchase is refunded in Shared Expenses.',
         );
       }
       c.total = c.money('amount');
@@ -112,7 +116,7 @@ void planCard(FinanceRuleContext c) {
             ),
       );
       if (c.total + used > available) {
-        reject('Refund exceeds the original category portion.');
+        reject('That’s more than is left to refund in this category.');
       }
       c.text('reason');
       c.kind = 'refund';
@@ -121,7 +125,7 @@ void planCard(FinanceRuleContext c) {
       if (sharedPurchase) {
         c.post('shared_clearing', -c.total);
         c.effects.add(
-          'Actual card credit is retained in clearing until explicit group-refund adoption.',
+          'The card credit waits until you apply it in Shared Expenses.',
         );
       } else {
         c.expense(-c.total);
@@ -134,18 +138,20 @@ void planCard(FinanceRuleContext c) {
       if (start.compareTo(end) > 0 ||
           end.compareTo(issued) > 0 ||
           issued.compareTo(due) > 0) {
-        reject('Review statement cycle, issue and due dates.');
+        reject(
+          'Check the dates: the period ends by the statement date, and the due date comes last.',
+        );
       }
       c.total = c.money('amount', zero: true, signed: true);
       if (c.value('minimum').isNotEmpty) {
         final minimum = c.money('minimum', zero: true);
         if (minimum > (c.total > BigInt.zero ? c.total : BigInt.zero)) {
-          reject('Minimum due exceeds the positive statement balance.');
+          reject('The minimum due can’t be more than the statement balance.');
         }
       }
       c.text('reference');
       if (c.value('verified') != 'true') {
-        reject('Confirm the provider statement evidence.');
+        reject('Confirm this matches your statement.');
       }
     case 'statementLink':
       final statement = c.ref('statement', {'statement'});
@@ -164,10 +170,14 @@ void planCard(FinanceRuleContext c) {
                 financeType(r) == op &&
                 r.values['activity'] == activity.id,
           )) {
-        reject('Statement activity is foreign or already linked.');
+        reject(
+          'Choose activity on this card that isn’t already matched to a statement.',
+        );
       }
       if (c.value('verified') != 'true') {
-        reject('Confirm provider membership; dates alone do not establish it.');
+        reject(
+          'Confirm this is on the statement. Dates alone can’t show that.',
+        );
       }
       c.source = activity.id;
     case 'cardAllocation':
@@ -177,17 +187,19 @@ void planCard(FinanceRuleContext c) {
           payment.values['card'] != card.actionId ||
           payment.date.compareTo(c.date) > 0 ||
           statement.values['issued']!.compareTo(c.date) > 0) {
-        reject('Allocation sources or date are incompatible.');
+        reject(
+          'Choose a statement and a payment on this card. The date can’t be before either of them.',
+        );
       }
       c.total = c.money('amount');
       if (c.total + c.used(op, 'payment', payment.id) > payment.amount ||
           c.total + c.used(op, 'statement', statement.id) > statement.amount) {
         reject(
-          'Allocation exceeds confirmed payment/credit or statement remaining due.',
+          'That’s more than is left on this payment or still due on this statement.',
         );
       }
       if (c.value('verified') != 'true') {
-        reject('Confirm the actual provider allocation.');
+        reject('Confirm your card issuer applied it this way.');
       }
       c.source = payment.id;
     case 'installment':
@@ -201,7 +213,9 @@ void planCard(FinanceRuleContext c) {
           c.value('interest').isNotEmpty ||
           c.value('fee').isNotEmpty) {
         if (['principal', 'interest', 'fee'].any((k) => c.value(k).isEmpty)) {
-          reject('Supply all confirmed components or leave all unknown.');
+          reject(
+            'Enter principal, interest and fee together, or leave all three blank.',
+          );
         }
         if (sumMinor(
                   [
@@ -217,7 +231,9 @@ void planCard(FinanceRuleContext c) {
                       .where((p) => p.ledger == 'card_liability')
                       .map((p) => p.amount),
                 )) {
-          reject('Provider installment components do not reconcile.');
+          reject(
+            'Principal, interest and fee must add up to the plan’s total, and principal can’t be more than the purchase.',
+          );
         }
       }
       if (s.current.any(
@@ -226,10 +242,12 @@ void planCard(FinanceRuleContext c) {
             financeType(r) == op &&
             r.values['purchase'] == purchase.id,
       )) {
-        reject('This purchase already has a current installment plan.');
+        reject('This purchase already has an installment plan.');
       }
       if (c.value('verified') != 'true') {
-        reject('Confirm provider dates and amounts.');
+        reject(
+          'Confirm these dates and amounts match your card issuer’s plan.',
+        );
       }
       c.text('reference');
       c.source = purchase.id;
@@ -241,12 +259,12 @@ void planCard(FinanceRuleContext c) {
       });
       if (plan.values['card'] != card.actionId ||
           statement.values['card'] != card.actionId) {
-        reject('Choose matching provider application sources.');
+        reject('Choose a plan and a matched payment on this card.');
       }
       final row = financeSchedule(plan.values['schedule']!)
           .where((r) => r.id == c.value('row'))
           .firstOrNull;
-      if (row == null) reject('Choose a current scheduled installment.');
+      if (row == null) reject('Choose a payment in this plan.');
       c.total = c.money('amount');
       final usedRow = sumMinor(
         s.current
@@ -262,11 +280,11 @@ void planCard(FinanceRuleContext c) {
       if (c.total + usedRow + row.paid > row.amount ||
           c.total + c.used(op, 'payment', allocation.id) > allocation.amount) {
         reject(
-          'Application exceeds installment or actual allocation capacity.',
+          'That’s more than is left on this installment or on the matched payment.',
         );
       }
       if (c.value('verified') != 'true') {
-        reject('Confirm provider application evidence.');
+        reject('Confirm your card issuer applied it this way.');
       }
       c.source = allocation.id;
     default:
@@ -284,7 +302,7 @@ class FinanceScheduleRow {
 List<FinanceScheduleRow> financeSchedule(String input) {
   final lines = input.trim().split('\n');
   if (lines.isEmpty || lines.length > 120) {
-    reject('Supply 1–120 explicit provider installments.');
+    reject('Enter 1 to 120 payments.');
   }
   final seen = <String>{};
   final result = <FinanceScheduleRow>[];
@@ -297,18 +315,18 @@ List<FinanceScheduleRow> financeSchedule(String input) {
         cells[0].length > 100 ||
         !seen.add(cells[0])) {
       reject(
-        'Use unique installment labels, date, amount and optional historical paid amount.',
+        'Put each payment on its own line: a name used once, the date, the amount and, if any, what’s already paid.',
       );
     }
     final date = civilDate(cells[1]);
     if (previous != null && date.compareTo(previous) < 0) {
-      reject('List installments in due-date order.');
+      reject('List the payments in date order.');
     }
     previous = date;
     final amount = component(parsePhp(cells[2]), positive: true);
     final paid = cells.length == 4 ? parsePhp(cells[3]) : BigInt.zero;
     if (paid > amount) {
-      reject('Historical paid amount exceeds the installment.');
+      reject('What’s already paid can’t be more than the payment.');
     }
     result.add(FinanceScheduleRow(cells[0], date, amount, paid));
   }

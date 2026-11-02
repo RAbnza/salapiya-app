@@ -29,7 +29,10 @@ LocalRevision financeSource(LocalSnapshot s, String id, Set<String> types) {
             (r.id == id || r.actionId == id) && types.contains(financeType(r)),
       )
       .firstOrNull;
-  return r ?? reject('The current owned financial source is unavailable.');
+  return r ??
+      reject(
+        'This record isn’t available any more. Go back and choose it again.',
+      );
 }
 
 BigInt financeBalance(
@@ -86,10 +89,10 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
         values['replaceVersion'] != '${replaced.number}' ||
         !nativeFinanceCommands.contains(financeType(replaced)) ||
         replaced.values.containsKey('sharedGroup')) {
-      reject('Review the current financial source in its own workflow.');
+      reject('This record can’t be changed here. Open its current version.');
     }
     if ((values['reason'] ?? '').trim().isEmpty) {
-      reject('Explain the correction.');
+      reject('Say why you’re changing this.');
     }
     if ([
           'reservation',
@@ -106,7 +109,7 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
               'recurrence',
             ].contains(financeType(replaced))) {
       reject(
-        'Use the explicit management, occurrence decision or link-reversal workflow. Preserve its history.',
+        'This can’t be changed here. Open the item in Planning and use its own actions.',
       );
     }
     if (!(operation == 'financeCorrection' &&
@@ -117,7 +120,7 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
               financeType(r) != 'financialFile' &&
               financeDependsOn(r, replaced),
         )) {
-      reject('Resolve dependent financial evidence first.');
+      reject('Other records depend on this one. Reverse those first.');
     }
     if (operation == 'financeReversal') {
       FinanceRuleContext(
@@ -143,7 +146,7 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
           source: replaced.source,
         ),
         effects: [
-          'Void the current effect at its original dates. Retain every revision.',
+          'This cancels its effect from its original dates. Earlier versions stay in Edit history.',
         ],
       );
     }
@@ -179,9 +182,7 @@ LocalPlan planNativeFinance(LocalSnapshot s, LocalCommand command) {
         previous: link.id,
         source: link.source,
       ),
-      effects: [
-        'Reverse this exact planning link. Actual money stays unchanged.',
-      ],
+      effects: ['This removes the link. Your money doesn’t change.'],
     );
   }
   return context.finish();
@@ -258,7 +259,7 @@ class FinanceRuleContext {
   void cash(BigInt n) {
     final a = s.account(text('account'));
     if (a.archived || date.compareTo(a.cutoff) <= 0) {
-      reject('Choose an active cash account after its cutoff.');
+      reject('Choose an active account, with a date after its balance starts.');
     }
     post('cash', n, account: a.id);
   }
@@ -286,10 +287,10 @@ class FinanceRuleContext {
   );
   LocalPlan finish() {
     if (title.isEmpty || title.length > 2000) {
-      reject('Enter a financial description.');
+      reject('Enter a description.');
     }
     if (sumMinor(posts.map((p) => p.amount)) != BigInt.zero) {
-      reject('The financial evidence is unbalanced.');
+      reject('This record doesn’t add up. Check the amounts.');
     }
     validateDebtProjection(this);
     final accounts = [
@@ -316,7 +317,9 @@ class FinanceRuleContext {
                     ) <
                 BigInt.zero &&
             value('acknowledge') != 'true') {
-          reject('Acknowledge the resulting negative cash balance.');
+          reject(
+            'This would take the account to a negative balance. Confirm that’s right to go on.',
+          );
         }
       }
     }
@@ -339,8 +342,7 @@ class FinanceRuleContext {
         ...effects,
         for (final p in posts)
           '${p.ledger.replaceAll('_', ' ')}: ${phpDecimal(p.amount)} PHP on ${p.date}.',
-        if (posts.isEmpty)
-          'Evidence only. Cash, spending and liability are unchanged.',
+        if (posts.isEmpty) 'No money moves.',
       ],
     );
   }

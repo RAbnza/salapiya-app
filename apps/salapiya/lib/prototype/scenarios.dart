@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'fixtures.dart';
 import '../features/finance/application/financial_controller.dart';
 import '../features/planning/application/planning_controller.dart';
-import '../features/common/prototype_form.dart';
 import '../features/life/application/life_controller.dart';
 import '../features/profile/application/profile_controller.dart';
 
@@ -48,6 +47,7 @@ class PrototypeSession extends ChangeNotifier {
       life.reset(empty: true);
       scenario = OverviewScenario.local;
     }
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);
@@ -76,6 +76,7 @@ class PrototypeSession extends ChangeNotifier {
     finance = FinancialController()..reset(empty: empty);
     planning = PlanningController(finance)..reset(empty: empty);
     life = LifeController()..reset(empty: empty);
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);
@@ -83,7 +84,6 @@ class PrototypeSession extends ChangeNotifier {
     profile.name = name;
     profile.generation++;
     profile.profileId = 'demo-profile-${profile.generation}';
-    prototypeDrafts.clear();
     profile.changed();
     notifyListeners();
   }
@@ -102,6 +102,7 @@ class PrototypeSession extends ChangeNotifier {
     life = old.$3;
     scenario = old.$4;
     profile.name = old.$5;
+    finance.privacyHidden ??= () => hideAmounts;
     finance.addListener(notifyListeners);
     planning.addListener(notifyListeners);
     life.addListener(notifyListeners);
@@ -132,6 +133,9 @@ class PrototypeSession extends ChangeNotifier {
 
   OverviewScenario scenario = OverviewScenario.local;
   bool hideAmounts = false;
+
+  /// The group Shared Expenses opens on, when there are several.
+  String? sharedDefaultGroup;
 
   bool get empty =>
       scenario == OverviewScenario.empty && finance.accounts.isEmpty;
@@ -193,7 +197,6 @@ class PrototypeSession extends ChangeNotifier {
       old.$3.dispose();
     }
     recoveryCopies.clear();
-    prototypeDrafts.clear();
     scenario = OverviewScenario.local;
     hideAmounts = false;
     notifyListeners();

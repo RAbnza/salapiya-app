@@ -5,6 +5,7 @@ import 'package:salapiya/app.dart';
 import 'package:salapiya/gallery/settings.dart';
 import 'package:salapiya/local/local_profiles.dart';
 import 'package:salapiya/local/local_runtime.dart';
+import 'package:salapiya/life/career_pages.dart';
 import 'package:salapiya/life/life_controller.dart';
 import 'package:salapiya/life/life_domain.dart';
 import 'package:salapiya/features/life/application/life_controller.dart';
@@ -62,15 +63,9 @@ void main() {
             SalapiyaApp(session: runtime.session, settings: settings),
           );
           await localSettle(tester);
-          await localTap(
-            tester,
-            mobile
-                ? find.byKey(const ValueKey('navigation-fallback'))
-                : find.byTooltip('Navigation \u00b7 5 destinations'),
-          );
-          await localTap(tester, find.text('Life').last);
+          await localTap(tester, find.byKey(const ValueKey('nav-life')));
           await localTap(tester, find.text('Tasks').first);
-          expect(find.text('A durable accessible task'), findsOneWidget);
+          expect(find.text('A durable accessible task'), findsWidgets);
           expect(find.textContaining('View state:'), findsNothing);
           expect(find.text('Simulated outcome'), findsNothing);
           expect(
@@ -81,18 +76,20 @@ void main() {
           await localTap(tester, find.text('Career').first);
           await localTap(tester, find.text('Synthetic salary employer'));
           expect(find.text('12345.67'), findsNothing);
-          expect(find.text('Hidden'), findsWidgets);
+          expect(find.text('Amount hidden'), findsWidgets);
           await tester.runAsync(() async {
             runtime.session!.togglePrivacy();
           });
           await localSettle(tester);
-          expect(find.text('12345.67'), findsWidgets);
-          await localTap(tester, find.byType(BackButton));
+          expect(find.text('From ₱12,345.67 a month'), findsWidgets);
+          Navigator.of(tester.element(find.byType(LifeApplicationPage))).pop();
+          await localSettle(tester);
           await localTap(tester, find.text('Calendar').first);
           expect(find.text('Demo today'), findsNothing);
           expect(tester.takeException(), isNull);
+          await localTap(tester, find.byTooltip('Calendar options'));
           await localTap(tester, find.text('Preferences & help'));
-          expect(find.textContaining('Visibility changes'), findsOneWidget);
+          expect(find.text('Show in Life'), findsOneWidget);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           await localSettle(tester);

@@ -6,6 +6,7 @@ import 'design_system/theme.dart';
 import 'gallery/gallery.dart';
 import 'gallery/settings.dart';
 import 'app/shell.dart';
+import 'app/title_bar.dart';
 import 'app/window_chrome.dart';
 import 'prototype/scenarios.dart';
 import 'local/local_profile_view.dart';
@@ -32,6 +33,7 @@ class SalapiyaApp extends StatefulWidget {
 
 class _SalapiyaAppState extends State<SalapiyaApp> {
   final navigator = GlobalKey<NavigatorState>();
+  final popups = PopupRouteTracker();
   static bool licensesRegistered = false;
   late final GallerySettings settings = widget.settings ?? GallerySettings();
   @override
@@ -59,10 +61,19 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
     listenable: settings,
     builder: (context, _) => MaterialApp(
       navigatorKey: navigator,
+      navigatorObservers: [popups],
       title: widget.production ? 'Salapiya' : 'Salapiya · Demo',
       debugShowCheckedModeBanner: false,
       theme: SalapiyaTheme.build(Brightness.light),
       darkTheme: SalapiyaTheme.build(Brightness.dark),
+      highContrastTheme: SalapiyaTheme.build(
+        Brightness.light,
+        highContrast: true,
+      ),
+      highContrastDarkTheme: SalapiyaTheme.build(
+        Brightness.dark,
+        highContrast: true,
+      ),
       themeMode: settings.themeMode,
       themeAnimationDuration: Duration.zero,
       builder: (context, child) {
@@ -83,7 +94,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
                 outlinedButtonTheme: OutlinedButtonThemeData(
@@ -91,7 +102,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
                 textButtonTheme: TextButtonThemeData(
@@ -99,7 +110,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                     animationDuration:
                         settings.reduceMotion || media.disableAnimations
                         ? Duration.zero
-                        : const Duration(milliseconds: 120),
+                        : Motion.quick,
                   ),
                 ),
               ),
@@ -117,7 +128,7 @@ class _SalapiyaAppState extends State<SalapiyaApp> {
                   production:
                       widget.production ||
                       (widget.session?.production ?? false),
-                  child: WindowChrome(child: child!),
+                  child: WindowChrome(popups: popups, child: child!),
                 ),
               ),
             ),

@@ -9,7 +9,7 @@ const nativePlanningCommands = {
 String planningDate(String input, {bool exclusive = false}) {
   final date = civilDate(input);
   if (date.compareTo(exclusive ? '2200-01-01' : '2199-12-31') > 0) {
-    reject('Planning dates support 1900–2199.');
+    reject('Choose a date from 1900 to 2199.');
   }
   return date;
 }
@@ -78,11 +78,13 @@ void planPlanning(FinanceRuleContext c) {
           .difference(DateTime.parse('${start}T00:00:00Z'))
           .inDays;
       if (days < 1 || days > 366) {
-        reject('Budget periods use 1–366 days with an exclusive end.');
+        reject('A budget covers 1 to 366 days. Check its first and last day.');
       }
       if (!['net', 'gross'].contains(c.value('basis')) ||
           !['active', 'archived'].contains(c.value('status'))) {
-        reject('Choose budget spending basis and lifecycle.');
+        reject(
+          'Choose what counts as spending and whether this budget is active.',
+        );
       }
       if (s.current.any(
         (r) =>
@@ -93,31 +95,31 @@ void planPlanning(FinanceRuleContext c) {
             start.compareTo(r.values['endExclusive']!) < 0,
       )) {
         reject(
-          'This category already has an overlapping budget, including archived periods.',
+          'This category already has a budget for some of these dates, maybe an archived one.',
         );
       }
       c.effects.add(
-        'Spending allowance only. Net/gross comparisons use the whole explicit period; no money is posted.',
+        'A spending limit only. It compares the whole period, and no money moves.',
       );
     case 'savingsGoal':
       c.total = c.money('amount', wide: true);
       if (c.value('targetDate').isNotEmpty) planningDate(c.value('targetDate'));
       if (!['active', 'completed', 'archived'].contains(c.value('status'))) {
-        reject('Choose an explicit goal state.');
+        reject('Choose this goal’s status.');
       }
       if (c.value('status') == 'archived' &&
           savingsReserved(s, goal: c.old?.actionId ?? c.command.id) !=
               BigInt.zero) {
-        reject('Release reservations explicitly before archiving this goal.');
+        reject(
+          'Release the money set aside for this goal before archiving it.',
+        );
       }
-      c.effects.add(
-        'Goal target and state are management evidence, not an asset or automatic transfer.',
-      );
+      c.effects.add('A goal is a plan. It doesn’t hold or move money.');
     case 'reservation':
     case 'savingsReallocation':
       if (c.old != null) {
         reject(
-          'Change reservations through a new reviewed absolute reservation or reallocation. Preserve earlier decisions.',
+          'To change this, set a new amount or move the money to another goal.',
         );
       }
       final goal = c.ref('goal', {'savingsGoal'});
@@ -136,7 +138,7 @@ void planPlanning(FinanceRuleContext c) {
         v['delta'] = '$increase';
       } else {
         if (c.total == BigInt.zero) {
-          reject('Reallocate a positive reserved amount.');
+          reject('Enter an amount to move.');
         }
         final origin = c.ref('fromGoal', {'savingsGoal'});
         final fromAccount = s.account(c.text('fromAccount'));
@@ -149,7 +151,7 @@ void planPlanning(FinanceRuleContext c) {
                   account: fromAccount.id,
                 )) {
           reject(
-            'Choose distinct reservations with sufficient existing reserved money.',
+            'Choose two different places, and no more than what’s set aside there.',
           );
         }
         increase = fromAccount.id == account.id ? BigInt.zero : c.total;
@@ -161,12 +163,12 @@ void planPlanning(FinanceRuleContext c) {
             account.cutoff.compareTo(c.date) > 0 ||
             total + increase > eligibleSavings(s, account.id, c.date)) {
           reject(
-            'New or increased reservations require an active goal and supported actual cash capacity.',
+            'You can set aside more only on an active goal, and only what this account holds that isn’t already set aside.',
           );
         }
       }
       c.effects.add(
-        'Reservations remain separate from actual liquid assets. Spending may subsequently underfund them; no goal wins automatically.',
+        'Money set aside stays in your account. If you spend it, Salapiya shows the shortfall and doesn’t choose a goal for you.',
       );
     default:
       reject('Unsupported planning command.');

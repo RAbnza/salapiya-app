@@ -5,7 +5,6 @@ enum GallerySection {
   typography('Typography', Icons.text_fields_rounded),
   actions('Actions & forms', Icons.tune_rounded),
   finance('Money specimens', Icons.account_balance_wallet_outlined),
-  navigation('Navigation studies', Icons.space_dashboard_outlined),
   overlays('Overlays & review', Icons.layers_outlined),
   feedback('Feedback & status', Icons.chat_bubble_outline_rounded),
   branding('Brand & craft', Icons.texture_rounded);

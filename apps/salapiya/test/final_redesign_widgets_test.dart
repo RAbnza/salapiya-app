@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/design_system/theme.dart';
-import 'package:salapiya/design_system/workspace.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
+import 'package:salapiya/design_system/kit/review.dart';
+
+import 'shell_journey.dart' show newItem;
 
 void main() {
   testWidgets(
@@ -19,47 +22,12 @@ void main() {
       await tester.pumpWidget(const SalapiyaApp());
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('floating-dock-surface')), findsNothing);
-      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.tap(find.byKey(const ValueKey('shell-new')));
       await tester.pumpAndSettle();
-      expect(find.text('Transfer money'), findsOneWidget);
+      expect(newItem('Log a transfer'), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.text('Transfer money'), findsNothing);
-      expect(tester.takeException(), isNull);
-      debugDefaultTargetPlatformOverride = null;
-    },
-  );
-
-  testWidgets(
-    'help expansion never reads the parent scroll offset as its state',
-    (tester) async {
-      final scroll = ScrollController();
-      addTearDown(scroll.dispose);
-      Widget page(bool show) => MaterialApp(
-        theme: SalapiyaTheme.build(Brightness.light),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            key: const PageStorageKey('destination-regression'),
-            controller: scroll,
-            child: Column(
-              children: [
-                const SizedBox(height: 600),
-                if (show)
-                  const WorkspaceHelp(
-                    title: 'Card accounting',
-                    text: 'Card credit is not cash.',
-                  ),
-                const SizedBox(height: 600),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pumpWidget(page(false));
-      scroll.jumpTo(300);
-      await tester.pumpAndSettle();
-      await tester.pumpWidget(page(true));
-      await tester.pumpAndSettle();
+      expect(newItem('Log a transfer'), findsNothing);
       expect(tester.takeException(), isNull);
       debugDefaultTargetPlatformOverride = null;
     },
@@ -114,47 +82,40 @@ void main() {
     },
   );
 
-  testWidgets(
-    'task menus retain secondary commands at narrow width and 200 percent text',
-    (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-
-      tester.view.physicalSize = const Size(320, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      String? chosen;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: SalapiyaTheme.build(Brightness.dark),
-          home: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-            child: Scaffold(
-              body: SingleChildScrollView(
-                child: WorkspaceActionGroup(
-                  title: 'Statements',
-                  description: 'Provider evidence for your card.',
-                  icon: Icons.description_outlined,
-                  actions: const {
-                    'statement': 'Record statement',
-                    'link': 'Link activity',
-                    'allocate': 'Allocate payment',
-                  },
-                  onSelected: (v) => chosen = v,
-                ),
-              ),
-            ),
-          ),
+  testWidgets('leaving a form with no draft is a destructive confirmation', (
+    tester,
+  ) async {
+    final nav = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: nav,
+        theme: SalapiyaTheme.build(Brightness.light),
+        home: const Scaffold(body: Text('Home')),
+      ),
+    );
+    nav.currentState!.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const FormExitGuard(
+          dirty: true,
+          busy: false,
+          child: Scaffold(body: Text('Unposted form')),
         ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Statements actions'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Allocate payment'));
-      await tester.pumpAndSettle();
-      expect(chosen, 'allocate');
-      expect(tester.takeException(), isNull);
-      debugDefaultTargetPlatformOverride = null;
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    await nav.currentState!.maybePop();
+    await tester.pumpAndSettle();
+    // §5: the kit's dialog, a red main action, focus on the safe choice.
+    expect(find.text('Discard your changes?'), findsOneWidget);
+    final discard = tester.widget<AppButton>(
+      find.widgetWithText(AppButton, 'Discard changes'),
+    );
+    expect(discard.variant, AppButtonVariant.destructive);
+    final keep = find.widgetWithText(AppButton, 'Keep editing');
+    expect(tester.widget<AppButton>(keep).autofocus, isTrue);
+    await tester.tap(find.text('Discard changes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

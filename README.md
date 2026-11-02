@@ -1,49 +1,109 @@
-# Personal Management Platform
+<p align="center">
+  <img src="apps/salapiya/assets/branding/display/salapiya_mark.png" alt="Salapiya logo" width="120">
+</p>
 
-**Salapiya `0.6.1+8`: OWNER-APPROVED FULL RELEASE. Development COMPLETE.**
-Start with [final release, installer/APK paths, hashes and installation/recovery instructions](docs/salapiya/FINAL_RELEASE_AND_PROJECT_CLOSURE.md).
-The release is for the owner and their three brothers, with documented owner-accepted
-limitations. [Product and platform blueprint](docs/SALAPIYA_PRODUCT_AND_PLATFORM_BLUEPRINT.md) · [Browse all documents](docs/README.md).
+<h1 align="center">Salapiya</h1>
 
-**Existing web application identity: Personal workspace.** The web application and its tooling remain an executable reference alongside the completed Salapiya native application.
+<p align="center">Keep track of your money and your day, on Windows and Android, even offline.</p>
 
-Private personal management application with exact PHP financial workflows, accounts/debts/cards/planning, Career, source-driven Calendar/reminders, reports/CSV, shared expenses with separate group authority, versioned custom Trackers, onboarding, files/imports/private graph restore and account lifecycle.
+<p align="center">
+  <img src="https://img.shields.io/badge/release-0.6.1%2B8-7c3aed" alt="Release 0.6.1+8">
+  <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Android-informational" alt="Platforms: Windows and Android">
+  <img src="https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.7">
+  <a href="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml"><img src="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml/badge.svg" alt="Salapiya Flutter validation"></a>
+  <img src="https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey" alt="License: all rights reserved">
+</p>
 
-| Stage           | Verified status / evidence                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| V1              | Completed under its documented functional/local acceptance scope, with recorded hosted CI evidence; [handoff](docs/reference/PROJECT_DEVELOPMENT_HANDOFF.md) and [acceptance](docs/reference/verification/V1_C5_ACCEPTANCE.md). Production-dependent gates were separate.                                                                                                                                                                        |
-| V2-A–I          | Completed under documented acceptance scopes; [handoff, including final V2-I acceptance](docs/reference/V2_DEVELOPMENT_HANDOFF.md#30-v2-i-assignment-2---complete-domain-and-consolidated-acceptance). No production-release claim.                                                                                                                                                                                                              |
-| V3-A–D          | Completed and locally accepted under the approved targeted strategy; [handoff](docs/reference/V3_DEVELOPMENT_HANDOFF.md), [impact matrix](docs/reference/V3_TARGETED_ACCEPTANCE.md). Separately, [automatic CI at `239c360`](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106) passed 1,104 unit, 681 integration and 62 browser tests, migration/build/restore/container checks and production dependency audit. |
-| Web redesign    | M1?M6 are integrated into the merged web baseline recorded in the [Salapiya blueprint](docs/SALAPIYA_PRODUCT_AND_PLATFORM_BLUEPRINT.md); [M6 acceptance and limitations](docs/reference/REDESIGN_M6_ACCEPTANCE.md).                                                                                                                                                                                                                              |
-| Salapiya native | `0.6.1+8`, **OWNER-APPROVED FULL RELEASE** for the owner and three brothers; development **COMPLETE**. [Final release and project closure](docs/salapiya/FINAL_RELEASE_AND_PROJECT_CLOSURE.md) records artifacts, owner acceptance, historical evidence and accepted limitations.                                                                                                                                                                |
+## Table of Contents
 
-[ADR 0005](docs/reference/adr/0005-v3-scope-and-platform-transition.md) keeps the existing web application as the implementation/verification environment through redesign. Current web production deployment/readiness completion is no longer planned. Local and CI evidence do not establish production readiness, real cloud/provider activation, or human/hosted product acceptance. Historical handoffs retain their original phase boundaries; follow their latest accepted sections and the current approved roadmap.
+- [About](#about)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Tech Stack](#tech-stack)
+- [Roadmap](#roadmap)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+- [Acknowledgments](#acknowledgments)
 
-## Salapiya native development
+## About
 
-The completed Windows/Android application lives in [`apps/salapiya/`](apps/salapiya/README.md).
-See [final release and installation](docs/salapiya/FINAL_RELEASE_AND_PROJECT_CLOSURE.md)
-and [operations, signing and recovery](docs/salapiya/PRIVATE_RELEASE_OPERATIONS.md).
-P0-P6 records preserve historical development evidence; their earlier gate
-classifications are superseded only within the owner's final approved scope.
-The completed web application and its setup below remain an executable reference.
+**The problem.** Money moves through a lot of places at once: bank accounts, e-wallets, credit cards, debts you're paying off, and bills you split with family and friends. Keeping it all in your head (or a spreadsheet) means you never quite know what you have, what's due, or who owes whom. Most apps that help want a bank connection or an always-online account.
 
-## Project documentation
+**Who it's for.** People who want a clear, private record of their own money activity, and small groups (family, friends, housemates) who share expenses. Amounts are in Philippine pesos.
 
-The [Salapiya blueprint](docs/SALAPIYA_PRODUCT_AND_PLATFORM_BLUEPRINT.md) is the current planning starting point. Earlier documents live in the [reference library](docs/reference/README.md) and preserve product and technical contracts within their documented scope. The blueprint explains which future-product decisions it supersedes.
+**What makes it different.**
 
-- [Product vision and feature blueprint](docs/reference/PROJECT_VISION_AND_FEATURE_BLUEPRINT.md)
-- [System architecture](docs/reference/SYSTEM_ARCHITECTURE.md)
-- [Database architecture](docs/reference/DATABASE_ARCHITECTURE.md)
-- [Design system and visual guidelines](docs/reference/DESIGN_SYSTEM_AND_VISUAL_GUIDELINES.md)
-- [V3 handoff](docs/reference/V3_DEVELOPMENT_HANDOFF.md) and [targeted acceptance](docs/reference/V3_TARGETED_ACCEPTANCE.md)
-- [Approved comprehensive UI/UX redesign plan](docs/reference/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md)
-- [Approved redesign milestones](docs/reference/UI_UX_REDESIGN_MILESTONES.md)
-- [Owner decisions and deferred platform questions](docs/reference/UI_UX_REDESIGN_DECISIONS_REQUIRED.md)
+- **It's a record, not a bank.** Salapiya tracks money activity that happens elsewhere. It never moves, lends, borrows or pays money itself.
+- **Offline first.** Your profile lives on your device, encrypted. Everything works without an internet connection; signing in with Google is optional and only adds sync between your devices and shared groups.
+- **Exact money.** Amounts are stored as whole centavos, never floating point. A correction never overwrites what you recorded; it keeps the original and adds the fix.
+- **One app, two platforms.** Windows and Android share one Flutter codebase and one design system, with layouts that adapt to each.
 
-## Local setup
+This repository also holds the earlier **web version** (`src/`, Next.js and PostgreSQL). It is kept as a working reference for the financial rules, tests and migrations, and is not deployed ([ADR 0005](docs/adr/0005-v3-scope-and-platform-transition.md)).
 
-Install Node **24.21.0**, pnpm **12.9.1** and Docker Desktop. Run `pnpm install --frozen-lockfile`. Copy `.env.docker.example`, `.env.bootstrap.example`, `.env.migration.example`, `.env.test.example` and `.env.example` to their corresponding filenames without `.example`. Keep local passwords consistent between the examples. Never commit environment files or use these public development secrets in production.
+## Screenshots
+
+All screenshots use the app's built-in synthetic demo data. Full sets for both platforms and both themes are in [`docs/screenshots/`](docs/screenshots/).
+
+**Overview.** The home screen: available money, what's due next, debt progress and recent activity at a glance.
+
+| Windows | Android |
+| --- | --- |
+| <img src="docs/screenshots/windows-light-overview.png" alt="Overview on Windows, light theme" width="560"> | <img src="docs/screenshots/android-light-overview.png" alt="Overview on Android, light theme" width="220"> |
+
+**Money and Debts.** Accounts, activity, cards, planning and reports in Money; every debt with its schedule, payments and what's due next in Debts.
+
+| Money (Windows) | Debts (Android, dark) |
+| --- | --- |
+| <img src="docs/screenshots/windows-light-money.png" alt="Money on Windows, light theme" width="560"> | <img src="docs/screenshots/android-dark-debts.png" alt="Debts on Android, dark theme" width="220"> |
+
+**Shared Expenses and Life.** Split bills with a group and see who owes whom; keep your agenda, tasks, learning, books and career applications next to your money.
+
+| Shared Expenses (Windows, dark) | Life (Android) |
+| --- | --- |
+| <img src="docs/screenshots/windows-dark-shared.png" alt="Shared Expenses on Windows, dark theme" width="560"> | <img src="docs/screenshots/android-light-life.png" alt="Life on Android, light theme" width="220"> |
+
+## Features
+
+- **Money:** accounts, income and expenses, splits, transfers and fees, corrections and reversals, reports, CSV import and export.
+- **Debts and cards:** debts with payment schedules and urgency, credit cards with statements and installments, recurring bills.
+- **Planning:** budgets, savings goals and forecasts.
+- **Shared Expenses:** groups with invitations and roles, exact payer and share amounts, settlements the recipient confirms, and a private record of your own side of each bill.
+- **Life:** events, agenda and reminders, tasks, learning, books, and career applications and interviews.
+- **Profiles and data:** encrypted offline profiles, optional Google sign-in for sync and shared groups, encrypted backups you can restore on a new device.
+- **Look and feel:** light, dark and high-contrast themes, keyboard navigation on Windows, and text that scales.
+
+## Getting Started
+
+### Prerequisites
+
+- [Flutter](https://docs.flutter.dev/get-started/install) **3.47.7** (Dart **3.13.5**). Other versions may work but aren't tested.
+- **Windows builds:** Windows 10 or 11 (x64) with Visual Studio and its *Desktop development with C++* workload.
+- **Android builds:** the Android SDK and an emulator or a phone with USB debugging. The tested emulator is a Pixel 9 profile on Android 17 (API 37).
+
+Check your setup with `flutter doctor`.
+
+### Installation
+
+```powershell
+git clone https://github.com/RAbnza/Personal-Management-Platform.git
+cd Personal-Management-Platform/apps/salapiya
+flutter pub get --enforce-lockfile
+flutter run -d windows
+```
+
+The app starts offline and creates an encrypted profile on your device. Without Google configuration, the sign-in option explains that it's unavailable; everything else works.
+
+Release builds (a Windows installer and a signed APK) are shared privately and aren't published here. How they're installed, updated and restored is in [Operations and release](docs/OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure).
+
+<details>
+<summary>Running the web reference app</summary>
+
+Install Node **24.21.0**, pnpm **12.9.1** and Docker Desktop, then run `pnpm install --frozen-lockfile` from the repository root. Copy `.env.docker.example`, `.env.bootstrap.example`, `.env.migration.example`, `.env.test.example` and `.env.example` to the same names without `.example`, keeping the local passwords consistent between them. Never commit environment files or use these development secrets in production.
 
 1. `pnpm services:up`
 2. `pnpm db:provision:roles`
@@ -53,33 +113,102 @@ Install Node **24.21.0**, pnpm **12.9.1** and Docker Desktop. Run `pnpm install 
 6. `pnpm db:setup:test`
 7. `pnpm db:migrate:test`
 8. `pnpm jobs:migrate:test`
-9. Configure security-email encryption and start the separate worker as described in [operations](docs/reference/V1_OPERATIONS.md).
-10. `pnpm dev`; open `http://localhost:3000`. Mailpit is at `http://localhost:8025`.
+9. Configure security-email encryption and start the separate worker as described in [operations](docs/OPERATIONS_AND_RELEASE.md#v1-operations).
+10. `pnpm dev`, then open `http://localhost:3000`. Mailpit is at `http://localhost:8025`.
 
-Migration credentials belong to deployment commands. The web runtime uses only `app_domain` and `auth_adapter`. The worker has separate queue/auth-maintenance/lifecycle connections. No runtime uses `SET ROLE`, table ownership or `BYPASSRLS`.
+Migration credentials belong to deployment commands only. The web runtime uses just `app_domain` and `auth_adapter`, and the worker has its own queue, auth-maintenance and lifecycle connections. No runtime uses `SET ROLE`, table ownership or `BYPASSRLS`.
 
-## Verification
+</details>
 
-For assigned redesign milestones, use the [approved change-impact strategy](docs/reference/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#145-approved-change-impact-verification-and-delivery-boundaries). M1–M5 test changed/affected components, workflows and shared contracts with relevant responsive/theme/keyboard/accessibility and correctness/security checks. M6 covers the complete redesigned screen/route inventory and meaningful cross-screen workflows/accessibility; it is not an automatic complete V1–V3 regression campaign. Broaden only for changed shared contracts, discovered failures or significant security/financial risks. Preserve assertions and existing CI; record executed tests, results, coverage, exclusions and rationale. Historical evidence supports unchanged behavior, not redesigned screens.
+## Usage
 
-The commands below are general full-suite and specialized verification references, not a requirement to run every campaign for each milestone. Documentation-only approval runs none of the application tests, builds, benchmarks or Docker operations. Broader automatic CI remains enabled and its outcomes are reported separately.
+Run these from `apps/salapiya`.
 
-For a separately justified full-suite run, use `pnpm check`, `pnpm test`, `pnpm test:integration`, `pnpm db:verify:chain`, `pnpm build`, then `pnpm test:browser`. On memory-constrained machines, use `pnpm test --maxWorkers=1 --pool=threads`; it runs the complete suite with the same assertions, isolation and timeouts. Install Playwright Chromium with `pnpm exec playwright install chromium`, or on Windows set `PMP_BROWSER_CHANNEL=msedge` to use installed Edge. Browser acceptance starts its own production server on port **3100** and refuses reuse of a user's development server.
+| Task | Command |
+| --- | --- |
+| Run on Windows | `flutter run -d windows` |
+| Run on Android | `flutter devices`, then `flutter run -d <device-id>` |
+| Try the synthetic demo | `flutter run -d windows --dart-define=SALAPIYA_DEMO=true` |
+| Run with Google sign-in and sync | `flutter run -d windows --dart-define-from-file=build/p2-public-defines.json` (see [Configuration](#configuration)) |
+| Check formatting | `dart format --output=none --set-exit-if-changed lib test integration_test tool` |
+| Analyze | `flutter analyze --no-pub` |
+| Run a test file | `flutter test --no-pub test/<file>_test.dart` |
+| Build for Windows | `flutter build windows` |
+| Build a debug APK | `flutter build apk --debug` |
+| Retake the screenshots | `flutter test integration_test/readme_screenshots_test.dart -d windows --dart-define=SCREENSHOT_DIR=<absolute path to docs/screenshots>` |
 
-Integration tests refuse databases other than `personal_management_test`. Migration verification creates and removes a uniquely named disposable database, proves a no-op repeat, and runs committed financial/lifecycle smoke checks. `pnpm db:verify:chain --upgrade` also preserves committed C4 balances and reports across the upgrade. Preserve numbered migrations; never use schema push. Generate reviewed additions with `pnpm db:generate`, test the chain before applying to development, and apply migrations once with the migration owner in the authorized environment; this is not an instruction to provision production.
+On Android, start the emulator with the VS Code task *Salapiya: start Android emulator* or `scripts/salapiya/start-emulator.cmd`. Native integration tests should use `--no-uninstall` so they don't remove an existing profile. The full test strategy is in [Verification](docs/OPERATIONS_AND_RELEASE.md#verification).
 
-`pnpm verify:performance` measures a guarded multi-year synthetic test dataset and 100 users/20 active callers against documented latency budgets. Its 50,000-action default can take considerable time with all financial integrity checks enabled; run it separately from final regressions. `pnpm verify:restore` performs the isolated encrypted local restore/deletion-register drill. Neither command proves production capacity or cloud retention. See operations for the separate controlled `pnpm backup:daily` deployment command.
+## Configuration
 
-If a capacity run is interrupted, `PMP_PERFORMANCE_RESUME_WORKSPACE_ID` accepts only the exact named synthetic owner/workspace in the isolated test database. The runner validates the contiguous committed purchase indices and resumes missing batches rather than disabling constraints or fabricating evidence. `PMP_PERFORMANCE_RETAIN_FIXTURE=true` retains that guarded fixture for diagnosis; remove it with the guarded named-fixture helper after review. The default run cleans up its fixture. Retained fixtures and test results are not production backups.
+The app needs no configuration to run offline. Google sign-in and sync use **public** build defines; `node prepare-p2.mjs` in `services/salapiya/p0` writes them to `apps/salapiya/build/p2-public-defines.json`. Never put secrets, sessions or signing passwords in defines.
 
-Build Linux artifacts with `docker build --target web --tag pmp-v1-c5-web .`, then the corresponding `worker` and `backup` targets/tags. `pnpm verify:containers` checks all three images against the isolated test database on the Compose network. It does not expose a public port, overwrite a running development service or pass administrator/migration credentials to the runtime containers. Alternate CI networks can set `PMP_TEST_DOCKER_NETWORK` and `PMP_TEST_DOCKER_DATABASE_HOST`.
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `SALAPIYA_SUPABASE_URL` | Build define | Supabase project URL for sign-in and the backend. |
+| `SALAPIYA_PUBLIC_KEY` | Build define | The project's public (anon) key. |
+| `SALAPIYA_POWERSYNC_URL` | Build define | PowerSync instance URL for sync. |
+| `SALAPIYA_ENVIRONMENT` | Build define | `development` (default) or `pilot`. A pilot also needs the two values below. |
+| `SALAPIYA_EXPECTED_PROJECT` | Build define | The pilot's Supabase project; must differ from development. |
+| `SALAPIYA_EXPECTED_SYNC_INSTANCE` | Build define | The pilot's PowerSync instance; must differ from development. |
+| `SALAPIYA_DEMO` | Build define | `true` opens the synthetic demo instead of a real profile. |
+| `SALAPIYA_KEYSTORE` | Environment | Android release keystore path. Release signing needs all four signing values or none. |
+| `SALAPIYA_STORE_PASSWORD` | Environment | Keystore password. |
+| `SALAPIYA_KEY_ALIAS` | Environment | Signing key alias. |
+| `SALAPIYA_KEY_PASSWORD` | Environment | Signing key password. |
+| `SALAPIYA_UNSIGNED_STAGING` | Environment | `true` allows an unsigned APK for diagnostics only; it can't be distributed. |
 
-## Product and release documentation
+An unknown or mixed environment refuses to connect and stays usable offline. Signing and environment details are in [private release operations](docs/OPERATIONS_AND_RELEASE.md#salapiya-private-release-operations).
 
-- [V1 user guide](docs/reference/V1_USER_GUIDE.md)
-- [Environment, deployment, worker and recovery operations](docs/reference/V1_OPERATIONS.md)
-- [Historical V1 acceptance evidence and conditional production gates](docs/reference/verification/V1_C5_ACCEPTANCE.md)
+## Tech Stack
 
-V1/V2/V3 acceptance records remain historical evidence within their stated scopes. Operational/provider checklists are conditional under ADR 0005, not active web-production provisioning tasks. Existing local setup, role isolation and recovery safeguards remain applicable.
+| Area | Technology |
+| --- | --- |
+| App | Flutter 3.47.7 / Dart 3.13.5 for Windows and Android |
+| Local data | SQLite (`sqlite3` 3.8.0) with encrypted local profiles |
+| Sign-in and sync | Supabase Auth with Google, Supabase PostgreSQL, PowerSync (`powersync` 2.5.0); backend migrations and functions in `services/salapiya/p0/` |
+| Design | An in-house design system and component kit (`lib/design_system/`), Geist type, light, dark and high-contrast themes |
+| Distribution | Unsigned Inno Setup installer (Windows), signed APK (Android) |
+| Testing | Flutter unit, widget and integration tests on Windows and the Android emulator |
+| Web reference app | Next.js 16.3.8, React 19.2.8, TypeScript, Drizzle ORM, PostgreSQL 17, Better Auth, pg-boss, Tailwind CSS 4, Vitest, Playwright |
 
-Adaptable Trackers: see [workflows](docs/reference/V3_TRACKER_WORKFLOWS.md), [targeted V3 acceptance](docs/reference/V3_TARGETED_ACCEPTANCE.md) and [deferred configuration](docs/reference/V3_MANUAL_ACTIONS_AND_DEFERRED_GATES.md). The V3 assignment uses change-impact verification; the existing full CI workflow remains enabled.
+## Roadmap
+
+- [x] Web app V1–V3 and its redesign (October 2026)
+- [x] Salapiya on Windows and Android: Money, Debts, Shared Expenses, Life, sync and backups
+- [x] Private release `0.6.1+8` (29 October 2026)
+- [x] Debt payment scheduling and urgency
+- [x] Full UI redesign and design system (November 2026)
+- [ ] Next major update: new features and changes built on the design system
+- [ ] Trusted Windows code signing and a wider range of tested phones
+
+Known limitations of the current release (unsigned Windows installer, attachments kept on the device, no store distribution) are listed in [accepted limitations](docs/OPERATIONS_AND_RELEASE.md#accepted-limitations). The full timeline is in [Development history](docs/DEVELOPMENT_HISTORY.md).
+
+## Documentation
+
+- [Product and features](docs/PRODUCT_AND_FEATURES.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Database](docs/DATABASE.md)
+- [Domain rules](docs/DOMAIN_RULES.md)
+- [Design system](docs/DESIGN_SYSTEM.md)
+- [Operations and release](docs/OPERATIONS_AND_RELEASE.md), including [native development setup](docs/OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation) and [testing](docs/OPERATIONS_AND_RELEASE.md#verification)
+- [Development history](docs/DEVELOPMENT_HISTORY.md)
+- [Architecture decision records](docs/adr/)
+
+## Contributing
+
+This is a personal project and I'm not taking pull requests right now. Bug reports and suggestions are welcome as [GitHub issues](https://github.com/RAbnza/Personal-Management-Platform/issues).
+
+## License
+
+This repository has no license file, so default copyright applies: all rights reserved. The bundled fonts are under the SIL Open Font License (`apps/salapiya/assets/fonts/*/OFL.txt`), and `src/components/patterns/magic-dock.LICENSE` covers that component.
+
+## Contact
+
+Rendel Abainza: [github.com/RAbnza](https://github.com/RAbnza)
+
+## Acknowledgments
+
+- [Flutter](https://flutter.dev), [Supabase](https://supabase.com) and [PowerSync](https://www.powersync.com), which the app is built on.
+- [Geist](https://vercel.com/font), [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) and [Source Sans 3](https://fonts.google.com/specimen/Source+Sans+3), bundled under the SIL Open Font License.
+- **How it was built:** development was AI-assisted. I set the scope, made the product and architecture decisions, and reviewed every milestone; the implementation was carried out with AI coding agents working from the repository instructions (`AGENTS.md`, `CLAUDE.md`). Each milestone ended with a written handoff and its verification evidence, kept under [`docs/archive/`](docs/DEVELOPMENT_HISTORY.md#phase-records).

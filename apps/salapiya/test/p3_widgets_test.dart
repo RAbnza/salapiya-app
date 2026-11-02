@@ -14,6 +14,16 @@ import 'package:salapiya/local/local_store.dart';
 import 'local_money_journey.dart';
 import 'local_test_support.dart';
 
+/// Leaves a form as Back or Esc does; it has no Close button of its own.
+Future<void> close(WidgetTester tester, Finder inside) async {
+  await tester
+      .state<NavigatorState>(
+        find.ancestor(of: inside, matching: find.byType(Navigator)).first,
+      )
+      .maybePop();
+  await localSettle(tester);
+}
+
 void main() {
   for (final mobile in [false, true]) {
     for (final theme in ['light', 'dark']) {
@@ -95,7 +105,8 @@ void main() {
                   {
                     'id': invitation,
                     'op': 'invite',
-                    'at': '2026-10-26T00:00:00Z',
+                    // Invitations stay open for seven days, so it's sent today.
+                    'at': '${civilToday()}T00:00:00Z',
                   },
                 ],
               });
@@ -118,13 +129,16 @@ void main() {
               ),
             );
             await localSettle(tester);
-            await localTap(tester, find.text('Open your groups').first);
+            await localTap(tester, find.byKey(const ValueKey('nav-shared')));
             await localWait(
               tester,
               () => find.text(name).evaluate().isNotEmpty,
             );
-            await localTap(tester, find.text('Add shared expense'));
-            final field = find.byKey(const ValueKey('shared-field-name'));
+            await localAction(tester, 'Add shared expense');
+            final field = find.descendant(
+              of: find.byKey(const ValueKey('native-name')),
+              matching: find.byType(TextField),
+            );
             await localWait(tester, () => field.evaluate().isNotEmpty);
             await tester.ensureVisible(field);
             await tester.tap(field);
@@ -156,7 +170,7 @@ void main() {
             expect(readFinished, isTrue);
             await reading;
             expect(persisted, isTrue);
-            await localTap(tester, find.text('Close').last);
+            await close(tester, field);
             await localTap(tester, find.text('Keep draft & close'));
             var intentsRead = false;
             final intents = f.store.db
@@ -171,9 +185,9 @@ void main() {
             expect(intentsRead, isTrue);
             expect(await intents, isEmpty);
             expect(tester.takeException(), isNull);
-            await localTap(tester, find.text('Balances'));
+            await localTap(tester, find.byKey(const ValueKey('Balances')));
             expect(
-              find.textContaining('Suggestions are nonposting'),
+              find.textContaining('A proposal. Nothing changes'),
               findsOneWidget,
             );
             expect(tester.takeException(), isNull);
@@ -214,11 +228,13 @@ void main() {
                 'bill': refused,
               });
             });
-            final saved = find.byKey(ValueKey('shared-intent-$refused'));
+            // A refused bill is on Bills, under Needs your attention.
+            await localTap(tester, find.byKey(const ValueKey('Bills')));
+            final saved = find.byKey(ValueKey('shared-task-$refused'));
             await localWait(tester, () => saved.evaluate().isNotEmpty);
             await localTap(tester, saved);
-            expect(find.text('Retained rejected purchase'), findsOneWidget);
-            await localTap(tester, find.text('Create corrected draft'));
+            expect(find.text('Retained rejected purchase'), findsWidgets);
+            await localTap(tester, find.text('Fix it'));
             await localWait(tester, () => field.evaluate().isNotEmpty);
             expect(
               tester.widget<TextField>(field).controller!.text,
@@ -249,32 +265,22 @@ void main() {
             expect(linkRead, isTrue);
             await links;
             expect(linkCopied, isTrue);
-            await localTap(tester, find.text('Close').last);
+            await close(tester, field);
+            await localTap(tester, find.text('Keep draft & close'));
             expect(saved, findsOneWidget);
             expect(tester.takeException(), isNull);
-            await localTap(
-              tester,
-              find.widgetWithText(TextButton, 'Lifecycle'),
-            );
-            await localTap(tester, find.text('Revoke invitation'));
-            final issued = find.byKey(
-              const ValueKey('shared-field-invitation'),
-            );
-            await localWait(tester, () => issued.evaluate().isNotEmpty);
-            expect(
-              tester
-                  .widget<DropdownButtonFormField<String>>(issued)
-                  .initialValue,
-              invitation,
-            );
-            await localTap(tester, find.text('Review').last);
-            expect(
-              find.textContaining('reference ${invitation.substring(0, 8)}'),
-              findsOneWidget,
-            );
+            await localTap(tester, find.byKey(const ValueKey('People')));
+            final revoke = find.byKey(ValueKey('revoke-$invitation'));
+            await localWait(tester, () => revoke.evaluate().isNotEmpty);
+            await localTap(tester, revoke);
+            // Offline here, so it says so before a form opens.
+            expect(find.text('This needs a connection'), findsOneWidget);
+            expect(find.text('Revoke this invitation?'), findsNothing);
             await localTap(tester, find.text('Close').last);
             expect(tester.takeException(), isNull);
-            await localTap(tester, find.widgetWithText(TextButton, 'Bills'));
+            await localTap(tester, find.byKey(const ValueKey('Bills')));
+            await localTap(tester, find.text('Earlier accepted shared source'));
+            await localTap(tester, find.byKey(const ValueKey('bill-menu')));
             await localTap(
               tester,
               find.byKey(ValueKey('private-bill-$source')),
@@ -282,15 +288,14 @@ void main() {
             await localWait(
               tester,
               () => find
-                  .textContaining('The saved private purchase changed.')
+                  .textContaining('The purchase you saved changed.')
                   .evaluate()
                   .isNotEmpty,
             );
             expect(
-              find.byKey(const ValueKey('shared-field-account')),
+              find.byKey(const ValueKey('native-select-account')),
               findsNothing,
             );
-            await localTap(tester, find.text('Close').last);
             expect(tester.takeException(), isNull);
           } finally {
             debugDefaultTargetPlatformOverride = null;

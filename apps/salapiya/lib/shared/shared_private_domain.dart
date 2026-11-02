@@ -18,7 +18,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
   }
   final cardFunded = value('funding') == 'card';
   if (cardFunded && !['bill', 'refund'].contains(mode)) {
-    reject('Group settlement payments require actual cash evidence.');
+    reject('Payments need a cash or bank account, not a card.');
   }
   BigInt amount(String k) {
     final n = parsePhp(value(k));
@@ -31,10 +31,10 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
   if (oldId.isNotEmpty) {
     old = s.revision(oldId);
     if (!s.current.contains(old) || value('sourceVersion') != '${old.number}') {
-      reject('Private source changed.');
+      reject('Your record changed. Check it and try again.');
     }
     if (value('reason').trim().isEmpty) {
-      reject('Explain the private source reconciliation.');
+      reject('Say why you’re changing your record.');
     }
     final dependencies = s.current
         .where((r) => r.source == oldId && financeType(r) != 'financialFile')
@@ -49,7 +49,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
               ),
         );
     if (dependencies.isNotEmpty && !restoredPayment) {
-      reject('Resolve dependent private evidence first.');
+      reject('Something else in your records depends on this. Fix that first.');
     }
   }
   if (s.current.any(
@@ -60,7 +60,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
         r.values['sharedMode'] == mode,
   )) {
     reject(
-      'This private source is already linked. Review its current revision.',
+      'This is already in your Money. Open it to check it.',
     );
   }
   if (!['bill', 'payment', 'refund', 'clear', 'unclear'].contains(mode)) {
@@ -80,7 +80,9 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
     if (n == BigInt.zero) return;
     final account = s.account(value('account'));
     if (account.archived || date.compareTo(account.cutoff) <= 0) {
-      reject('Choose an active funding account after its cutoff.');
+      reject(
+        'Choose an active account whose starting balance is dated before this.',
+      );
     }
     post('cash', n, account: account.id);
   }
@@ -129,7 +131,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
   if (cardFunded) {
     if (old == null || !sharedSourceUsesCard(old)) {
       reject(
-        'First record the actual card purchase or refund in Money, then adopt its immutable evidence.',
+        'Log the card purchase or refund in Money first, then add it here.',
       );
     }
     final card = financeSource(s, old.values['card'] ?? '', {'creditCard'});
@@ -140,7 +142,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
     );
     if (recognizedCardMovement != (mode == 'bill' ? -paid : paid)) {
       reject(
-        'Immutable card liability evidence does not match the actual funded amount.',
+        'That doesn’t match your card record. Use its amount.',
       );
     }
     if (value('card') != card.actionId ||
@@ -155,7 +157,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
                 (old.values['sharedGroup'] == null
                     ? old.amount != paid
                     : parsePhp(old.values['fundingAmount']!) != paid)))) {
-      reject('Retain the exact owned card funding, amount and date.');
+      reject('Keep the card, amount and date from your card record.');
     }
     v.addAll({
       'card': card.actionId,
@@ -175,16 +177,16 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
             old.values['split'] == 'true' ||
             (!cardFunded && old.values['account'] != value('account'))) {
           reject(
-            'Existing purchase adoption must retain its exact cash funding, date and account.',
+            'Keep the amount, date and account from your saved purchase.',
           );
         }
       } else if (old.values['sharedGroup'] != group ||
           old.values['sharedKey'] != sourceKey) {
-        reject('Private linkage cannot switch source.');
+        reject('This record is linked to another bill, so it can’t be used here.');
       } else if (value('acknowledgeFunding') != 'true' &&
           (old.values['fundingAmount'] != value('fundingAmount') ||
               old.values['account'] != value('account'))) {
-        reject('Acknowledge an actual funding correction explicitly.');
+        reject('You’re changing what you paid. Confirm that’s right.');
       }
     }
     if (cardFunded) {
@@ -197,7 +199,9 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
     total = share;
   } else if (mode == 'payment') {
     if (paid == BigInt.zero || share != BigInt.zero) {
-      reject('Payment records actual money with no spending.');
+      reject(
+        'A payment needs an amount, and none of it counts as your spending.',
+      );
     }
     final outgoing = value('direction') == 'out';
     if (!outgoing && value('direction') != 'in') {
@@ -212,7 +216,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
             old.values['account'] != value('account') ||
             old.date != date)) {
       reject(
-        'Reusing actual money requires the same group, parties, date, account and amount.',
+        'To reuse that record, the group, people, date, account and amount must all match.',
       );
     }
     cash(outgoing ? -paid : paid);
@@ -232,7 +236,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
           r.values['sharedRevision'] == value('billRevision'),
     );
     if (value('coverage') != (adopted ? 'adopted' : 'clearing')) {
-      reject('Private refund coverage changed.');
+      reject('This bill’s place in your Money changed. Check it and try again.');
     }
     if (adopted) {
       expense(-share);
@@ -244,7 +248,9 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
     total = adopted ? share : BigInt.zero;
   } else if (mode == 'unclear') {
     if (old != null || paid == BigInt.zero || share != BigInt.zero) {
-      reject('Restoring clearing is a new noncash classification.');
+      reject(
+        'This can’t be taken out of your group balance with these amounts.',
+      );
     }
     final clearing = s.revision(value('paymentSource'));
     if (!s.current.contains(clearing) ||
@@ -253,7 +259,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
         clearing.values['sharedKey'] != sourceKey ||
         clearing.values['fundingAmount'] != value('fundingAmount') ||
         s.current.any((r) => r.source == clearing.id)) {
-      reject('Private clearing source changed or was already restored.');
+      reject('This was already taken out of your group balance, or it changed.');
     }
     final outgoing = clearing.values['direction'] == 'out';
     if (value('sharedAccounting') == '2') {
@@ -270,7 +276,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
     kind = 'adjustment';
   } else {
     if (old != null || paid == BigInt.zero || share != BigInt.zero) {
-      reject('Clearing is a new noncash classification.');
+      reject('This can’t be counted in your group balance with these amounts.');
     }
     final payment = s.revision(value('paymentSource'));
     if (!s.current.contains(payment) ||
@@ -279,7 +285,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
         payment.values['sharedKey'] != sourceKey ||
         payment.values['fundingAmount'] != value('fundingAmount') ||
         s.current.any((r) => r.source == payment.id)) {
-      reject('Private payment coverage changed or already cleared.');
+      reject('This was already counted in your group balance, or it changed.');
     }
     final outgoing = payment.values['direction'] == 'out';
     post('shared_clearing', outgoing ? -paid : paid);
@@ -300,7 +306,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
           old.values['sharedKey'] != sourceKey ||
           old.values['fundingAmount'] != value('fundingAmount') ||
           old.values['account'] != value('account'))) {
-    reject('Refund reclassification retains actual accepted money.');
+    reject('Keep the amount and account from your saved refund.');
   }
   if (old != null && !['bill', 'refund', 'payment'].contains(mode)) {
     reject(
@@ -328,7 +334,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
       if (day.compareTo(date) >= 0 &&
           running < BigInt.zero &&
           value('acknowledge') != 'true') {
-        reject('Negative balance requires explicit acknowledgement.');
+        reject('This takes the account negative. Confirm that’s right.');
       }
     }
   }
@@ -337,8 +343,8 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
   }
   return LocalPlan(
     effects: [
-      'Private cash ${phpDecimal(sumMinor(posts.where((p) => p.ledger == 'cash').map((p) => p.amount)))} PHP; personal expense ${phpDecimal(sumMinor(posts.where((p) => p.ledger == 'expense').map((p) => p.amount)))} PHP.',
-      'Only this private profile is affected. Group acceptance and recipient confirmation remain independent.',
+      'Cash ₱${phpDecimal(sumMinor(posts.where((p) => p.ledger == 'cash').map((p) => p.amount)))}; your spending ₱${phpDecimal(sumMinor(posts.where((p) => p.ledger == 'expense').map((p) => p.amount)))}.',
+      'Only your own records change. The group’s records and anyone’s confirmation stay as they are.',
     ],
     revision: LocalRevision(
       id: cmd.id,

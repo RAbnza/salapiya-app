@@ -49,7 +49,7 @@ class LocalProfiles {
               p.basename(f.path).contains('.sqlite-'),
         )) {
           reject(
-            'Protected profile information is unavailable. Existing encrypted files have been preserved. Restore a portable backup or recover the original OS credentials; no database was reset.',
+            'Salapiya can’t reach the key that opens your profile. Your files are safe and nothing was reset. Make sure you’re signed in to the same device account, then try again.',
           );
         }
         return null;
@@ -75,13 +75,13 @@ class LocalProfiles {
         base64Url.decode(key).length != 32 ||
         !['initializing', 'ready', 'restoring'].contains(d['phase'])) {
       reject(
-        'Invalid protected profile descriptor. Existing data is preserved.',
+        'Salapiya can’t read what it needs to open your profile. Your files are safe and nothing was reset.',
       );
     }
     final file = File(p.join(directory.path, '$id.sqlite'));
     if (d['phase'] == 'ready' && !await file.exists()) {
       reject(
-        'The active encrypted database is missing. Restore a backup; a new empty profile will not replace it.',
+        'Your profile’s records aren’t on this device any more. Nothing was replaced with an empty profile. A backup can restore them on another device.',
       );
     }
     if (d['phase'] == 'restoring') {
@@ -93,7 +93,7 @@ class LocalProfiles {
       if (await staging.exists()) {
         if (await file.exists()) {
           reject(
-            'Recovery files need review; both database copies are preserved.',
+            'A restore didn’t finish, and two copies of this profile are on this device. Both are safe.',
           );
         }
         final check = openLocalDatabase(staging.path, key);
@@ -106,7 +106,7 @@ class LocalProfiles {
         await staging.rename(file.path);
       } else if (!await file.exists()) {
         reject(
-          'The verified recovery database is missing. Original archive is required.',
+          'A restore didn’t finish and its files have gone. Your backup file is safe, and it can restore on another device.',
         );
       }
       final check = openLocalDatabase(file.path, key);
@@ -162,14 +162,14 @@ class LocalProfiles {
     final previous = await vault.read();
     final old = previous == null ? null : jsonDecode(previous) as Map;
     if (active != null || (old != null && old['phase'] != 'empty')) {
-      reject('One profile is already initialized. Reopen it instead.');
+      reject('A profile is already set up on this device. Try again to open it.');
     }
     await directory.create(recursive: true);
     if (await directory.list().any(
       (f) => p.basename(f.path).contains('.sqlite'),
     )) {
       reject(
-        'Existing database files require recovery before creating a profile.',
+        'An earlier profile’s files are still on this device, so a new one can’t start here.',
       );
     }
     final d = {
@@ -198,7 +198,7 @@ class LocalProfiles {
     final prior = previous == null ? null : jsonDecode(previous) as Map;
     final hasCurrent = prior != null && prior['phase'] != 'empty';
     if (hasCurrent && !preserveCurrent) {
-      reject('An active profile already exists. Review the safe switch first.');
+      reject('A profile is already open on this device. Review the switch first.');
     }
     if (!RegExp(r'^[0-9a-f-]{36}$').hasMatch(id) ||
         name.trim().isEmpty ||
@@ -208,7 +208,7 @@ class LocalProfiles {
     final target = File(p.join(directory.path, '$id.sqlite'));
     if (await target.exists()) {
       reject(
-        'This cloud profile already has a protected database here. Existing files are preserved; review recovery before switching.',
+        'The profile on this Google account already has files on this device. They’re safe. Nothing changed.',
       );
     }
     await directory.create(recursive: true);
@@ -243,7 +243,7 @@ class LocalProfiles {
     final old = previous == null ? null : jsonDecode(previous) as Map;
     if (active != null || (old != null && old['phase'] != 'empty')) {
       reject(
-        'Recovery activation requires a fresh installation. The current profile is preserved.',
+        'A backup restores only when no profile is open on this device. Your profile hasn’t changed.',
       );
     }
     final id = bundle['owner'] as String;
@@ -354,7 +354,7 @@ class LocalProfiles {
     if (await target.exists()) {
       // Existing profiles are deliberately never replaced from an old archive.
       reject(
-        'This profile already exists on this installation. Its database and the validated recovery staging file are preserved. Restore on a fresh installation.',
+        'This profile is already on this device, so this backup can’t restore here. Your files are safe.',
       );
     }
     final descriptor = {
@@ -385,10 +385,10 @@ class LocalProfiles {
   /// Remote records, external archives and preserved profiles are never touched.
   Future<void> removeLocal(String expectedOwner) async {
     final raw = await vault.read();
-    if (raw == null) reject('No protected local profile is available.');
+    if (raw == null) reject('No profile is open on this device.');
     final d = jsonDecode(raw) as Map<String, dynamic>;
     if (d['id'] != expectedOwner || d['phase'] != 'ready') {
-      reject('The active profile changed. Review local removal again.');
+      reject('This profile changed. Open Remove again and check it.');
     }
     _validateRemovalPaths(d);
     await vault.write(jsonEncode({...d, 'phase': 'removing'}));
@@ -432,13 +432,13 @@ class LocalProfiles {
             p.basename(directory.path),
           ),
         )) {
-      reject('Local removal cannot follow a redirected profile directory.');
+      reject('This profile’s folder points somewhere else, so nothing was removed.');
     }
     // Validate every target before deleting any; never traverse a link/junction.
     for (final path in paths) {
       final type = await FileSystemEntity.type(path, followLinks: false);
       if (type == FileSystemEntityType.link) {
-        reject('Local removal cannot follow linked files.');
+        reject('Some of this profile’s files are links, so nothing was removed.');
       }
       if (type == FileSystemEntityType.directory) {
         await for (final entity in Directory(
@@ -446,7 +446,7 @@ class LocalProfiles {
         ).list(recursive: true, followLinks: false)) {
           if (await FileSystemEntity.type(entity.path, followLinks: false) ==
               FileSystemEntityType.link) {
-            reject('Local removal cannot follow linked attachments.');
+            reject('Some of this profile’s attached files are links, so nothing was removed.');
           }
         }
       }
@@ -478,7 +478,7 @@ class LocalBackup {
   static SecretKey _key(String value) {
     final bytes = base64Url.decode(value.trim());
     if (bytes.length != 32) {
-      reject('Enter the complete generated recovery secret.');
+      reject('Enter the whole recovery secret.');
     }
     return SecretKey(bytes);
   }
@@ -604,7 +604,7 @@ class LocalBackup {
         (b['name'] as String).length > 200 ||
         DateTime.tryParse(b['createdUtc'] as String) == null ||
         !(b['createdUtc'] as String).endsWith('Z')) {
-      reject('Unsupported or invalid local archive.');
+      reject('This version of Salapiya can’t open this backup.');
     }
     final commands = b['commands'] as List, drafts = b['drafts'] as List;
     if (b['life'] case final Map life) {
@@ -628,7 +628,7 @@ class LocalBackup {
                     'financialFile';
               }).length) {
         reject(
-          'Unsupported or inconsistent financial archive coverage. Attachment bytes are not restored by this archive.',
+          'This backup’s file list doesn’t add up. Nothing changed.',
         );
       }
     }
@@ -636,7 +636,7 @@ class LocalBackup {
     if (commands.length > 20000 ||
         drafts.length > 100 ||
         b['revision'] != '${commands.length}') {
-      reject('Archive counts or version are incompatible.');
+      reject('This version of Salapiya can’t open this backup.');
     }
     final ids = <String>{};
     for (var i = 0; i < commands.length; i++) {
@@ -647,7 +647,7 @@ class LocalBackup {
           (connected ? c.expectedVersion < 0 : c.expectedVersion != i) ||
           c.payload != r['payload'] ||
           DateTime.tryParse(r['recorded_at'] as String) == null) {
-        reject('Archive command history is incompatible.');
+        reject('This backup’s history is damaged. Nothing changed.');
       }
     }
     if (connected) {
@@ -660,16 +660,16 @@ class LocalBackup {
                   jsonDecode(remote['enrollment_snapshot'] as String),
                 ) !=
                 canonicalJson(commands)) {
-          reject('Invalid unpublished enrollment recovery graph.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       if (!RegExp(r'^[0-9a-f-]{36}$')
               .hasMatch(remote['remote_owner'] as String) ||
           remote['email'] is! String) {
-        reject('Invalid connected recovery identity.');
+        reject('This backup is damaged. Nothing changed.');
       }
       final intents = b['intents'] as List;
-      if (intents.length > 20000) reject('Unsupported recovery intent count.');
+      if (intents.length > 20000) reject('This backup is damaged. Nothing changed.');
       final intentIds = <String>{};
       var last = 0;
       for (final raw in intents) {
@@ -688,14 +688,14 @@ class LocalBackup {
             r['sequence_no'] is! int ||
             (r['sequence_no'] as int) <= last ||
             DateTime.tryParse(r['recorded_at'] as String) == null) {
-          reject('Invalid connected recovery intent.');
+          reject('This backup is damaged. Nothing changed.');
         }
         last = r['sequence_no'] as int;
       }
     }
     if (b['format'] == 3) {
       if ((b['sharedReviews'] as List? ?? []).length > 20000) {
-        reject('Unsupported private review history count.');
+        reject('This backup is damaged. Nothing changed.');
       }
       for (final raw in b['sharedReviews'] as List? ?? []) {
         final r = raw as Map;
@@ -703,12 +703,12 @@ class LocalBackup {
             r['owner_id'] != (b['connection'] as Map)['remote_owner'] ||
             r['id'] is! String ||
             r['reason'] is! String) {
-          reject('Invalid owned private review evidence.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       if ((b['sharedIntents'] as List).length > 20000 ||
           (b['sharedDrafts'] as List).length > 100) {
-        reject('Unsupported shared recovery counts.');
+        reject('This backup is damaged. Nothing changed.');
       }
       final sharedIds = <String>{};
       for (final raw in b['sharedIntents'] as List) {
@@ -719,14 +719,14 @@ class LocalBackup {
             payload['contract'] != 3 ||
             payload['group'] != r['group_id'] ||
             DateTime.tryParse(r['recorded_at'] as String) == null) {
-          reject('Invalid original shared recovery intent.');
+          reject('This backup is damaged. Nothing changed.');
         }
       }
       for (final raw in b['sharedDrafts'] as List) {
         final r = raw as Map;
         if ((r['payload'] as String).length > 131072 ||
             DateTime.tryParse(r['updated_at'] as String) == null) {
-          reject('Invalid shared draft.');
+          reject('This backup is damaged. Nothing changed.');
         }
         jsonDecode(r['payload'] as String);
       }
@@ -735,7 +735,7 @@ class LocalBackup {
       final r = raw as Map;
       if (ids.contains(r['command_id']) ||
           (r['operation'] as String).length > 200) {
-        reject('Invalid restored draft.');
+        reject('This backup is damaged. Nothing changed.');
       }
       Map<String, String>.from(jsonDecode(r['values_json'] as String) as Map);
     }
@@ -748,7 +748,7 @@ class LocalBackup {
     validate(bundle);
     final bytes = utf8.encode(jsonEncode(bundle));
     if (bytes.length > maxBytes) {
-      reject('Archive exceeds the 32 MiB local recovery limit.');
+      reject('This backup is over the 32 MB limit. Nothing was saved.');
     }
     final box = await _cipher.encrypt(
       bytes,
@@ -768,7 +768,7 @@ class LocalBackup {
           _header.length,
           (i) => bytes[i] == _header[i],
         ).every((x) => x)) {
-      reject('Unsupported or incomplete backup file.');
+      reject('This file isn’t a complete Salapiya backup.');
     }
     final plain = await _cipher.decrypt(
       SecretBox.fromConcatenation(

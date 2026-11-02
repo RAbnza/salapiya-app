@@ -30,6 +30,46 @@ const reminderModes = [
   'Off',
 ];
 
+/// What's happening with an item's reminder on this device.
+enum ReminderState {
+  /// Reminders are off here.
+  off,
+
+  /// On, but the device refuses them.
+  blocked,
+
+  /// The user turned this one off.
+  turnedOff,
+
+  /// The user turned this kind off.
+  moduleOff,
+  dismissed,
+  scheduled,
+  snoozed,
+
+  /// Beyond the nearest 128.
+  queued,
+
+  /// Further off than the device schedules.
+  far,
+
+  /// Its time went by, shown or not.
+  passed,
+
+  /// Not looked at yet.
+  checking,
+}
+
+/// One item's reminder: its state, and when it will fire.
+class ReminderView {
+  const ReminderView(this.state, {this.at, this.returned = false});
+  final ReminderState state;
+  final DateTime? at;
+
+  /// The item changed after a dismissal, so the reminder came back.
+  final bool returned;
+}
+
 class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
   DeviceReminders(
     this.store,
@@ -55,7 +95,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
   Map<String, dynamic> choices = {};
   bool allowed = false, ready = false, closed = false;
   bool permissionKnown = true;
-  String status = 'Notifications are off on this device.';
+  String status = 'Reminders are off on this device.';
   String? pendingTap;
   String timezone = 'Asia/Manila';
   void Function(AgendaItem?)? navigate;
@@ -63,6 +103,10 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _timer;
   WidgetsBinding? _binding;
   final Map<String, String> sourceStates = {};
+
+  /// The same as [sourceStates], for screens to read rather than parse.
+  final Map<String, ReminderView> views = {};
+  bool reconcileFailed = false;
   Future<void> initialize() async {
     try {
       _binding = WidgetsBinding.instance;
@@ -94,7 +138,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
       ready = true;
       await reconcile();
     } catch (_) {
-      status = 'Native notification registration unavailable. In-app commitments remain usable; retry after checking platform settings.';
+      status = 'Reminders can’t be set on this device right now. Everything stays in the app. Check your device’s settings, then try again.';
       notifyListeners();
     }
     _timer = Timer.periodic(
@@ -120,7 +164,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
     LifeController.validateTime(next['start'] as String);
     LifeController.validateTime(next['end'] as String);
     if (next['start'] == next['end']) {
-      lifeReject('Quiet hours must have different endpoints.');
+      lifeReject('Quiet hours need a different start and end.');
     }
     if (next['enabled'] == true && preferences['enabled'] != true) {
       next['enabledAt'] = clock().toUtc().toIso8601String();
@@ -156,7 +200,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
         .firstOrNull;
     if (current == null) {
       lifeReject(
-        'This source generation is obsolete. Open the current source.',
+        'This item changed. Open it again to set its reminder.',
       );
     }
     final choice = <String, dynamic>{
@@ -178,8 +222,8 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
   String state(AgendaItem item) =>
       sourceStates[item.id] ??
       (preferences['enabled'] == true
-          ? 'Awaiting device reconciliation'
-          : 'Off · in-app only');
+          ? 'Checking'
+          : 'In the app only');
   Future<void> reconcile() {
     final next = _work.catchError((Object _) {}).then((_) => _reconcile());
     _work = next;
@@ -227,6 +271,8 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
         for (final source in currentSources) source.id: source,
       };
       sourceStates.clear();
+      views.clear();
+      reconcileFailed = false;
       for (final item in currentSources) {
         final choice = Map<String, dynamic>.from(
           choices[item.id] as Map? ?? {},
@@ -234,15 +280,29 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
         final same = choice['generation'] == item.generation;
         final mode = choice['mode'] as String? ?? 'Inherited';
         final action = same ? choice['action'] as String? ?? '' : '';
+        // Dismissed, then the item changed: the reminder is back, and says why.
+        final returned = !same && choice['action'] == 'Dismissed';
         if (!enabled ||
             (preferences['modules'] as Map)[item.kind] != true ||
             mode == 'Off' ||
             action == 'Dismissed') {
-          sourceStates[item.id] = !allowed && preferences['enabled'] == true
-              ? 'OS permission denied · in-app only'
+          final refused = !allowed && preferences['enabled'] == true;
+          sourceStates[item.id] = refused
+              ? 'Your device is blocking this'
               : action == 'Dismissed'
-              ? 'Dismissed · source unchanged'
-              : 'Off · in-app only';
+              ? 'Dismissed'
+              : 'In the app only';
+          views[item.id] = ReminderView(
+            refused
+                ? ReminderState.blocked
+                : !enabled
+                ? ReminderState.off
+                : action == 'Dismissed'
+                ? ReminderState.dismissed
+                : mode == 'Off'
+                ? ReminderState.turnedOff
+                : ReminderState.moduleOff,
+          );
           continue;
         }
         final lead = switch (mode) {
@@ -261,7 +321,8 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
         if (snooze != null) at = snooze;
         at = deferQuiet(at, preferences, timezone);
         if (at.isAfter(now.add(const Duration(days: 90)))) {
-          sourceStates[item.id] = 'Outside the 90-day scheduling horizon';
+          sourceStates[item.id] = 'More than 90 days away';
+          views[item.id] = const ReminderView(ReminderState.far);
           continue;
         }
         final key = sha256
@@ -284,12 +345,13 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
               'suppressed',
               'dismissed',
             ].contains(previous['state'])) {
-          sourceStates[item.id] = 'Elapsed or suppressed · no automatic resend';
+          sourceStates[item.id] = 'Its time has passed';
+          views[item.id] = const ReminderView(ReminderState.passed);
           continue;
         }
         if (at.isBefore(now) || optin == null || at.isBefore(optin)) {
-          sourceStates[item.id] =
-              'Elapsed or predates opt-in · no automatic resend';
+          sourceStates[item.id] = 'Its time has passed';
+          views[item.id] = const ReminderView(ReminderState.passed);
           if (previous == null) {
             await store.db.execute(
               'INSERT INTO device_reminder VALUES(?,?,?,?,?,?,?)',
@@ -312,6 +374,11 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
           'at': at.toUtc(),
           'id': previous?['os_id'] ?? nextId++,
         };
+        views[item.id] = ReminderView(
+          snooze != null ? ReminderState.snoozed : ReminderState.queued,
+          at: at.toUtc(),
+          returned: returned,
+        );
       }
       final selected = desired.entries.toList()
         ..sort(
@@ -414,17 +481,24 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
           "UPDATE device_reminder SET state='scheduled' WHERE logical_key=?",
           [entry.key],
         );
-        sourceStates[item.id] =
-            'Scheduled on this device · ${at.toIso8601String()} · delivery best effort';
+        sourceStates[item.id] = 'Set on this device';
+        views[item.id] = ReminderView(
+          views[item.id]?.state == ReminderState.snoozed
+              ? ReminderState.snoozed
+              : ReminderState.scheduled,
+          at: at,
+          returned: views[item.id]?.returned ?? false,
+        );
       }
       status =
           '${device.capability}\n${!permissionKnown
-              ? 'Windows permission status unknown; OS schedule registration is checked separately'
+              ? 'Windows hasn’t said whether these can show. Send a test to check.'
               : allowed
-              ? 'OS notifications enabled'
-              : 'Notification permission denied'} · ${bounded.length} scheduled · nearest 128 within 90 days. Delivery is not completion.';
+              ? 'Notifications are allowed.'
+              : 'Your device is blocking these.'} ${bounded.length} set, the nearest 128 within 90 days.';
     } catch (_) {
-      status = 'Native scheduling could not be reconciled. In-app sources remain available. Retry; previously registered notifications may remain until cancellation succeeds.';
+      reconcileFailed = true;
+      status = 'Reminders couldn’t be updated. Your records are fine. Reminders already set may still show. Try again.';
     }
     if (!closed) notifyListeners();
   }
@@ -528,5 +602,5 @@ DateTime deferQuiet(
     );
     if (candidates.isNotEmpty) return candidates.last;
   }
-  lifeReject('Quiet-hour endpoint cannot be resolved in this timezone.');
+  lifeReject('Quiet hours can’t end at that time in this timezone. Choose another end time.');
 }

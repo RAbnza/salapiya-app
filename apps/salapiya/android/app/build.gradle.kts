@@ -64,6 +64,8 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Already in the app through its plugins; FileProvider needs it to compile.
+    implementation("androidx.core:core:1.13.1")
 }
 
 kotlin {

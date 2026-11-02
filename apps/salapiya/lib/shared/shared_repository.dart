@@ -4,13 +4,15 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../local/finance_domain.dart';
 import '../local/local_runtime.dart';
 import '../local/local_store.dart';
+import 'shared_data.dart';
 import 'shared_domain.dart';
 
-class SharedRepository extends ChangeNotifier {
+class SharedRepository extends ChangeNotifier implements SharedWriter {
   SharedRepository(this.runtime, this.store);
   final LocalRuntime runtime;
   final LocalStore store;
@@ -24,7 +26,12 @@ class SharedRepository extends ChangeNotifier {
   StreamSubscription<dynamic>? _reviews;
   List<SharedJson> reviews = [];
   String? error;
+
+  /// The first read has finished, so an empty list means there are no groups.
+  bool loaded = false;
+  @override
   String? get actor => runtime.connected.binding?['remote_owner'] as String?;
+  @override
   bool get online =>
       runtime.connected.flow?.client.auth.currentUser?.id == actor &&
       store.db.currentStatus.connected &&
@@ -88,8 +95,9 @@ class SharedRepository extends ChangeNotifier {
             .where((r) => r['owner_id'] == user),
       ];
     } catch (_) {
-      error = 'Shared records could not be read. Your stored evidence is preserved; reopen or retry.';
+      error = 'Couldn’t read your shared records. Nothing was lost. Try again.';
     }
+    loaded = true;
     if (!_closed) notifyListeners();
   }
 
@@ -105,6 +113,7 @@ class SharedRepository extends ChangeNotifier {
     'version': version,
     'values': values,
   };
+  @override
   Future<String> submit(
     String group,
     String op,
@@ -114,11 +123,11 @@ class SharedRepository extends ChangeNotifier {
   }) async {
     final user = actor;
     if (user == null) {
-      reject('Connect your profile with Google before joining a group.');
+      reject('Connect this profile with Google to use shared groups.');
     }
     final queued = ['bill', 'report'].contains(op);
     if (!queued && !online) {
-      reject('Connect and synchronize before reviewing this operation.');
+      reject('This needs a connection. Connect, then try again.');
     }
     final cid = id ?? newLocalId();
     final payload = jsonEncode(command(group, op, values, version: version));
@@ -130,7 +139,10 @@ class SharedRepository extends ChangeNotifier {
         params: {'command_id': cid, 'command_payload': payload},
       );
       if (prior['outcome'] != 'accepted') {
-        reject(prior['reason'] as String? ?? 'Invitation requires review.');
+        reject(
+          prior['reason'] as String? ??
+              'This invitation didn’t go through. Check it and try again.',
+        );
       }
       return cid;
     }
@@ -140,13 +152,14 @@ class SharedRepository extends ChangeNotifier {
     return cid;
   }
 
+  @override
   Future<void> retry(String id) async {
-    if (!online) reject('A current online identity is required.');
+    if (!online) reject('You need to be online and signed in to do this.');
     final row = await store.db.get('SELECT * FROM shared_intent WHERE id=?', [
       id,
     ]);
     if (row['actor'] != actor || row['state'] == 'review') {
-      reject('Review the original intent before creating a corrected command.');
+      reject('Check what was refused before trying again.');
     }
     if (row['state'] == 'restored') {
       final original = object(
@@ -172,14 +185,20 @@ class SharedRepository extends ChangeNotifier {
     await store.recordSharedReceipt(id, actor!, receipt);
     await reload();
     if (receipt['outcome'] != 'accepted') {
-      reject(receipt['reason'] as String? ?? 'Group submission needs review.');
+      reject(
+        receipt['reason'] as String? ??
+            'The group didn’t accept this. Check it and try again.',
+      );
     }
   }
 
+  @override
   Future<SharedJson> reviewInvitation(String code) async {
-    if (!online) reject('Connect with the intended Google identity first.');
+    if (!online) {
+      reject('Sign in with the Google account this invitation was sent to.');
+    }
     final parts = code.trim().split('.');
-    if (parts.length != 2) reject('Paste the complete group.code invitation.');
+    if (parts.length != 2) reject('Paste the whole invitation code.');
     return object(
       await runtime.connected.flow!.client.rpc(
         'p3_review_invitation',
@@ -194,6 +213,7 @@ class SharedRepository extends ChangeNotifier {
   ).map((n) => n.toRadixString(16).padLeft(2, '0')).join();
   static String tokenHash(String token) =>
       sha256.convert(utf8.encode(token)).toString();
+  @override
   Future<void> draft(String id, String group, SharedJson values) =>
       store.db.execute(
         'INSERT INTO shared_draft VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at',
@@ -204,6 +224,74 @@ class SharedRepository extends ChangeNotifier {
           DateTime.now().toUtc().toIso8601String(),
         ],
       );
+
+  @override
+  Future<void> keepRecord({
+    required String id,
+    required String group,
+    required String bill,
+    required String record,
+    required String stamp,
+    required String reason,
+  }) async {
+    if (!online) reject('This needs a connection. Connect, then try again.');
+    try {
+      await runtime.connected.flow!.client.rpc(
+        'p3_retain_private_evidence',
+        params: {
+          'command_id': id,
+          'profile_id': store.owner,
+          'group_id': group,
+          'bill_id': bill,
+          'private_revision': record,
+          'source_stamp': stamp,
+          'reason': reason,
+        },
+      );
+    } on PostgrestException catch (e) {
+      // The server's own refusal. Anything else is a lost answer.
+      if (e.code == '22023') reject(e.message);
+      rethrow;
+    }
+  }
+
+  /// Keeps the link to the user's own purchase before the bill is sent. A
+  /// refusal can never undo that spending, so the intent is saved first.
+  Future<void> linkPurchase(String bill, String group, String purchase) =>
+      store.saveDraft('shared-purchase:$bill', bill, {
+        'privateSource': purchase,
+        'group': group,
+        'bill': bill,
+      });
+
+  /// A corrected draft keeps its purchase's link to the user's own record.
+  Future<void> carryPurchaseLink(String from, String to, String group) async {
+    final purchase = await store.draft('shared-purchase:$from');
+    if (purchase == null) return;
+    await store.saveDraft('shared-purchase:$to', to, {
+      ...Map<String, String>.from(purchase['values'] as Map),
+      'group': group,
+      'bill': to,
+    });
+  }
+
+  /// The fields a saved draft holds, or null when it's gone.
+  @override
+  Future<SharedJson?> readDraft(String id) async {
+    final row = (await store.db.getAll(
+      'SELECT payload FROM shared_draft WHERE id=?',
+      [id],
+    )).firstOrNull;
+    return row == null ? null : object(jsonDecode(row['payload'] as String));
+  }
+
+  /// Removes the user's own unsent draft. Nothing else refers to it.
+  @override
+  Future<void> discardDraft(String id) async {
+    await store.db.execute('DELETE FROM shared_draft WHERE id=?', [id]);
+    await reload();
+  }
+
   @override
   void dispose() {
     _closed = true;

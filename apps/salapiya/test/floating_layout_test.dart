@@ -29,7 +29,14 @@ void main() {
         if (platform == TargetPlatform.windows) {
           expect(dock, findsNothing);
           expect(find.byType(ShellSidebar), findsOneWidget);
-          expect(find.text('Create'), findsOneWidget);
+          // Only the button: a change line also says New early in a month.
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('shell-new')),
+              matching: find.text('New'),
+            ),
+            findsOneWidget,
+          );
         } else {
           expect(
             tester.getBottomLeft(scroll).dy,
@@ -45,7 +52,7 @@ void main() {
         if (dockRect != null) expect(tester.getRect(dock), dockRect);
         expect(
           tester
-              .getBottomLeft(find.textContaining('Next: interview on 23 Oct'))
+              .getBottomLeft(find.textContaining('Tala logged'))
               .dy,
           lessThan(dockRect?.top ?? tester.getBottomLeft(scroll).dy),
         );

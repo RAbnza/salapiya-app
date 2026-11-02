@@ -65,7 +65,9 @@ BigInt sharedMinor(dynamic value, {bool positive = false}) {
 
 Map<String, String> equalShares(BigInt total, Iterable<String> participants) {
   final ids = participants.toSet().toList()..sort();
-  if (ids.isEmpty || ids.length > 100) reject('Select 1–100 participants.');
+  if (ids.isEmpty || ids.length > 100) {
+    reject('Choose at least one person, up to 100.');
+  }
   final count = BigInt.from(ids.length);
   return {
     for (var i = 0; i < ids.length; i++)
@@ -79,10 +81,12 @@ void validateSharedAxis(dynamic raw, SharedJson people, BigInt total) {
   if (axis.isEmpty ||
       axis.length > 100 ||
       axis.keys.any((k) => !people.containsKey(k))) {
-    reject('Choose 1–100 known participants.');
+    reject('Choose at least one person from this group, up to 100.');
   }
   if (sumMinor(axis.values.map(sharedMinor)) != total) {
-    reject('Each allocation axis must independently equal the total.');
+    reject(
+      'What each person paid and each person’s part must each add up to the total.',
+    );
   }
 }
 
@@ -145,8 +149,12 @@ class SharedGroup {
       people.entries.where((p) => p.value['user'] == user).firstOrNull?.key;
   bool active(String? person) =>
       person != null && people[person]?['active'] == true;
-  String personName(String id) =>
-      people[id]?['name'] as String? ?? 'Historical participant';
+
+  /// The server stores a deleted account's name as "Deleted participant".
+  /// That stays as stored; only what people read changes.
+  String personName(String id) => people[id]?['kind'] == 'deleted'
+      ? 'Deleted account'
+      : people[id]?['name'] as String? ?? 'Earlier member';
   SharedJson revision(String bill) =>
       object((bills[bill]['revisions'] as List).last);
   Map<String, BigInt> billPositions(String bill) {
@@ -265,13 +273,15 @@ class SharedGroup {
     final allocations = <String, dynamic>{};
     var left = amount;
     if (selected != null) {
-      if (selected.length > 100) reject('Select up to 100 bills.');
+      if (selected.length > 100) reject('Choose up to 100 bills.');
       for (final a in selected.entries) {
         final r = revision(a.key),
             n = sharedMinor(a.value['amount'], positive: true);
         if (a.value['revision'] != r['id'] ||
             n > due(sender, recipient, bill: a.key)) {
-          reject('Selected source changed or exceeds remaining capacity.');
+          reject(
+            'A bill you chose changed, or this is more than what’s left on it.',
+          );
         }
         allocations[a.key] = a.value;
         left -= n;
@@ -289,7 +299,9 @@ class SharedGroup {
         applicable -= use;
       }
     }
-    if (left < BigInt.zero) reject('Allocations exceed payment.');
+    if (left < BigInt.zero) {
+      reject('The amounts on your bills add up to more than this payment.');
+    }
     return {
       'allocations': allocations,
       'advance': '$left',

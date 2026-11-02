@@ -10,19 +10,19 @@ LocalPlan planFinancialFile(LocalSnapshot s, LocalCommand command) {
       date = civilDate(v['date'] ?? '');
   final title = (v['name'] ?? '').trim();
   if (title.isEmpty || title.length > 200) {
-    reject('Enter a private attachment name up to 200 characters.');
+    reject('Enter a file name of up to 200 characters.');
   }
   String? source;
   if (op == 'financialFile') {
     if (!['application/pdf', 'image/jpeg', 'image/png'].contains(v['mime']) ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(v['checksum'] ?? '')) {
-      reject('Choose a bounded PDF, JPEG or PNG with exact checksum metadata.');
+      reject('Choose a PDF, JPEG or PNG file.');
     }
     final size = parseMinor(v['size'] ?? '');
     if (size <= BigInt.zero ||
         size > BigInt.from(10 * 1024 * 1024) ||
         RegExp(r'[\\/:\x00-\x1f\x7f]').hasMatch(title)) {
-      reject('Attachment name or 10 MiB size bound is invalid.');
+      reject('This file’s name can’t be used, or it’s over 10 MB.');
     }
     final original = s.revision(v['sourceRevision'] ?? '');
     if (nativeFileCommands.contains(financeType(original)) ||
@@ -35,7 +35,7 @@ LocalPlan planFinancialFile(LocalSnapshot s, LocalCommand command) {
           'cashImportCancel',
         ].contains(financeType(original))) {
       reject(
-        'Link supporting files to a concrete financial source or exact provider revision.',
+        'Attach files to a transaction or other record, not to a file or an import.',
       );
     }
     final files = s.current.where(
@@ -46,7 +46,7 @@ LocalPlan planFinancialFile(LocalSnapshot s, LocalCommand command) {
         sumMinor(files.map((r) => parseMinor(r.values['size']!))) + size >
             BigInt.from(1024 * 1024 * 1024)) {
       reject(
-        'Private supporting-file metadata exceeds the 1,000-object / 1 GiB bound.',
+        'You’ve reached the limit of 1,000 files or 1 GB. Archive a file link to make room.',
       );
     }
     source = original.id;
@@ -59,7 +59,7 @@ LocalPlan planFinancialFile(LocalSnapshot s, LocalCommand command) {
     final file = financeSource(s, v['file'] ?? '', {'financialFile'});
     if (financialFileDetached(s, file.id) ||
         (v['reason'] ?? '').trim().isEmpty) {
-      reject('Choose an attached file and explain archiving its link.');
+      reject('Choose an attached file and say why you’re archiving its link.');
     }
     source = file.id;
   } else {
@@ -81,8 +81,8 @@ LocalPlan planFinancialFile(LocalSnapshot s, LocalCommand command) {
       source: source,
     ),
     effects: [
-      'Private supporting metadata only. No cash, spending, liability or group records change.',
-      'Cloud bytes remain unavailable: production storage/scanning is not verified. Local presence and byte integrity are checked separately.',
+      'This attaches a file. No money or records change.',
+      'The file stays on this device. It isn’t uploaded or virus-scanned.',
     ],
   );
 }

@@ -63,83 +63,78 @@ void main() {
           ),
         );
         await localSettle(tester);
-        await localTap(tester, find.text('Create a local offline profile'));
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
+        await localTap(tester, find.text('Start on this device'));
         await tester.enterText(find.byType(TextField), 'P4 portability owner');
-        await localTap(tester, find.text('Create local profile'));
+        await localTap(tester, find.text('Create profile'));
         await localWait(tester, () => runtime.session != null);
         await localTap(tester, find.byKey(const ValueKey('nav-money')));
-        await localTap(tester, find.byTooltip('Create account'));
+        await localTap(tester, find.text('Add account'));
         await localEnter(tester, 'name', 'Portability wallet');
         await localEnter(tester, 'amount', '1000.00');
         await localEnter(tester, 'cutoff', '2026-10-01');
         await localConfirm(tester);
         final c = runtime.session!.localFinance,
             account = c.snapshot.accounts.single.id;
-        await localTap(tester, find.text('Add expense').first);
+        await localAction(tester, 'Log expense');
         await localEnter(tester, 'name', 'Synthetic supporting source');
         await localEnter(tester, 'amount', '20.00');
         await localConfirm(tester);
         expect(c.snapshot.balance(account), BigInt.from(98000));
         await localTap(tester, find.text('Files').first);
-        await localTap(
-          tester,
-          find.byType(DropdownButtonFormField<String>).first,
-        );
-        await localTap(
-          tester,
-          find.textContaining('Synthetic supporting source ·').last,
-        );
-        await localTap(tester, find.text('Choose private supporting file'));
+        await localTap(tester, find.byKey(const ValueKey('files-attach')));
+        await localTap(tester, find.text('Synthetic supporting source'));
         await waitForNativePicker(
           tester,
-          () =>
-              find.text('Review private supporting file').evaluate().isNotEmpty,
+          () => find.text('Attach this file?').evaluate().isNotEmpty,
           'select test/fixtures/p4_receipt.png',
         );
-        await localTap(tester, find.text('Attach private file'));
+        await localTap(tester, find.text('Attach file'));
         await localWait(
           tester,
           () =>
               c.snapshot.current.any((r) => financeType(r) == 'financialFile'),
         );
         expect(c.snapshot.balance(account), BigInt.from(98000));
-        await localTap(tester, find.text('Preview unscanned image'));
+        await localTap(tester, find.textContaining('p4_receipt').first);
+        await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
-          () => find
-              .text(
-                'Unscanned private image. Integrity verification is not a safety scan.',
-              )
-              .evaluate()
-              .isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('preview-image')).evaluate().isNotEmpty,
         );
         expect(find.byType(Image), findsWidgets);
         await localTap(tester, find.text('Close'));
+        await tester.pageBack();
+        await localSettle(tester);
         await localTap(tester, find.text('Import').first);
-        await localTap(
-          tester,
-          find.text('Choose supported cash CSV / start a new review'),
-        );
+        await localTap(tester, find.text('Import a file').first);
         await waitForNativePicker(
           tester,
           () => find
-              .text('Stage & generate immutable preview')
+              .byKey(const ValueKey('import-check-rows'))
               .evaluate()
               .isNotEmpty,
           'select test/fixtures/p4_cash.csv',
         );
-        await localTap(tester, find.text('Stage & generate immutable preview'));
+        await localTap(tester, find.byKey(const ValueKey('import-check-rows')));
         await localWait(
           tester,
-          () => find.text('Confirm exact row decisions').evaluate().isNotEmpty,
+          () => find
+              .byKey(const ValueKey('import-confirm'))
+              .evaluate()
+              .isNotEmpty,
         );
         expect(c.snapshot.balance(account), BigInt.from(98000));
-        await localTap(tester, find.text('Confirm exact row decisions'));
+        await localTap(tester, find.byKey(const ValueKey('import-confirm')));
         await localWait(
           tester,
-          () => find.text('Process next reviewed chunk').evaluate().isNotEmpty,
+          () => find
+              .byKey(const ValueKey('import-run-all'))
+              .evaluate()
+              .isNotEmpty,
         );
-        await localTap(tester, find.text('Process next reviewed chunk'));
+        await localTap(tester, find.byKey(const ValueKey('import-run-all')));
         await localWait(
           tester,
           () => c.snapshot.balance(account) == BigInt.from(105500),
@@ -150,44 +145,42 @@ void main() {
               .length,
           2,
         );
+        await localTap(tester, find.byKey(const ValueKey('import-done')));
         await localTap(tester, find.text('Reports').first);
-        await localTap(tester, find.text('Export filtered financial CSV'));
+        await localTap(tester, find.text('Export CSV').first);
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Financial CSV saved with the displayed filters')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('CSV saved.').evaluate().isNotEmpty,
           'save synthetic financial CSV to a temporary test destination',
         );
         await tester.runAsync(c.store.integrity);
         final originalIds = c.snapshot.revisions.map((r) => r.id).toList(),
             owner = c.store.owner;
-        await localTap(tester, find.byTooltip('Profile & utilities'));
-        await localTap(tester, find.text('Backup & recovery'));
-        await localTap(tester, find.text('Generate recovery secret'));
-        final secretField = find.widgetWithText(TextField, 'Recovery secret');
-        final recoverySecret = tester
-            .widget<TextField>(secretField)
-            .controller!
-            .text;
-        expect(recoverySecret, isNotEmpty);
+        await localTap(tester, find.byKey(const ValueKey('shell-profile')));
+        final menu = find.byKey(const ValueKey('profile-menu-Backup & recovery'));
         await localTap(
           tester,
-          find.widgetWithText(
-            CheckboxListTile,
-            'I have saved this recovery secret in a separate safe place',
-          ),
+          menu.evaluate().isNotEmpty
+              ? menu
+              : find.byKey(const ValueKey('Backup & recovery')),
         );
-        await localTap(tester, find.text('Save encrypted backup'));
+        await localTap(tester, find.byKey(const ValueKey('backup-save')));
+        final secretField = find.descendant(
+          of: find.byKey(const ValueKey('backup-secret')),
+          matching: find.byType(TextField),
+        );
+        String shownSecret() =>
+            tester.widget<TextField>(secretField).controller!.text;
+        await localWait(tester, () => shownSecret().isNotEmpty);
+        final recoverySecret = shownSecret();
+        await localTap(tester, find.byKey(const ValueKey('backup-kept')));
+        await localTap(tester, find.byKey(const ValueKey('backup-save-file')));
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Encrypted backup saved.')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Backup saved').evaluate().isNotEmpty,
           'save encrypted synthetic financial archive',
         );
+        await localTap(tester, find.byKey(const ValueKey('backup-done')));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(runtime.close);
         runtime.dispose();
@@ -209,22 +202,35 @@ void main() {
           ),
         );
         await localSettle(tester);
+        await localTap(tester, find.byKey(const ValueKey('greeting-start')));
         await localTap(tester, find.text('Restore from backup'));
+        await localTap(tester, find.byKey(const ValueKey('restore-choose')));
+        await waitForNativePicker(
+          tester,
+          () => find.text('Choose another file').evaluate().isNotEmpty,
+          'select the encrypted archive just saved',
+        );
         await tester.enterText(
-          find.widgetWithText(TextField, 'Recovery secret'),
+          find.descendant(
+            of: find.byKey(const ValueKey('backup-secret')),
+            matching: find.byType(TextField),
+          ),
           recoverySecret,
         );
         FocusManager.instance.primaryFocus?.unfocus();
         await localSettle(tester);
-        await localTap(tester, find.text('Choose and inspect backup'));
-        await waitForNativePicker(
+        await localTap(tester, find.byKey(const ValueKey('restore-open')));
+        await localWait(
           tester,
-          () =>
-              find.text('Restore reviewed local profile').evaluate().isNotEmpty,
-          'select the encrypted archive just saved',
+          () => find
+              .byKey(const ValueKey('restore-confirm'))
+              .evaluate()
+              .isNotEmpty,
         );
-        await localTap(tester, find.text('Restore reviewed local profile'));
+        await localTap(tester, find.byKey(const ValueKey('restore-confirm')));
+        await localTap(tester, find.text('Restore'));
         await localWait(tester, () => restoredRuntime!.session != null);
+        await localTap(tester, find.byKey(const ValueKey('restore-open-app')));
         final recovered = restoredRuntime.session!.localFinance;
         expect(recovered.store.owner, owner);
         expect(
@@ -236,34 +242,23 @@ void main() {
         await localTap(tester, find.text('Files').first);
         await localWait(
           tester,
-          () => find
-              .textContaining('Actual bytes absent on this device.')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Missing').evaluate().isNotEmpty,
         );
         final recoveredVersion = recovered.snapshot.version;
-        await localTap(
-          tester,
-          find.text('Restore local bytes from identical original'),
-        );
+        await localTap(tester, find.textContaining('p4_receipt').first);
+        await localTap(tester, find.byKey(const ValueKey('file-menu')));
+        await localTap(tester, find.byKey(const ValueKey('file-restore')));
         await waitForNativePicker(
           tester,
-          () => find
-              .textContaining('Original bytes match the immutable checksum')
-              .evaluate()
-              .isNotEmpty,
+          () => find.text('Restored from your original.').evaluate().isNotEmpty,
           'select the same test/fixtures/p4_receipt.png to restore local bytes',
         );
         expect(recovered.snapshot.version, recoveredVersion);
-        await localTap(tester, find.text('Preview unscanned image'));
+        await localTap(tester, find.byKey(const ValueKey('file-preview')));
         await localWait(
           tester,
-          () => find
-              .text(
-                'Unscanned private image. Integrity verification is not a safety scan.',
-              )
-              .evaluate()
-              .isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('preview-image')).evaluate().isNotEmpty,
         );
         await localTap(tester, find.text('Close'));
         await tester.runAsync(recovered.store.integrity);
