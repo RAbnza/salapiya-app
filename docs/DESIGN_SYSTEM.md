@@ -1,10 +1,10 @@
 # Design system
 
-This is the spec for the Salapiya UI redesign (Windows and Android, one Flutter codebase). Every redesign chat follows it. When a chat needs a rule that isn't here, add it here first, then build it. Every section chat builds to the [Section screen standard](#section-screen-standard-the-overviews-quality-bar): the Overview is the quality bar.
+This is Salapiya's design system (Windows and Android, one Flutter codebase). Every UI change follows it, new features included. When a change needs a rule that isn't here, add it here first, then build it. Every screen, new or changed, builds to the [Section screen standard](#section-screen-standard-the-overviews-quality-bar): the Overview is the quality bar. The UI redesign (Chats 1 to 17, finished on 2026-11-03) built every real-use screen to it; the decision log keeps that history.
 
 The pre-redesign design system, including its research and history, is archived at [archive/DESIGN_SYSTEM_pre-redesign.md](archive/DESIGN_SYSTEM_pre-redesign.md). It is not a rule source.
 
-**Scope.** The redesign covers the UI layer of the real-use screens only (the `production` code paths: `lib/app`, `lib/finance`, `lib/shared`, `lib/life`, `lib/local`, `lib/connected`, `lib/design_system`). Demo and gallery screens (`lib/features/*` demo branches, `lib/gallery`, `lib/prototype`) must keep compiling and working, but they are not polished. Models, domain rules, calculations, the database, migrations, sync and auth flows do not change. A UI goal that seems to need such a change goes to the handoff under "Needs approval".
+**Scope.** It covers the real-use screens (the `production` code paths: `lib/app`, `lib/finance`, `lib/shared`, `lib/life`, `lib/local`, `lib/connected`, `lib/design_system`, `lib/profile`, `lib/onboarding`, and the section frames under `lib/features`, as `consistency_sweep_test` lists them). Demo and gallery screens (`lib/features/*` demo branches, `lib/gallery`, `lib/prototype`) must keep compiling and working, but they are not polished. Models, domain rules, calculations and data follow their own documents (DOMAIN_RULES, DATABASE, ARCHITECTURE); a screen that needs them changed waits for that change to be approved.
 
 ## Contents
 
@@ -1433,7 +1433,7 @@ The rules' error messages are user-facing too. They follow this glossary, and wh
 
 ## 8. Dashboard data inventory
 
-This inventory covers what the Overview can show without new domain logic. **Readable** means an existing getter or pure function returns the value as-is. **UI aggregation** means summing, grouping or filtering existing exact values inside the view; each new aggregation is listed in the handoff under "Needs approval" before it is built. **New logic** is out of scope for the UI redesign.
+This inventory covers what the Overview can show without new domain logic. **Readable** means an existing getter or pure function returns the value as-is. **UI aggregation** means summing, grouping or filtering existing exact values inside the view; each new aggregation is listed in the handoff under "Needs approval" before it is built. **New logic** is a domain change, approved on its own before a screen shows it.
 
 | Data | Source | Status |
 | --- | --- | --- |
@@ -1711,6 +1711,7 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | 2026-11-03 | Chat 17 stage B4: `FormExitGuard` asks through the kit's confirmation instead of a stock `AlertDialog`: Keep editing plus Keep draft & close, or a destructive Discard changes with focus on Keep editing. Discard draft leaves the exit dialog in Money, Life and Shared's bill and payment forms (`discardDraft` is gone); drafts are discarded from Saved drafts. | Approved |
 | 2026-11-03 | Chat 17 stage C: this document matches the code again (chart and Overview file names, `BudgetProgress`, Windows button height, tabs everywhere). §9, the temporary roadmap, is retired; its lasting rules on rule messages are §7's Rule messages, and the decision log is §9. Lines that described work still to come now describe what's done. The intro, the Scope paragraph and CLAUDE.md's redesign block change only when the owner calls the redesign finished. | Approved |
 | 2026-11-03 | Chat 17, after stage C (owner's go-ahead on both recommendations): chart axis labels follow §1 at 200% (kept inside the plot, thinned from the last when they don't fit, a band as tall as the labels). At 100% only the edge labels move, inside the plot. `p3_widgets_test`'s invitation is now sent on the day the test runs; it had a fixed date that expired after seven days. | Approved |
+| 2026-11-03 | The owner calls the UI redesign finished. This document stays the design system for every later change, including the coming feature update: new and changed screens build to the Section screen standard, follow §1 to §7 and record their decisions here. CLAUDE.md's redesign block became its permanent UI rules; the intro and Scope here no longer describe a redesign in progress. | Approved |
 | 2026-11-02 | The demo controller's group actions stay for now: `LocalFinancialController`'s constructor resets the base controller and clears its group state, so removing that state changes the real controller. | Needs approval |
 | 2026-11-02 | Owner review: Chat 15b looks good on the emulator, which finishes it. | Approved |
 | 2026-11-02 | Chat 15b, the owner's picks: phones use the dock's names in the app bar, and the title drops under the actions only when it doesn't fit (a wrapped title broke inside a word at 200%); Go to's page groups its entries in cards; one stage. | Approved |
