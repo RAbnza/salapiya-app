@@ -19,7 +19,8 @@ The ideas below aren't final. The planning session can solidify them, push back 
 
 - Make the things I already do every month less of a chore: recurring budgets, groceries, meal prep.
 - Turn a Shared Expenses group into a real shared space for a household or any group doing something together, not just a place to split bills. Right now my brothers and I plan our house renovation in Google Sheets; I want that to live in the app.
-- Clean up the parts of the app that grew awkward: quick actions on Android, where Profile and Settings live, landscape on Android, moving between tabs.
+- Clean up the parts of the app that grew awkward: quick actions on Android, where Profile and Settings live, where reminders live, landscape on Android, moving between tabs, and editing records after they exist.
+- Make signing in and opening the app feel safer and more like one app: Google sign-in inside the app, "Continue to Salapiya", and an optional app lock.
 - Keep everything consistent with the design system, so the new parts look like they were always there.
 
 ## 2. Ground rules
@@ -133,6 +134,59 @@ It isn't only for renovations. It should work for any group project or household
 
 **What's there now.** Section tabs are the app's own (no `TabBarView`), so swiping has to be added to that, and it mustn't fight with horizontal scrolling inside a tab (charts, tables, the week strip).
 
+### 3.13 One-time debt payments
+
+**What I want.** When I schedule a debt, I can say it's paid back in one go, for example in a month, instead of setting it up as monthly with a single payment. I'm not sure a separate option is better than "monthly, 1 payment", so the plan should decide.
+
+**What's there now.** A debt schedule's frequency is weekly, monthly, yearly or custom (every N days), in `debtScheduleFrequencies` and `validateDebtCadence` in `lib/finance/debt_rules.dart`. The explicit schedule rows are the real record; the frequency only describes them.
+
+**To settle.** A "one payment" choice (a single due date and amount) vs keeping the existing options and making the one-payment case easier to pick. Either way, nothing about how payments and dues work changes.
+
+### 3.14 Where reminders live
+
+**What I want.** Reminders sit in Life right now, but they cover more than events and tasks: debt dues, card payments and other money things. They might belong somewhere else.
+
+**What's there now.** Life has a Reminders tab (`lib/life/reminders_tab.dart`, `reminder_page.dart`), and Calendar and Career link to it. Money and debt reminders show there too.
+
+**To settle.** Where reminders go (their own place, the bell or notification panel from 3.2, or Overview), how each section still shows its own upcoming items, and how this fits the new organization in 3.8.
+
+### 3.15 Google sign-in that feels like part of the app
+
+**What I want.**
+- On Android, signing in with Google happens inside the app instead of switching to the browser.
+- On Windows, if it's possible, the browser tab closes itself after I pick an account. If it can't, leave it.
+
+**What's there now.** Sign-in uses Supabase's OAuth flow in the external browser (`signInWithOAuth` with `LaunchMode.externalApplication` in `lib/p0/auth_runtime.dart`), and the browser comes back to the app through the `dev.salapiya.p0://auth/callback` link.
+
+**To settle.**
+- **Android:** the native Google account picker (Credential Manager or Google Sign-In handing an ID token to Supabase) vs an in-app browser tab. The native picker likely needs a new package and an Android OAuth client in Google Cloud.
+- **Windows:** whether the page the browser lands on can close itself (browsers usually only let a script close a tab it opened), or at least say "You can close this tab now".
+- Both keep the existing PKCE and session protections, and the existing accounts keep working.
+
+### 3.16 "Continue to Salapiya" on Google's sign-in screen
+
+**What I want.** Google's screen says "continue to uxnyxhwqshqpvinvopiv.supabase.co". It should say "Continue to Salapiya", but only if I don't have to pay for it. If it needs a paid plan, leave it.
+
+**To settle.** Find the free way, if there is one. A custom domain on Supabase is a paid add-on. Signing in with Google's own ID token (the native picker in 3.15) usually shows the app name from the Google Cloud consent screen instead of the Supabase domain, which might solve this for free at least on Android. Check what Windows would show, and what the consent screen needs (app name, logo, possibly Google's verification).
+
+### 3.17 Editing debts and other records
+
+**What I want.** After creating a debt, I can change its name or its type. If that's already possible, it's too hidden; it should be easy to find, for example in the ⋯ menu. The same goes for other records that are hard to edit.
+
+**What's there now.** The debt's ⋯ menu (`debt-more` in `lib/finance/debt_screen.dart`) has Update amounts, Break down a payment, Log a lender charge or waiver, Log an early payoff and View record. It has no rename and no type change. Financial records change through corrections that keep history (DOMAIN_RULES), so an edit here has to be a correction, not an overwrite.
+
+**To settle.** Which details of a debt can change after it's created (name, lender, type, notes) and which can't without a full correction. Put Edit in the ⋯ menu of each record type. List the other records (accounts, cards, budgets, goals, groups, Life items) that are hard to edit today.
+
+### 3.18 App lock
+
+**What I want.** I can turn on a PIN to lock the app, so it's more secure.
+
+**To settle.**
+- When it locks (on launch, after time in the background) and what's hidden until it's unlocked, including the preview in the app switcher.
+- How the PIN is stored safely (never in plain text, with limits on attempts).
+- What happens if I forget it, without weakening the existing encrypted profile and recovery rules.
+- Whether Windows Hello or fingerprint can unlock it too. That would probably need a package such as `local_auth`, which follows the UI package rule.
+
 ## 4. Open for suggestions
 
 The planning session should add ideas that fit the goals in §1, mark them as suggestions, and leave them for my approval. Good places to look: groceries and meals, group tools, and anything that makes everyday logging faster.
@@ -159,3 +213,4 @@ Each milestone's section below the table covers:
 | Date | Decision |
 | --- | --- |
 | 2026-11-03 | Started the 0.8 update on `update/0.8`. Ideas captured in §3; the plan comes next. |
+| 2026-11-03 | Added ideas 3.13–3.18: one-time debt payments, where reminders live, in-app Google sign-in, "Continue to Salapiya", editing debts and other records, app lock. |
