@@ -13,37 +13,37 @@
 
 | Area | Selected baseline | Reason and limits |
 | --- | --- | --- |
-| Applications | Flutter/Dart, one shared product codebase | A substantial rewrite is acceptable (D17), so desktop/mobile product behavior takes priority over web-code reuse. Platform adapters and adaptive UI are still necessary. |
-| Local data | SQLite via the validated Flutter/PowerSync-compatible storage stack | Durable transactions, local reads and offline work. Encryption, exact types, schema constraints and upgrade behavior require proof. |
-| Remote identity | Supabase Auth with Google | Standard recoverable identity for sync/groups; not required for local-only use. |
-| Remote data | Managed Supabase PostgreSQL | Fits relational financial/group rules and transactional validation better than a document-model rewrite. |
-| Sync infrastructure | PowerSync | Reuse transport/local replication infrastructure; custom authorization, financial commands and conflict resolution remain necessary. |
-| Files | Private object storage with local download cache | Keep file transfer separate from small structured-record synchronization. Provider configuration/scanning is gated. |
-| Business rules | Shared pure Dart domain code within both clients; validated remote command implementation | Local responsiveness plus independently enforced remote integrity. Cross-language parity needs fixtures, not assumptions. |
+| Applications | Flutter/Dart, one shared product codebase | A big rewrite was acceptable (D17), so getting desktop and mobile behaviour right matters more than reusing web code. Platform adapters and an adaptive UI are still needed. |
+| Local data | SQLite via the validated Flutter/PowerSync-compatible storage stack | Durable transactions, local reads and offline work. Encryption, exact types, schema constraints and upgrades all have to be proven. |
+| Remote identity | Supabase Auth with Google | A standard, recoverable identity for sync and groups; not needed for local-only use. |
+| Remote data | Managed Supabase PostgreSQL | Fits the relational financial and group rules, and transactional validation, better than rewriting everything for a document model. |
+| Sync infrastructure | PowerSync | Reuses transport and local replication; I still have to build the authorization, financial commands and conflict resolution. |
+| Files | Private object storage with local download cache | File transfer stays separate from syncing small structured records. Provider configuration and scanning are gated. |
+| Business rules | Shared pure Dart domain code within both clients; validated remote command implementation | Fast local responses, with remote integrity enforced separately. Keeping two languages in step needs fixtures, not assumptions. |
 
-Flutter supports Windows and Android; this is not a promise that every plugin supports every target. See [Flutter platforms](https://docs.flutter.dev/reference/supported-platforms), [Supabase Flutter](https://supabase.com/docs/guides/getting-started/quickstarts/flutter), and the publisher's [PowerSync package](https://pub.dev/packages/powersync). Pin tested compatible versions when Gate G0 is executed; do not use the web repository's version numbers as native dependency selections.
+Flutter supports Windows and Android, but that doesn't mean every plugin supports every target. See [Flutter platforms](https://docs.flutter.dev/reference/supported-platforms), [Supabase Flutter](https://supabase.com/docs/guides/getting-started/quickstarts/flutter), and the publisher's [PowerSync package](https://pub.dev/packages/powersync). Pin versions I've tested together when I run Gate G0; the web repo's version numbers aren't the native dependency choices.
 
 #### 7.2 Application boundaries
 
-Use a modular application with presentation, application commands/queries, pure domain rules, repositories and platform adapters. Keep Money, Debts/Cards, Planning, Sharing, Career, Time, Trackers, Profile/Sync and Files/Recovery coherent without premature microservices.
+A modular app with presentation, application commands and queries, pure domain rules, repositories and platform adapters. Money, Debts and Cards, Planning, Sharing, Career, Time, Trackers, Profile and Sync, and Files and Recovery each hang together, without jumping to microservices.
 
-UI state is transient. The local database owns persisted records, durable drafts and pending commands. State-management libraries coordinate views; they are not a second financial authority. Use reactive local queries and bounded results. Select one primary state-management and routing approach during G0, rather than introducing competing frameworks. Candidate categories include Riverpod-style state coordination and maintained declarative routing; exact packages/versions are not independently approved by this blueprint.
+UI state is temporary. The local database owns saved records, durable drafts and pending commands. State-management libraries coordinate views; they're not a second source of financial truth. Use reactive local queries and bounded results. Pick one main approach to state management and routing during G0 rather than mixing competing frameworks. Riverpod-style state coordination and maintained declarative routing are the kinds of thing I'm considering; this plan doesn't approve exact packages or versions by itself.
 
-The server authenticates each request, checks ownership/membership and versions, then executes a complete domain command in one transaction. Prefer a narrow application-command surface, such as validated PostgreSQL RPC with a small API layer where needed. Do not expose arbitrary ledger writes to clients. Least-privilege database grants, API checks and sync filtering are all required; service-role secrets remain server-side.
+The server authenticates every request, checks ownership, membership and versions, then runs one whole domain command in a single transaction. Keep the surface of application commands narrow, like validated PostgreSQL RPC with a small API layer where needed. Clients never get to write arbitrary ledger rows. Least-privilege database grants, API checks and sync filtering are all needed, and service-role secrets stay on the server.
 
 #### 7.3 What is not automatically portable
 
-Next.js server rendering, browser sessions, raw PostgreSQL functions, RLS, lock semantics, deferred trigger behavior, pg-boss jobs and S3/ClamAV infrastructure do not become native capabilities by changing UI frameworks. Identify the replacement for every invariant and side effect.
+Next.js server rendering, browser sessions, raw PostgreSQL functions, RLS, lock semantics, deferred triggers, pg-boss jobs and the S3/ClamAV setup don't turn into native features by switching UI frameworks. Every invariant and side effect needs its replacement named.
 
-SQLite local transactional checks and the controlled command layer protect against application bugs; an owner with full control of their device can modify local files. The service must treat uploaded data as untrusted and enforce shared/remote rules independently. Local tampering cannot grant access to another person's records.
+SQLite's local transactional checks and the controlled command layer protect against bugs in the app; someone with full control of their own device can still edit the local files. The service treats uploaded data as untrusted and enforces shared and remote rules on its own. Tampering locally can't give anyone access to another person's records.
 
 #### 7.4 Alternatives considered
 
-Tauri/React offers stronger direct reuse of the web UI/domain language and remains a fallback if Flutter's critical integrations fail. Because a substantial rewrite was acceptable (D17), the preference shifted toward Flutter; no measured performance superiority is claimed. Tauri's documented Next.js path requires static export, so the current server application is not a drop-in package. [Tauri Next.js integration](https://v2.tauri.app/start/frontend/nextjs/).
+Tauri with React would reuse more of the web UI and domain language directly, and it's the fallback if Flutter's critical integrations fail. Because a big rewrite was acceptable (D17), I leaned towards Flutter; I'm not claiming it measured faster. Tauri's documented Next.js path needs a static export, so the current server app wouldn't just drop in. [Tauri Next.js integration](https://v2.tauri.app/start/frontend/nextjs/).
 
-Firestore has useful offline caching, but documented last-write-wins updates and offline transaction limitations do not supply this application's relational financial guarantees. It is not selected as the primary data model. [Firestore offline data](https://firebase.google.com/docs/firestore/manage-data/enable-offline), [transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).
+Firestore has useful offline caching, but its documented last-write-wins updates and offline transaction limits don't give the relational financial guarantees this app needs. It's not the main data model. [Firestore offline data](https://firebase.google.com/docs/firestore/manage-data/enable-offline), [transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).
 
-Fully separate native clients increase solo-developer maintenance. Peer-hosted synchronization makes availability depend on personal devices and complicates recovery. Self-hosting is a possible later cost trade-off, not an assumed free or lower-maintenance default.
+Fully separate native clients would mean more upkeep for one developer. Peer-hosted sync would make availability depend on personal devices and make recovery harder. Self-hosting might be a cost trade-off later; I'm not assuming it's free or less work.
 
 ### 8. Offline operation, authority and synchronization contract
 
@@ -51,92 +51,92 @@ Fully separate native clients increase solo-developer maintenance. Peer-hosted s
 
 | Mode/data | Authority and user experience |
 | --- | --- |
-| Local-only private profile | Local transactional data is authoritative. All launch personal functions must be usable without a backend, including advanced local management. |
-| Connected private profile | PostgreSQL holds the accepted cross-device record. Each device reads local accepted data plus explicitly pending local work. Local saves remain durable before service acceptance. |
-| Shared group | Service holds accepted group history/membership; local copies and pending commands support offline reading/capture. No device is the group server. |
-| Derived values | Rebuildable projections of applicable authoritative records; never independently edited balances or totals. |
-| Attachments | Metadata and transfer status are distinct from actual bytes available on a device. |
+| Local-only private profile | The local transactional data is the truth. Every personal launch feature has to work with no backend, including the advanced local management. |
+| Connected private profile | PostgreSQL holds the accepted record across devices. Each device reads its local accepted data plus local work that's clearly pending. A local save is durable before the service accepts it. |
+| Shared group | The service holds accepted group history and membership; local copies and pending commands let you read and capture offline. No device acts as the group's server. |
+| Derived values | Projections that can be rebuilt from the records they come from; never balances or totals someone edits on their own. |
+| Attachments | A file's details and transfer status are separate from whether its bytes are actually on a device. |
 
-This is a local-first interaction model with server-authoritative reconciliation for synchronized data, not a promise of simultaneous global consistency while offline. PowerSync documents that conflict handling and idempotent backend writes remain application responsibilities. [PowerSync conflict handling](https://docs.powersync.com/handling-writes/handling-update-conflicts).
+The interaction model is local-first, with the server deciding when synced data is reconciled. It isn't a promise that everything is consistent everywhere at once while offline. PowerSync's own docs say conflict handling and idempotent backend writes are the app's job. [PowerSync conflict handling](https://docs.powersync.com/handling-writes/handling-update-conflicts).
 
 #### 8.2 Operational availability
 
 | Workflow | Offline behavior | Online requirement |
 | --- | --- | --- |
-| Startup, local creation, private reads/search, downloaded history | Available without sign-in refresh | None |
-| Ordinary income, expense, transfer, new bill and payment report | Validate and durably save local work; connected effects are pending until accepted | Sync/revalidation for cross-device/group acceptance |
-| Reports and forecasts | Calculate over available complete local data with freshness/pending labels | Refresh for newer remote changes |
-| Complex debt/card closure, schedule replacement, allocation/correction or capacity-dependent actions | Full local operation in local-only mode; connected mode permits review/draft | Online finalization can be required where stale concurrent state makes acceptance unsafe |
-| Google enrollment, another-device retrieval, invitation acceptance, membership/ownership changes | Explain connection requirement; preserve user input | Required |
-| Local reminders and downloaded file access | Available subject to OS scheduling/files present | None |
-| Undownloaded files, remote updates and cloud recovery | Show explicit availability/status | Required |
+| Startup, local creation, private reads/search, downloaded history | Works without refreshing the sign-in | None |
+| Ordinary income, expense, transfer, new bill and payment report | Validated and saved durably on the device; connected effects stay pending until accepted | Sync and revalidation for acceptance across devices or by the group |
+| Reports and forecasts | Worked out over the complete local data available, labelled with freshness and anything pending | Refresh for newer remote changes |
+| Complex debt/card closure, schedule replacement, allocation/correction or capacity-dependent actions | Fully local in local-only mode; connected mode allows review and drafts | Finishing online can be required where stale concurrent state would make acceptance unsafe |
+| Google enrollment, another-device retrieval, invitation acceptance, membership/ownership changes | Explains that a connection is needed and keeps what the user entered | Required |
+| Local reminders and downloaded file access | Available, as far as OS scheduling and the files present allow | None |
+| Undownloaded files, remote updates and cloud recovery | Availability and status shown plainly | Required |
 
-Gate G3 must produce a command-by-command availability matrix for all M/S rows. Keep ordinary recording offline; do not use this exception to turn the entire finance module into an online-only application. Advanced offline finalization can be expanded after its invariants are proved.
+Gate G3 has to produce a command-by-command availability table for every M and S row. Ordinary recording stays offline; this exception isn't a way to turn the whole finance module online-only. Finishing advanced actions offline can grow once its invariants are proven.
 
 #### 8.3 Durable command processing
 
-Proposed implementation contract, to be proved against the selected SDK:
+A proposed contract, still to be proven against the SDK I pick:
 
-1. A user action is validated with exact domain rules and assigned a stable command ID, schema version, device identity, expected record/source versions, and payload digest.
-2. Commit pending intent and the local representation needed to display it atomically. A power loss must not leave an unexplained balance change without a recoverable command.
-3. Upload a whole domain command through an authenticated endpoint. Do not treat independently replicated ledger rows as authorization to post money.
-4. The server verifies current authority, dependencies and versions, then atomically records the accepted action, journal/evidence, audit and idempotent receipt, or returns a structured rejection/conflict.
-5. Same command ID and same normalized payload returns its prior result. Same ID with a different payload fails. Use stable IDs and dependencies, not device clock order, to identify actions.
-6. Reconcile the receipt and downloaded accepted state without displaying the accepted action and its pending projection twice. An upload acknowledgement and completed download checkpoint are different events.
-7. Temporary failures retry with bounded backoff. Permanent validation/authority conflicts move to an inspectable review state; they must not stall all unrelated uploads indefinitely.
-8. Preserve rejected intent and genuine private money evidence. Correction/retry creates explicit subsequent intent where necessary; never mark a rejected command synced or repeatedly resubmit an invalid payload under new IDs.
+1. A user action is validated with the exact domain rules and given a stable command id, schema version, device identity, the expected record and source versions, and a digest of its payload.
+2. The pending intent and whatever's needed to show it locally are committed together. A power cut must never leave a balance change with no recoverable command behind it.
+3. A whole domain command is uploaded through an authenticated endpoint. Ledger rows replicated on their own never count as permission to post money.
+4. The server checks current authority, dependencies and versions, then records the accepted action, its journal and evidence, the audit and an idempotent receipt in one go, or returns a structured rejection or conflict.
+5. The same command id with the same normalized payload returns its earlier result. The same id with a different payload fails. Actions are identified by stable ids and dependencies, not the order of device clocks.
+6. The receipt and the downloaded accepted state are reconciled without showing the accepted action and its pending projection twice. An upload acknowledgement and a finished download checkpoint are different events.
+7. Temporary failures retry with bounded backoff. Permanent validation or authority conflicts move to a review state you can inspect; they never hold up every unrelated upload forever.
+8. Rejected intent and real private money evidence are kept. A correction or retry creates new, explicit intent where it's needed; a rejected command is never marked synced, and an invalid payload is never resent again and again under new ids.
 
-PowerSync's exact queue/transaction/checkpoint behavior and local-only table support must be tested. A bounded command adapter/pending projection is acceptable application work; building a second general-purpose synchronization engine is not the default. Download-only accepted financial tables plus local pending command records are a proposed approach, not a validated SDK guarantee.
+PowerSync's exact queue, transaction and checkpoint behaviour, and its support for local-only tables, have to be tested. A bounded command adapter and pending projection are fair application work; building a second general-purpose sync engine isn't the default. Accepted financial tables that only download, plus local pending command records, is a proposed approach, not something the SDK has been shown to guarantee.
 
 #### 8.4 Conflicts and duplicates
 
 | Situation | Required behavior |
 | --- | --- |
-| Two distinct expenses recorded on separate devices | Preserve both if independently valid; no balance-row overwrite. |
-| Same submitted command retried after response loss | Return original outcome without a second economic effect. |
-| Same real-world purchase manually entered twice under different IDs | Offer duplicate detection/review; idempotency alone cannot establish that they are the same purchase. |
-| Concurrent correction of one bill/action | Expected-version rejection and comparison/review; no last-write-wins amounts. |
-| Two payments consume the same remaining liability/allocation capacity | Serialize server validation; reject/hold incompatible intent; preserve evidence of an actual payment for reviewed classification. |
-| New expense makes another device's savings reservation underfunded | Keep real expense and explain shortfall; never fabricate cash or delete a reservation silently. |
-| Record archived/deleted remotely while offline edits exist | Enforce current allowed transition, preserve draft/conflict; no automatic resurrection. |
-| Member removed before an offline command uploads | Recheck current membership and deny new group writes; local private evidence remains available. |
-| Unrelated new bill advances group state | Avoid rejecting all independent creates solely because a global version changed; validate the actual affected dependencies. Scope version changes carefully. |
+| Two distinct expenses recorded on separate devices | Keep both if each is valid on its own; no balance row gets overwritten. |
+| Same submitted command retried after response loss | Return the original outcome without a second economic effect. |
+| Same real-world purchase manually entered twice under different IDs | Offer duplicate detection and review; idempotency alone can't prove they're the same purchase. |
+| Concurrent correction of one bill/action | Expected-version rejection, then a comparison and review; amounts never go last-write-wins. |
+| Two payments consume the same remaining liability/allocation capacity | Server validation runs one at a time; incompatible intent is rejected or held, and evidence of a real payment is kept for a reviewed classification. |
+| New expense makes another device's savings reservation underfunded | Keep the real expense and explain the shortfall; never invent cash or quietly delete a reservation. |
+| Record archived/deleted remotely while offline edits exist | Enforce the transition currently allowed and keep the draft or conflict; nothing comes back to life on its own. |
+| Member removed before an offline command uploads | Recheck current membership and deny new group writes; local private evidence stays available. |
+| Unrelated new bill advances group state | Don't reject every independent create just because a global version changed; validate the dependencies actually affected. Scope version changes carefully. |
 
-Do not auto-merge monetary fields, posted journals, settlement transitions, schedule versions, or provider facts. For nonfinancial entries, default to explicit record-version conflicts first; field-level merging is an optional later improvement.
+Monetary fields, posted journals, settlement transitions, schedule versions and provider facts never auto-merge. For non-financial entries, start with explicit record-version conflicts; merging field by field could come later.
 
 #### 8.5 Read consistency and user-facing status
 
-Provide a consistent accepted snapshot for financial reporting and distinguish any overlay of local pending entries. Show last successful sync, pending count and actionable review failures in a dedicated Sync area. Ordinary screens need concise labels rather than implementation detail.
+Financial reports get a consistent accepted snapshot, with any overlay of local pending entries marked as such. A dedicated Sync area shows the last successful sync, the pending count and review failures you can act on. Ordinary screens get short labels, not implementation detail.
 
-**Saved on this device** means durable locally. **Synced** means accepted and reconciled to the applicable service checkpoint. **Waiting for connection** means pending transfer. **Needs review** means user action is needed. For settlements, **Confirmed by recipient** is a separate business state; a synced pending settlement is not a confirmed payment receipt.
+**Saved on this device** means it's durable locally. **Synced** means accepted and reconciled to the service checkpoint that applies. **Waiting for connection** means it's waiting to transfer. **Needs review** means the user needs to do something. For settlements, **Confirmed by recipient** is its own business state; a synced pending settlement isn't a confirmed receipt of payment.
 
-Download histories sufficient for required local calculations; pagination cannot silently turn visible-page sums into account/group totals. Supported capacity bounds must be disclosed and validated. A missing initial history blocks a complete-balance claim, not unrelated features.
+Download enough history for the local calculations that need it; pagination must never quietly turn the sum of a visible page into an account or group total. Supported capacity limits have to be stated and validated. Missing first-download history blocks claiming a complete balance, not unrelated features.
 
 ### 11. Security, privacy and lifecycle
 
-The approved security posture is practical baseline protection, not an enterprise control program. It includes strict ownership, secure authentication, encrypted transport, protected credentials, appropriate local storage protection, auditable financial transitions and recoverability.
+The security level I approved is practical baseline protection, not an enterprise control programme. It covers strict ownership, secure authentication, encrypted transport, protected credentials, suitable local storage protection, auditable financial transitions and being able to recover.
 
-End-to-end encryption is not a first-release requirement. Authorized infrastructure administrators may technically access cloud-stored private/group data; disclose this. Group members cannot access each other's private records. Enabling synchronization uploads the private dataset to the selected services, so this product is not described as device-only once connected.
+End-to-end encryption isn't a first-release requirement. Authorized infrastructure admins can technically reach private and group data stored in the cloud, and the app says so. Group members can't reach each other's private records. Turning on sync uploads the private data to the chosen services, so once connected the product isn't described as device-only.
 
-Select maintained encryption and OS credential-storage facilities; do not invent cryptography or derive a database key directly from a short PIN. Validate the chosen SQLite encryption path on both platforms. Protect attachment bytes, temporary exports and logs as well as database files. Optional biometric/system app lock is a convenience/access control separate from encryption and recovery. Secure database/backup key handling is Gate G4, not an assumed property of SQLite or PowerSync.
+Use maintained encryption and the OS's credential storage; no home-made cryptography, and no database key derived straight from a short PIN. The SQLite encryption path I pick has to be validated on both platforms. Attachment bytes, temporary exports and logs need protecting as well as the database files. An optional biometric or system app lock is a convenience and access control, separate from encryption and recovery. Handling the database and backup keys securely is Gate G4; it's not something SQLite or PowerSync gives me for free.
 
-Authenticate and authorize all commands, file requests and subscription scopes. Never ship service-role, database-owner, signing or OAuth client secrets in apps. Use bounded validation, least-privilege grants, rate/size limits, current membership checks, safe local file paths and external link handling. Financial values, notes, tokens, invite secrets and attachment contents do not belong in telemetry.
+Every command, file request and subscription scope is authenticated and authorized. Never ship service-role, database-owner, signing or OAuth client secrets inside the apps. Bounded validation, least-privilege grants, rate and size limits, current membership checks, safe local file paths and careful handling of external links. Financial values, notes, tokens, invite secrets and attachment contents never go into telemetry.
 
-Separate local-profile removal, device revocation, cloud-account deletion and leaving a group. Consequential actions show what is removed, what remains shared, unsynced data at risk and recovery availability. Cloud deletion requires online authentication and revalidation; local-only deletion remains possible offline with explicit confirmation. A locally queued delete is not globally completed deletion.
+Removing the local profile, revoking a device, deleting the cloud account and leaving a group are separate things. Consequential actions show what goes, what stays shared, unsynced data that's at risk and whether recovery is possible. Deleting in the cloud needs online authentication and a fresh check; deleting a local-only profile works offline with an explicit confirmation. A delete queued on the device isn't a finished deletion everywhere.
 
-Define retained-backup and shared-history handling before real use. Do not promise immediate erasure from old backups or other members' downloads. Restoration must reapply account deletion/revocation decisions rather than revive unauthorized access. No advertising or behavioral analytics is required for the private pilot; any diagnostic upload is explicit and redacted.
+Decide how kept backups and shared history are handled before real use. Don't promise instant erasure from old backups or from other members' downloads. A restore has to reapply account deletions and revocations, never bring unauthorized access back. The private pilot needs no advertising or behavioural analytics; any diagnostic upload is explicit and redacted.
 
 ### 15. Repository and migration organization
 
-Continue in `RAbnza/Personal-Management-Platform`. Preserve the accepted web baseline and its tests/docs as an executable reference. Do not dismantle the web app at the start or maintain two competing product roadmaps indefinitely.
+I'm continuing in `RAbnza/Personal-Management-Platform`. The accepted web baseline and its tests and docs stay as a reference I can run. Don't take the web app apart at the start, and don't keep two competing product roadmaps going forever.
 
-A proposed structure is a new `apps/salapiya/` Flutter application, a bounded backend area such as `services/salapiya/` or documented Supabase functions/migrations, reusable cross-language fixtures under `contracts/`, and existing authoritative documents under `docs/`. This is a starting suggestion, not permission to move current files. Inspect repository tooling and decide exact paths in G0.
+The structure I proposed: a new `apps/salapiya/` Flutter app, a bounded backend area like `services/salapiya/` or documented Supabase functions and migrations, cross-language fixtures under `contracts/`, and the existing documents under `docs/`. That's a starting suggestion, not permission to move current files. Look at the repository's tooling and decide the exact paths in G0.
 
-Create a fresh native/local schema and deliberately mapped remote schema. Do not replay all web migrations inside SQLite. Reuse appropriate PostgreSQL logic only after reviewing its dependence on Better Auth/web workspace identities, privileged roles and old lifecycle machinery. Port semantic fixtures into Dart and backend tests; do not mechanically reuse web UI tests as native acceptance.
+Create a fresh native local schema and a deliberately mapped remote schema. Don't replay every web migration inside SQLite. Reuse PostgreSQL logic only after checking how much it depends on Better Auth and web workspace identities, privileged roles and the old lifecycle machinery. Port the semantic fixtures into Dart and backend tests; don't reuse web UI tests mechanically as native acceptance.
 
-No real legacy data migration is required. Create synthetic seed data and purposeful edge fixtures. Any cleaning/resetting of the old test environment remains a separate explicit action. New Salapiya schema upgrades and backup compatibility become required as soon as real pilot data exists.
+No real legacy data needs migrating. Create synthetic seed data and edge-case fixtures on purpose. Cleaning or resetting the old test environment stays its own explicit action. Once real pilot data exists, schema upgrades and backup compatibility for Salapiya become required.
 
-Before implementation begins, add narrowly scoped pointers/ADRs to the current handoff and architecture documents to avoid future agents following stale status text. This blueprint alone does not rewrite those historical records. Do not rename the repository or publish changes without a corresponding assignment.
+Before building starts, add narrowly scoped pointers or ADRs to the current handoff and architecture documents, so nobody (me included, later) follows stale status text. This plan on its own doesn't rewrite those historical records. Don't rename the repository or publish changes without deciding to do that as its own piece of work.
 
 ### 20. Risk register and mitigation
 
@@ -159,26 +159,26 @@ Before implementation begins, add narrowly scoped pointers/ADRs to the current h
 
 | ID | Decision | Status / rationale |
 | --- | --- | --- |
-| D01 | Salapiya; Your money, on your terms. | Approved final workshop name/tagline; repository name unchanged. |
-| D02 | Windows and Android with substantial capability parity | Approved; adapt UI/input, preserve meaning. |
-| D03 | One local profile per installation | Approved; no actual multi-person-per-installation need. |
-| D04 | Local creation/use without mandatory account | Approved; no online anonymous-registration prerequisite. |
-| D05 | Optional Google connection; one remote account/private profile, multiple devices | Approved; replaces earlier email/password-first recommendation. |
-| D06 | Continue with Google can retrieve an existing profile directly | Approved; do not create an empty profile first. |
-| D07 | Synchronize private data as well as groups | Approved; same-person cross-device use is core scope. |
-| D08 | All existing implemented financial capabilities launch together | Approved; supersedes earlier financial deferrals. Internal stages are not scope cuts. |
-| D09 | Overview, Money, Debts, Shared Expenses, Life | Approved; Debts prominent and Life retained despite finance-focused name. |
-| D10 | Calendar/reminders, Tasks/Learning/Books and Career essentials at launch | Approved; meaningful broader personal use from the beginning. |
-| D11 | Custom tracker builder/migrations, deep Career/tracker analytics later | Approved deferral; preserve compatible underlying preset/history design. |
-| D12 | Flutter, SQLite, Supabase and PowerSync baseline | Approved for planning, gated by actual platform/integrity/cost proof; no prior native acceptance. |
-| D13 | Owner-independent cloud groups, active-member bill creation, creator corrections, recipient confirmations | Approved; no owner approval queue for every bill and no owner access to private ledgers. |
-| D14 | Versioned conflict review and durable retries | Approved principle; exact queue/command implementation remains G1/G3. |
-| D15 | Baseline security; no initial end-to-end encryption requirement | Approved; disclose administrator trust, preserve user isolation and protected storage. |
-| D16 | Private distribution and free-tier pilot | Approved; no paid-service commitment or public launch. |
-| D17 | Substantial rewrite acceptable; no legacy real-data migration | Approved; existing data is disposable, but deletion is not automatically authorized. |
-| D18 | Continue in the existing repository | Approved; preserve web reference/history, separate replacement implementation. |
-| D19 | Logo and final native assets later | Deferred; no logo generated or implied approved here. |
-| D20 | Independent backups and reviewed recovery | Approved requirement; exact format/encryption/retention validated in G4/G8. |
+| D01 | Salapiya; Your money, on your terms. | Approved as the final name and tagline from the workshop; the repository name doesn't change. |
+| D02 | Windows and Android with substantial capability parity | Approved; the UI and input adapt, the meaning stays the same. |
+| D03 | One local profile per installation | Approved; there's no real need for several people on one install. |
+| D04 | Local creation/use without mandatory account | Approved; no anonymous online registration needed first. |
+| D05 | Optional Google connection; one remote account/private profile, multiple devices | Approved; replaces my earlier email-and-password-first idea. |
+| D06 | Continue with Google can retrieve an existing profile directly | Approved; no empty profile created first. |
+| D07 | Synchronize private data as well as groups | Approved; one person using several devices is core scope. |
+| D08 | All existing implemented financial capabilities launch together | Approved; replaces the earlier financial deferrals. Building in stages isn't cutting scope. |
+| D09 | Overview, Money, Debts, Shared Expenses, Life | Approved; Debts is prominent, and Life stays even though the name is finance-focused. |
+| D10 | Calendar/reminders, Tasks/Learning/Books and Career essentials at launch | Approved; meaningful wider personal use from the start. |
+| D11 | Custom tracker builder/migrations, deep Career/tracker analytics later | Approved as deferred; the preset and history design underneath stays compatible. |
+| D12 | Flutter, SQLite, Supabase and PowerSync baseline | Approved for planning, gated on real proof of platform support, integrity and cost; no native acceptance before that. |
+| D13 | Owner-independent cloud groups, active-member bill creation, creator corrections, recipient confirmations | Approved; no owner approval queue for every bill, and owners can't see private ledgers. |
+| D14 | Versioned conflict review and durable retries | Approved as a principle; the exact queue and command implementation is still G1/G3. |
+| D15 | Baseline security; no initial end-to-end encryption requirement | Approved; say plainly that admins are trusted, and keep user isolation and protected storage. |
+| D16 | Private distribution and free-tier pilot | Approved; no paid-service commitment and no public launch. |
+| D17 | Substantial rewrite acceptable; no legacy real-data migration | Approved; existing data is throwaway, but that doesn't automatically approve deleting it. |
+| D18 | Continue in the existing repository | Approved; keep the web reference and history, with the replacement built separately. |
+| D19 | Logo and final native assets later | Deferred; no logo is generated here, and none is implied to be approved. |
+| D20 | Independent backups and reviewed recovery | Approved requirement; the exact format, encryption and retention get validated in G4/G8. |
 
 ### 23. Reference index
 
@@ -189,8 +189,8 @@ Before implementation begins, add narrowly scoped pointers/ADRs to the current h
 - [Budgets](DOMAIN_RULES.md#v2-c--budgets).
 - [Savings goals](DOMAIN_RULES.md#v2-d--savings-goals).
 - [Forecasts](DOMAIN_RULES.md#v2-e--forecasts).
-- [Career analytics](DOMAIN_RULES.md#v2-f--richer-career-analytics) — advanced analytics deferred, evidence retained.
-- [Scheduled notifications](DOMAIN_RULES.md#v2-g--scheduled-opted-in-notifications) — source semantics retained; native channel redesign specified here.
+- [Career analytics](DOMAIN_RULES.md#v2-f--richer-career-analytics) — advanced analytics deferred, evidence kept.
+- [Scheduled notifications](DOMAIN_RULES.md#v2-g--scheduled-opted-in-notifications) — what the sources mean stays; the native channel redesign is set out here.
 - [Files, imports and portability](DOMAIN_RULES.md#v2-h--supporting-files-imports-and-portability).
 - [Shared Expenses implementation](archive/web/SHARED_EXPENSES_IMPLEMENTATION.md).
 - [V3 tracker workflows](PRODUCT_AND_FEATURES.md#adaptable-trackers-workflows).
@@ -199,7 +199,7 @@ Before implementation begins, add narrowly scoped pointers/ADRs to the current h
 
 #### External technical references
 
-Official documentation checked during the October 19, 2026 workshop/doc preparation. Revalidate time-sensitive claims before implementation or spending. These sources establish product capabilities/constraints, not acceptance of Salapiya's implementation.
+Official documentation I checked while preparing the workshop and these docs on October 19, 2026. Recheck anything time-sensitive before building or spending money. These sources describe what the products can and can't do; they don't accept Salapiya's implementation.
 
 - [Flutter supported platforms](https://docs.flutter.dev/reference/supported-platforms) and [adaptive design](https://docs.flutter.dev/ui/adaptive-responsive).
 - [Supabase Flutter guide](https://supabase.com/docs/guides/getting-started/quickstarts/flutter) and [Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google).
@@ -212,40 +212,40 @@ Official documentation checked during the October 19, 2026 workshop/doc preparat
 ## System Architecture
 
 **Native continuation (October 20, 2026):** The [Salapiya blueprint](PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint)
-governs the new Windows/Android direction. See the [P0 foundation](OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation)
-and [actual native verification](archive/salapiya/P0_VERIFICATION.md). This document
-retains historical web contracts/evidence; its web architecture and earlier stop
-instructions do not select or accept the native implementation. G0-G4 remain open.
+sets the new Windows and Android direction. See the [P0 foundation](OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation)
+and the [actual native verification](archive/salapiya/P0_VERIFICATION.md). What follows
+keeps the historical web contracts and evidence; its web architecture and older
+instructions to stop don't choose or accept the native implementation. G0-G4 are still open.
 
 **Project:** Personal Management Platform (working name)  
 **Architecture version:** 1.0  
 **Date:** October 5, 2026  
 **Primary source:** `PROJECT_VISION_AND_FEATURE_BLUEPRINT.md`, version 1.3, October 5, 2026, read in full (sections 1–19).  
 **Source SHA-256:** `AAB9E718338D3D11EC4D434330D2573456FA6BF953E4A6D3397DC9618915ECB4`  
-**Status:** Current web architecture with original design/conditional operational guidance retained. V1/V2 completion and V3 targeted acceptance are documented in their handoffs; this specification alone is not test evidence.
+**Status:** The current web architecture, with the original design and conditional operational guidance kept. V1/V2 completion and V3's targeted acceptance are recorded in their handoffs; this spec on its own isn't test evidence.
 
-**Roadmap amendment — October 16, 2026:** [ADR 0005](adr/0005-v3-scope-and-platform-transition.md) and the [V3 development plan](archive/web/V3_DEVELOPMENT_PLAN.md) supersede the earlier V3 external-calendar commitment and post-V3 web production-release sequence. The version/date/source hash above identify the original design inputs, not the amended files. Actual V1/V2/V3 completion evidence is in the handoffs, with V3 accepted under the later targeted strategy. Current web infrastructure remains the implementation/verification baseline through comprehensive UI/UX redesign; completing its production deployment/readiness is no longer planned. Historical hosting/provider/production requirements below remain preserved and conditional, not current provisioning tasks or future-platform technology decisions.
+**Roadmap amendment — October 16, 2026:** [ADR 0005](adr/0005-v3-scope-and-platform-transition.md) and the [V3 development plan](archive/web/V3_DEVELOPMENT_PLAN.md) replace the earlier V3 commitment to external calendars and the plan to release the web app to production after V3. The version, date and source hash above identify the original design inputs, not the amended files. The real V1/V2/V3 completion evidence is in the handoffs, with V3 accepted under the later targeted strategy. The current web infrastructure stays the baseline for building and verifying through the full UI/UX redesign; finishing its production deployment and readiness is no longer planned. The historical hosting, provider and production requirements below are kept as conditional records, not current provisioning tasks or technology decisions for the future platform.
 
-**Approved redesign alignment — October 17, 2026:** V3-A–D are complete under [targeted local acceptance](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance); broader automatic CI passed separately at `239c360` ([run](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106)). The approved [redesign plan](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) and [decision register](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md) now govern presentation/navigation. M1 foundations are completed and explicitly approved October 17, 2026 (Asia/Manila); M2 is ready for separate assignment ([handoff](archive/web/REDESIGN_M1_HANDOFF.md)); M2-M6 have not started. **Personal workspace** is the working identity. Final branding and F01–F07 wait for future platform planning/development; architecture decisions occur after redesign and before native implementation. No replacement framework/database/identity/sync/provider is selected. Preserve the modular monolith, auth, scoped roles/RLS, services/APIs, database, transactions, worker and financial/private/group boundaries.
+**Approved redesign alignment — October 17, 2026:** V3-A–D are finished under [targeted local acceptance](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance); the broader automatic CI passed separately at `239c360` ([run](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106)). The approved [redesign plan](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) and [decision register](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md) now decide presentation and navigation. M1 foundations are finished and were approved on October 17, 2026 (Asia/Manila); M2 is ready to start on its own ([handoff](archive/web/REDESIGN_M1_HANDOFF.md)); M2-M6 haven't started. **Personal workspace** is the working identity. Final branding and F01–F07 wait for future platform planning and development; architecture decisions come after the redesign and before native work. No replacement framework, database, identity, sync or provider has been chosen. The modular monolith, auth, scoped roles and RLS, services and APIs, database, transactions, worker, and the financial, private and group boundaries all stay.
 
 ### 1. Authority, intent, and reading guide
 
-The blueprint defines the product requirements. The accompanying request additionally requires a complete technology recommendation and private multi-user accounts from the beginning. Instructions inside the blueprint are treated as product requirements and design context, not as commands to deploy, install software, or change accounts.
+The blueprint sets the product requirements. On top of that, I asked for a complete technology recommendation and private multi-user accounts from the start. Instructions inside the blueprint count as product requirements and design context, not orders to deploy, install software or change accounts.
 
-This document converts those requirements into implementation boundaries, data ownership, financial invariants, command contracts, operational controls, and release gates. It should guide the subsequent database schema, API specification, interface design, backlog, and automated tests.
+This document turns those requirements into implementation boundaries, data ownership, financial invariants, command contracts, operational controls and release gates. The database schema, API spec, interface design, backlog and automated tests should all follow from it.
 
-Terminology used throughout:
+Terms used throughout:
 
-- **Requirement:** behavior explicitly required by the blueprint or the accompanying request.
-- **Decision / recommended default:** an architectural choice made here. Adopt it unless a recorded architecture decision replaces it.
-- **Open / gate:** a choice that requires confirmation or evidence before the affected feature is implemented or released. An open decision does not authorize silent guessing.
-- **Future:** a designed extension boundary, not a requirement to implement its tables or infrastructure in V1.
+- **Requirement:** behaviour the blueprint or my request explicitly asks for.
+- **Decision / recommended default:** an architectural choice made here. Use it unless a recorded architecture decision replaces it.
+- **Open / gate:** a choice that needs confirming, or evidence, before the feature it affects is built or released. An open decision is never a licence to guess quietly.
+- **Future:** a designed boundary for an extension, not a requirement to build its tables or infrastructure in V1.
 
-The default architecture is an online, responsive web application with a modular monolith, one PostgreSQL database, and one private personal workspace per user. The financial core uses a small balanced journal underneath user-friendly financial actions. Applications and trackers remain specialized domains. Calendar entries and reports derive from domain records. Authentication, ownership checks, database isolation, and account deletion are part of the first release.
+The default architecture is an online, responsive web app: a modular monolith, one PostgreSQL database, and one private personal workspace per user. Under the user-friendly financial actions, the financial core uses a small balanced journal. Applications and trackers stay their own specialized domains. Calendar entries and reports come from domain records. Authentication, ownership checks, database isolation and account deletion are all part of the first release.
 
-That architecture continues to govern M1–M6; the later Windows/Android direction does not authorize replacing it now. Most future personal features should operate offline with device-local data and selected synchronization/collaboration online. Frameworks, local persistence, backend, identity, synchronization/conflict protocols and data migration remain subject to separate platform architecture planning and approval. Preserve current security, privacy, authorization and integrity guarantees throughout.
+That architecture still governs M1–M6; the later Windows and Android direction doesn't mean replacing it now. Most future personal features should work offline with data on the device, and some sync and collaboration online. Frameworks, local storage, the backend, identity, sync and conflict protocols, and data migration all wait for separate platform architecture planning and approval. The current security, privacy, authorization and integrity guarantees hold the whole way through.
 
-Sections 2–5 cover scope and stack; 6–10 cover identity, data, finance, and transactional APIs; 11–16 cover UI and product modules; 17–21 cover privacy, operations, and tests; 22–24 record decisions, release sequencing, and the final consistency review.
+Sections 2–5 cover scope and the stack; 6–10 identity, data, finance and transactional APIs; 11–16 the UI and product modules; 17–21 privacy, operations and tests; 22–24 decisions, release order and the final consistency review.
 
 | Quick navigation | Main references |
 | --- | --- |
@@ -270,7 +270,7 @@ Sections 2–5 cover scope and stack; 6–10 cover identity, data, finance, and 
 | After V3 | Comprehensive UI/UX Redesign → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance | Web remains the environment through redesign; future technologies and feature changes require separate decisions. No current web production deployment/readiness completion is planned. |
 | Later selectively | In-transit transfers, refinancing, multiple payment sources, standalone lending, richer group splits/simplification, multiple currencies, offline synchronization, general sharing | Add only with explicit financial and authorization rules; no premature implementations. |
 
-Core partial refund support is a **recommended V1 addition** because it exercises the same journal and correction machinery and prevents users from misclassifying common receipts. It is not presented as an extra blueprint release commitment. If deferred, do not expose a refund form until its allocation and reporting rules are implemented. Credit-card refunds arrive with cards.
+I recommend adding core partial refunds in **V1**, because they use the same journal and correction machinery and stop people misfiling a common kind of receipt. It's a recommendation, not an extra release commitment from the blueprint. If it's deferred, no refund form appears until its allocation and reporting rules exist. Credit-card refunds come with cards.
 
 #### 2.2 Non-negotiable architectural invariants
 
@@ -291,11 +291,11 @@ Core partial refund support is a **recommended V1 addition** because it exercise
 
 #### 3.1 Modular monolith with two process types
 
-Use one repository and one application domain model. Run a Next.js web process and a small Node.js background worker from the same versioned codebase. They share PostgreSQL but have different credentials and responsibilities. A worker is an execution role, not a microservice with its own business rules.
+One repository and one application domain model. A Next.js web process and a small Node.js background worker run from the same versioned codebase. They share PostgreSQL but have different credentials and jobs. The worker is a way of running code, not a microservice with business rules of its own.
 
-The browser communicates with same-origin JSON endpoints. Route handlers authenticate, validate input, invoke application services, and shape safe responses. Application services own transactions and coordinate domain functions. Repositories execute scoped SQL. Pure financial functions construct and validate posting plans without HTTP or database dependencies.
+The browser talks to same-origin JSON endpoints. Route handlers authenticate, validate input, call application services and shape safe responses. Application services own transactions and coordinate the domain functions. Repositories run scoped SQL. Pure financial functions build and check posting plans with no HTTP or database dependencies.
 
-Server-rendered reads can call the same query services directly; they do not make HTTP requests back to the application. Use Route Handlers for business mutations so there is one visible command surface. Do not independently implement the same mutation in Server Actions, route handlers, and UI callbacks.
+Server-rendered reads call the same query services directly, without HTTP requests back into the app. Business changes go through Route Handlers so there's one visible command surface. The same change never gets written separately in Server Actions, route handlers and UI callbacks.
 
 ```mermaid
 flowchart TD
@@ -316,25 +316,25 @@ flowchart TD
     Worker -. sanitized errors and metrics .-> Observability
 ```
 
-All financial consistency remains inside a database transaction. Email and other remote I/O happen after commit through durable tasks. V1 agenda and reports query authoritative data synchronously; they must not wait for a worker to reflect a saved payment.
+Financial consistency always lives inside a database transaction. Email and other remote I/O happen after the commit, through durable tasks. The V1 agenda and reports read the real data directly; they never wait for a worker before showing a saved payment.
 
 #### 3.2 Deliberately small infrastructure
 
-Do not introduce microservices, Kubernetes, Kafka, Redis, a search cluster, a warehouse, GraphQL, full event sourcing, or a general plugin runtime initially. PostgreSQL supports the relationships, transactional writes, filtered reporting, and modest job volume. Separate reads from commands in code without creating separate databases or distributed CQRS infrastructure.
+No microservices, Kubernetes, Kafka, Redis, search cluster, warehouse, GraphQL, full event sourcing or general plugin runtime to start with. PostgreSQL handles the relationships, transactional writes, filtered reporting and the modest number of jobs. Reads and commands are separate in the code, without separate databases or distributed CQRS infrastructure.
 
-This choice favors a solo developer's ability to understand a workflow from form to transaction to report. The main tradeoff is that module boundaries are enforced through code review, imports, and tests rather than process isolation.
+I chose this so that I, working alone, can follow a workflow from the form to the transaction to the report. The main trade-off is that module boundaries are kept by code review, imports and tests rather than by separate processes.
 
 ### 4. Technology stack and dependency matrix
 
 #### 4.1 Selection and version policy
 
-**Web architecture selection (not an installed-package inventory):** TypeScript, React with Next.js App Router on Node.js 24 LTS, PostgreSQL 17, Drizzle ORM with `pg`, Better Auth database sessions, Zod, React Hook Form, TanStack Query/Table, shadcn/ui with one consistent accessible primitive family, and a PostgreSQL-backed job worker.
+**Web architecture selection (not a list of installed packages):** TypeScript, React with Next.js App Router on Node.js 24 LTS, PostgreSQL 17, Drizzle ORM with `pg`, Better Auth database sessions, Zod, React Hook Form, TanStack Query/Table, shadcn/ui with one consistent, accessible family of primitives, and a job worker backed by PostgreSQL.
 
-Node 24 is an LTS choice verified against the [Node release schedule](https://nodejs.org/en/about/previous-releases). Choose the current patched stable Next.js release compatible with the selected React release when implementation starts. Pin PostgreSQL 17 for local/CI/production consistency; a supported newer major is an explicit upgrade, not an automatic provider default. Verify provider availability before provisioning.
+Node 24 is an LTS release, checked against the [Node release schedule](https://nodejs.org/en/about/previous-releases). When building starts, pick the current patched, stable Next.js release that works with the chosen React release. Pin PostgreSQL 17 so local, CI and production match; moving to a newer supported major is a deliberate upgrade, not whatever the provider defaults to. Check the provider actually offers it before provisioning.
 
-For M1–M6 retain the installed pinned stack; redesign approval is not an automatic package-upgrade task. Managed hosting/provider choices below remain historical or conditional under ADR 0005. Pin exact installed versions in the lockfile and runtime/container configuration. Do not put floating `latest` versions in production builds. Prefer stable documented APIs, review advisories, and prove the auth/ORM/database integration before feature development. Better Auth and Drizzle evolve faster than PostgreSQL; treat their integration as a tested seam. Links below are official documentation/repositories; key compatibility, isolation, session, worker, and hosting capabilities were checked on October 5, 2026. This is not a blanket certification of every future package version.
+For M1–M6 the installed, pinned stack stays; approving the redesign doesn't mean upgrading packages. The managed hosting and provider choices below are historical or conditional under ADR 0005. Pin exact installed versions in the lockfile and the runtime and container config, and never put floating `latest` versions in production builds. Prefer stable documented APIs, read advisories, and prove the auth, ORM and database integration before building features. Better Auth and Drizzle move faster than PostgreSQL, so their integration is a seam with tests around it. The links below go to official docs and repositories; I checked the key compatibility, isolation, session, worker and hosting capabilities on October 5, 2026. That doesn't vouch for every future package version.
 
-**Priority:** R = required for this chosen design; S = strongly recommended; O = optional. A future-phase R dependency is required only when that feature ships, not installed upfront. Grouped dependencies have complementary purposes, described separately in the row.
+**Priority:** R = required for this design; S = strongly recommended; O = optional. An R dependency for a later phase is only required when that feature ships, not installed up front. Dependencies grouped in one row do complementary jobs, each described in the row.
 
 #### 4.2 Application, data, and identity
 
@@ -353,11 +353,11 @@ For M1–M6 retain the installed pinned stack; redesign approval is not an autom
 | [decimal.js](https://mikemcl.github.io/decimal.js/) | O, later calculations | Rates, weighted calculations and supported forecasts with explicit rounding | Avoids binary floating-point for fractional calculations. Not necessary for V1 centavo arithmetic and never evidence of a provider's interest policy. |
 | [rate-limiter-flexible](https://github.com/animir/node-rate-limiter-flexible) | S, public launch | PostgreSQL-backed limits for expensive business endpoints; auth also uses Better Auth's documented limiter | Avoids hand-built distributed counters. Configure separate policies and retention; verify PostgreSQL store/version compatibility. |
 
-Drizzle provides explicit [transaction APIs](https://orm.drizzle.team/docs/transactions) and [RLS definitions](https://orm.drizzle.team/docs/rls). Those capabilities support this design; they do not automatically make queries tenant-safe.
+Drizzle has explicit [transaction APIs](https://orm.drizzle.team/docs/transactions) and [RLS definitions](https://orm.drizzle.team/docs/rls). They help this design, but they don't make queries tenant-safe by themselves.
 
 #### 4.3 Frontend and interaction libraries
 
-The matrix records architectural selection/adoption guidance, not proof that every package is installed. The current manifest contains React/Next, Tailwind/CVA/clsx/tailwind-merge, Radix Dialog, RHF/resolvers/Zod, Lucide, Recharts, date-fns/timezone tools and next-themes; Geist uses the existing Next font integration. TanStack Query/Table, cmdk, Sonner, DayPicker, FullCalendar/Temporal, Driver.js and dnd-kit are not installed at this alignment baseline. Follow [Plan Section 9](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#9-library-strategy-and-platform-reuse): expand one Radix-backed owned-component family; introduce Query/Table only for actual consumers, cmdk for the assigned destination menu, and other additions only for demonstrated needs. FullCalendar/native date-picker alternatives, virtualization, tours, drag/drop and motion libraries are conditional/deferred, not mandatory dependencies. No dependency is installed or upgraded by documentation approval.
+This table is guidance on what to choose and adopt, not proof that every package is installed. The current manifest has React/Next, Tailwind/CVA/clsx/tailwind-merge, Radix Dialog, RHF/resolvers/Zod, Lucide, Recharts, date-fns and timezone tools, and next-themes; Geist comes through the existing Next font integration. TanStack Query/Table, cmdk, Sonner, DayPicker, FullCalendar/Temporal, Driver.js and dnd-kit aren't installed at this baseline. Follow [Plan Section 9](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#9-library-strategy-and-platform-reuse): grow one family of owned components on Radix; bring in Query/Table only where something actually uses them, cmdk for the destination menu, and anything else only for a proven need. FullCalendar or native date-picker alternatives, virtualization, tours, drag and drop, and motion libraries are conditional or deferred, not required. Approving documentation doesn't install or upgrade anything.
 
 | Technology / dependency | Priority and phase | Purpose and placement; work avoided | Project fit and tradeoff |
 | --- | --- | --- | --- |
@@ -412,11 +412,11 @@ The matrix records architectural selection/adoption guidance, not proof that eve
 
 #### 4.6 Meaningful alternatives
 
-- **Next.js versus Vite + Fastify:** a separate SPA and API is valid, but adds routing, deployment and contract wiring. Choose Next.js for one deployable web boundary; keep domains framework-independent so extraction is possible.
-- **Drizzle versus Prisma:** both can support PostgreSQL. Drizzle is selected for visible SQL, custom constraints and reporting. Prisma is a reasonable team-familiarity alternative, but do not install both or assume either replaces transaction/ownership design.
-- **Better Auth versus managed auth:** managed auth can reduce credential operations, but introduces pricing and provider lifecycle dependencies. The selected library preserves control and conventional database sessions; patching and recovery delivery are explicit responsibilities. If the auth proof fails, choose a managed provider through an ADR before building product features.
-- **Balanced journal versus ad hoc signed transaction rows:** a small journal requires more careful initial modeling, but it prevents contradictory handling of financed spending, upfront fees, refunds, and group receivables. Users never have to learn accounting terminology.
-- **Render versus Vercel plus separate services:** long-lived Node processes and a colocated worker simplify database connections and scheduling. Vercel remains possible later if worker/database topology and caching are revalidated.
+- **Next.js versus Vite + Fastify:** a separate SPA and API would work, but adds routing, deployment and contract wiring. I chose Next.js for one deployable web boundary, and keep the domains framework-independent so they could be pulled out later.
+- **Drizzle versus Prisma:** both work with PostgreSQL. I picked Drizzle for visible SQL, custom constraints and reporting. Prisma would be a fair choice for a team that knows it, but don't install both, and don't assume either one replaces designing transactions and ownership.
+- **Better Auth versus managed auth:** managed auth means less credential work, but brings pricing and a dependency on the provider's lifecycle. The library I picked keeps control and ordinary database sessions; patching and delivering recovery are then my job. If the auth proof fails, choose a managed provider through an ADR before building product features.
+- **Balanced journal versus ad hoc signed transaction rows:** a small journal takes more careful modelling at the start, but it stops financed spending, upfront fees, refunds and group receivables from being handled in contradictory ways. Users never have to learn accounting terms.
+- **Render versus Vercel plus separate services:** long-running Node processes and a worker next to them make database connections and scheduling simpler. Vercel is still possible later if the worker and database layout and caching are checked again.
 
 ### 5. Module boundaries and internal organization
 
@@ -433,7 +433,7 @@ The matrix records architectural selection/adoption guidance, not proof that eve
 | Shared expenses, later | Groups, participants, bills, group balances, confirmations/disputes | Separate group authorization; private integration through explicit per-user finance commands. |
 | Trackers, later | Versioned templates, definitions, entries | Shared time/history capabilities; cannot implement a competing ledger or job pipeline. |
 
-Use a simple repository layout:
+A simple repository layout:
 
 ```text
 src/app/                    pages, layouts, thin route handlers
@@ -448,70 +448,70 @@ tests/{unit,integration,e2e}/
 docs/reference/adr/                   decisions that change this baseline
 ```
 
-Repositories require an authorized transaction/query context, never a loose `userId` supplied from the browser. Avoid a generic repository abstraction. Domain modules export explicit use cases and DTOs; other modules do not reach into their tables to mutate them. Use ESLint restricted-import rules to keep database/auth code out of browser bundles and cross-module internals out of callers.
+Repositories need an authorized transaction or query context, never a loose `userId` sent from the browser. No generic repository abstraction. Domain modules export explicit use cases and DTOs, and other modules don't reach into their tables to change them. ESLint restricted-import rules keep database and auth code out of browser bundles, and one module's internals out of another's callers.
 
-Synchronous module coordination uses typed function calls within one transaction. Durable tasks carry IDs, version, scope and a small allowlisted payload. A lightweight job interface is justified; a general event bus or plugin framework is not.
+Modules coordinate synchronously with typed function calls inside one transaction. Durable tasks carry ids, a version, a scope and a small allow-listed payload. A lightweight job interface earns its place; a general event bus or plugin framework doesn't.
 
 ### 6. Multi-user accounts, authentication, and authorization
 
 #### 6.1 Identity and workspace model
 
-`AuthUser` is managed by Better Auth. `UserProfile` holds application-facing name and lifecycle status. `PersonalWorkspace` contains `id`, `owner_user_id`, `kind`, `currency`, `timezone`, `week_start`, and lifecycle timestamps. Enforce a unique owner for the personal-workspace kind. The initial default is PHP, Asia/Manila, and Monday week start, confirmed during setup.
+Better Auth manages `AuthUser`. `UserProfile` holds the name the app shows and the lifecycle status. `PersonalWorkspace` has `id`, `owner_user_id`, `kind`, `currency`, `timezone`, `week_start` and lifecycle timestamps, with a unique owner enforced for the personal-workspace kind. The defaults are PHP, Asia/Manila and a Monday week start, confirmed during setup.
 
-Each real user gets exactly one private personal workspace. Do not add a general workspace-membership table or household administrator in V1. The separate workspace ID leaves room for future workspace types without implying sharing now. A future demo is a distinct sandbox scope or deployment with synthetic data, not a boolean filter casually mixed into real financial queries.
+Each real user gets exactly one private personal workspace. V1 has no general workspace-membership table and no household admin. Keeping the workspace id separate leaves room for other workspace types later without implying any sharing now. A future demo would be its own sandbox scope or deployment with synthetic data, not a boolean filter casually mixed into real financial queries.
 
-Workspace provisioning is idempotent after verified authentication: a transaction inserts the profile/workspace/default categories/settings only if absent. A unique constraint prevents duplicate workspaces under concurrent first requests. Until provisioning succeeds, show a recoverable setup error and block domain commands. Do not assume the auth library's user-creation hook and application provisioning share a transaction. A partial registration can be retried safely.
+Setting up a workspace is idempotent once authentication is verified: one transaction inserts the profile, workspace, default categories and settings only if they aren't there yet. A unique constraint stops two first requests at once from making two workspaces. Until setup succeeds, the app shows a setup error you can recover from and blocks domain commands. Don't assume the auth library's user-creation hook and the app's setup share a transaction. A half-finished registration can be retried safely.
 
-Currency becomes immutable once postings exist in V1. Changing timezone affects display and future reminder scheduling, not financial effective dates or stored instants. Different users can enable different modules and reminder settings.
+In V1 the currency can't change once there are postings. Changing the timezone affects what's displayed and future reminder scheduling, never financial effective dates or stored instants. Different users can turn on different modules and reminder settings.
 
 #### 6.2 Chosen sign-in and recovery experience
 
-Use email/password with email verification. Registration supports distinct people, not a hardcoded owner. An initial closed beta can use a configurable registration allowlist or expiring invitation codes; opening registration later must not require a schema rewrite. Normalize identity email using the auth library's semantics; do not remove dots or plus suffixes using provider-specific assumptions.
+Email and password, with email verification. Registration is for separate people, not one hard-coded owner. A first closed beta can use a configurable registration allow-list or expiring invitation codes; opening registration later mustn't need a schema rewrite. Normalize identity emails the way the auth library does; don't strip dots or plus suffixes based on what one provider happens to do.
 
-Delegate password hashing, token generation, verification and reset flows to Better Auth. Set application policy to allow long passphrases, password-manager autofill/paste, and a documented minimum length (recommended 12 characters) without arbitrary composition rules. Keep a reasonable library-supported maximum to bound hashing work. Authentication endpoints must not disclose account existence through different recovery messages.
+Better Auth handles password hashing, token generation, verification and resets. App policy allows long passphrases, password-manager autofill and paste, and a documented minimum length (12 characters recommended) with no arbitrary composition rules. A reasonable maximum the library supports keeps hashing work bounded. Authentication endpoints never reveal whether an account exists through different recovery messages.
 
-Recommended flows:
+The flows I recommend:
 
 1. Registration → verification email → verified sign-in → idempotent workspace setup → optional onboarding.
 2. Forgotten password → generic acknowledgement → short-lived one-time link to an allowlisted application route → new password → revoke all existing sessions → sign in again.
 3. Password change or email change → recent reauthentication; verify a new email before replacing the old identity; notify the prior email of the change without sensitive financial content.
-4. Unavailable email → direct the user to recover their mailbox. V1 has no informal administrator password reset based on knowing a family member. Additional recovery methods need a designed proof-of-ownership flow.
+4. Unavailable email → point the user to recovering their mailbox. V1 has no informal admin password reset based on knowing a family member. Any other recovery method needs a designed proof-of-ownership flow.
 
-Better Auth documents [email/password recovery](https://better-auth.com/docs/authentication/email-password). Explicitly enable `revokeSessionsOnPasswordReset`; its [configuration reference](https://better-auth.com/docs/reference/options) shows this is not a behavior to assume from defaults. Reset and verification URLs must never enter ordinary logs, analytics, referrers, or public error reports.
+Better Auth documents [email/password recovery](https://better-auth.com/docs/authentication/email-password). Turn on `revokeSessionsOnPasswordReset` explicitly; its [configuration reference](https://better-auth.com/docs/reference/options) shows it isn't the default. Reset and verification URLs never go into ordinary logs, analytics, referrers or public error reports.
 
-Use the provider only for delivery; verification and recovery state remains under the auth library. Delivery callbacks must durably accept the send task or return a retriable failure. If asynchronous delivery needs a bearer link, encrypt that short-lived payload with a dedicated rotating server key, restrict queue access, and delete it after send/expiry. Do not retain token-bearing job results. An unavailable email provider must not result in a misleading success claiming that mail was delivered.
+The email provider only delivers; verification and recovery state stays with the auth library. Delivery callbacks either accept the send task durably or return a failure that can be retried. If asynchronous delivery needs a bearer link, that short-lived payload is encrypted with its own rotating server key, queue access is restricted, and it's deleted after sending or expiry. Job results holding tokens aren't kept. If the email provider is down, the app never claims the mail was delivered.
 
 #### 6.3 Session policy
 
-Use opaque database-backed sessions in secure HttpOnly cookies. Production cookies are Secure, appropriately SameSite (Lax for the same-origin application), host-scoped, and unavailable to JavaScript. No bearer tokens in localStorage. Configure a seven-day session lifetime with documented refresh behavior; add a maximum thirty-day absolute lifetime checked server-side. Shorten these if risk or user feedback warrants it.
+Opaque, database-backed sessions in secure HttpOnly cookies. In production the cookies are Secure, SameSite as appropriate (Lax for the same-origin app), host-scoped and invisible to JavaScript. No bearer tokens in localStorage. Sessions last seven days with documented refresh behaviour, plus a thirty-day absolute maximum checked on the server. Shorten these if the risk or user feedback calls for it.
 
-Disable session cookie caching/stateless-only validation for protected reads and writes so server revocation takes effect on the next request. Use database session verification at the application boundary. Expose session/device list, current-session logout, logout all devices, and individual revocation. Store only the metadata needed to help identify sessions; trim IP/user-agent retention.
+Protected reads and writes don't use session cookie caching or stateless-only validation, so a revocation on the server applies on the very next request. The app boundary checks sessions against the database. There's a list of sessions and devices, sign-out of the current session, sign-out everywhere, and revoking one at a time. Only the metadata needed to recognize a session is stored, and IP and user-agent retention is trimmed.
 
-Require reauthentication within five minutes for deletion, password/email changes and later recovery/MFA changes. Session renewal alone is not proof of a fresh password challenge. After logout or account switch, clear Query caches, refresh server-rendered state and notify other tabs. Request-scoped session memoization is acceptable; cross-request user-data memoization is not. These controls build on the library's [session APIs](https://better-auth.com/docs/concepts/session-management).
+Deleting, changing the password or email, and later recovery or MFA changes need you to have signed in again within the last five minutes. Renewing a session on its own doesn't prove a fresh password check. After signing out or switching accounts, the Query caches clear, server-rendered state refreshes and other tabs are told. Memoizing the session within one request is fine; memoizing user data across requests isn't. These controls build on the library's [session APIs](https://better-auth.com/docs/concepts/session-management).
 
-The released V1-C4 deletion challenge uses a Better Auth plugin endpoint and the pinned library's password verifier, origin protection and persistent rate limiter. It records a five-minute server-owned `auth.session_assurance`; renewal never creates proof. Session review returns estimated device and timestamps without tokens or IPs, and revocation uses supported library operations. A password change verifies the current password and revokes other sessions. Expired session metadata and verification credentials have an auth-only bounded housekeeping process; it also removes global library abuse counters inactive for thirty days, retaining active limit windows. Production must configure its cadence rather than imply that expiry itself deletes stored metadata.
+The released V1-C4 deletion challenge uses a Better Auth plugin endpoint with the pinned library's password verifier, origin protection and persistent rate limiter. It records a five-minute `auth.session_assurance` that the server owns; renewing a session never creates that proof. Session review returns an estimated device and timestamps, without tokens or IPs, and revocation uses the library's supported operations. A password change checks the current password and revokes other sessions. Expired session metadata and verification credentials are cleaned up by a bounded housekeeping process that only touches auth; it also removes the library's global abuse counters after thirty days of inactivity, keeping active limit windows. Production has to set how often it runs; expiry on its own doesn't delete stored metadata.
 
-MFA/passkeys are a sensible later security improvement using supported auth-library capabilities; they are not a second homemade authentication system. Finalize backup/recovery behavior before enabling them.
+MFA and passkeys would be a sensible security step later, using what the auth library supports, not a second home-made authentication system. Settle backup and recovery behaviour before turning them on.
 
 #### 6.4 Authorization at every boundary
 
-Authentication answers who is signed in. Authorization answers whether that user can perform this operation on every involved record. A login page or middleware redirect is not sufficient. Every route handler, server query, download, command and worker handler enforces its own applicable policy.
+Authentication answers who's signed in. Authorization answers whether that user can do this operation on every record involved. A login page or a middleware redirect isn't enough. Every route handler, server query, download, command and worker handler enforces its own policy.
 
-Build `ActorContext` from a validated server session: user ID, personal workspace ID resolved from the database, session ID, and request ID. Reject or ignore client-supplied owner/workspace fields on personal commands. Do not trust a URL workspace ID merely because it looks valid.
+`ActorContext` is built from a validated server session: the user id, the personal workspace id looked up in the database, the session id and the request id. Owner or workspace fields sent by the client on personal commands are rejected or ignored. A workspace id in a URL isn't trusted just because it looks valid.
 
-For a transfer, validate both financial accounts, all fee bearers, categories and linked source records against the same workspace. For a debt payment, validate the debt, paying account, schedule version, installments and any original action. Apply identical checks to search, counts, joins, relation expansion, charts and export filters. Random UUIDs reduce guessability but do not grant access.
+For a transfer, both financial accounts, every fee bearer, the categories and any linked source records are checked against the same workspace. For a debt payment: the debt, the paying account, the schedule version, the installments and any original action. Search, counts, joins, relation expansion, charts and export filters get the same checks. Random UUIDs are hard to guess, but they don't grant access.
 
-Return 404 for a missing or nonowned private record so enumeration does not disclose existence. Use 403 for a known, visible resource on which a role cannot perform a particular action. Report unexpected foreign-key errors as safe validation failures without exposing another user's identifiers or data.
+A missing private record, or one you don't own, returns 404, so probing can't reveal that it exists. 403 is for a known, visible resource where a role can't do a particular action. Unexpected foreign-key errors come back as safe validation failures, without exposing another user's ids or data.
 
 #### 6.5 Database isolation as a second barrier
 
-All private domain tables carry `workspace_id NOT NULL`. Parent tables provide a unique `(workspace_id, id)` key; child relationships use composite foreign keys such as `(workspace_id, account_id)` → `FinancialAccount(workspace_id, id)`. This blocks cross-workspace links even when two valid IDs are submitted together. Tags, allocations, audits and attachment relations follow the same rule.
+Every private domain table has `workspace_id NOT NULL`. Parent tables have a unique `(workspace_id, id)` key, and child relationships use composite foreign keys such as `(workspace_id, account_id)` → `FinancialAccount(workspace_id, id)`. That blocks links across workspaces even when two valid ids are sent together. Tags, allocations, audits and attachment relations follow the same rule.
 
-Use PostgreSQL RLS with both read/update `USING` and insert/update `WITH CHECK` policies. The common policy requires that the row's workspace matches transaction-local context and belongs to the authenticated user. `PersonalWorkspace` itself is scoped by `owner_user_id`; queries must avoid recursive policies. Use an invoker-rights view or scoped query rather than an owner-bypassing report view. PostgreSQL documents owner/superuser bypass and default-deny behavior in its [row-security reference](https://www.postgresql.org/docs/17/ddl-rowsecurity.html).
+PostgreSQL RLS, with `USING` policies for reads and updates and `WITH CHECK` policies for inserts and updates. The common policy requires the row's workspace to match the transaction-local context and belong to the signed-in user. `PersonalWorkspace` itself is scoped by `owner_user_id`, and queries avoid recursive policies. Reports use an invoker-rights view or a scoped query, never a view that bypasses the owner. PostgreSQL documents the owner and superuser bypass and the default-deny behaviour in its [row-security reference](https://www.postgresql.org/docs/17/ddl-rowsecurity.html).
 
-The transaction helper checks out one connection, starts a transaction, installs trusted user/workspace context with transaction-local `set_config`, executes only through that transaction object, then commits or rolls back. A missing context denies access. Never use connection-global tenant settings or issue a query on the general pool halfway through this helper. This applies to read-only reports too.
+The transaction helper checks out one connection, starts a transaction, sets the trusted user and workspace context with transaction-local `set_config`, runs everything through that transaction object, then commits or rolls back. No context means no access. Never use connection-wide tenant settings, and never run a query on the general pool partway through this helper. That goes for read-only reports too.
 
-Use separate roles:
+Separate roles:
 
 | Role | Permitted purpose | Restrictions |
 | --- | --- | --- |
@@ -522,13 +522,13 @@ Use separate roles:
 | Worker domain role | Execute a job in its verified owner/group scope | Re-establish context, check lifecycle/membership and source version; no global bypass for convenience. |
 | Lifecycle operator | Narrowly scoped deletion/restore procedures | Separate credential/process authorization, recorded execution; not a general public admin endpoint. |
 
-RLS protects against missing query predicates, not a fully compromised server that can forge context. Parameterized SQL, restricted credentials and safe server code are still essential. Test the actual runtime roles; tests run only as a database owner cannot prove isolation.
+RLS protects against a forgotten query predicate, not against a fully compromised server that can forge its context. Parameterized SQL, restricted credentials and safe server code still matter. Test with the real runtime roles; tests that only run as the database owner can't prove isolation.
 
 ### 7. Data architecture and sources of truth
 
 #### 7.1 Core relational model
 
-Names below are conceptual; the later schema may use snake_case. UUIDs identify records. Store `created_at`/`recorded_at` as UTC `timestamptz`, mutable aggregate `version` as an integer, and relevant effective dates as PostgreSQL `date`. An event's original timezone is a separate IANA name.
+The names below are conceptual; the real schema can use snake_case. Records are identified by UUIDs. `created_at` and `recorded_at` are UTC `timestamptz`, a mutable aggregate's `version` is an integer, and effective dates are PostgreSQL `date`. An event's original timezone is stored separately as an IANA name.
 
 | Aggregate / records | Source-of-truth responsibility | Key relationships and constraints |
 | --- | --- | --- |
@@ -546,7 +546,7 @@ Names below are conceptual; the later schema may use snake_case. UUIDs identify 
 | AuditRevision, Activity | Evidence versus friendly activity feed | Scoped target links; revision records transactional; activity is a sanitized presentation. |
 | CommandReceipt, durable job records | Idempotency and asynchronous intent | Unique command key/hash; tasks queued in the same transaction as their source change where required. |
 
-Financial category allocations are represented by categorized expense postings. A separate editable expense table must not become a second authority. A join/metadata table can associate postings with a purchase line or fee component, but totals always reconcile to those postings.
+Category allocations are categorized expense postings. A separate editable expense table must never become a second source of truth. A join or metadata table can tie postings to a purchase line or a fee component, but the totals always reconcile to the postings.
 
 ```mermaid
 erDiagram
@@ -568,7 +568,7 @@ erDiagram
     JOB_APPLICATION ||--o{ APPLICATION_EVENT : schedules
 ```
 
-The diagram omits audit/ownership columns and internal expense/income/equity ledger accounts for readability; these remain mandatory in the actual schema. Use concrete foreign keys for financial relationships. A generic `source_type/source_id` reference is allowed only in nonfinancial presentation/job metadata with a controlled resolver, source-lifecycle tests, and an orphan detector. It is not a replacement for debt/payment/account foreign keys.
+The diagram leaves out audit and ownership columns and the internal expense, income and equity ledger accounts to stay readable; they're still required in the real schema. Financial relationships use concrete foreign keys. A generic `source_type/source_id` reference is only allowed in non-financial presentation or job metadata, with a controlled resolver, source-lifecycle tests and an orphan detector. It never stands in for debt, payment or account foreign keys.
 
 #### 7.2 Authoritative versus derived values
 
@@ -583,27 +583,27 @@ The diagram omits audit/ownership columns and internal expense/income/equity led
 | Reminder dismissal/snooze | ReminderOccurrence | Does not alter source status. |
 | Group balances, later | Confirmed group bills/corrections/settlements | Separate from any user's optional private ledger link. |
 
-Avoid ambiguous stored flags such as `isPaid` on both an installment and its payment rows. Derive due residuals; if a summary is persisted, make its rebuild strategy and transaction owner explicit.
+No ambiguous stored flags like `isPaid` on both an installment and its payment rows. Due residuals are derived; if a summary is ever stored, its rebuild strategy and which transaction owns it are stated.
 
 #### 7.3 Dates and historical setup
 
-Financial `effective_date` is a user-selected local accounting date. A created timestamp does not substitute for it. All-day deadlines use `date` and travel across zones unchanged. Timed events store UTC instant plus entered IANA timezone; handle nonexistent/ambiguous DST times explicitly rather than choosing silently.
+A financial `effective_date` is a local accounting date the user picks; a created timestamp never stands in for it. All-day deadlines use `date` and stay the same across zones. Timed events store a UTC instant plus the IANA timezone entered; DST times that don't exist or happen twice are handled explicitly, never resolved quietly.
 
-**Opening cutoff default:** an entered balance dated D means the balance at the end of D; normal activity begins D+1. The UI states this prominently and offers a prior-day cutoff when today's actions need recording. Prevent ordinary new entries at or before an account's opening cutoff. A controlled historical-import/correction workflow can revise the opening baseline with a before/after reconciliation. This prevents importing old activity on top of a balance that already includes it.
+**Opening cutoff default:** a balance entered for date D is the balance at the end of D, and normal activity starts on D+1. The UI says this clearly and offers the previous day as the cutoff when today's actions need recording. Ordinary new entries on or before an account's opening cutoff are blocked. A controlled historical-import or correction workflow can revise the opening baseline, with a before-and-after reconciliation. That way old activity never gets imported on top of a balance that already includes it.
 
-Opening cash and existing liabilities post to opening-equity buckets, not income/expense. Paid historical installments are imported as historical schedule state with evidence; they create no new cash payment. Coverage starts at the cutoff and is visible on reports.
+Opening cash and existing liabilities post to opening-equity buckets, not income or expenses. Installments already paid in the past come in as historical schedule state with their evidence, and create no new cash payment. Coverage starts at the cutoff and shows on reports.
 
 ### 8. Financial core and accounting correctness
 
 #### 8.1 A small internal balanced journal
 
-The UI offers actions such as Receive income, Add expense, Transfer, Record borrowing, Pay debt, Refund and Correct. Each command creates a posting plan. Users never choose arbitrary debit/credit accounts.
+The UI offers actions like Receive income, Add expense, Transfer, Record borrowing, Pay debt, Refund and Correct. Each command builds a posting plan. Users never pick debit and credit accounts themselves.
 
-Use internal ledger kinds: cash asset, receivable/clearing asset, liability, expense, income, opening equity and explicit adjustment equity. Future cards use liability accounts; future group receivables and payables use scoped subaccounts. Categories are dimensions on expense/income postings, not independently maintained balances.
+Internal ledger kinds: cash asset, receivable or clearing asset, liability, expense, income, opening equity and explicit adjustment equity. Cards will use liability accounts, and group receivables and payables will use scoped sub-accounts. Categories are a dimension on expense and income postings, not balances kept on their own.
 
-Store signed centavos: debit positive, credit negative. A journal must sum to zero. Asset/expense balances are debit-normal; liability/income balances are credit-normal, so displayed liability is the negated signed sum. Every posting names a ledger account of the same workspace and currency as its journal. A journal's effective date applies to all its entries.
+Signed centavos are stored: debits positive, credits negative, and a journal always sums to zero. Asset and expense balances are debit-normal; liability and income balances are credit-normal, so the liability shown is the signed sum negated. Every posting names a ledger account in the same workspace and currency as its journal, and a journal's effective date applies to all its entries.
 
-One user action can contain multiple balanced journals when fee components have different dates. The whole action is saved atomically; each component affects the correct reporting period. V1 completed transfers move both principal sides on the same effective date. Different departure/arrival dates require the future transit workflow.
+One user action can hold several balanced journals when its fee parts have different dates. The whole action saves in one go, and each part lands in the right reporting period. A V1 completed transfer moves both sides of the principal on the same effective date; different departure and arrival dates need the future in-transit workflow.
 
 #### 8.2 Exact money and rounding
 
@@ -616,7 +616,7 @@ One user action can contain multiple balanced journals when fee components have 
 
 #### 8.3 Posting recipes
 
-Amounts in this table are PHP for readability. Each debit total equals its credit total.
+Amounts in this table are PHP, to keep it readable. Each debit total equals its credit total.
 
 | Action | Debit | Credit | Reporting meaning |
 | --- | --- | --- | --- |
@@ -636,43 +636,43 @@ Amounts in this table are PHP for readability. Each debit total equals its credi
 | Confirmed waiver of recognized interest 400 | Loan liability 400 | Interest expense/recognized-cost offset 400 | Noncash reduction linked to a recognized charge. Imported unknown components use disclosed opening/adjustment treatment. |
 | Unexplained positive reconciliation adjustment 100 | Cash 100 | Adjustment equity 100 | Explicit adjustment, not inferred income. |
 
-Separate fee bearer accounts produce separate cash/liability postings; their classification remains fee expense. A fee cannot be both deducted from proceeds and added again to debt unless the user confirms two distinct real charges. Multi-fee previews show labels, amounts, dates, bearers and combined effect.
+Different fee bearer accounts produce separate cash or liability postings, still classified as fee expense. A fee can't be both taken from the proceeds and added to the debt again unless the user confirms two separate real charges. Previews with several fees show their labels, amounts, dates, bearers and combined effect.
 
 #### 8.4 Database and service safeguards
 
-Application services validate command semantics and create the complete plan. Database constraints enforce referential/row-level facts; a deferred constraint trigger validates each committed journal's balanced sum, minimum posting count, scope, currency and posted parent state. `CHECK` constraints alone cannot validate sums over child rows. Test this trigger with direct SQL under the runtime role, including attempted partial inserts.
+Application services check what a command means and build the complete plan. Database constraints enforce the referential and row-level facts, and a deferred constraint trigger checks each committed journal's balanced sum, minimum number of postings, scope, currency and posted parent state; `CHECK` constraints alone can't validate sums across child rows. Test that trigger with direct SQL under the runtime role, including attempts at partial inserts.
 
-Posted journals/postings reject UPDATE/DELETE through protected database rules, and new postings cannot be appended to an already finalized journal. Within one write transaction, create a building journal, insert its entries, then finalize it; a deferred commit check rejects any journal left building. Thus the journal can be assembled atomically without leaving an editable posted parent. Financial form drafts, if offered, live separately and never enter balance queries. In V1 a save command either posts the full action or fails; no persistent half-posted action is exposed. The lifecycle purge role is the deliberate exception for whole-workspace deletion.
+Protected database rules make posted journals and postings reject UPDATE and DELETE, and no posting can be added to a journal once it's finalized. In one write transaction the app creates a journal in a building state, inserts its entries, then finalizes it; a deferred check at commit rejects any journal still building. So a journal is assembled atomically without ever leaving an editable posted parent. Financial form drafts, where offered, live separately and never show up in balance queries. In V1 a save either posts the whole action or fails; there's never a half-posted action left lying around. The lifecycle purge role is the one deliberate exception, for deleting a whole workspace.
 
-Balances are sums of all posted signed entries, including originals and their offsetting reversals. Never filter out the original while retaining its reversal. Financial action detail groups correction chains so users see the current meaning and history without mistaking corrections for new purchases.
+Balances sum every posted signed entry, originals and their offsetting reversals included. Never filter out an original while keeping its reversal. A financial action's details group its correction chain, so you see what it means now and its history without mistaking corrections for new purchases.
 
 #### 8.5 Refunds, rebates and correction semantics
 
-Refunds are real new events dated when they occur. Link each to a purchase and allocate its categories. Lock the original purchase when validating cumulative refunds. Ordinary purchase refunds cannot exceed the refundable purchase amount; fees need an explicit separate fee refund and unusual extra compensation needs a separately classified action. Multiple partial refunds are supported without rewriting the purchase.
+A refund is a real new event, dated when it happens. Each one links to a purchase and allocates its categories, and the original purchase is locked while cumulative refunds are checked. An ordinary purchase refund can't exceed what's refundable on the purchase; fees need their own explicit fee refund, and unusual extra compensation needs its own separately classified action. Several partial refunds work without rewriting the purchase.
 
-Gross spending is signed purchase/charge activity after correction cancellation; refunds and recognized-cost rebates are separately classified offsets. Net spending subtracts those offsets. A reversal inherits the original reporting class with opposite sign, so a correction does not inflate gross spending, cash flow or refund totals. The replacement carries the corrected economic meaning. Count business actions by their logical identity/current revision, not by journal-row count.
+Gross spending is signed purchase and charge activity after corrections cancel out; refunds and rebates on recognized costs are offsets, classified separately. Net spending takes those offsets away. A reversal takes the original's reporting class with the opposite sign, so a correction never inflates gross spending, cash flow or refund totals, and the replacement carries the corrected meaning. Business actions are counted by their logical identity and current revision, not by journal rows.
 
-Recommended cashback rule: merchant cashback explicitly linked to a purchase is a spending offset; general wallet/bank rewards are labeled reward income. The user selects the meaning when recording actual receipt. Expected cashback stays planned. A debt waiver produces no cash receipt unless a separate real receipt occurred. A waiver of unrecognized future interest changes schedule/avoided-charge metadata only, not expense postings.
+The cashback rule I recommend: merchant cashback linked to a purchase is a spending offset; general wallet or bank rewards are labelled reward income. The user picks which when recording the money actually arriving. Expected cashback stays planned. A debt waiver produces no cash receipt unless a separate real receipt happened. Waiving future interest that was never recognized only changes schedule and avoided-charge metadata, not expense postings.
 
-Changes to amount, account, currency, effective date, recognized fee, category allocation or liability allocation create a reversal-and-replacement command with a required reason. Correct an erroneous historical action at its original effective date (and replacement's corrected date); record the correction timestamp now. A real refund or later settlement uses its actual new date. Simple descriptions, notes and references can have audited metadata revisions without financial reversal. Category renaming changes the label, not historical amounts; category reclassification is an explicit financial revision.
+Changing the amount, account, currency, effective date, a recognized fee, a category allocation or a liability allocation creates a reverse-and-replace command, which needs a reason. A wrong historical action is corrected at its original effective date (and the replacement at its corrected date), while the correction's own timestamp is now. A real refund or a later settlement uses its actual new date. Plain descriptions, notes and references can have audited metadata revisions without a financial reversal. Renaming a category changes the label, not historical amounts; moving amounts to another category is an explicit financial revision.
 
 #### 8.6 Cash, availability and reconciliation
 
-Tracked liquid funds is the signed sum of cash accounts, including unexplained negative balances, so reconciliation identities remain true. Available-to-spend presentation excludes negative balances as usable funds, shows a separate deficit/incomplete-history warning, and never adds credit limits. Do not relabel the sum of positive accounts as net liquid funds. An archived account remains in historical and current financial totals while it carries tracked value; archive changes navigation, not ownership of money.
+Tracked liquid funds is the signed sum of the cash accounts, unexplained negative balances included, so the reconciliation identities stay true. The available-to-spend view doesn't count negative balances as usable money, shows a separate warning about a deficit or incomplete history, and never adds credit limits. The sum of positive accounts is never relabelled as net liquid funds. An archived account stays in historical and current totals while it still holds tracked value; archiving changes navigation, not who owns the money.
 
-Allow a real transaction that makes a manual account negative after a clear warning and explicit acknowledgement. Record the warning outcome; do not invent an overdraft policy or drop the transaction. A genuinely pending transfer is outside the completed-transfer command and must not be falsely posted as completed.
+A real transaction that takes a manual account below zero is allowed after a clear warning and an explicit acknowledgement. The warning's outcome is recorded; the app never invents an overdraft policy or drops the transaction. A transfer that's genuinely still pending is outside the completed-transfer command and is never posted as completed.
 
-Archived accounts reject ordinary new activity until explicitly restored. Historical corrections/reversals can still reference them through the correction workflow, preserving old financial evidence and updating totals. Archiving an account with a remaining balance requires an explanatory preview; it never clears that balance.
+Archived accounts refuse ordinary new activity until they're restored. Historical corrections and reversals can still point to them through the correction workflow, which keeps the old financial evidence and updates the totals. Archiving an account that still has a balance needs a preview explaining it; archiving never clears the balance.
 
-A reconciliation records the user's observed balance and cutoff, the calculated amount at comparison, difference, source version and optional statement reference. If another write or backdated correction changes the comparison, flag the reconciliation as needing review rather than claiming it remains verified. An explicit adjustment requires date, amount and reason and links back to the reconciliation. Never auto-adjust to the provider balance.
+A reconciliation records the balance the user saw and its cutoff, the calculated amount at the time of comparing, the difference, the source version and an optional statement reference. If a later write or a backdated correction changes the comparison, the reconciliation is flagged as needing review instead of still claiming to be verified. An explicit adjustment needs a date, amount and reason, and links back to the reconciliation. Never adjust automatically to the provider's balance.
 
 ### 9. Debt schedules, payments, and settlement
 
 #### 9.1 Supported V1 debt semantics
 
-Support manually entered personal loans, installment loans and financed purchases with provider-confirmed amounts. A flexible obligation can be represented through manual charges and dates, but issuer-specific revolving-credit calculations belong to the card release. Do not generate universal amortization or infer an interest rate from installment totals.
+Personal loans, installment loans and financed purchases, entered by hand with amounts the provider confirmed. A flexible obligation can be represented with manual charges and dates, but issuer-specific revolving-credit maths belongs to the card release. No universal amortization, and no inferring an interest rate from installment totals.
 
-Persist separately:
+Stored separately:
 
 - Original principal as known contractual metadata.
 - Recognized liability from the ledger, with principal/interest/fee classifications where supported by evidence.
@@ -681,15 +681,15 @@ Persist separately:
 - Paid amounts and allocation evidence, including amounts awaiting classification.
 - Lifecycle state (active, settled, settled early, cancelled) and separately derived overdue status.
 
-Cancellation is not permission to erase a live liability. A debt with postings requires a correction, waiver, settlement or other explicit resolution before its recognized balance can disappear.
+Cancelling doesn't let a live liability vanish. A debt with postings needs a correction, waiver, settlement or another explicit resolution before its recognized balance can go.
 
 #### 9.2 Payment components versus installment allocation
 
-A payment has two distinct allocations. **Accounting allocation** says how cash reduces an existing liability, recognizes a new charge, or remains pending classification. **Due allocation** says which contractual installments have been satisfied. Paying an installment does not prove its whole amount was principal.
+A payment has two separate allocations. The **accounting allocation** says how the cash lowers an existing liability, recognizes a new charge, or waits to be classified. The **due allocation** says which contractual installments it satisfied. Paying an installment doesn't prove the whole amount was principal.
 
-One `DebtPayment` references one `FinancialAction`; its components and installment allocations are saved in the same transaction. The form can propose oldest-due-first allocation, but the user sees and confirms it. Partial payments leave a positive due residual. Extra payments require explicit allocation to future obligations, recognized principal, or an advance/clearing amount; never force a negative outstanding debt silently.
+One `DebtPayment` points to one `FinancialAction`, and its parts and installment allocations save in the same transaction. The form can suggest paying the oldest due first, but the user sees it and confirms. A partial payment leaves a positive amount still due. Extra payments need an explicit allocation to future obligations, recognized principal, or an advance or clearing amount; a debt is never quietly pushed below zero.
 
-Fees paid outside the contract are not automatically counted toward installment satisfaction. The sum of due allocations plus an explicit unapplied contractual amount equals the payment's contractual portion, excluding separately identified external fees. Accounting components plus such fees equal the actual cash deduction.
+Fees paid outside the contract don't automatically count towards an installment. The due allocations plus an explicit unapplied contractual amount equal the contractual part of the payment, not counting separately identified external fees. The accounting parts plus those fees equal the cash actually taken out.
 
 **Unknown breakdown default:**
 
@@ -698,31 +698,31 @@ Fees paid outside the contract are not automatically counted toward installment 
 3. If neither liability reduction nor new charge allocation is known, record actual cash against a clearly labeled payment-clearing asset. A user-confirmed due payment may still satisfy a scheduled amount, but recognized debt remains unresolved until classified. The dashboard/report discloses the clearing balance and incomplete liability picture.
 4. Later classification reclassifies clearing into liability reduction and/or expense without another cash deduction. Do not mark settlement complete while unresolved clearing or a liability mismatch remains.
 
-Clearing is an accounting control, not a claim that money is available or collectible. Exclude uncertain clearing from available funds and default tracked net position; disclose it separately. This conservative default resolves an ambiguity in the blueprint without manufacturing a provider breakdown. Validate its wording with representative users before debt implementation.
+Clearing is an accounting control, not a claim that the money is available or collectable. Uncertain clearing stays out of available funds and the default tracked net position, and is shown separately. This careful default settles an ambiguity in the blueprint without inventing a provider breakdown. Check its wording with representative users before building debts.
 
 #### 9.3 Schedule revisions
 
-Schedules are immutable versions with reason, effective date, creator and type: correction or renegotiation. A revision previews old versus new due dates/amounts, carried paid amounts, remaining payable, and affected reminders. Keep stable obligation identities where the obligation survives a date correction. For changed obligations, record explicit supersession and allocation mappings rather than copying payments into a second schedule.
+Schedules are versions that never change, each with a reason, effective date, creator and type: correction or renegotiation. A revision previews the old and new due dates and amounts, the paid amounts carried over, what's left to pay, and the reminders affected. Where an obligation survives a date correction, it keeps its identity. For obligations that change, explicit supersession and allocation mappings are recorded instead of copying payments into a second schedule.
 
-Historic payment allocations retain their original references. A current-schedule mapping is a projection of those same payments, not an additional payment. Sum each payment once. Validate that retained allocations plus explicit unapplied amounts reconcile, and never mark historical paid installments as newly due. Old schedule versions remain available for explanation.
+Historical payment allocations keep their original references. A mapping onto the current schedule is a projection of those same payments, not extra payments, so each payment is summed once. The kept allocations plus explicit unapplied amounts have to reconcile, and installments paid in the past are never marked as newly due. Old schedule versions stay available to explain things.
 
-Commit the new active version, allocation mapping, audit, reminder cancellations/rescheduling and any required financial correction together. A due-date-only change needs no posting. A new provider-confirmed charge requires a posting; future scheduled interest alone does not. Reject stale revision previews using the debt's version. Refinancing is deferred and must eventually settle the original debt and create a new borrowing action.
+The new active version, the allocation mapping, the audit, reminder cancellations and rescheduling, and any financial correction needed all commit together. Changing only a due date needs no posting. A new charge the provider confirmed needs a posting; future scheduled interest on its own doesn't. Stale revision previews are rejected using the debt's version. Refinancing is deferred, and will have to settle the original debt and create a new borrowing action.
 
 #### 9.4 Early settlement
 
-The command accepts settlement date, actual paying account/payment, confirmed payoff, recognized charge/waiver components, avoided future charges, reference, reason and expected debt version.
+The command takes the settlement date, the actual paying account and payment, the confirmed payoff, recognized charge and waiver parts, avoided future charges, a reference, a reason and the debt version it expects.
 
-For a recognized PHP 6,400 liability: debit liability PHP 6,000 / credit cash PHP 6,000, then debit liability PHP 400 / credit the appropriate recognized-charge offset PHP 400. After the complete atomic action, recognized liability must be exactly zero, with no unresolved payment allocation. Preserve old terms and cancel future unpaid obligations/reminders.
+For a recognized PHP 6,400 liability: debit liability PHP 6,000 / credit cash PHP 6,000, then debit liability PHP 400 / credit the right recognized-charge offset PHP 400. After the whole atomic action, the recognized liability is exactly zero with no payment allocation left unresolved. The old terms are kept, and future unpaid obligations and reminders are cancelled.
 
-If PHP 6,400 is only future scheduled payable while recognized liability is PHP 6,000, payment of PHP 6,000 clears that recognized amount. Record the avoided PHP 400 in settlement/schedule history with no expense reversal. If the recognized amount is different again, show the mismatch and require a supported correction/charge/waiver before allowing `settled_early`.
+If the PHP 6,400 is only the future scheduled amount and the recognized liability is PHP 6,000, paying PHP 6,000 clears what's recognized. The avoided PHP 400 goes into the settlement and schedule history, with no expense reversal. If the recognized amount is something else again, the mismatch is shown, and a supported correction, charge or waiver is needed before `settled_early` is allowed.
 
-Do not derive a payoff from months remaining or hide a residual with a rounding adjustment. Settlement is a user-confirmed record of what occurred; the application does not execute payment or claim to calculate the lender's official payoff.
+Never work out a payoff from the months remaining or hide a leftover with a rounding adjustment. A settlement is the user's confirmed record of what happened; the app doesn't make the payment or claim to calculate the lender's official payoff.
 
 ### 10. Commands, APIs, transactions, and errors
 
 #### 10.1 API convention
 
-Use same-origin REST-like JSON under `/api/v1`. Better Auth owns `/api/auth/*`. Resource IDs are UUIDs; typed schemas and inferred DTOs are shared with the client. Keep internal database entities and credentials out of response types. Start with code-defined contracts; add generated OpenAPI only when an external client makes it worthwhile.
+Same-origin, REST-like JSON under `/api/v1`, with Better Auth owning `/api/auth/*`. Resource ids are UUIDs, and the typed schemas and inferred DTOs are shared with the client. Internal database entities and credentials stay out of response types. Contracts start out defined in code; generated OpenAPI only comes in if an external client makes it worth it.
 
 | Endpoint example | Contract and responsibility |
 | --- | --- |
@@ -745,13 +745,13 @@ Use same-origin REST-like JSON under `/api/v1`. Better Auth owns `/api/auth/*`. 
 | `GET /api/v1/commands/:commandId` | Retrieve the owner's persisted result after an uncertain save. |
 | `POST /api/v1/account/deletion-requests` | Fresh authentication, explicit scope and confirmation; begins lifecycle workflow. |
 
-Collection queries have allowlisted sort keys, bounded page size (default 50, maximum 100), and stable ordering such as `(effective_date DESC, id DESC)`. Use opaque cursor pagination for large ledgers/activity. Offset pagination is acceptable for small administration/settings lists. Filtering happens before pagination; report totals are never totals of the currently loaded page.
+Collection queries have allow-listed sort keys, a bounded page size (50 by default, 100 at most) and a stable order like `(effective_date DESC, id DESC)`. Large ledgers and activity use opaque cursor pagination; small admin and settings lists can use offsets. Filtering happens before pagination, and report totals are never the total of whatever page is loaded.
 
 #### 10.2 Transaction protocol
 
-For V1, serialize financial commands within a workspace by locking its financial-state/workspace row first. This simple choice is appropriate for a personal finance workload and avoids subtle concurrent settlement/refund errors. Lock any remaining aggregates in deterministic ID order. Ordinary career writes use optimistic versions and do not need to block on unrelated finance work. Revisit the coarse lock only after measured contention.
+In V1, financial commands in a workspace run one at a time by locking its financial-state or workspace row first. That simple choice suits a personal finance workload and avoids subtle concurrency bugs in settlements and refunds. Other aggregates are locked in a fixed id order. Ordinary career writes use optimistic versions and don't wait on unrelated finance work. Only revisit the coarse lock if contention is actually measured.
 
-The service executes:
+The service does this:
 
 1. Validate session, current user/workspace lifecycle, origin/CSRF controls, body size and input schema.
 2. Open a scoped transaction, obtain the workspace write lock, and claim the command key.
@@ -761,9 +761,9 @@ The service executes:
 6. Validate database constraints and commit once.
 7. Return the committed result and affected query scopes. Only now show success; invalidate relevant client views.
 
-Preview is advisory, never a reservation. Store or sign its normalized payload hash and dependency versions when useful, but always revalidate at commit. A negative-balance warning acknowledgement is bound to the current intent; it cannot bypass ownership or arithmetic validation.
+A preview is advice, never a reservation. Its normalized payload hash and dependency versions can be stored or signed where useful, but everything is revalidated at commit. Acknowledging a below-zero warning is tied to the current intent and can't get round ownership or arithmetic checks.
 
-Use READ COMMITTED plus the explicit write locks for commands. Multi-query reports use a read-only REPEATABLE READ transaction so cards, charts and detail totals share one database snapshot. SQL deadlocks/serialization failures can retry the whole idempotent command a small bounded number of times with jitter. Do not retry validation conflicts as if they were transient infrastructure faults.
+Commands use READ COMMITTED plus the explicit write locks. Reports with several queries use a read-only REPEATABLE READ transaction, so cards, charts and detail totals all come from one database snapshot. SQL deadlocks and serialization failures can retry the whole idempotent command a small, bounded number of times with jitter. Validation conflicts are never retried as if they were passing infrastructure faults.
 
 ```mermaid
 sequenceDiagram
@@ -787,85 +787,85 @@ sequenceDiagram
 
 #### 10.3 Idempotency and concurrency
 
-Generate one client command UUID when an action is ready to submit. Retain that UUID across retries and uncertain network outcomes. Scope uniqueness by workspace and command ID; store command type, normalized payload hash, result identity and completion status in the same transaction as the action. Same key/same payload returns the prior result; same key/different payload returns 409. A second request that waits on the first transaction must read its committed result rather than create another action.
+The client generates one command UUID when an action is ready to submit, and keeps it through retries and uncertain network outcomes. Uniqueness is per workspace and command id; the command type, normalized payload hash, result identity and completion status are stored in the same transaction as the action. Same key and same payload returns the earlier result; same key and a different payload returns 409. A second request that waits on the first transaction reads its committed result instead of creating another action.
 
-Persist financial action command IDs and compact command receipts for the life of the financial record; ordinary nonfinancial receipt bodies may expire after a documented interval. Do not delete the uniqueness evidence and allow an old financial retry to become a new payment. The client can retain only the opaque pending command ID in sessionStorage for reload recovery, without financial payloads or auth tokens. A commit followed by a lost response is resolved through the command-status endpoint or a same-key retry.
+Financial action command ids and compact command receipts are kept as long as the financial record exists; ordinary non-financial receipt bodies can expire after a documented interval. The uniqueness evidence is never deleted in a way that lets an old financial retry become a new payment. To recover after a reload, the client keeps only the opaque pending command id in sessionStorage, with no financial payload and no auth token. If a commit's response gets lost, the command-status endpoint or a retry with the same key settles it.
 
-Mutable resources use integer versions/conditional writes; stale updates return 409 with safe conflict details. Two concurrent partial refunds, debt payments or settlements must re-evaluate remaining amounts after locking. Bank reference strings are not globally unique and are insufficient idempotency keys. Similar date/amount/content can produce a duplicate warning, never an unconditional merge.
+Mutable resources use integer versions and conditional writes, and a stale update returns 409 with safe conflict details. Two partial refunds, debt payments or settlements at once re-check the remaining amounts after locking. Bank reference strings aren't globally unique, so they can't be idempotency keys. A similar date, amount or content can raise a duplicate warning, never an automatic merge.
 
 #### 10.4 Error contract and validation layers
 
-Use a consistent problem response with `status`, stable `code`, safe `message`, optional field errors, `requestId`, and `retryable`. Typical codes: `VALIDATION_FAILED`, `STALE_VERSION`, `ALLOCATION_MISMATCH`, `CURRENCY_MISMATCH`, `IDEMPOTENCY_CONFLICT`, `SOURCE_CHANGED`, `RATE_LIMITED`, and `TEMPORARY_UNAVAILABLE`.
+Errors use one consistent problem response: `status`, a stable `code`, a safe `message`, optional field errors, `requestId` and `retryable`. Typical codes: `VALIDATION_FAILED`, `STALE_VERSION`, `ALLOCATION_MISMATCH`, `CURRENCY_MISMATCH`, `IDEMPOTENCY_CONFLICT`, `SOURCE_CHANGED`, `RATE_LIMITED` and `TEMPORARY_UNAVAILABLE`.
 
 - 400: malformed JSON or query syntax; 401: no valid session; 404: unavailable/nonowned private resource.
 - 409: stale version or command-key conflict; 422: business validation failure; 429: abuse/usage limit with retry guidance.
 - 500/503: unexpected/internal or transient failure; return a request ID, not SQL, stack trace, tokens or private record content.
 
-Client schemas provide immediate feedback; server schemas enforce external input; domain services enforce cross-record business rules; database constraints are the final guard. Use a discriminated union per financial action, bound string lengths/array counts/date ranges, and reject unknown write fields to prevent mass assignment. HTML forms cannot choose an arbitrary journal account or change ownership.
+Client schemas give instant feedback; server schemas enforce what comes in from outside; domain services enforce the business rules across records; database constraints are the last line. Each financial action is a discriminated union, string lengths, array counts and date ranges are bounded, and unknown write fields are rejected so nothing gets mass-assigned. An HTML form can't pick an arbitrary journal account or change ownership.
 
-The UI distinguishes validation failure, confirmed failure, saving, saved, and **outcome unknown**. A timeout does not prove rollback. Preserve recoverable in-memory form input, expose status lookup/retry, and do not promise offline durability. Correlate technical errors through the request ID while keeping actionable field errors visible.
+The UI tells apart a validation failure, a confirmed failure, saving, saved and **outcome unknown**. A timeout doesn't prove anything was rolled back. Form input in memory that can be recovered is kept, status lookup and retry are offered, and there's no promise of offline durability. Technical errors are traced by the request id, while the field errors you can act on stay visible.
 
 ### 11. Frontend architecture and user experience
 
-Implement M1–M6 in the existing Next.js/React web environment. The [approved frame](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts) uses Home, an integrated module switcher, contextual Add/Find a screen/Account utilities, local section navigation and adaptive list/detail layouts instead of a mandatory permanent global sidebar. Money, Career, Calendar, Trackers, Shared expenses when enabled and Reports remain discoverable; mobile uses labeled Home / Calendar / Modules / More. Preserve every current route, source link and capability flag. Navigation hiding is not authorization and never changes data, reports or independent Agenda/reminder preferences.
+M1–M6 are built in the existing Next.js/React web environment. The [approved frame](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts) uses Home, an integrated module switcher, contextual Add, Find a screen and Account utilities, local section navigation and adaptive list and detail layouts instead of a permanent global sidebar. Money, Career, Calendar, Trackers, Shared expenses when it's on, and Reports stay easy to find; mobile uses labelled Home / Calendar / Modules / More. Every current route, source link and capability flag stays. Hiding something from navigation isn't authorization, and it never changes data, reports or the separate Agenda and reminder preferences.
 
-The approved design plan takes precedence for warm-neutral surfaces, violet/lavender actions, restrained accents, Geist, centralized semantic tokens, balanced density and light/dark presentation. [Design guidelines](archive/DESIGN_SYSTEM_pre-redesign.md#design-system-and-visual-guidelines) retain stable financial/accessibility/privacy/state requirements. Reuse `src/components/ui`, shell and domain components; add shared compositions only for demonstrated reuse, keeping domain commands/validation outside presentation. Final branding remains substitutable; no offline/native behavior is added.
+The approved design plan decides warm-neutral surfaces, violet and lavender actions, restrained accents, Geist, central semantic tokens, balanced density and light and dark themes. The [design guidelines](archive/DESIGN_SYSTEM_pre-redesign.md#design-system-and-visual-guidelines) keep the stable requirements on finance, accessibility, privacy and states. Reuse `src/components/ui`, the shell and the domain components; add shared compositions only when reuse is proven, and keep domain commands and validation out of presentation. Final branding can still be swapped in; no offline or native behaviour is added.
 
-Use Server Components for authenticated initial reads and lightweight layout; Client Components for forms, tables, charts and interactive controls. Mark database/auth modules server-only. Return narrow DTOs rather than complete ORM rows. Follow the framework's [data-security guidance](https://nextjs.org/docs/app/guides/data-security) for server/client boundaries; authorization is in the service layer, not just UI rendering.
+Server Components for authenticated first reads and light layout; Client Components for forms, tables, charts and interactive controls. Database and auth modules are marked server-only. Narrow DTOs go back, not whole ORM rows. The framework's [data-security guidance](https://nextjs.org/docs/app/guides/data-security) sets the server and client boundaries; authorization lives in the service layer, not just in what the UI renders.
 
-Existing Server Component reads and command lifecycles remain valid. Where an assigned milestone adopts TanStack Query to replace repeated interactive fetch state, it owns only that remote state; React Hook Form owns editable form state; URL parameters own safe filters and periods; component state owns dialogs and transient selections. Avoid duplicating these stores. Use a fresh server QueryClient per request when hydrating, scoped client keys, and no persisted private Query cache. Financial mutations have no speculative balance update: show a pending indicator and replace/invalidate from the committed server result. Small reversible UI preferences may use optimistic updates with rollback.
+The existing Server Component reads and command lifecycles still hold. Where a milestone brings in TanStack Query to replace repeated interactive fetch state, Query owns only that remote state; React Hook Form owns editable form state; URL parameters own safe filters and periods; component state owns dialogs and passing selections. None of these get duplicated. Hydration uses a fresh server QueryClient per request and scoped client keys, and no private Query cache is persisted. Financial changes never update a balance speculatively: they show a pending indicator and replace or invalidate from the committed server result. Small UI preferences that can be undone can use optimistic updates with rollback.
 
-Every amount-bearing workflow has a summary preview: paying/receiving accounts, actual cash effect, spending effect, liability effect, fees, effective date and warnings. Category splits use an exact remaining-to-allocate indicator. A receipt form asks whether money is income, borrowing, refund or owned transfer. Salary destination is editable on each receipt; optional defaults only prefill.
+Every workflow with an amount has a summary preview: the paying or receiving accounts, the actual cash effect, the spending effect, the liability effect, fees, the effective date and warnings. Category splits show exactly how much is left to allocate. A receipt form asks whether the money is income, borrowing, a refund or a transfer from your own account. The salary destination can be edited on every receipt; optional defaults only prefill it.
 
-Responsive forms prioritize phone entry, keyboard focus and readable labels. Tables collapse into useful detail views on small screens. Error summaries focus the first invalid field; status is conveyed with text/icons as well as color. Charts have accompanying tables, named periods and links to the underlying records. Money amounts retain exact visible values even when a chart uses approximate plot coordinates.
+Responsive forms put phone entry, keyboard focus and readable labels first. Tables fold into useful detail views on small screens. Error summaries move focus to the first invalid field, and status comes with text or icons as well as colour. Charts come with tables, named periods and links to the records behind them. Amounts keep their exact values on screen even when a chart plots approximate coordinates.
 
-Onboarding persists versioned steps and progress independently from actual records. Completed setup commands use ordinary idempotent services. Skipping, resuming or replaying a tour must not recreate accounts or transactions. Career-only users bypass money setup; optional modules remain opt-in. Help includes task instructions, empty-state actions and an accessible feedback route with user-controlled diagnostic sharing.
+Onboarding stores its versioned steps and progress separately from real records. Finished setup commands go through the ordinary idempotent services. Skipping, resuming or replaying a tour never recreates accounts or transactions. Career-only users skip money setup, and optional modules stay opt-in. Help has task instructions, empty-state actions and an accessible way to give feedback, where the user controls any diagnostics shared.
 
-**Module-disable default:** hiding a module preserves its data and keeps existing agenda items visible with a hidden-module badge. Explain this before disabling and offer a separate agenda filter and reminder setting. Financial reports continue to include retained financial records by default; a navigation preference cannot make debt or spending vanish. No irreversible data change occurs when a module is hidden or re-enabled.
+**Module-disable default:** hiding a module keeps its data, and its existing agenda items stay visible with a hidden-module badge. The app explains this before you hide it, and offers a separate agenda filter and reminder setting. Financial reports still include the kept financial records by default; a navigation preference can't make debt or spending disappear. Hiding a module or turning it back on never changes data irreversibly.
 
 ### 12. Calendar, reminders, and background processing
 
 #### 12.1 Agenda as a projection
 
-Each source module supplies a bounded `listAgendaItems` query and an authorized source route. The common DTO includes stable source kind/ID/occurrence key, title, date-only or timed interval, source status, display module, reminder capability and source version. V1 merges debt installments, career events/next actions and personal events. Avoid showing both an application next-action field and its linked follow-up event as separate items.
+Each source module provides a bounded `listAgendaItems` query and an authorized source route. The shared DTO has a stable source kind, id and occurrence key, a title, a date-only or timed interval, the source's status, the module to show it under, whether it can have reminders, and the source version. V1 merges debt installments, career events and next actions, and personal events. An application's next-action field and its linked follow-up event never show as two separate items.
 
-Query projections directly in V1, ordered by date/time with module filters. A generated event is not another editable appointment record. Editing it opens the debt, application or tracker command; only manual personal events are edited directly by Calendar. Completion/cancellation/settlement automatically changes visibility because the source query changes. Overdue means an unresolved eligible source whose date is before today in the user's zone.
+In V1 projections are queried directly, ordered by date and time, with module filters. A generated event isn't another editable appointment. Editing it opens the debt, application or tracker command; only personal events you added yourself are edited directly in Calendar. Completing, cancelling or settling something changes what's visible automatically, because the source query changes. Overdue means an eligible source that isn't resolved and whose date is before today in the user's zone.
 
-Do not compare a date-only debt deadline against UTC midnight. A due-today debt becomes overdue on the following local day. Timed event conflicts can be flagged; the application never silently moves an interview or provider due date.
+A date-only debt deadline is never compared against UTC midnight; a debt due today becomes overdue on the next local day. Clashing timed events can be flagged, but the app never quietly moves an interview or a provider's due date.
 
 #### 12.2 Reminder state
 
-Use rules (explicit per-source override or module default) and occurrence state (dismissed, snoozed-until, disabled, delivery state). In-app indicators are computed on reads; persist occurrence state when a dismiss/snooze/settings command first needs it, not as a side effect of GET. Correctness does not depend on a browser remaining open or a nightly cron task.
+There are rules (an explicit override per source, or the module default) and occurrence state (dismissed, snoozed until, disabled, delivery state). In-app indicators are worked out on read; occurrence state is stored when a dismiss, snooze or settings command first needs it, never as a side effect of a GET. Being correct doesn't depend on a browser staying open or a nightly cron job.
 
-Define a logical reminder key from owner/scope, source, occurrence, reminder rule and channel. A source version is a validity check, not a reason to resend the same reminder after editing an irrelevant note. Relevant date/status/rule changes cancel old scheduling generations. A new materially changed due date can create a new generation; explain it in history. Payment that clears the relevant due amount invalidates all its unpaid reminders. Preserve a debt due-resolution epoch in reminder metadata so a later correction that makes the same obligation due again, even within the same schedule, uses a fresh notification generation. Partial payment updates the displayed residual without resetting acknowledgement. Reminder generation changes never rewrite authoritative financial or schedule evidence.
+A logical reminder key is built from the owner or scope, the source, the occurrence, the reminder rule and the channel. A source version is a validity check, not a reason to send the same reminder again after someone edits an unrelated note. Changes to the dates, status or rules that matter cancel old scheduling generations. A due date that really changes can start a new generation, explained in the history. A payment that clears the amount due invalidates all its unpaid reminders. Reminder metadata keeps a debt's due-resolution epoch, so if a later correction makes the same obligation due again, even in the same schedule, it gets a fresh notification generation. A partial payment updates the remaining amount shown without resetting acknowledgement. Changing reminder generations never rewrites the real financial or schedule evidence.
 
-Dismissal only dismisses the reminder. Snooze moves its next display/delivery time and is visible to the user. Disabling reminders is separate from disabling a module. Recommended V1 overdue behavior is a persistent in-app badge rather than repeated external alerts; external overdue cadence remains a V2 preference gate.
+Dismissing only dismisses the reminder. Snoozing moves when it next shows or is delivered, and the user can see that. Turning reminders off is separate from turning a module off. For overdue items in V1 I recommend a lasting in-app badge rather than repeated external alerts; how often to send external overdue alerts stays a V2 preference gate.
 
 #### 12.3 Durable tasks and external delivery
 
-Use pg-boss's supported transaction integration to enqueue required application work alongside the source mutation. Prove rollback behavior in the integration spike. If the pinned adapter cannot share the existing transaction, use a small transactional outbox and dispatcher instead; never perform a post-commit best-effort enqueue as the only record of required work. Select one approach and record it, rather than maintaining both by default.
+Required application work is queued with pg-boss's supported transaction integration, in the same transaction as the source change. Prove how it rolls back in the integration spike. If the pinned adapter can't share the existing transaction, use a small transactional outbox and dispatcher instead; a best-effort enqueue after the commit is never the only record of required work. Pick one approach and record it, rather than keeping both by default.
 
-V1 worker jobs cover auth/security mail, lifecycle cleanup and maintenance; later jobs cover opted-in reminders, exports/imports, attachment scanning and bounded recurrence generation. Job schemas are versioned. Keep only IDs/scope where possible, not snapshots of salary, employer or account names. Handlers recheck current lifecycle, permissions, preferences, source version and unresolved status immediately before acting. A deleted user or removed member cannot receive a queued private export because it was authorized hours earlier.
+V1 worker jobs cover auth and security mail, lifecycle cleanup and maintenance; later ones cover opted-in reminders, exports and imports, attachment scanning and bounded recurrence generation. Job schemas are versioned. Where possible jobs keep only ids and scope, never snapshots of salaries, employers or account names. Right before acting, a handler rechecks the current lifecycle, permissions, preferences, source version and whether the thing is still unresolved. A deleted user or a removed member can't get a queued private export just because it was authorized hours ago.
 
-Delivery state records scheduled, claimed, suppressed/cancelled, provider-accepted, delivered if evidenced, bounced and failed. Provider acceptance is not proof the user received or read the message. Use exponential retry, bounded attempts, a dead-letter state, and an operator-visible backlog age. Webhooks require signature validation and idempotent event IDs.
+Delivery state records scheduled, claimed, suppressed or cancelled, accepted by the provider, delivered (if there's evidence), bounced and failed. The provider accepting a message doesn't prove the user got it or read it. Exponential retry, a bounded number of attempts, a dead-letter state and a backlog age an operator can see. Webhooks need signature validation and idempotent event ids.
 
-Internal notification rows have a unique logical delivery key. External delivery uses that key as the provider idempotency key where supported. A crash after provider acceptance but before acknowledgement is an uncertain outcome; reconcile with provider evidence or hold for review after its deduplication window. Do not promise exactly-once email on an at-least-once worker. There is also a small race if a source is resolved after the provider has accepted a message; an already-sent message cannot be recalled.
+Internal notification rows have a unique logical delivery key, which external delivery uses as the provider's idempotency key where it's supported. A crash after the provider accepted a message but before acknowledging it is an uncertain outcome: reconcile with the provider's evidence, or hold it for review once its deduplication window has passed. An at-least-once worker can't promise exactly-once email. There's also a small race when a source is resolved after the provider has accepted a message; a message already sent can't be taken back.
 
-External reminders require opt-in, local timezone, quiet hours, content privacy preferences and a channel-level opt-out. Default notification text omits amounts and company names. Quiet hours defer reminders without moving source deadlines. Separate required account-security mail from optional financial/career reminders.
+External reminders need opt-in, the local timezone, quiet hours, content privacy preferences and an opt-out per channel. By default notification text leaves out amounts and company names. Quiet hours hold reminders back without moving the source's deadline. Required account-security mail is kept apart from optional financial and career reminders.
 
 #### 12.4 Recurrence, later
 
-Recurring definitions generate expected occurrences with unique `(rule_id, logical_occurrence_date, generation)` identity. Generate a bounded rolling horizon, not an infinite schedule. Occurrences can be planned, linked/paid, completed, skipped or cancelled. Arrival of a date never posts money. A completion command links an existing action or posts one idempotently.
+Recurring definitions generate expected occurrences, each identified uniquely by `(rule_id, logical_occurrence_date, generation)`. They're generated over a bounded rolling horizon, not an endless schedule. An occurrence can be planned, linked or paid, completed, skipped or cancelled. A date arriving never posts money; a completion command links an existing action or posts one idempotently.
 
-Implement the limited supported recurrence grammar with date-fns calendar operations: daily/weekly/monthly and explicit end/count/interval. For monthly days 29–31 default to an explicitly selected last-valid-day rule, with a preview. If arbitrary RFC-style recurrence is needed later, evaluate a mature recurrence library then; it must not silently replace the product's shorter-month rule with skipped months.
+The limited recurrence grammar supported is built on date-fns calendar operations: daily, weekly or monthly, with an explicit end, count or interval. For monthly days 29–31 the default is a last-valid-day rule the user selects explicitly, with a preview. If arbitrary RFC-style recurrence is ever needed, look at a mature recurrence library then; it must never quietly swap the product's shorter-month rule for skipped months.
 
-Changing one occurrence records an override; changing future occurrences creates a rule version effective from a boundary. Preserve completed/past occurrences and cancel obsolete pending jobs. Do not shift weekends/holidays without a confirmed rule. External calendar synchronization is outside V3 and deferred until future platform architecture planning approves direction, scopes, conflict policy, stable external IDs, echo suppression and deletion semantics. Internal Calendar/Agenda integration remains required in V3; notification delivery is a separate existing capability.
+Changing one occurrence records an override; changing future ones creates a rule version effective from a boundary. Completed and past occurrences are kept, and obsolete pending jobs are cancelled. Nothing shifts for weekends or holidays without a confirmed rule. Syncing with external calendars is outside V3 and deferred until later platform architecture planning approves the direction, scopes, conflict policy, stable external ids, echo suppression and deletion behaviour. Internal Calendar and Agenda integration is still required in V3; notification delivery is a separate feature that already exists.
 
 ### 13. Reports, dashboards, and analytical definitions
 
-One reporting service supplies weekly, monthly, calendar-quarter, yearly and custom periods. Use inclusive date inputs converted to half-open boundaries `[start, next_day_after_end)`. Financial queries filter effective dates; timed career activity filters converted UTC boundaries. Week start is user-configurable. Invalid or excessively broad interactive ranges are rejected or routed to a bounded export.
+One reporting service provides weekly, monthly, calendar-quarter, yearly and custom periods. Inclusive date inputs become half-open boundaries `[start, next_day_after_end)`. Financial queries filter on effective dates; timed career activity filters on boundaries converted to UTC. The start of the week is the user's choice. Interactive ranges that are invalid or far too wide are rejected or sent to a bounded export.
 
-Financial reporting derives from classified postings and source metadata. Store/report a calculation-definition version so future semantics can be explained. Every response includes period, filters, PHP currency, workspace timezone, coverage/cutoffs, generation time, financial data revision and relevant uncertainty flags. Backdated corrections intentionally revise historical reports. An exported snapshot remains a dated artifact; it is not silently rewritten or promised as immutable official accounting.
+Financial reports come from classified postings and source metadata. A calculation-definition version is stored and reported, so later changes in meaning can be explained. Every response has the period, filters, PHP currency, the workspace timezone, coverage and cutoffs, when it was generated, the financial data revision and any uncertainty flags that apply. Backdated corrections revise historical reports on purpose. An exported snapshot stays a dated artifact; it's never quietly rewritten, and it's never promised as official accounting that can't change.
 
 | Metric | Definition and exclusions |
 | --- | --- |
@@ -880,7 +880,7 @@ Financial reporting derives from classified postings and source metadata. Store/
 | Scheduled payable | Remaining contractual dues including identified future charges; never added to recognized liability as another debt. |
 | Tracked net position | Included tracked cash/assets/confirmed receivables/card credits less recognized liabilities; list included kinds, excluded uncertain clearing and missing history. Available credit is excluded. |
 
-Cash reconciliation must satisfy:
+Cash reconciliation has to satisfy:
 
 ```text
 Closing liquid funds
@@ -890,51 +890,51 @@ Closing liquid funds
   + Explicit balance/baseline adjustments
 ```
 
-The blueprint's cash-flow fixture must produce PHP 36,915 closing funds from PHP 24,500 opening + PHP 30,000 salary − PHP 12,400 cash spending − PHP 4,500 principal − PHP 500 newly recognized interest − PHP 185 fees. Recognized expenses are PHP 13,085; net cash change is PHP 12,415. These are separate assertions, not alternate labels for one total.
+The blueprint's cash-flow fixture has to produce PHP 36,915 closing funds from PHP 24,500 opening + PHP 30,000 salary − PHP 12,400 cash spending − PHP 4,500 principal − PHP 500 newly recognized interest − PHP 185 fees. Recognized expenses are PHP 13,085 and the net cash change is PHP 12,415. Those are separate assertions, not two names for one total.
 
-Retain source posting labels to split transfer principal from fees even within one journal. In the future transit workflow, departure/arrival moves between liquid cash and transit assets; add a separately disclosed net movement to/from owned nonliquid funds so the expanded identity remains true. Do not reclassify a transfer as income merely to balance a report.
+Source posting labels are kept so transfer principal can be split from fees even inside one journal. In the future in-transit workflow, departure and arrival move money between liquid cash and transit assets, with a separately shown net movement to or from owned non-liquid funds so the expanded identity still holds. A transfer is never reclassified as income just to make a report balance.
 
-Debt/liability roll-forward separately reconciles opening recognized debt + newly recognized borrowing/charges − reductions/waivers + corrections = closing debt. Expense, cash-flow and liability reports use complementary lenses; never sum their totals into a meaningless overall amount.
+The debt and liability roll-forward reconciles separately: opening recognized debt + newly recognized borrowing and charges − reductions and waivers + corrections = closing debt. Expense, cash-flow and liability reports look at the same money from different angles; their totals are never added into one meaningless overall amount.
 
-Report SQL must pre-aggregate postings and allocations at the appropriate grain before joining. A purchase with three tags and two installments must not appear six times in totals. Filters such as category constrain category amounts; account filters require documented behavior for two-sided transfers. Consolidated reports eliminate internal movements only within the included tracked scope and label single-account movements appropriately.
+Report SQL aggregates postings and allocations at the right grain before joining, so a purchase with three tags and two installments never shows up six times in the totals. A category filter limits the category amounts; account filters need documented behaviour for transfers, which have two sides. Combined reports cancel internal movements only inside the tracked scope they include, and label single-account movements properly.
 
-Dashboard queries reuse these definitions: attention items first, then financial/career summaries, agenda and activity. A pending/unclassified payment, missing principal breakdown, stale reconciliation or unlinked group allocation is visible as incomplete coverage. Every number links to a detail query using the same period/filter contract.
+Dashboard queries reuse these definitions: things needing attention first, then financial and career summaries, the agenda and activity. A pending or unclassified payment, a missing principal breakdown, a stale reconciliation or an unlinked group allocation shows as incomplete coverage. Every number links to a detail query with the same period and filter contract.
 
-Use actual-period refunds by default, even when the purchase was last year. An optional purchase-cost view combines original and linked refunds without rewriting period reports. Career cohorts count applications submitted in a period and outcomes observed by an identified as-of time; event counts and distinct-application counts are different measures. Empty denominators return null with “not applicable,” not zero or NaN.
+Refunds land in the period they actually happen by default, even if the purchase was last year. An optional purchase-cost view puts the original and its linked refunds together without rewriting period reports. Career cohorts count applications submitted in a period and the outcomes seen by a named as-of time; counting events and counting distinct applications are different measures. An empty denominator returns null with "not applicable", not zero or NaN.
 
 ### 14. Career and tracker domain design
 
 #### 14.1 Applications and history
 
-`JobApplication` represents one attempt, not one company. Store company/role, source, URL, role-description snapshot, actual application date, location/work arrangement, optional salary range/currency, technologies, contact information, notes, resume-version reference and next action. Provider URLs can expire; do not fetch them automatically server-side in V1.
+`JobApplication` is one attempt, not one company. It stores the company and role, where it was found, the URL, a snapshot of the role description, the actual application date, location and work arrangement, an optional salary range and currency, technologies, contact information, notes, a reference to the resume version and the next action. Posting URLs can expire; V1 doesn't fetch them automatically on the server.
 
-Keep stage and outcome distinct. Saved is not submitted. Support skipped stages and repeated interviews; record stage-change effective date and entry timestamp. Accepted, rejected, withdrawn, offer-declined, offer-expired and employer-cancelled are explicit outcomes. A reopened attempt is a recorded transition, not an overwritten terminal history. No-response is a dated observation, never an automated rejection.
+Stage and outcome stay separate, and Saved isn't submitted. Stages can be skipped and interviews repeated; a stage change records its effective date and when it was entered. Accepted, rejected, withdrawn, offer declined, offer expired and employer cancelled are explicit outcomes. Reopening an attempt is a recorded transition, not an overwrite of its final history. No response is an observation with a date, never an automatic rejection.
 
-Each interview/assessment is an `ApplicationEvent` with time/timezone, link/location, preparation notes and outcome. Follow-ups can be dated events. A stage change and any explicitly requested next event can commit together, but a stage alone must not fabricate an interview date. Duplicate company/role attempts produce a warning with a choice to continue.
+Each interview or assessment is an `ApplicationEvent` with a time and timezone, a link or location, preparation notes and an outcome. Follow-ups can be dated events. A stage change can commit together with a next event the user explicitly asked for, but a stage on its own never invents an interview date. A second attempt at the same company and role raises a warning, with the choice to carry on.
 
-V1 resume versions are immutable identifiers/notes/reference links; later uploads preserve the exact file/version used. Updating the user's latest resume does not rewrite an old application. Contact details and salary expectations are private fields excluded from logs and defaults in external notifications.
+In V1, resume versions are fixed identifiers, notes and reference links; later uploads will keep the exact file and version used. Updating your latest resume never rewrites an old application. Contact details and salary expectations are private fields, kept out of logs and out of external notifications by default.
 
-Career reporting uses history to calculate elapsed stage durations and explicitly handles repeated stages, open stages and corrections. Count interviews separately from applications that reached an interview. Define the response event and as-of cutoff before adding conversion funnels; richer cohort analytics can wait until V2 without losing the required raw history.
+Career reporting uses the history to work out how long each stage took, and handles repeated stages, open stages and corrections explicitly. Interviews are counted separately from applications that reached an interview. Define the response event and the as-of cutoff before adding conversion funnels; richer cohort analysis can wait for V2 without losing the raw history it needs.
 
 #### 14.2 Versioned trackers, V3
 
-`TrackerTemplateVersion` owns field definitions with stable field IDs, type, validation, choices and primary title/status/deadline mapping. `Tracker` references a template lineage/version; `TrackerEntry` stores validated JSONB values plus version and indexed extracted title/status/due date. Extracted columns update transactionally with entry values and are rebuildable, not separately edited.
+`TrackerTemplateVersion` owns the field definitions: stable field ids, type, validation, choices and the main title, status and deadline mapping. `Tracker` points to a template lineage and version; `TrackerEntry` stores validated JSONB values plus a version, and an indexed, extracted title, status and due date. The extracted columns update in the same transaction as the entry values and can be rebuilt; they're never edited on their own.
 
-Begin with preset Learning, Books and Personal Tasks templates and field types text, number, date, checkbox and single-select. User-created templates and custom fields follow within V3, after version/migration safety is established. TypeScript/Zod validation is constructed from a strict allowlist of definition types. No arbitrary JavaScript, SQL, formulas or executable template content. Number fields are not the financial Money type unless a separately designed nonfinancial display use requires it.
+Start with preset Learning, Books and Personal Tasks templates, and the field types text, number, date, checkbox and single-select. Templates and custom fields users create come later in V3, once version and migration safety is in place. TypeScript/Zod validation is built from a strict allow-list of definition types. No arbitrary JavaScript, SQL, formulas or executable template content. Number fields aren't the financial Money type unless a separately designed non-financial display needs it.
 
-Adding optional fields can be compatible; adding required fields needs defaults or a migration plan. Removing a field archives its definition and retains values; changing type/select options creates a version and migration preview with invalid-entry handling. Do not rewrite every entry silently. Date/status mappings drive agenda projections through the same source contract as Career and Debt.
+Adding optional fields can stay compatible; adding required ones needs defaults or a migration plan. Removing a field archives its definition and keeps the values; changing a type or select options creates a version and a migration preview, with handling for invalid entries. Never rewrite every entry quietly. Date and status mappings feed agenda projections through the same source contract as Career and Debt.
 
-Habit streaks require dated check-in records and timezone rules; they cannot be derived reliably from a single completion checkbox. Tracker template sharing is later content sharing, not permission to read instances. Trackers may link to financial/career records, but those modules remain authoritative.
+Habit streaks need dated check-in records and timezone rules; one completion checkbox can't produce them reliably. Sharing tracker templates, later, would be sharing content, not permission to read someone's trackers. Trackers can link to financial or career records, but those modules stay the real source.
 
-Completed V3 preserves database Section 14’s versioned template/field/option, tracker, entry/revision and migration model. V3-A/B implemented presets, customization and safe migration; V3-C added reports/statistics, internal Calendar/reminders, onboarding/navigation, portability and lifecycle; V3-D completed approved targeted acceptance/documentation. Assignment 2 superseded the original comprehensive campaign with change-impact verification. Use the [V3 handoff](archive/web/V3_DEVELOPMENT_HANDOFF.md) and [impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) for actual evidence and limits; the approved redesign preserves these implemented contracts.
+The finished V3 keeps database Section 14's versioned model for templates, fields and options, trackers, entries and revisions, and migrations. V3-A/B built presets, customization and safe migration; V3-C added reports and statistics, internal Calendar and reminders, onboarding and navigation, portability and lifecycle; V3-D finished the approved targeted acceptance and documentation. The second piece of work replaced the original big verification campaign with change-impact verification. The [V3 handoff](archive/web/V3_DEVELOPMENT_HANDOFF.md) and the [impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) have the actual evidence and its limits; the approved redesign keeps these built contracts.
 
 ### 15. Financial roadmap extension design
 
 #### 15.1 Cards and statements, V2
 
-Map a card to a liability ledger account with issuer/name/limit metadata. A credit-card purchase remains an expense-entry workflow even though its funding recipe differs from cash.
+A card maps to a liability ledger account, with the issuer, name and limit as metadata. A card purchase is still entered as an expense, even though how it's funded differs from cash.
 
-The UI should use the existing purchase/expense experience as the primary entry surface. When the selected funding source is a credit card, the server uses the card-purchase financial recipe:
+The existing purchase and expense entry is the main place to record it. When the funding source chosen is a credit card, the server uses the card-purchase recipe:
 
 recognized spending increases;
 
@@ -942,71 +942,71 @@ card liability increases;
 
 liquid cash does not move.
 
-Do not require the user to enter the purchase once in Expenses and again in a Cards module.
+Nobody has to enter the purchase once in Expenses and again in a Cards module.
 
-The dedicated Cards surface manages liability, activity, statements, payments, reconciliation, fees, interest, refunds, card credits, utilization and installment plans rather than acting as another purchase tracker.
+The Cards area manages liability, activity, statements, payments, reconciliation, fees, interest, refunds, card credits, utilization and installment plans; it isn't another purchase tracker.
 
-Purchases and recognized fees/interest post spending/liability; payments post cash reduction and liability reduction; refunds offset spending and liability or create an overpayment credit. Pending authorizations are separate informational records until recognized as posted activity.
+Purchases and recognized fees and interest post spending and liability; payments post less cash and less liability; refunds offset spending and liability or create an overpayment credit. Pending authorizations are separate records, for information only, until they're recognized as posted activity.
 
-Persist transaction date, posting date and statement membership separately. Recommended report default is transaction-date spending for recognized purchases, with explicit provider-posted cutoff views for reconciliation. Statement assignment follows verified posting/cycle information rather than a guessed date rule.
+The transaction date, posting date and which statement a charge belongs to are stored separately. By default I recommend reporting recognized purchases by transaction date, with explicit views cut off by the provider's posting for reconciliation. Which statement a charge goes on follows verified posting and cycle information, never a guessed date rule.
 
-CardStatement stores immutable verified cycle dates, statement balance, minimum due and due date. StatementEntry links recognized activity; allocation records explain payments/credits against the statement. Closing a statement does not create another purchase or recalculate its original balance after payment. Remaining statement due changes through effective allocations while the original verified statement balance remains fixed.
+CardStatement stores the verified cycle dates, statement balance, minimum due and due date, which never change. StatementEntry links recognized activity, and allocation records explain payments and credits against the statement. Closing a statement doesn't create another purchase, and doesn't recalculate its original balance after a payment. The remaining statement due changes through allocations in effect, while the original verified statement balance stays fixed.
 
-Do not assume minimum-payment, interest, available-credit or payment-allocation formulas across issuers. A manual closed statement snapshot can reveal unrecorded transactions; reconciliation must resolve them explicitly rather than manufacturing postings.
+Don't assume minimum-payment, interest, available-credit or payment-allocation formulas are the same across issuers. A closed statement entered by hand can reveal transactions that weren't recorded; reconciliation sorts them out explicitly instead of inventing postings.
 
-Card installment plans link the original spending and provider-confirmed scheduled obligations without recognizing the same purchase every month. Installment count alone is insufficient evidence for interest, fees, total repayment or due-date behavior. Newly recognized provider charges become separate financial actions.
+A card installment plan links the original spending to the scheduled obligations the provider confirmed, without recognizing the same purchase every month. The number of installments on its own isn't enough evidence for interest, fees, the total repayment or due dates. New charges recognized from the provider become separate financial actions.
 
-An overpaid card is shown as card credit in presentation and excluded from liquid funds. A credit-normal card balance is not displayed as negative debt.
+An overpaid card shows as card credit and stays out of liquid funds. A card balance in credit isn't shown as negative debt.
 
-Utilization handles missing/zero limits, identifies its balance date, and computes aggregate eligible outstanding balances divided by aggregate eligible limits. Exclude card-credit balances from the used-credit numerator and disclose missing-limit cards. Available credit remains an estimate and is never cash.
+Utilization handles missing or zero limits, states its balance date, and works out total eligible outstanding balances divided by total eligible limits. Card-credit balances stay out of the credit-used numerator, and cards with no limit are called out. Available credit stays an estimate and is never cash.
 
-When a card-funded purchase is also a shared expense, the same real-world purchase is entered once. Private Finance records the card liability and the owner's private spending/receivable effects; group authority records payer contribution and participant shares. Other group members never receive the payer's private card/account identifiers.
+When a purchase paid by card is also a shared expense, it's still entered once. Private Finance records the card liability and the owner's private spending and receivable effects; the group side records what the payer put in and each participant's share. Other group members never get the payer's private card or account ids.
 
 #### 15.2 Planning, budgets and savings goals
 
-Budgets are category/period limits compared against defined net or gross spending (recommended net, with refunds displayed). Changing a budget does not change expenses. Forecasts combine opening actual position with expected occurrences and assumptions; actual and predicted totals appear separately.
+Budgets are limits per category and period, compared against defined net or gross spending (I recommend net, with refunds shown). Changing a budget doesn't change any expense. Forecasts combine the actual opening position with expected occurrences and assumptions, and show actual and predicted totals separately.
 
-Savings goals are reservations against eligible owned cash, not another asset. Goal allocations sum within an allowed eligible pool; allocate under the same workspace financial lock to prevent concurrent over-reservation. Recompute underfunding when actual spending lowers the pool and show a warning rather than silently changing past reservations. A transfer between accounts does not make additional savings. Releasing/reserving funds changes only reservation records.
+Savings goals reserve eligible cash you own; they aren't another asset. Goal allocations add up within an allowed eligible pool, and allocating happens under the same workspace financial lock so two at once can't over-reserve. When actual spending shrinks the pool, underfunding is recalculated and a warning shown, instead of past reservations changing quietly. Moving money between accounts doesn't create more savings. Releasing or reserving funds only changes reservation records.
 
 #### 15.3 Transfers in transit and later receivables
 
-When introduced, transit uses an owned nonspendable asset: departure debits transit/credits source cash; arrival debits destination/credits transit. Failure/return and fee refunds are separate confirmed actions with their own dates. An initiated transfer is a lifecycle record, not a cash posting until actual departure occurs. Preserve paired references and prevent duplicate completion.
+When it arrives, money in transit uses an owned asset you can't spend: departure debits transit and credits the source cash; arrival debits the destination and credits transit. Failure or return, and fee refunds, are separate confirmed actions with their own dates. A started transfer is a lifecycle record, not a cash posting, until the money actually leaves. Paired references are kept, and a transfer can't be completed twice.
 
-Standalone lending uses cash-to-receivable postings and principal recoveries reduce receivable, not income. Write-offs require explicit reasons/classification. Group receivables are released with shared expenses even if standalone lending remains deferred. Investments/noncash assets need valuation and reporting policy before they enter tracked net position. Currency conversion needs rates, realized differences and balancing rules before a workspace supports multiple currencies; storing a currency code now does not implement FX.
+Standalone lending posts cash to a receivable, and getting principal back lowers the receivable; it isn't income. Write-offs need an explicit reason and classification. Group receivables come out with shared expenses, even while standalone lending stays deferred. Investments and noncash assets need a valuation and reporting policy before they count in tracked net position. Currency conversion needs rates, realized differences and balancing rules before a workspace supports several currencies; storing a currency code now doesn't mean FX is built.
 
 ### 16. Shared expenses: separate group authority and private integration
 
 #### 16.1 Authorization and membership
 
-Create `ExpenseGroup`, `GroupMembership`, `Invitation` and `Participant`. Group-owned tables use `group_id` and composite group-scoped foreign keys/RLS, not a personal workspace ID copied from the creator. Active membership permits only the documented group actions. Personal ledger links carry the owner's workspace and remain invisible to other members.
+`ExpenseGroup`, `GroupMembership`, `Invitation` and `Participant`. Tables the group owns use `group_id` with composite group-scoped foreign keys and RLS, never a personal workspace id copied from whoever created it. Active membership only allows the documented group actions. Personal ledger links carry the owner's workspace and stay invisible to other members.
 
-Use owner/member roles. Owners manage membership/settings and archive the group; members record permitted bills/settlements. Only a bill's creator revises it initially. An owner can flag/propose a correction, not silently edit another person's bill or inspect their private account. Restrict group membership administration to current owners with recent authentication for consequential changes. Design membership RLS without a policy recursively querying itself: use a narrowly audited permission predicate with fixed search path and no broad data-return privileges where needed. Membership changes and authorization-sensitive group commands coordinate on the group lock, then recheck membership before commit.
+Owner and member roles. Owners manage membership and settings and can archive the group; members record the bills and settlements they're allowed to. At first only a bill's creator revises it. An owner can flag or propose a correction, but can't quietly edit someone else's bill or look at their private account. Managing membership is limited to current owners, with a recent sign-in for consequential changes. Membership RLS is designed so no policy queries itself recursively: where needed, a narrowly audited permission predicate with a fixed search path and no broad data-returning privileges. Membership changes and group commands that depend on authorization coordinate on the group lock, then recheck membership before committing.
 
-Invitation tokens are random, expiring and single-use; store a hash. Acceptance requires a signed-in verified target user and explicitly shows historical group visibility. Bind email-targeted invitations to the verified invited email; do not expose user-directory search to arbitrary callers. Each registered user has at most one active participant identity per group.
+Invitation tokens are random, expire and work once, and only a hash is stored. Accepting one needs the intended user signed in and verified, and shows plainly what group history they'll see. An invitation sent to an email is tied to that verified email; arbitrary callers can't search a user directory. Each registered user has at most one active participant identity per group.
 
-Nonregistered participants have display names and a manual-recording flag, no auth identity, no private workspace and no notifications. Claiming/linking one requires an invitation, explicit acceptance and balance/history review. A name match never performs a merge.
+People who aren't registered have a display name and a flag saying their entries are recorded by hand; they have no auth identity, no private workspace and no notifications. Claiming or linking one needs an invitation, explicit acceptance and a review of the balance and history. Matching names never merges anyone.
 
-Recommended former-member policy: retain read-only access to records visible before exit and subsequent resolution/corrections of those existing obligations; hide unrelated new bills, contacts and uploads. Implement this with explicit visibility bounds/record entitlements, not only `membership.active`. Removal revokes write rights and unrelated access immediately. Leaving preserves obligations; archived groups preserve history. Finalize this policy and its deletion implications before building invitations.
+The former-member policy I recommend: read-only access to the records they could see before leaving, plus later resolution and corrections of those existing obligations; unrelated new bills, contacts and uploads stay hidden. This is built with explicit visibility bounds and record entitlements, not just `membership.active`. Removal takes away write rights and unrelated access at once. Leaving keeps obligations, and archived groups keep their history. Settle this policy, and what it means for deletion, before building invitations.
 
 #### 16.2 Group financial model
 SharedExpense versions contain description/date/currency/total and their PayerContribution and ParticipantShare rows.
 
-V2 supports one or multiple payers per bill. Single payer remains the simplest/default UI, but the model and service rules must not assume exactly one contribution.
+V2 supports one or more payers per bill. One payer stays the simplest, default UI, but the model and service rules never assume exactly one contribution.
 
 For every finalized current bill revision:
 
 sum(PayerContribution.amount) = bill total
 sum(ParticipantShare.amount) = bill total
 
-Validate both independently under the group lock.
+Both are checked separately, under the group lock.
 
-The payer need not consume a share, a participant need not pay, and any subset of members may participate.
+A payer doesn't have to have a share, a participant doesn't have to pay, and any subset of members can be in a bill.
 
-Initial V2 participant split methods are equal and exact/custom. Category splitting and participant splitting remain separate dimensions.
+V2 starts with equal and exact (custom) splits between participants. Splitting by category and splitting between people stay separate.
 
-Store group-level corrections as explicit revisions rather than editing finalized evidence.
+Group-level corrections are stored as explicit revisions; finalized evidence is never edited.
 
-The current participant balance is derived across all current effective bills, refunds and confirmed settlements:
+A participant's current balance is worked out across every bill in effect, refunds and confirmed settlements:
 
 Group net receivable
   = Current contributions paid for bills
@@ -1016,33 +1016,33 @@ Group net receivable
   + Confirmed settlements paid
   - Confirmed settlements received
 
-Positive means the group owes the participant money. Negative means the participant owes the group.
+Positive means the group owes the participant; negative means the participant owes the group.
 
-All current participant net positions must sum exactly to zero.
+All current participant net positions add up to exactly zero.
 
-Reciprocal obligations therefore net automatically in current presentation while original bills remain unchanged. If A owes B PHP 1,000 from one bill and B owes A PHP 800 from another, their current relationship is A owing B PHP 200.
+So debts in both directions net out automatically in what's shown now, while the original bills stay as they were. If A owes B PHP 1,000 from one bill and B owes A PHP 800 from another, A currently owes B PHP 200.
 
-Pairwise relationship views and whole-group settlement suggestions are derived projections, not mutable balance stores.
+Views between two people and settlement suggestions for the whole group are derived projections, not balances stored and edited.
 
-Reported/proposed/disputed settlements contribute zero to confirmed group balances. The read model may additionally expose pending outgoing/incoming settlement amounts and a clearly labeled projected balance if those pending settlements are confirmed.
+Reported, proposed and disputed settlements add nothing to confirmed group balances. The read model can also show pending outgoing and incoming settlement amounts, and a clearly labelled projected balance if those pending settlements are confirmed.
 
-Confirmed settlements contain payer, recipient, date, amount, allocations, confirmer, version and state. Support full settlement, custom partial amounts, selected-expense allocations, partial settlement of one bill, and allocation of one settlement across multiple eligible bills.
+A confirmed settlement has a payer, recipient, date, amount, allocations, who confirmed it, a version and a state. Full settlements, custom partial amounts, allocations to chosen expenses, partly settling one bill, and spreading one settlement across several eligible bills are all supported.
 
-Overpayment is explicit and becomes an advance/reverse position rather than being truncated.
+An overpayment is explicit and becomes an advance or a reverse position; it's never cut off.
 
-Settlement suggestions may match group debtors to creditors to reduce payment count while preserving participant net positions. Suggestions never post money or alter balances. Do not claim mathematically minimal transfer count unless the algorithm guarantees it. Redirected settlement through indirect obligations requires explicit agreement/confirmation from the affected participants.
+Settlement suggestions can match the group's debtors with its creditors to cut the number of payments while keeping everyone's net position. Suggestions never post money or change balances. Don't claim the mathematically fewest transfers unless the algorithm guarantees it. Redirecting a settlement through indirect obligations needs explicit agreement or confirmation from the people affected.
 
-Bill disputes keep the obligation visible with disputed meaning and suppress automatic settlement suggestions for that disputed amount.
+A disputed bill keeps the obligation visible, marked as disputed, and no settlement suggestions are made for the disputed amount.
 
-Deterministic centavo allocation handles PHP 100 / 3 as PHP 33.34, PHP 33.33 and PHP 33.33 with the extra recipient identified.
+Centavos are allocated the same way every time: PHP 100 / 3 is PHP 33.34, PHP 33.33 and PHP 33.33, with who gets the extra named.
 
-Serialize writes by group row/version, separate from private workspace locks. Explicit private-link commands touching both scopes lock in the documented order: group first, then workspace IDs ascending. Revalidate membership after acquiring locks. Do not acquire the reverse order elsewhere.
+Group writes run one at a time on the group row and version, separately from private workspace locks. Private-link commands that touch both scopes lock in the documented order: the group first, then workspace ids ascending. Membership is checked again after the locks are taken, and nothing anywhere takes them in the reverse order.
 
 #### 16.3 Optional per-user private posting
 
-Group history records what participants agree happened. Personal posting requires each user's own account selection and approval. `PrivateLedgerLink` uniquely associates workspace, source kind/ID/version and posting purpose with a financial action. Hide account IDs/names/balances from group DTOs. Group reports and private reports are separate and never added together as independent expenses.
+Group history records what the participants agree happened. Posting to a personal ledger needs each user to pick their own account and approve it. `PrivateLedgerLink` uniquely ties a workspace, a source kind, id and version, and a posting purpose to a financial action. Group DTOs never include account ids, names or balances. Group reports and private reports are separate, and are never added together as if they were separate expenses.
 
-The blueprint's PHP 1,200 dinner is implemented as follows:
+Here's how the blueprint's PHP 1,200 dinner works:
 
 | Person / action | Private postings | Group effect |
 | --- | --- | --- |
@@ -1051,33 +1051,33 @@ The blueprint's PHP 1,200 dinner is implemented as follows:
 | Brother pays 400, recipient confirms, both link their actual movement | Brother: debit payable 400 / credit own cash 400. Payer: debit own receiving cash 400 / credit receivable 400 | Confirmed settlement reduces their group positions once. |
 | Other brother pays 150 | Same recipe for 150 | His remaining payable is 250; payer remains owed 250. |
 
-Confirmation alone does not choose a receiving account or post into both private ledgers. The recipient can combine confirmation and their own posting in one command; the payer receives an actionable pending link/classification state. Personal adoption can occur later and has its own idempotency key. No distributed all-or-nothing transaction between different users' approvals is required.
+Confirming on its own doesn't pick a receiving account or post into both private ledgers. The recipient can confirm and post to their own ledger in one command; the payer gets a pending link or classification to act on. Taking it into a personal ledger can happen later, with its own idempotency key. No distributed all-or-nothing transaction across different users' approvals is needed.
 
-If a participant uses groups without a private ledger, show their group balance and the lack of personal posting without fabricating private spending. If a settlement is posted privately before adopting the related bill, require bill adoption or an explicitly labeled clearing path so an unexplained negative payable is not created.
+If someone uses groups without a private ledger, the app shows their group balance and that nothing's posted personally, without inventing private spending. If a settlement is posted privately before the related bill has been taken in, either the bill has to be taken in or an explicitly labelled clearing path used, so no unexplained negative payable appears.
 
-Actual cash sent before recipient confirmation can debit settlement-clearing/credit payer cash. Confirmation later reclassifies clearing against the payable without another deduction. Actual received cash before linkage can debit recipient cash/credit pending-receipt clearing; confirmation/linking reclassifies it against the receivable. Pending cash movements are real privately, while the group settlement remains unconfirmed. Show the difference and its explanation.
+Cash actually sent before the recipient confirms can debit settlement clearing and credit the payer's cash; confirming later reclassifies the clearing against the payable without taking the money out again. Cash actually received before it's linked can debit the recipient's cash and credit pending-receipt clearing; confirming or linking reclassifies it against the receivable. Pending cash movements are real on the private side while the group settlement is still unconfirmed, and the app shows the difference and why.
 
-Link an existing private purchase through an explicit conversion: reverse/reclassify the other participants' expense shares into receivable without another cash movement. Existing private transfers/payments are linked and reclassified, never reposted. A private action cannot be linked twice for the same amount/purpose. Group payable/receivable subaccounts cannot also be created as lender debts for the same obligation.
+An existing private purchase is linked through an explicit conversion: the other participants' expense shares are reversed or reclassified into a receivable, with no extra cash movement. Existing private transfers and payments are linked and reclassified, never posted again. A private action can't be linked twice for the same amount and purpose. Group payable and receivable sub-accounts can't also be created as lender debts for the same obligation.
 
-The user-entry experience should avoid duplicate representation of one real-world purchase. If the current user records an expense and marks it as shared, the application may create the linked private financial evidence and group bill through one reviewed workflow. Likewise, a card-funded shared purchase may create card liability, the user's own spending share and group receivable without duplicate spending or duplicate card liability.
+Entry should never represent one real purchase twice. If you record an expense and mark it as shared, the app can create the linked private financial evidence and the group bill in one reviewed workflow. In the same way, a shared purchase paid by card can create the card liability, your own share of the spending and the group receivable, without doubling the spending or the card liability.
 
-For a multi-payer bill, each registered payer controls only their own private financial adoption. The group records exact contribution amounts but does not expose how another participant funded that contribution. One participant may privately use cash while another uses a credit card without exposing those account/card details to the group.
+With several payers, each registered payer only controls taking the bill into their own private records. The group records exactly what each put in, but never shows how someone funded it. One person might use cash and another a credit card, without either's account or card details reaching the group.
 
-Group confirmation never grants authority to write another participant's private ledger.
+Confirming something in the group never lets anyone write to another participant's private ledger.
 
 #### 16.4 Corrections, overpayments and settlement suggestions
 
-Bill edits retain versions and notify affected registered members. A group correction changes group balances atomically but never silently rewrites another user's private ledger. Their previously adopted private version becomes visibly out of sync and offers a reviewed corrective path. Reports disclose pending differences.
+Bill edits keep their versions and notify the registered members affected. A group correction changes group balances atomically, but never quietly rewrites anyone's private ledger. The private version they took in earlier shows as out of step and offers a reviewed way to correct it. Reports show differences still pending.
 
-A confirmed settlement reversal follows the same rule: reversing group settlement evidence does not pretend that a real-world cash transfer was physically returned.
+Reversing a confirmed settlement follows the same rule: reversing the group's settlement evidence doesn't pretend a real cash transfer was physically returned.
 
-Refunds reverse the relevant payer/share effects. A fully settled participant can become owed money after a refund or correction; retain prior payments rather than erasing them.
+Refunds reverse the payer and share effects they apply to. Someone fully settled can end up being owed money after a refund or correction; their earlier payments are kept, not erased.
 
-Overpayments require a preview and create a reverse balance or advance rather than truncating at zero. A payer's transfer fee remains private spending unless a distinct agreed shared fee is recorded.
+An overpayment needs a preview and creates a reverse balance or an advance instead of stopping at zero. A payer's transfer fee stays their private spending unless a separate shared fee is agreed and recorded.
 
-Nonregistered settlement confirmations identify the recording member and explicitly state that no authenticated recipient verified receipt. Dispute resolution retains evidence and before/after allocations. A group owner's role is not an automatic adjudication override.
+A settlement confirmed for someone who isn't registered names the member who recorded it and says plainly that no signed-in recipient verified receiving it. Resolving a dispute keeps the evidence and the before and after allocations. Being the group owner doesn't make you the automatic judge.
 
-V2 includes settlement suggestions derived from current confirmed participant net positions. A deterministic simplifier may match debtors and creditors to suggest fewer transfers while preserving every participant's net position.
+V2 has settlement suggestions worked out from participants' current confirmed net positions. A deterministic simplifier can match debtors and creditors to suggest fewer transfers while keeping everyone's net position the same.
 
 Suggestions:
 
@@ -1095,7 +1095,7 @@ preserve explainable allocations when applied;
 
 do not claim mathematically minimal transfers unless proven.
 
-Direct reciprocal netting is inherent in current balance derivation and requires no destructive rewriting. Redirected discharge through participants without a direct obligation requires explicit agreement/confirmation from the affected participants before the resulting settlement is applied.
+Netting debts that run in both directions is built into how current balances are worked out, and rewrites nothing. Clearing a debt by routing it through people who don't owe each other directly needs explicit agreement or confirmation from the people affected before the resulting settlement applies.
 
 ### 17. Security, privacy, audit, and lifecycle
 
@@ -1114,9 +1114,9 @@ Direct reciprocal netting is inherent in current balance derivation and requires
 | Malicious imports/files | Bounded parsing, quarantined scans, private ownership checks, CSV formula escaping and no executable document previews. |
 | Supply-chain/configuration compromise | Locked versions, reviewed updates, least-privilege deployment secrets, production-only origins, migration checks and rapid security patch procedure. |
 
-Better Auth's [rate-limit documentation](https://better-auth.com/docs/concepts/rate-limit) supports database storage and notes that direct server API calls are not covered by its client-request limits. Do not create a wrapper around login/reset that accidentally bypasses abuse protection. Only trust forwarding headers sanitized by the hosting proxy; test spoofed headers.
+Better Auth's [rate-limit documentation](https://better-auth.com/docs/concepts/rate-limit) supports database storage, and notes that direct server API calls aren't covered by its client-request limits. Don't wrap login or reset in a way that accidentally skips abuse protection. Only trust forwarding headers the hosting proxy has cleaned, and test spoofed ones.
 
-Use HTTPS, encryption at rest from configured managed services, restricted database networking, separate environment secrets and a private object-storage policy. This is server-accessible encryption, not end-to-end encryption. No bank credentials, wallet PINs, full payment-card details or unnecessary identity documents are collected. Mask optional account reference metadata. Production support access is exceptional, explicitly scoped and audited; a group owner has no platform support privileges.
+HTTPS, encryption at rest from the managed services, restricted database networking, separate secrets per environment and a private object-storage policy. The server can read this encryption; it isn't end-to-end. No bank credentials, wallet PINs, full payment-card details or unnecessary identity documents are collected, and optional account reference metadata is masked. Support access to production is the exception, explicitly scoped and audited; a group owner has no platform support privileges.
 
 #### 17.2 Three kinds of history
 
@@ -1124,13 +1124,13 @@ Use HTTPS, encryption at rest from configured managed services, restricted datab
 2. **Domain audit:** actor, action, subject, effective/recorded timestamps, before/after safe domain values, reason, request/command ID and version. Contains private data, so it has the same authorization as its source.
 3. **Operational logs/activity UI:** logs contain technical identifiers/status/timing; the activity UI contains authorized summaries. Neither is the financial ledger. Activity can be regenerated or pruned without changing balances.
 
-Write mandatory financial/domain audit records in the same transaction as the change. A failed audit write must fail a financial mutation. General activity formatting and email can be asynchronous. An append-only application audit is traceable history, not a claim of cryptographic tamper resistance against database administrators.
+Required financial and domain audit records are written in the same transaction as the change, so if the audit write fails, the financial change fails too. General activity formatting and email can happen asynchronously. An append-only audit in the app is traceable history, not a claim of cryptographic tamper-proofing against database admins.
 
 #### 17.3 Account and workspace lifecycle
 
-Differentiate archive, reversal/correction, workspace deletion and identity deletion. Referenced financial accounts cannot be individually deleted. Applications/trackers can be archived; record removal cancels/removes derived reminders through the source workflow and does not leave an orphan agenda item.
+Archiving, reversing or correcting, deleting a workspace and deleting an identity are all different. A financial account that something refers to can't be deleted on its own. Applications and trackers can be archived; removing a record cancels or removes its derived reminders through the source workflow and never leaves an orphaned agenda item.
 
-Recommended full deletion flow:
+The full deletion flow I recommend:
 
 1. Require fresh authentication. Show a scope preview: private records, settings, history, files, exports, sessions and future shared-history implications. Offer exports with their known limitations.
 2. Confirm explicitly; set account/workspace to `deletion_pending` and revoke all ordinary sessions immediately. Block domain writes, new jobs and file downloads. A limited reauthenticated lifecycle page can cancel within a recommended seven-day grace period.
@@ -1138,51 +1138,51 @@ Recommended full deletion flow:
 4. Retain a minimal deletion tombstone of internal IDs and dates through the backup window to prevent resurrection after a restore. It contains no financial content. Issue completion evidence without retaining the deleted dataset.
 5. Backups expire on the documented schedule; recommended maximum application-controlled retention is thirty days. Publish the actual configured provider, object-version and log retention, not an unverified promise. Disable unexpected indefinite object versioning/soft-delete retention.
 
-Recommended operational logs retain thirty days, short-lived export objects twenty-four hours, and token-bearing email payloads only until send/expiry. Financial/domain audit lasts with the live workspace. Unverified abandoned registrations can expire after seven days. Tune security abuse metadata retention independently and disclose it.
+What I recommend keeping: operational logs for thirty days, short-lived export objects for twenty-four hours, and email payloads that carry tokens only until they're sent or expire. Financial and domain audit lasts as long as the live workspace. Abandoned registrations that were never verified can expire after seven days. Retention for security abuse metadata is tuned separately and stated.
 
-V1-C4 implements a seven-day deletion grace period, exact count/type scope review, explicit whole-workspace-and-identity confirmation, blocked lifecycle state and coordinated ordinary-session revocation. It records successful revocation only after the pre-request sessions are absent. Interrupted requests remain blocked and can be inspected through limited reauthenticated lifecycle access. The separate lifecycle operator performs reviewed resumable projection batches and one bounded atomic private-evidence graph, then scrubs the manifest and records a minimal tombstone. Cancelled request links are detached during the final identity purge. This process has no ordinary runtime evidence-delete bypass. See [ADR 0003](adr/0003-v1-c4-reviewed-lifecycle-maintenance.md) and the [lifecycle runbook](OPERATIONS_AND_RELEASE.md#v1-lifecycle-operation).
+V1-C4 builds a seven-day deletion grace period, a review of exactly what goes by count and type, an explicit confirmation covering the whole workspace and identity, a blocked lifecycle state, and coordinated revocation of ordinary sessions. Revocation is only recorded as successful once the sessions from before the request are gone. An interrupted request stays blocked and can be looked at through limited lifecycle access after signing in again. The separate lifecycle operator runs reviewed, resumable projection batches and one bounded, atomic graph of private evidence, then scrubs the manifest and records a minimal tombstone. Links from cancelled requests are detached during the final identity purge. Nothing in ordinary runtime can bypass this to delete evidence. See [ADR 0003](adr/0003-v1-c4-reviewed-lifecycle-maintenance.md) and the [lifecycle runbook](OPERATIONS_AND_RELEASE.md#v1-lifecycle-operation).
 
-The product explicitly states that actual backup expiry is unverified for this deployment and does not promise immediate backup erasure. Tombstones have a recommended thirty-day minimum date but are not automatically deleted until actual retained backup windows are established. Independent deletion-register retention, restore reapplication, maintenance scheduling, support contact and durable security-email delivery remain production acceptance gates. No uploaded files, stored CSV objects or shared-workspace records are claimed in the V1 deletion preview.
+The product says plainly that actual backup expiry isn't verified for this deployment, and doesn't promise immediate erasure from backups. Tombstones have a recommended thirty-day minimum, but aren't deleted automatically until the real backup retention windows are known. Keeping an independent deletion register, reapplying it on restore, scheduling maintenance, a support contact and durable security email are still production acceptance gates. The V1 deletion preview doesn't claim any uploaded files, stored CSV objects or shared-workspace records.
 
-Future shared history requires a product/privacy decision before shared expenses launch. Proposed default: preserve nonidentifying bill/settlement participant references needed by other members, remove the departing user's private ledger links/contact details, and display “Deleted participant.” Do not silently erase others' settlement evidence or claim that pseudonymization removes all identification from their notes. Owner transfer/group archival and treatment of shared receipts must be included in the deletion preview.
+Shared history needs a product and privacy decision before shared expenses launch. My proposed default: keep the non-identifying participant references on bills and settlements that other members need, remove the leaving user's private ledger links and contact details, and show "Deleted participant". Never quietly erase other people's settlement evidence, or claim pseudonymization removes every identifying detail from their notes. Transferring ownership or archiving the group, and what happens to shared receipts, have to be in the deletion preview.
 
 ### 18. Imports, exports, files, and restoration
 
 #### 18.1 V1 exports
 
-Provide distinct CSV exports for transactions/postings or action details, debt schedules/payments, application history, and report aggregates as supported. Define column names, schema version, date/amount formats, filters, coverage, and source IDs. A readable report CSV is not a complete restorable workspace backup. Include a manifest/README when an export consists of several related files.
+Separate CSV exports for transactions and postings or action details, debt schedules and payments, application history, and report aggregates where supported. Each defines its column names, schema version, date and amount formats, filters, coverage and source ids. A readable report CSV isn't a complete backup you can restore a workspace from. An export made of several related files comes with a manifest or README.
 
-Stream modest exports from a consistent scoped snapshot with a size/time cap. Large jobs later export to private short-lived storage; reauthorize when requested and again when downloaded. Apply spreadsheet-safe formula escaping to untrusted text beginning with dangerous spreadsheet characters; `csv-stringify` documents [formula escaping](https://csv.js.org/stringify/options/escape_formulas/). Preserve exact monetary strings and identify text sanitization in the export schema.
+Modest exports stream from one consistent, scoped snapshot, with a size and time cap. Large jobs will later export to private, short-lived storage, authorized again when requested and again when downloaded. Untrusted text that starts with a dangerous spreadsheet character gets formula escaping; `csv-stringify` documents [formula escaping](https://csv.js.org/stringify/options/escape_formulas/). Monetary strings stay exact, and the export schema says where text was sanitized.
 
 #### 18.2 V2 imports
 
-Create an import batch with content checksum, source format/version, explicit column mapping, date format, currency, account cutoff and per-row status. Parse into staging; show invalid/ambiguous rows, suspected duplicates and money totals before posting. Do not guess whether `03/04/2026` is March 4 or April 3.
+An import batch has a content checksum, the source format and version, an explicit column mapping, the date format, currency, the account's cutoff and a status per row. It's parsed into staging, and invalid or ambiguous rows, likely duplicates and money totals are shown before anything posts. Never guess whether `03/04/2026` is March 4 or April 3.
 
-Confirmed rows invoke the same authorized posting services. Each row has a stable batch/row command ID; retries cannot duplicate committed rows. Identical files and provider references produce warnings and proposed skips, but unrelated equal amounts are not necessarily duplicates. Chunked imports report imported/skipped/failed counts and allow restart; each financial action remains atomic even when an entire large batch is not.
+Confirmed rows go through the same authorized posting services. Each row has a stable batch-and-row command id, so retries can't duplicate rows already committed. Identical files and provider references produce warnings and suggested skips, but two unrelated equal amounts aren't necessarily duplicates. Chunked imports report imported, skipped and failed counts and can restart; each financial action stays atomic even when a whole large batch isn't.
 
-Preview a cutoff strategy: history begins after the opening baseline, or replace the baseline with an earlier opening amount before importing earlier history. Do not simply add old transactions to a current opening balance. Historical imports do not generate new reminders for already paid installments. Cancelling an already committed import uses explicit batch reversal where supported, not deletion without evidence.
+The cutoff strategy is previewed: either history starts after the opening baseline, or the baseline is replaced with an earlier opening amount before importing earlier history. Old transactions are never just added on top of a current opening balance. Historical imports don't create new reminders for installments already paid. Cancelling an import that's already committed uses an explicit batch reversal where supported, not deletion without evidence.
 
 #### 18.3 Attachments
 
-Use private S3 objects with metadata scoped to a workspace or group and validated source relation. Recommended first limits: PDF/JPEG/PNG, 10 MiB per file, 1 GiB per workspace, adjustable after measurement. Resume/assessment formats such as DOCX require explicit support and scan/preview decisions; do not accept every Office/archive type by default.
+Private S3 objects, with metadata scoped to a workspace or group and a validated link to the source. The first limits I recommend: PDF, JPEG and PNG, 10 MiB per file and 1 GiB per workspace, adjustable once measured. Resume and assessment formats like DOCX need explicit support and decisions on scanning and preview; not every Office or archive type gets accepted by default.
 
-Upload flow: authorize source and quota → create pending object record → short-lived constrained upload → verify actual size/type/checksum → quarantine/scan → mark available. Claimed browser MIME type is insufficient. Failed/quarantined objects cannot be downloaded; lifecycle jobs delete abandoned uploads. Strip image location metadata where practical and do not render active SVG/HTML inline.
+Upload flow: authorize the source and quota → create a pending object record → short-lived, constrained upload → check the real size, type and checksum → quarantine and scan → mark available. The MIME type the browser claims isn't enough. Failed or quarantined objects can't be downloaded, and lifecycle jobs delete abandoned uploads. Image location metadata is stripped where practical, and active SVG or HTML is never rendered inline.
 
-Downloads recheck authorization, then use a short-lived signed URL or authenticated proxy. Signed URLs are bearer capabilities; keep expiry short (recommended five minutes), do not log them, and acknowledge the residual access window after membership revocation. Use a proxy if immediate revocation is necessary. [S3's presigned URL model](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) supports this tradeoff. Upload evidence never automatically posts money or advances an application.
+Downloads check authorization again, then use a short-lived signed URL or an authenticated proxy. A signed URL works for whoever holds it, so expiry is short (five minutes recommended), it's never logged, and the small window of access left after a membership is revoked is acknowledged. Use a proxy if revocation has to be immediate. [S3's presigned URL model](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) supports that trade-off. Uploaded evidence never posts money or moves an application forward by itself.
 
 #### 18.4 Portable restore versus disaster recovery
 
-A portable workspace bundle later contains a versioned manifest, supported entities/relationships, exact values/dates, template versions, checksums and stated attachment coverage. It excludes password hashes, sessions and recovery tokens. Validate and remap identities to the receiving authenticated owner; do not trust workspace IDs or unsafe paths in an uploaded archive. Preview counts, totals, unsupported features and conflicts in staging.
+A portable workspace bundle will contain a versioned manifest, the supported entities and relationships, exact values and dates, template versions, checksums and a statement of which attachments it covers. It leaves out password hashes, sessions and recovery tokens. Identities are validated and remapped to the signed-in owner receiving it; workspace ids and unsafe paths inside an uploaded archive are never trusted. Counts, totals, unsupported features and conflicts are previewed in staging.
 
-Initial restore recommendation is **replace the user's one private workspace after explicit confirmation**, with a recovery snapshot and atomic activation of validated replacement data. A staging namespace is not an additional active personal workspace. A future “restore as separate workspace” option requires the multiple-workspace product model first. Suspend writes during final activation; rebuild derived values, recheck journal balance/ownership and suppress historical notification replay.
+To start with I recommend that a restore **replaces the user's one private workspace after explicit confirmation**, with a recovery snapshot and atomic activation of the validated replacement data. A staging namespace isn't an extra active personal workspace. A "restore as a separate workspace" option would need the multiple-workspace product model first. Writes pause during the final activation; derived values are rebuilt, journal balances and ownership are checked again, and historical notifications aren't replayed.
 
-Service disaster recovery restores a whole managed environment from trusted backups. It does not use a user's portable import endpoint. Both paths validate financial invariants and relationship counts, but have different permissions, scope and communication requirements.
+Disaster recovery for the service restores a whole managed environment from trusted backups; it never goes through a user's portable import endpoint. Both paths check the financial invariants and relationship counts, but they differ in permissions, scope and what has to be communicated.
 
 ### 19. Performance, caching, limits, and growth
 
 #### 19.1 Initial measurable targets
 
-These are recommended engineering targets, not measured performance claims. Validate them against the selected paid deployment before storing real family/user data.
+These are engineering targets I recommend, not measured performance. Check them against the chosen paid deployment before storing real family or user data.
 
 | Area | Initial target / bound |
 | --- | --- |
@@ -1196,31 +1196,31 @@ These are recommended engineering targets, not measured performance claims. Vali
 | Input | Ordinary JSON body cap 256 KiB; default maximum 100 category/fee/allocation rows per command; explicit bulk endpoints for imports. |
 | Worker health | Alert on dead letters, auth-email backlog over 2 minutes, or later reminder backlog over 5 minutes. |
 
-Set upload storage/size limits only when uploads ship. Report storage, database connection and provider-email quota costs before increasing registration limits. A product limit must produce a clear actionable error rather than an unexplained save failure.
+Upload storage and size limits are set only when uploads ship. Report storage, database connection and email-provider quota costs before raising registration limits. Hitting a product limit gives a clear error that says what to do, never an unexplained save failure.
 
 #### 19.2 Query and cache strategy
 
-Create indexes beginning with scope and common access keys: `(workspace_id, effective_date, id)` on financial action/journal reads, `(workspace_id, ledger_account_id, journal_id)` on postings, debt/status/due-date indexes on schedule queries, application/status/date indexes, and unique scoped command/source keys. If effective date is denormalized onto a posting for performance, enforce equality with its parent rather than allowing divergence.
+Indexes start with the scope and common access keys: `(workspace_id, effective_date, id)` for financial action and journal reads, `(workspace_id, ledger_account_id, journal_id)` on postings, debt, status and due-date indexes for schedule queries, application, status and date indexes, and unique scoped command and source keys. If the effective date is copied onto a posting for speed, it's enforced equal to its parent's so the two can't drift.
 
-Use EXPLAIN on realistic multi-year fixtures and avoid N+1 application/agenda detail fetches. Use indexed PostgreSQL search or full-text/trigram capabilities only when basic search is too slow; do not add a search service initially. Keep queue maintenance/retention from dominating financial tables and monitor connection pools across auth, domain and worker roles.
+Run EXPLAIN on realistic fixtures covering several years, and avoid N+1 detail fetches for applications and the agenda. Reach for indexed PostgreSQL search, or full-text and trigram features, only when basic search gets too slow; no search service to start with. Keep queue maintenance and retention from crowding the financial tables, and watch connection pools across the auth, domain and worker roles.
 
-Private responses use `Cache-Control: private, no-store`; explicitly configure framework data/render caching rather than relying on a version-specific default. Public static assets and help content can be cached aggressively. Client query caches are per signed-in user/workspace and expire/reset at session change.
+Private responses use `Cache-Control: private, no-store`, and the framework's data and render caching is configured explicitly rather than trusting a version-specific default. Public static assets and help content can be cached hard. Client query caches belong to the signed-in user and workspace, and expire or reset when the session changes.
 
-V1 balances/reports derive directly from SQL. If measurements justify summary tables, keep them transactionally updated for critical balances or version-tagged for analytical results, with a rebuild command and invariant check against postings. Backdated changes invalidate summaries from the earliest affected date. Stale analytics must display freshness; stale summaries must not validate a financial command.
+In V1, balances and reports come straight from SQL. If measurements ever justify summary tables, they're updated in the same transaction for critical balances, or version-tagged for analytical results, with a rebuild command and an invariant check against the postings. Backdated changes invalidate summaries from the earliest date affected. Stale analytics say how fresh they are; a stale summary never validates a financial command.
 
 #### 19.3 Evolution triggers
 
-Scale the web process horizontally only after database session/rate-limit state, private caching and connection budgets are verified. Add worker replicas for backlog, using idempotent handlers and database claiming. Optimize/index queries and raise database capacity before introducing a read replica. A later reporting replica may be stale; read-after-write balances stay on the primary.
+Only scale the web process out once database session and rate-limit state, private caching and connection budgets are verified. Add worker replicas for a backlog, with idempotent handlers and database claiming. Optimize and index queries and raise database capacity before adding a read replica. A later reporting replica can be stale, so balances you read right after writing stay on the primary.
 
-Replace the workspace-wide financial lock with finer aggregate locking only if real per-workspace contention warrants it. Partition large audit/queue data only after measured volume. Extract a service only when independent deployment/load/team ownership justifies the extra consistency boundary. The journal and its allocations should remain in one transactional store unless a new design deliberately replaces that guarantee.
+Swap the workspace-wide financial lock for finer per-aggregate locking only if real contention inside a workspace calls for it. Partition large audit or queue data only once the volume is measured. Pull a service out only when independent deployment, load or team ownership is worth the extra consistency boundary. The journal and its allocations stay in one transactional store unless a new design deliberately replaces that guarantee.
 
 ### 20. Deployment, CI/CD, observability, and recovery
 
-**Scope of retained guidance:** The hosting topology, hosted acceptance, paid services and deployment pipeline below are historical/conditional requirements for the current web application. ADR 0005 removes their completion from the current roadmap; do not provision them for V3 preparation. Existing local build/runtime, recovery, security and integrity verification remains applicable, scheduled under the V3 plan. These recommendations do not select the future platform infrastructure.
+**Scope of what's kept:** the hosting layout, hosted acceptance, paid services and deployment pipeline below are historical, conditional requirements for the current web app. ADR 0005 takes finishing them off the current roadmap; don't provision them to prepare V3. The existing local build and runtime, recovery, security and integrity checks still apply, scheduled under the V3 plan. None of this chooses the future platform's infrastructure.
 
 #### 20.1 Recommended topology
 
-Deploy a containerized Next.js Node web service, a separately started worker using the same source revision, and a paid managed PostgreSQL instance on Render. Prefer Singapore for the initial Manila-centered audience, subject to confirmed latency/data-location requirements. Render lists Singapore and regional private networking in its [region documentation](https://render.com/docs/regions), and supports [long-running workers](https://render.com/docs/background-workers).
+A containerized Next.js Node web service, a worker started separately from the same source revision, and a paid managed PostgreSQL instance on Render. Singapore is the preferred region for a first audience centred on Manila, as long as latency and data-location requirements are confirmed. Render lists Singapore and regional private networking in its [region documentation](https://render.com/docs/regions), and supports [long-running workers](https://render.com/docs/background-workers).
 
 ```mermaid
 flowchart LR
@@ -1237,49 +1237,49 @@ flowchart LR
     CI --> Worker
 ```
 
-Use development, staging and production environments with different databases, auth secrets, email configuration and object namespaces. Preview deployments contain synthetic data, never copied production financial data. Bind auth redirects/origins to the exact environment. No production secret may be prefixed for browser exposure.
+Development, staging and production each have their own database, auth secrets, email configuration and object namespaces. Preview deployments hold synthetic data, never copied production financial data. Auth redirects and origins are bound to the exact environment, and no production secret is ever prefixed for exposure to the browser.
 
-Container builds run as nonroot, use a pinned LTS base and contain only runtime dependencies/artifacts. Runtime files are ephemeral; do not save uploads/backups on a web instance's local disk. Health endpoints reveal no private data. Readiness checks database/schema compatibility; worker health uses heartbeat/backlog metrics. Handle graceful shutdown and in-flight job leases so a restart cannot silently drop required work.
+Containers run as non-root on a pinned LTS base and hold only runtime dependencies and build output. Runtime files are temporary, so uploads and backups never go on a web instance's local disk. Health endpoints reveal no private data; readiness checks database and schema compatibility, and worker health uses heartbeat and backlog metrics. Graceful shutdown and leases on in-flight jobs mean a restart can't quietly drop required work.
 
 #### 20.2 Build and migration pipeline
 
-For each change: frozen lockfile install → format/lint/type checks → unit/property tests → real-PostgreSQL migration and integration tests → production build → E2E smoke/acceptance subset → dependency/security review → staging deployment and smoke checks → controlled production promotion.
+For every change: install from a frozen lockfile → format, lint and type checks → unit and property tests → migration and integration tests on real PostgreSQL → production build → an E2E smoke and acceptance subset → dependency and security review → staging deployment and smoke checks → controlled promotion to production.
 
-Apply reviewed migrations in a single deployment job with the migration credential, not from each starting web replica. Test migrations from an empty database and the last released schema. Never use automatic destructive schema push in production. Verify new private tables have scoped keys and RLS policies before enabling routes.
+Reviewed migrations run in a single deployment job with the migration credential, never from each web replica as it starts. Migrations are tested from an empty database and from the last released schema. Never use an automatic, destructive schema push in production. New private tables are checked for scoped keys and RLS policies before their routes are turned on.
 
-Prefer expand-and-contract changes: add compatible columns/tables, deploy tolerant code, backfill in bounded batches, verify, then remove old structures in a later release. Coordinate web and worker versions; versioned queued payloads must remain readable during a rollout. Code rollback is safe only when the schema remains compatible. A database restore is an incident recovery action with potential data loss, not the routine rollback for a UI defect.
+Prefer expand-and-contract: add compatible columns or tables, deploy code that copes with both, backfill in bounded batches, verify, then remove the old structures in a later release. Web and worker versions are coordinated, and versioned queued payloads stay readable during a rollout. Rolling code back is only safe while the schema stays compatible. Restoring the database is incident recovery that can lose data, not the routine rollback for a UI bug.
 
-Keep deployment runbooks, environment-variable schema, role bootstrap scripts and migration commands in the repository. Use protected production credentials and record the deployed commit/schema revision. Dependency updates to auth, database, date or financial libraries run the relevant integration/acceptance suites before merge.
+Deployment runbooks, the environment-variable schema, role bootstrap scripts and migration commands live in the repository. Production credentials are protected, and the deployed commit and schema revision are recorded. Updates to auth, database, date or financial libraries run the relevant integration and acceptance suites before merging.
 
 #### 20.3 Observability and support
 
-Logs include request/command ID, route template, outcome/error code, duration, database/queue timing and an internal pseudonymous scope identifier when necessary. Never include free-text descriptions, monetary amounts, email/reset tokens, cookies, SQL parameters or full report payloads. Monitoring processors receive scrubbed events. Turn off session replay initially.
+Logs include the request or command id, route template, outcome or error code, duration, database and queue timing, and an internal pseudonymous scope id when needed. Never free-text descriptions, monetary amounts, email or reset tokens, cookies, SQL parameters or full report payloads. Monitoring processors get scrubbed events, and session replay is off to start with.
 
-Monitor response errors/latency, database saturation/locks/connection count, queue age/retries/dead letters, failed auth-email delivery, reminder suppression/failure, reconciliation invariant violations, backup age and restore-drill outcome. Alert on any nonzero journal imbalance or cross-scope integrity failure. Audits can detect invalid state; they must not auto-correct it.
+Monitor response errors and latency, database saturation, locks and connection count, queue age, retries and dead letters, failed auth email, reminder suppression and failure, reconciliation invariant violations, backup age and how restore drills go. Alert on any journal that doesn't balance to zero, or any integrity failure across scopes. Audits can spot invalid state; they never correct it automatically.
 
-The support/feedback route lets users submit a description and request ID, with explicit consent before including screenshots/exported data. Do not send private reports automatically. Keep a small incident procedure: contain writes if consistency is at risk, preserve evidence, assess scope, restore/fix, communicate known impact and verify recovery.
+The support and feedback route lets users send a description and request id, with explicit consent before including screenshots or exported data. Private reports are never sent automatically. A small incident procedure: hold writes if consistency is at risk, keep the evidence, work out the scope, restore or fix, tell people the known impact, and verify the recovery.
 
 #### 20.4 Backup and restoration contract
 
-Enable paid managed PITR and verify its configured recovery window. Add daily encrypted logical backups to a separate private bucket with thirty-day lifecycle expiry and restricted recovery credentials. Keep backup-role/role-definition restoration instructions and keys independently available. Attachment protection needs its own backup/version policy before uploads ship; a database dump cannot recover missing files.
+Turn on paid managed PITR and check its configured recovery window. Add daily encrypted logical backups to a separate private bucket with a thirty-day lifecycle expiry and restricted recovery credentials. Instructions and keys for restoring the backup role and role definitions are kept available independently. Attachments need their own backup and version policy before uploads ship; a database dump can't recover missing files.
 
-**Recommended targets:** recoverable-point objective at most 15 minutes for the PITR-covered database; recovery-time objective at most 4 hours for the initial dataset. These are acceptance targets, not provider guarantees. Daily off-provider logical backup has up to 24 hours of data loss if PITR is unavailable; disclose this different disaster scenario. Choose and fund a tighter off-provider strategy if that risk is unacceptable.
+**Recommended targets:** a recovery-point objective of at most 15 minutes for the database PITR covers, and a recovery-time objective of at most 4 hours for the first dataset. They're acceptance targets, not provider guarantees. The daily logical backup outside the provider can lose up to 24 hours of data if PITR isn't available; say so, because it's a different disaster. If that risk isn't acceptable, choose and pay for a tighter strategy outside the provider.
 
-Render documents plan-dependent PITR windows, a recovery-time lag, and separate logical exports in its [backup documentation](https://render.com/docs/postgresql-backups). Verify the purchased configuration against the targets and retention promise; free database plans are unsuitable for this production recovery baseline.
+Render's [backup documentation](https://render.com/docs/postgresql-backups) covers PITR windows that depend on the plan, a lag before recovery, and separate logical exports. Check the configuration actually bought against the targets and the retention promise; free database plans don't meet this production recovery baseline.
 
-Run a restore drill before launch, monthly thereafter, and after major storage/schema changes. Restore into an isolated environment; validate migration version, role/RLS enforcement, per-scope record counts, balanced journals, selected account/debt totals and attachment references. Reapply deletion tombstones from an independently retained deletion register before any restored environment accepts users. Otherwise an old backup could resurrect a deleted account.
+Run a restore drill before launch, then monthly, and after any big storage or schema change. Restore into an isolated environment and check the migration version, role and RLS enforcement, record counts per scope, balanced journals, some account and debt totals, and attachment references. Reapply deletion tombstones from a separately kept deletion register before a restored environment accepts any users; otherwise an old backup could bring a deleted account back.
 
-Revoke all restored sessions/recovery tokens, pause outbound queues, reconcile tasks that may already have sent mail, and avoid replaying historical reminders. Identify any financial writes lost after the recovery point and communicate the recovery cutoff to affected users. Switch connections only after validation; retain or remove old instances according to the incident and retention policy. Never claim a backup works solely because an export job succeeded.
+Revoke every restored session and recovery token, pause outbound queues, reconcile tasks that might already have sent mail, and don't replay historical reminders. Work out which financial writes were lost after the recovery point and tell the affected users the recovery cutoff. Only switch connections over after validating; keep or remove the old instances according to the incident and the retention policy. A backup isn't proven to work just because an export job succeeded.
 
 ### 21. Testing architecture and release evidence
 
-The following catalogs correctness/security contracts and supporting test layers. It is not an instruction to rerun every suite for every UI change; use current phase acceptance records and the change-impact strategy below. This architecture document itself supplies no new test result.
+What follows lists the correctness and security contracts and the test layers behind them. It's not an instruction to rerun every suite for every UI change; use the current phase acceptance records and the change-impact strategy below. This architecture document on its own adds no new test result.
 
-V3 Assignment 2 explicitly superseded the original comprehensive strategy with approved targeted verification; the [impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records selected new/affected checks and exclusions. Original V1/V2 handoffs remain historical evidence. Broader automatic CI at the completed V3 commit passed separately; it does not change the approved local scope.
+The second piece of V3 work explicitly replaced the original big test strategy with approved targeted verification; the [impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records the new or affected checks I chose and what was left out. The original V1/V2 handoffs stay as historical evidence. The broader automatic CI at the finished V3 commit passed separately; it doesn't change the approved local scope.
 
-For M1–M5, verify new/changed components, affected screens/workflows, relevant shared interaction/presentation contracts and materially affected existing functionality. Include appropriate browser, responsive, theme, keyboard/accessibility checks and financial, authorization, privacy/lifecycle invariants wherever changed presentation flows can affect them. M6 is final redesign-wide acceptance: cover all redesigned screens/routes, cross-module/contextual links, visual consistency, responsive layouts, both themes, shared components, consequential journeys, keyboard/accessibility, changed UI performance and affected behavior. Meaningful cross-screen browser/accessibility coverage is required; automatic complete V1–V3 regression is not.
+For M1–M5, verify new or changed components, the screens and workflows affected, the shared interaction and presentation contracts involved, and existing features that are materially affected. Include the right browser, responsive, theme, keyboard and accessibility checks, and the financial, authorization, privacy and lifecycle invariants wherever a changed presentation flow could touch them. M6 is the final acceptance across the whole redesign: every redesigned screen and route, links across modules and in context, visual consistency, responsive layouts, both themes, shared components, consequential journeys, keyboard and accessibility, changed UI performance and affected behaviour. Meaningful browser and accessibility coverage across screens is required; an automatic full V1–V3 regression isn't.
 
-Do not repeat unrelated backend/database/infrastructure/performance/browser campaigns without impact. Broaden only for changed shared contracts, discovered failures or significant security/financial integrity risks. Preserve mandatory guarantees, existing assertions and unchanged CI. Historical evidence supports unchanged behavior, not redesigned interfaces. Record changed contract/risk, tests actually executed, actual results, coverage, exclusions/rationale and unverified required gates; report automatic broader CI separately. Use appropriate static checks and supported builds where implementation changes require them, with affected reruns after fixes. No application tests, builds, benchmarks or Docker operations run for this documentation-only task. Build/container evidence never implies production deployment.
+Don't repeat unrelated backend, database, infrastructure, performance or browser campaigns when nothing affects them. Widen only for changed shared contracts, failures found, or serious security or financial integrity risks. Keep the mandatory guarantees, existing assertions and the unchanged CI. Historical evidence supports behaviour that didn't change, not redesigned screens. Record the contract or risk that changed, the tests actually run, the actual results, the coverage, what was left out and why, and any required gates still unverified; report the broader automatic CI separately. Use the right static checks and supported builds where a change needs them, and rerun what's affected after fixes. No app tests, builds, benchmarks or Docker operations ran for this documentation-only work. Build or container evidence never implies a production deployment.
 
 | Layer | Required evidence |
 | --- | --- |
@@ -1292,9 +1292,9 @@ Do not repeat unrelated backend/database/infrastructure/performance/browser camp
 | Accessibility | Keyboard-only workflows, focus/error handling, screen-reader labels, contrast/status text and automated axe checks. |
 | Operational | Migration upgrade, deployment rollback compatibility, worker crash/retry, email provider failure, restored session revocation, backup restore and purge retry. |
 
-Do not use SQLite as a substitute for PostgreSQL isolation, numeric, locking or trigger tests. Unit tests can use in-memory pure functions; finance service tests need the real transaction layer. Test failure injection after each intermediate write to prove no partial financial action survives.
+SQLite never stands in for PostgreSQL in isolation, numeric, locking or trigger tests. Unit tests can use pure functions in memory; finance service tests need the real transaction layer. Inject a failure after each intermediate write to prove no partial financial action survives.
 
-Reference test fixtures include:
+The reference fixtures include:
 
 - The blueprint's exact PHP transfer, salary, gift, net-disbursement, principal/interest and early-settlement examples.
 - A PHP 1,000 category split, zero/oversized/invalid amounts, centavo remainders, negative cash and archived-account history.
@@ -1305,9 +1305,9 @@ Reference test fixtures include:
 - Account A attempting to use every private ID belonging to B, including audit, reminder, command result, source link and CSV export.
 - Lost response after commit followed by a same-key retry returning exactly one financial action.
 
-For affected group flows, retain tests for registered/nonregistered participants, departed members, token reuse, settled bill corrections, partial/pending/disputed/reversed/overpaid settlements, unlinked private records and no leakage of paying account details. For cards, test statement closure, partial payment, credits/overpayment and installments without repeated spending. For trackers, migrate a definition while preserving entries and prior values.
+For group flows that are affected, keep the tests for registered and unregistered participants, members who left, token reuse, corrections to settled bills, partial, pending, disputed, reversed and overpaid settlements, unlinked private records, and no leak of paying account details. For cards, test closing a statement, partial payment, credits and overpayment, and installments without counting spending again. For trackers, migrate a definition while keeping entries and their earlier values.
 
-Acceptance evidence is workflow-based within the approved change-impact scope: required selected checks pass, invariants hold, changed migration/restore contracts are verified when relevant, and changed UI performance meets the agreed budgets. Historical conditional launch criteria remain separate. Do not use a high line-coverage percentage as a substitute for these proofs.
+Acceptance evidence is about workflows, inside the approved change-impact scope: the required checks pass, the invariants hold, changed migration and restore contracts are verified where relevant, and changed UI performance stays within the agreed budgets. The historical conditional launch criteria stay separate. A high line-coverage percentage is never a substitute for these proofs.
 
 ### 22. Decisions, risks, and unresolved questions
 
@@ -1350,7 +1350,7 @@ Acceptance evidence is workflow-based within the approved change-impact scope: r
 | External calendar synchronization | Outside V3; defer direction, permissions, deletion and conflict policy to future platform architecture | Future platform architecture planning and explicit approval; product owner/technical lead. |
 | Public-launch performance/capacity | Measure section 19 targets and set real quotas; adjust infrastructure or promises to evidence | Before public launch; technical lead/operator. |
 
-These original design gates are historical or conditional where accepted V1–V3 implementation has resolved them; use current handoffs and authoritative implemented contracts rather than treating every row as an M1 blocker. Final branding and F01–F07 remain the deferred items in the redesign register. New behavior still needs explicit decisions before it becomes a schema convention. They do not postpone the baseline account model, ownership rules, exact money or core transactional guarantees.
+Where the accepted V1–V3 work has settled them, these original design gates are historical or conditional; go by the current handoffs and the built contracts instead of treating every row as something blocking M1. Final branding and F01–F07 are still the deferred items in the redesign register. New behaviour still needs explicit decisions before it becomes a schema convention. None of this holds up the baseline account model, ownership rules, exact money or the core transactional guarantees.
 
 #### 22.3 Important risks and mitigation
 
@@ -1369,7 +1369,7 @@ These original design gates are historical or conditional where accepted V1–V3
 
 ### 23. Implementation sequence and development guardrails
 
-Steps 1–9 preserve the historical implementation sequence; V1–V3 are complete under their documented acceptance scopes. M1 foundations were implemented under a separate assignment and explicitly granted final visual approval October 17, 2026 (Asia/Manila); M2 is ready for its separate assignment. The architecture alignment itself changed no business implementation.
+Steps 1–9 are the historical order I built things in; V1–V3 are finished under their documented acceptance scopes. M1 foundations were built as their own piece of work and got final visual approval on October 17, 2026 (Asia/Manila); M2 is ready to start on its own. Aligning the architecture didn't change any business implementation.
 
 1. **Foundation proof:** pin dependencies, run local PostgreSQL/mail sandbox, create runtime roles/RLS helper, prove authentication/recovery and transactional job enqueue, define Money/date types and first ADRs.
 2. **First vertical slice:** verified user → private workspace → optional setup → opening account → actual income/expense → account history, with a second user's isolation tests. Add completed transfer with fees and category splits next.
@@ -1380,13 +1380,13 @@ Steps 1–9 preserve the historical implementation sequence; V1–V3 are complet
 7. **V2 financial workflows:** cards/statements and planning, then opted-in notifications; uploads/imports/portability have independent readiness gates.
 8. **V2 shared expenses:** group authorization/invitations and zero-sum bill model first, then confirmations, disputes, explicit private links/corrections and guided privacy explanation.
 9. **V3 adaptable trackers:** V3-A foundation/presets → V3-B customization/versioned migrations → V3-C reports/internal Calendar and cross-domain integration → V3-D consolidated acceptance/documentation. Delivered A/B with focused checks, then C/D under the later approved targeted strategy; the original full-campaign wording is superseded by the V3 acceptance record. External calendar synchronization is deferred to future architecture planning.
-10. **Current/subsequent direction:** Approved M1–M6 Comprehensive UI/UX Redesign (M1 completed and finally approved October 17, 2026; M2 ready for separate assignment; M2-M6 not started) in the existing web environment → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance. Reassess features/infrastructure before transition; select no replacement technology or protocol until that plan is approved.
+10. **Current/subsequent direction:** Approved M1–M6 Comprehensive UI/UX Redesign (M1 completed and finally approved October 17, 2026; M2 ready to start as its own piece of work; M2-M6 not started) in the existing web environment → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance. Reassess features/infrastructure before transition; select no replacement technology or protocol until that plan is approved.
 
-For AI-assisted implementation, every task specifies the owning module, applicable invariant/ADR, authorized transaction boundary, source contract, migration impact and acceptance evidence. Never accept generated shortcuts that add mutable account balances, cast money to Number, accept client ownership, post expected occurrences automatically, use production data in demos, or implement a second expense source. Update this architecture/ADRs when behavior changes and keep the subsequent database/API specifications consistent with it.
+When I use an AI assistant to build something, each task names the module that owns it, the invariant or ADR that applies, the authorized transaction boundary, the source contract, the migration impact and the acceptance evidence. I don't accept generated shortcuts that add editable account balances, cast money to Number, trust ownership sent by the client, post expected occurrences automatically, use production data in demos, or create a second source of expenses. Update this architecture and the ADRs when behaviour changes, and keep the database and API specs consistent with it.
 
 ### 24. Final consistency review against the blueprint
 
-This is a design-level review of the full blueprint and the additional multi-user/stack request. “Covered” means a concrete architectural path and test obligation are specified; it does not mean software has been built or acceptance tests have run.
+This reviews the design against the whole blueprint and my extra request for multiple users and a stack. "Covered" means there's a concrete architectural path and a test obligation written down; it doesn't mean the software is built or that acceptance tests have run.
 
 #### 24.1 Requirements and roadmap coverage
 
@@ -1450,6 +1450,6 @@ This is a design-level review of the full blueprint and the additional multi-use
 
 #### 24.4 Review conclusion
 
-The proposed architecture supports the blueprint's complete roadmap and all stated acceptance scenarios without treating future modules as V1 prerequisites. Multiple independent users, secure recovery/session management, private data ownership and deletion are foundational. Shared expenses remain a required later module with narrower group permissions. Financial actuals, planned obligations, recognized spending and cash movements have separate, testable meanings.
+The proposed architecture supports the blueprint's whole roadmap and every acceptance scenario it states, without making future modules prerequisites for V1. Several independent users, secure recovery and session management, private data ownership and deletion are all part of the foundation. Shared expenses stay a required later module with narrower group permissions. Financial actuals, planned obligations, recognized spending and cash movements each have their own meaning you can test.
 
-The main additions made by engineering judgment are the internal balanced journal, explicit clearing for unknown payment allocation, layered RLS/foreign-key isolation, transactional job intent, concrete operational targets, and versioned private/group reconciliation. Their tradeoffs and unresolved product choices are documented above. Implementation should proceed through the release gates rather than silently weakening these invariants to accelerate a screen or feature.
+What I added on my own engineering judgment: the internal balanced journal, explicit clearing for payments whose allocation is unknown, layered RLS and foreign-key isolation, transactional job intent, concrete operational targets, and versioned reconciliation between private and group records. Their trade-offs and the product choices still open are written up above. Building should go through the release gates, never quietly weaken these invariants to get a screen or feature out faster.

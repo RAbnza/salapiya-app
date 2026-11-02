@@ -41,8 +41,8 @@ or use the recovery exception. Recovery does not disable triggers or RLS.
 ## Consequences
 
 Local queue rollback/replay, real-role eligibility and isolated recovery can be
-proved without claiming a deployed provider or retention guarantee. Production
+proved without a deployed provider or a retention guarantee. Production
 requires a verified sender, paid database/PITR, independently protected keys and
 storage, measured staging capacity, monitoring and a successful hosted CI run.
 Key rotation requires draining or expiring existing queued ciphertext before
-switching the single active key; seamless multiple-key rotation is not claimed.
+switching the single active key; seamless multiple-key rotation isn't supported.

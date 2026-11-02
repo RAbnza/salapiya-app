@@ -98,82 +98,37 @@ early-repayment or settlement logic; nothing posts money)
 **Domain:** Finance  
 **Status:** Approved product direction before implementation
 
----
-
 ### 1. Purpose
 
-This document defines the V2 credit-card product and workflow requirements.
-
-It supplements the existing credit-card sections of:
-
-- `PROJECT_VISION_AND_FEATURE_BLUEPRINT.md`
-- `SYSTEM_ARCHITECTURE.md`
-- `DATABASE_ARCHITECTURE.md`
-- `DESIGN_SYSTEM_AND_VISUAL_GUIDELINES.md`
-
-All existing financial integrity, ownership, audit, idempotency and exact-money rules remain applicable.
-
-Where this document is more specific about V2 user experience, follow this document.
-
----
+This sets out the product and workflow requirements for V2 credit cards. It adds to the credit-card sections of `PROJECT_VISION_AND_FEATURE_BLUEPRINT.md`, `SYSTEM_ARCHITECTURE.md`, `DATABASE_ARCHITECTURE.md` and `DESIGN_SYSTEM_AND_VISUAL_GUIDELINES.md`. Every existing rule on financial integrity, ownership, audit, idempotency and exact money still applies. Where this is more specific about the V2 user experience, this wins.
 
 ### 2. Product principle
 
-A credit card is a liability with a billing lifecycle.
-
-It is **not** a cash account.
-
-However, a credit-card purchase is still fundamentally a purchase.
-
-Therefore:
+A credit card is a liability with a billing cycle. It's **not** a cash account. But a purchase made with a card is still a purchase, so:
 
 > **Credit-card purchases must integrate with the ordinary expense-entry experience instead of forcing users to enter the same purchase into a separate card tracker.**
 
-The system may use a card-specific financial command internally.
-
-The UI should still present one coherent purchase workflow.
-
----
+Inside, the system can use a card-specific financial command; on screen it's still one coherent purchase workflow.
 
 ### 3. User mental model
 
-The application should distinguish:
+The app keeps these three things apart, and never presents them as interchangeable.
 
 #### Purchase
 
-The user buys something using the credit card.
-
-Result:
-
-- spending is recognized;
-- card liability increases;
-- cash does not move.
+You buy something with the card. Spending is recognized, card liability goes up, and no cash moves.
 
 #### Card installment plan
 
-A purchase is subject to a provider installment arrangement.
-
-The purchase expense must not be recognized repeatedly every month.
+The purchase is under a provider installment arrangement. Its expense is never recognized again every month.
 
 #### Card payment
 
-The user transfers real money from a bank/wallet/cash account to the card provider.
-
-Result:
-
-- paying cash decreases;
-- card liability decreases;
-- spending is not recognized again.
-
-These concepts must never be presented as interchangeable.
-
----
+You move real money from a bank, wallet or cash account to the card provider. The paying cash goes down, card liability goes down, and spending isn't recognized again.
 
 ### 4. Unified expense-entry workflow
 
-The existing Add Expense experience should evolve so the user chooses a funding source.
-
-Conceptually:
+Add Expense grows so you choose a funding source. Roughly:
 
 ```text
 Add Expense
@@ -194,62 +149,23 @@ Description
 Weekly groceries
 ```
 
-If the selected funding source is:
-
-- cash/bank/wallet → use the existing cash expense behavior;
-- credit card → use the card-purchase behavior.
-
-The user must not separately re-enter the same transaction in the Cards module.
-
----
+If the funding source is cash, a bank or a wallet, it's the existing cash expense behaviour; if it's a credit card, it's the card-purchase behaviour. Nobody enters the same transaction again in the Cards module.
 
 ### 5. Progressive card options
 
-Selecting a credit card may expose a collapsed section such as:
+Choosing a credit card can reveal a collapsed section such as:
 
 > Card details
 
-Normal purchases should not require unnecessary provider fields.
-
-Optional/applicable card fields may include:
-
-- transaction date;
-- posting date;
-- posted/pending state where supported;
-- provider reference;
-- regular purchase versus installment purchase;
-- statement association when known.
-
-Advanced details use progressive disclosure.
-
----
+Normal purchases don't ask for provider fields they don't need. The optional card fields, where they apply, are: the transaction date; the posting date; posted or pending state where supported; the provider's reference; regular or installment purchase; and which statement it's on, when that's known. Advanced details stay tucked away until needed.
 
 ### 6. Pending authorizations
 
-A pending authorization is not the same thing as posted card activity.
-
-A pending authorization:
-
-- does not create recognized posted card liability;
-- must not be included in posted statement totals;
-- must not be presented as a finalized purchase;
-- may be shown informationally if later supported.
-
-When an authorization becomes posted, the recognized card activity is recorded according to the provider-confirmed posting information.
-
-Do not guess posting dates.
-
----
+A pending authorization isn't posted card activity. It doesn't create recognized posted card liability, never counts in posted statement totals, and is never shown as a finished purchase; if that's supported later, it can be shown for information. Once an authorization posts, the recognized card activity is recorded from the posting information the provider confirmed. Posting dates are never guessed.
 
 ### 7. Card purchase accounting
 
-A normal posted card purchase:
-
-- increases the applicable spending category;
-- increases card liability;
-- does not reduce a liquid account.
-
-Illustrative example:
+A normal posted card purchase raises its spending category, raises card liability, and doesn't take money out of any liquid account. For example:
 
 ```text
 Groceries expense     +PHP 3,000
@@ -257,124 +173,33 @@ Card liability        +PHP 3,000
 Cash movement              PHP 0
 ```
 
-The financial journal remains authoritative.
-
-The card activity is linked evidence/read structure, not an independently editable balance.
-
----
+The financial journal is still the real record. Card activity is linked evidence and a read structure, not a balance anyone edits on its own.
 
 ### 8. Dedicated Credit Cards surface
 
-Credit cards still require a dedicated management surface.
-
-The dedicated page is **not another expense tracker**.
-
-It answers card-specific questions such as:
-
-- What is my current posted outstanding balance?
-- What was the most recent verified statement balance?
-- How much of that statement remains due?
-- What is the minimum due?
-- When is payment due?
-- What payments have been made?
-- Which transactions belong to this statement?
-- What fees and interest have been recognized?
-- Do I have a card credit from overpayment/refunds?
-- What installment plans exist?
-- What is my utilization estimate?
-
----
+Cards still need a place of their own to manage them, but that place is **not another expense tracker**. It answers questions only cards raise: What's my current posted outstanding balance? What was the latest verified statement balance? How much of that statement is still due? What's the minimum due, and when is payment due? What payments have I made? Which transactions are on this statement? What fees and interest have been recognized? Do I have card credit from an overpayment or refunds? What installment plans are there? What's my utilization estimate?
 
 ### 9. Card detail terminology
 
-Do not collapse all card numbers into one ambiguous "Balance."
-
-Show separate concepts:
-
-- posted outstanding balance;
-- statement balance;
-- remaining statement due;
-- minimum due;
-- due date;
-- available credit estimate;
-- utilization;
-- card credit/overpayment where applicable.
-
-Each value should identify its basis/date where necessary.
-
----
+Card figures never get squashed into one vague "Balance". These are shown separately: the posted outstanding balance; the statement balance; the remaining statement due; the minimum due; the due date; the available credit estimate; utilization; and card credit or overpayment where it applies. Each value says what it's based on, and its date, where that matters.
 
 ### 10. Transaction date and posting date
 
-Store and display transaction date and posting date separately.
-
-Recommended meaning:
-
-- **Transaction date:** when the user made the purchase.
-- **Posting date:** when the provider recognized/posted it.
-
-Spending reports should preserve the documented transaction-date basis for recognized purchases unless an authoritative decision changes that basis.
-
-Statement membership follows verified provider posting/cycle information.
-
-Do not infer statement membership solely from a guessed cycle calculation when the provider evidence differs.
-
----
+The transaction date and posting date are stored and shown separately. The **transaction date** is when the user made the purchase; the **posting date** is when the provider recognized or posted it. Spending reports keep the documented transaction-date basis for recognized purchases unless an authoritative decision changes it. Which statement a charge belongs to follows the provider's verified posting and cycle information; it's never worked out from a guessed cycle calculation when the provider's evidence says otherwise.
 
 ### 11. Statements
 
-A statement is provider evidence.
+A statement is evidence from the provider. Closing or recording one never creates another purchase or another liability. A statement keeps: the card; cycle start and end; the statement date; the due date; the statement balance; the minimum due; the provider's reference where given; verification metadata; and the recognized statement activity linked to it, where known.
 
-Closing/recording a statement must not create another purchase or another liability.
-
-A statement should retain:
-
-- card;
-- cycle start;
-- cycle end;
-- statement date;
-- due date;
-- statement balance;
-- minimum due;
-- provider reference where supplied;
-- verification metadata;
-- linked recognized statement activity where known.
-
-Statement values are immutable/versioned evidence.
-
-Corrections create a new statement revision rather than editing historical evidence in place.
-
----
+Statement values are versioned evidence that doesn't change. A correction creates a new statement revision instead of editing historical evidence in place.
 
 ### 12. Statement reconciliation
 
-A provider statement may expose missing or incorrect application records.
-
-The application must not fabricate financial actions merely to force the statement to match.
-
-Differences should remain explicit until resolved through:
-
-- missing purchase entry;
-- missing fee/interest;
-- refund;
-- payment allocation;
-- opening/import evidence;
-- correction;
-- other supported reconciliation action.
-
-Unknown provider lines remain visibly unresolved.
-
----
+A provider statement can show up missing or wrong records in the app. The app never invents financial actions just to make the statement match. Differences stay visible until they're resolved through one of: a missing purchase entry; a missing fee or interest; a refund; a payment allocation; opening or import evidence; a correction; or another supported reconciliation action. Provider lines nobody can explain stay visibly unresolved.
 
 ### 13. Remaining statement due
 
-Remaining statement due derives from the verified statement and applicable effective allocations.
-
-It is not independently editable.
-
-A payment must not alter the original historical statement balance.
-
-Example:
+The remaining statement due comes from the verified statement and the allocations in effect. It can't be edited on its own, and a payment never changes the original historical statement balance. For example:
 
 ```text
 Statement balance              PHP 20,000
@@ -382,15 +207,11 @@ Confirmed applicable payment   PHP  8,000
 Remaining statement due        PHP 12,000
 ```
 
-The original statement continues to show PHP 20,000.
-
----
+The original statement still shows PHP 20,000.
 
 ### 14. Card payments
 
-A card payment records real cash movement from a selected owned financial account.
-
-Example:
+A card payment records real cash moving out of an owned financial account you choose. For example:
 
 ```text
 BDO cash                  -PHP 10,000
@@ -398,126 +219,51 @@ Card liability            -PHP 10,000
 Additional spending             PHP 0
 ```
 
-The original purchase has already created the spending effect.
-
-Do not classify principal card repayment as another expense.
-
----
+The original purchase already created the spending, so paying off card principal is never classed as another expense.
 
 ### 15. Payment allocations
 
-Where provider allocation is known, card payments/credits may be allocated to applicable statement balances.
-
-Do not invent allocation order where provider rules are unknown.
-
-If allocation is manually/provider-confirmed, retain that evidence.
-
-Any unallocated/uncertain portion must remain visible rather than being silently guessed.
-
----
+Where the provider's allocation is known, card payments and credits can be allocated to the statement balances they apply to. Where the provider's rules aren't known, no allocation order is invented. A manual or provider-confirmed allocation keeps its evidence. Any part that's unallocated or uncertain stays visible instead of being quietly guessed.
 
 ### 16. Fees and interest
 
-Recognized card fees and interest are separate expenses.
-
-Examples include:
-
-- annual fee;
-- late fee;
-- finance charge;
-- installment fee;
-- provider-confirmed interest;
-- other card fees.
-
-Do not create a fee/interest expense merely because a future installment schedule implies one.
-
-Recognize the charge when supported by actual provider evidence or user-confirmed records.
-
----
+Recognized card fees and interest are separate expenses: an annual fee, a late fee, a finance charge, an installment fee, interest the provider confirmed, or other card fees. A fee or interest expense is never created just because a future installment schedule suggests one; a charge is recognized when there's real provider evidence or a record the user confirmed.
 
 ### 17. Refunds
 
-A card purchase refund should:
-
-- reduce the applicable card liability or create/increase card credit;
-- offset the relevant spending classification according to the established refund rules;
-- link to the original purchase when possible;
-- preserve original purchase history.
-
-A refund is not ordinary income.
-
----
+A refund on a card purchase lowers the card liability or creates or adds to card credit, offsets the right spending classification under the established refund rules, links to the original purchase where possible, and keeps the purchase's history. A refund isn't ordinary income.
 
 ### 18. Card overpayment
 
-If payments/credits exceed recognized card liability, show the result as a **card credit**.
-
-Do not display this as negative debt.
-
-Do not include card credit in liquid funds.
-
-The application must not imply that card credit is cash available in the user's bank account.
-
----
+If payments and credits come to more than the recognized card liability, the result shows as **card credit**. It's never shown as negative debt and never counted in liquid funds, and the app never suggests card credit is cash sitting in your bank account.
 
 ### 19. Credit limit and utilization
 
-Credit limit is optional provider metadata.
-
-Credit limit is not cash.
-
-Utilization may be calculated as:
+A credit limit is optional provider metadata, and it isn't cash. Utilization can be calculated as:
 
 ```text
 eligible posted outstanding balance / eligible credit limit
 ```
 
-Handle missing and zero limits safely.
-
-For multiple cards, aggregate utilization uses:
+Missing and zero limits are handled safely. Across several cards, utilization is:
 
 ```text
 sum of eligible used credit / sum of eligible credit limits
 ```
 
-Do not average individual card percentages.
-
-Exclude card-credit balances from the used-credit numerator.
-
----
+It's never the average of each card's percentage, and card-credit balances are left out of the credit-used numerator.
 
 ### 20. Installment purchases
 
-A credit-card purchase may optionally be identified as a provider installment purchase.
-
-Regular purchase remains the default simple workflow.
-
-The user may expand:
+A card purchase can optionally be marked as a provider installment purchase. A regular purchase stays the simple default, and where it fits the user can expand:
 
 > Installment details
 
-where appropriate.
-
-Potential provider-confirmed fields include:
-
-- installment count;
-- expected installment amounts;
-- first due date;
-- expected principal;
-- expected interest;
-- expected fee;
-- provider plan reference;
-- notes.
-
-Do not infer provider interest or total repayment from installment count alone.
-
----
+Fields the provider might confirm: the number of installments; the expected installment amounts; the first due date; expected principal, interest and fee; the provider's plan reference; and notes. Provider interest and the total repayment are never inferred from the number of installments alone.
 
 ### 21. Installment accounting
 
-Creating an installment plan does not recognize the purchase expense again.
-
-Example:
+Creating an installment plan never recognizes the purchase expense a second time. For example:
 
 ```text
 Laptop purchase
@@ -534,34 +280,15 @@ Cash/liability movement only,
 except newly recognized interest/fees
 ```
 
-Scheduled amounts do not automatically create financial postings.
-
----
+Scheduled amounts don't create financial postings by themselves.
 
 ### 22. Integration with ordinary expense history
 
-Card purchases should appear in ordinary expense/history/reporting views alongside other purchases.
-
-Relevant filters may include:
-
-- payment source;
-- card;
-- category;
-- transaction date;
-- posting date where appropriate.
-
-The user should not need to visit the Cards page to discover what they purchased.
-
----
+Card purchases show up in the ordinary expense, history and reporting views next to every other purchase, with filters where they help: payment source, card, category, transaction date, and posting date where appropriate. Nobody should have to open the Cards page to find out what they bought.
 
 ### 23. Integration with shared expenses
 
-When Shared Expenses is released, one real-world purchase may involve both:
-
-- a card-funded purchase;
-- a shared bill.
-
-Example:
+Once Shared Expenses is out, one real purchase can be both paid by card and a shared bill. For example:
 
 ```text
 Restaurant bill
@@ -574,95 +301,27 @@ Split with
 You + three brothers
 ```
 
-The user should not enter this twice.
-
-The linked domains must preserve:
-
-- card liability for the amount actually charged to that user's card;
-- the user's own spending share;
-- the user's group receivable/payable position;
-- group participant shares;
-- no duplicate purchase expense;
-- no duplicate card liability.
-
-Other registered participants' private funding sources remain private.
-
----
+The user never enters this twice. The linked domains keep: card liability for the amount actually charged to that user's card; the user's own share of the spending; their group receivable or payable position; the group participants' shares; no duplicate purchase expense; and no duplicate card liability. Other registered participants' private funding sources stay private.
 
 ### 24. UI simplicity requirements
 
-Ordinary purchase entry should remain simple.
-
-Do not require every user to understand:
-
-- journal entries;
-- statement allocations;
-- liability ledgers;
-- provider reconciliation;
-- allocation formulas.
-
-Expose advanced concepts only where necessary.
-
-The backend can remain rigorous without making the normal form intimidating.
-
----
+Entering an ordinary purchase stays simple. Not every user should need to understand journal entries, statement allocations, liability ledgers, provider reconciliation or allocation formulas; advanced ideas only show up where they're needed. The backend can stay rigorous without making the normal form intimidating.
 
 ### 25. Card reporting
 
-Card reporting should support, as applicable:
-
-- spending by category;
-- spending by card;
-- posted outstanding liability;
-- statement balances;
-- remaining statement due;
-- payments;
-- interest;
-- fees;
-- refunds;
-- card credits;
-- installment obligations;
-- utilization.
-
-Cash-flow reporting must distinguish card purchases from later card payments.
-
----
+Card reporting covers, where they apply: spending by category; spending by card; posted outstanding liability; statement balances; the remaining statement due; payments; interest; fees; refunds; card credits; installment obligations; and utilization. Cash-flow reporting keeps card purchases apart from later card payments.
 
 ### 26. Security and ownership
 
-Cards are private workspace data.
-
-All card reads/writes must preserve:
-
-- server-owned actor/workspace context;
-- strict workspace ownership;
-- RLS/runtime-role enforcement;
-- foreign-reference rejection;
-- safe unavailable/authorization responses;
-- no browser-supplied trusted ownership identifiers.
-
----
+Cards are private workspace data. Every card read and write keeps: the actor and workspace context the server owns; strict workspace ownership; RLS and runtime-role enforcement; rejection of foreign references; safe unavailable and authorization responses; and no ownership ids trusted from the browser.
 
 ### 27. Corrections
 
-Posted card financial actions follow the existing immutable correction/reversal/replacement model.
-
-Statement evidence uses statement revisions.
-
-Do not silently rewrite:
-
-- original purchases;
-- historical statements;
-- allocations;
-- payments.
-
-Corrections retain reason and before/after evidence.
-
----
+Posted card financial actions follow the existing correction model, where nothing changes in place and corrections reverse and replace. Statement evidence uses statement revisions. Original purchases, historical statements, allocations and payments are never quietly rewritten, and corrections keep their reason and before-and-after evidence.
 
 ### 28. Required acceptance scenarios
 
-Before V2-A is considered complete, verify at minimum:
+Before V2-A counts as complete, check at least:
 
 1. Create a credit card.
 2. Record a normal purchase through the ordinary Add Expense workflow.
@@ -687,93 +346,37 @@ Before V2-A is considered complete, verify at minimum:
 21. Verify responsive/browser/accessibility behavior.
 22. Verify interaction with Shared Expenses once V2-I integration exists.
 
----
-
 ### 29. Suggested implementation milestones
 
-Do not treat these milestone names as immutable if repository inspection reveals a better boundary.
+These milestone names aren't set in stone; if looking at the repository shows a better boundary, use it.
 
 #### V2-A1 — Card Integrity Foundation
 
-Focus on:
-
-- schema;
-- liability binding;
-- ownership;
-- RLS;
-- action kinds;
-- database invariants;
-- read model foundation.
+Schema, binding to the liability, ownership, RLS, action kinds, database invariants, and the foundations of the read model.
 
 #### V2-A2 — Card Purchases and Unified Expense Entry
 
-Focus on:
-
-- purchase financial recipe;
-- card activity;
-- expense-entry funding-source integration;
-- card activity history;
-- reporting classification.
+The purchase financial recipe, card activity, the funding-source choice in expense entry, card activity history and reporting classification.
 
 #### V2-A3 — Statements and Reconciliation
 
-Focus on:
-
-- statement snapshots;
-- revisions;
-- statement entries;
-- remaining-due derivation;
-- reconciliation.
+Statement snapshots, revisions, statement entries, working out the remaining due, and reconciliation.
 
 #### V2-A4 — Payments, Fees, Interest and Refunds
 
-Focus on:
-
-- card payments;
-- allocations;
-- fees;
-- interest;
-- refunds;
-- overpayment/card credit.
+Card payments, allocations, fees, interest, refunds, and overpayment or card credit.
 
 #### V2-A5 — Installment Plans
 
-Focus on:
-
-- provider-confirmed installment schedules;
-- no duplicate spending;
-- future due projections;
-- revisions where required.
+Installment schedules the provider confirmed, no duplicate spending, projections of future dues, and revisions where needed.
 
 #### V2-A6 — Integrated V2 Card Surface and Acceptance
 
-Focus on:
-
-- Dashboard;
-- Reports;
-- Agenda/reminders where applicable;
-- full browser acceptance;
-- Shared Expenses integration when that module exists;
-- regression/hardening.
-
----
+The Dashboard, Reports, Agenda and reminders where they apply, full browser acceptance, Shared Expenses integration once that module exists, and regression and hardening.
 
 ### 30. Out of scope unless later approved
 
-Do not automatically add:
-
-- bank/card account aggregation;
-- direct payment execution;
-- card-number storage beyond safe user-defined metadata;
-- full PAN/CVV storage;
-- provider-specific interest calculators;
-- automatic minimum-payment calculators;
-- automatic credit scoring;
-- provider login credentials;
-- guessed statement allocation rules;
-- universal rewards optimization.
-
-Continue from actual provider/user evidence rather than assumptions.
+None of these get added on their own: aggregating bank or card accounts; making payments directly; storing card numbers beyond safe metadata the user defines; storing a full PAN or CVV; provider-specific interest calculators; automatic minimum-payment calculators; automatic credit scoring; provider login credentials; guessed statement allocation rules; universal rewards optimization. Work from what the provider and the user actually show, not assumptions.
 
 ## V2 Shared Expenses and Settlements
 
@@ -782,63 +385,25 @@ Continue from actual provider/user evidence rather than assumptions.
 **Status:** Approved product direction before implementation  
 **Product references:** Splitwise / Settle Up style shared-expense management without requiring feature parity
 
----
-
 ### 1. Purpose
 
-This document defines V2 Shared Expenses and Settlements.
-
-The module supports shared real-world spending among:
-
-- family;
-- siblings;
-- friends;
-- couples;
-- roommates;
-- travel groups;
-- temporary groups;
-- other invited participants;
-- manually recorded nonregistered participants.
-
-It is **not family-only**.
-
-Earlier development wording such as:
+This sets out V2 Shared Expenses and Settlements. The module covers real shared spending between family, siblings, friends, couples, roommates, travel groups, temporary groups, other invited participants, and people who aren't registered and are recorded by hand. It's **not family-only**. Earlier wording like:
 
 > Family shared expenses
 
-is superseded for V2 by:
+is replaced, for V2, by:
 
 > **Shared Expenses and Settlements**
 
----
-
 ### 2. Core principle
 
-Shared Expenses answers:
+Shared Expenses answers: Who paid? Who took part? Whose share is what? How much has each person put in overall, and how much have they consumed overall? Who owes money right now, and who should get money? Which payments have been reported, and which of those are waiting to be confirmed? What's left after confirmed settlements? Which original expenses explain the current balance?
 
-- Who paid?
-- Who participated?
-- What share belongs to each person?
-- How much has each person contributed overall?
-- How much expense has each person consumed overall?
-- Who currently owes money?
-- Who should receive money?
-- What payments have been reported?
-- Which reported payments are awaiting confirmation?
-- What remains after confirmed settlements?
-- Which original expenses explain the current balance?
-
-Individual bills remain preserved.
-
-Current balances are derived across all effective group activity.
-
----
+Each bill is kept as it was. Current balances are worked out across all the group activity in effect.
 
 ### 3. Groups
 
-Shared expenses operate within an `ExpenseGroup`.
-
-Examples:
+Shared expenses live inside an `ExpenseGroup`, for example:
 
 - Brothers
 - Family Household
@@ -848,106 +413,33 @@ Examples:
 - Couple Expenses
 - Office Lunch Group
 
-A two-person group supports one-to-one shared expenses.
-
-Groups provide the authorization/history boundary.
-
-Do not replace the group model with unscoped arbitrary person-to-person records.
-
----
+A two-person group covers one-to-one shared expenses. Groups are the boundary for authorization and history, and the group model is never replaced with unscoped, arbitrary person-to-person records.
 
 ### 4. Lightweight group UX
 
-Although groups are required internally, group creation should remain lightweight.
-
-When creating a shared expense, the user may:
-
-- choose an existing group;
-- create a new group if needed.
-
-Do not force the user through unnecessary administration for a simple temporary group.
-
-A future Quick Split workflow may create/reuse a lightweight group internally, but it must preserve the same authorization and history rules.
-
----
+Groups are needed underneath, but creating one should stay light. When adding a shared expense, the user can pick an existing group or create a new one if they need to. A simple temporary group shouldn't drag anyone through administration it doesn't need. A future Quick Split workflow could create or reuse a lightweight group behind the scenes, as long as it keeps the same authorization and history rules.
 
 ### 5. Participants
 
-A group may contain:
-
-- registered users;
-- manual/nonregistered participants;
-- historical/deleted participant identities.
-
-Manual participants are explicitly labeled, for example:
+A group can hold registered users, people who aren't registered and are recorded by hand, and historical or deleted participant identities. Manual participants are clearly labelled, for example:
 
 > Not registered · recorded manually
 
-Do not silently match a manual participant to a newly registered user based only on display name.
-
-Linking/claiming a manual participant requires verified identity, consent and balance/history review.
-
----
+A manual participant is never quietly matched to a newly registered user on display name alone. Linking or claiming one needs a verified identity, consent, and a review of the balance and history.
 
 ### 6. Privacy boundary
 
-Group membership grants access only to group-owned records.
-
-It does not grant access to another participant's:
-
-- bank accounts;
-- wallet balances;
-- card balances;
-- debts;
-- salary;
-- Career records;
-- private notes;
-- unrelated transactions;
-- private workspace.
-
-Private account selections remain visible only to the account owner.
-
-Group owners are not administrators of another user's private workspace.
-
----
+Being in a group only gives access to records the group owns. It gives no access to another participant's bank accounts, wallet balances, card balances, debts, salary, Career records, private notes, unrelated transactions or private workspace. The accounts someone picks privately are only visible to them. Group owners aren't admins of anyone else's private workspace.
 
 ### 7. Shared expense record
 
-A shared expense records at minimum:
+A shared expense records at least: the group; a description; the expense date; currency; the total; each payer's contribution; the participants chosen; each participant's share; the split method; a category or label where it applies; notes; optional supporting evidence once file support exists; who created it; and its version history.
 
-- group;
-- description;
-- expense date;
-- currency;
-- total amount;
-- payer contribution(s);
-- selected participants;
-- participant share amounts;
-- split method;
-- category/label where applicable;
-- notes;
-- optional supporting evidence when file support exists;
-- creator;
-- version/history evidence.
-
-A shared expense is one logical bill.
-
-Corrections create retained revisions rather than silently editing historical evidence.
-
----
+A shared expense is one logical bill. Corrections create revisions that are kept, instead of quietly editing historical evidence.
 
 ### 8. One or multiple payers
 
-V2 must support:
-
-- one payer;
-- multiple payers for the same bill.
-
-This supersedes earlier wording that deferred multiple payers beyond the initial shared-expense release.
-
-Single payer remains the default simple experience.
-
-Suggested UI:
+V2 supports one payer or several payers for the same bill. That replaces earlier wording that pushed multiple payers past the first shared-expense release. One payer stays the simple default. The UI I have in mind:
 
 ```text
 Who paid?
@@ -957,7 +449,7 @@ Brother 1       PHP 4,000
 [ Add another payer ]
 ```
 
-If another payer is added:
+With another payer added:
 
 ```text
 Who paid?
@@ -969,9 +461,7 @@ Total paid      PHP 4,000
 Bill total      PHP 4,000
 ```
 
-The user does not need to choose a separate "multiple payer expense type."
-
----
+Nobody has to pick a separate "multiple payer expense type".
 
 ### 9. Payer contribution invariant
 
@@ -981,9 +471,7 @@ For every finalized shared expense:
 sum(payer contributions) = expense total
 ```
 
-No unexplained amount is permitted.
-
-Example:
+No amount is left unexplained. For example, this is valid:
 
 ```text
 Expense total       PHP 4,000
@@ -994,39 +482,20 @@ Brother 1           PHP 2,500
 Total paid          PHP 4,000
 ```
 
-Valid.
-
-This is invalid:
+This isn't:
 
 ```text
 Expense total       PHP 4,000
 Total contributions PHP 3,500
 ```
 
-The missing PHP 500 must be resolved before save.
-
----
+The missing PHP 500 has to be sorted out before saving.
 
 ### 10. Participant shares
 
-Payers and participants are independent concepts.
+Paying and taking part are separate ideas. A participant might pay and have a share, pay more than their share, pay less than their share, pay but have no share, or have a share without paying.
 
-A participant may:
-
-- pay and consume a share;
-- pay more than their share;
-- pay less than their share;
-- pay but consume no share;
-- consume a share without paying.
-
-Initial required split methods:
-
-- equal;
-- exact/custom amounts.
-
-Later methods such as percentages, weights and detailed itemized allocation may be added separately.
-
----
+The split methods required at first are equal and exact (custom) amounts. Percentages, weights and detailed itemized allocation can come later, separately.
 
 ### 11. Share invariant
 
@@ -1036,17 +505,11 @@ For every finalized shared expense:
 sum(participant shares) = expense total
 ```
 
-Payer contributions and participant shares must each independently equal the total.
-
-They do not need to match person-by-person.
-
----
+What payers put in and what participants' shares come to each equal the total on their own; they don't have to match person by person.
 
 ### 12. Multiple-payer example
 
-Four participants buy a meal costing PHP 4,000.
-
-Payment:
+Four people share a meal that costs PHP 4,000. Who paid:
 
 ```text
 You             PHP 1,500
@@ -1055,7 +518,7 @@ Brother 2       PHP     0
 Brother 3       PHP     0
 ```
 
-Equal consumption:
+Equal shares:
 
 ```text
 You             PHP 1,000
@@ -1064,7 +527,7 @@ Brother 2       PHP 1,000
 Brother 3       PHP 1,000
 ```
 
-Bill-level positions:
+Where each person stands on this bill:
 
 | Participant | Paid | Share | Position |
 | --- | ---: | ---: | ---: |
@@ -1073,17 +536,11 @@ Bill-level positions:
 | Brother 2 | PHP 0 | PHP 1,000 | -PHP 1,000 |
 | Brother 3 | PHP 0 | PHP 1,000 | -PHP 1,000 |
 
-Positive means the participant advanced money for others.
-
-Negative means the participant consumed more than they contributed.
-
----
+Positive means they fronted money for others; negative means they consumed more than they put in.
 
 ### 13. Participants may differ by expense
 
-Not every group member must participate in every expense.
-
-Example:
+Not every group member has to be in every expense. For example:
 
 ```text
 Brothers group
@@ -1099,15 +556,11 @@ Brother 2       PHP 300
 Brother 3 was not included.
 ```
 
-Brother 3 receives no share from that expense.
-
----
+Brother 3 gets no share of that expense.
 
 ### 14. Current group balance source
 
-Current group balances derive from authoritative group records.
-
-Conceptually:
+Current group balances come from the group records that are the real record. Roughly:
 
 ```text
 participant current net position
@@ -1120,33 +573,19 @@ participant current net position
  - confirmed settlements received
 ```
 
-The exact database/report implementation must preserve the established accounting conventions.
-
-Current group participant positions must always sum to exactly:
+However the database or report does it exactly, it keeps the accounting conventions already established. For each currency and group, the participants' current positions always add up to exactly:
 
 ```text
 0
 ```
 
-for each currency/group.
-
----
-
 ### 15. Expenses are not isolated debts
 
-Shared Expense 1 and Shared Expense 2 must not behave as completely unrelated balances that each require independent repayment.
-
-All current applicable expenses participate in the current group calculation.
-
-Source expenses remain inspectable for history and explanation.
-
----
+Shared Expense 1 and Shared Expense 2 never act as completely separate balances that each have to be paid back on their own. Every current expense that applies goes into the current group calculation, and the source expenses stay open to inspection for history and explanation.
 
 ### 16. Reciprocal netting
 
-Reciprocal obligations between the same participants cancel in the current relationship balance.
-
-Example:
+When the same participants owe each other, those amounts cancel in their current relationship balance. For example:
 
 ```text
 Expense 1:
@@ -1156,34 +595,21 @@ Expense 2:
 Brother 1 owes you       PHP   800
 ```
 
-Current relationship:
+The current relationship:
 
 ```text
 You owe Brother 1        PHP 200
 ```
 
-Do not delete or rewrite Expense 1 or Expense 2.
-
-The PHP 200 balance is a derived current result.
-
----
+Neither Expense 1 nor Expense 2 is deleted or rewritten. The PHP 200 is a current result worked out from them.
 
 ### 17. Pairwise relationship visibility
 
-Where source allocations support it, the group UI should answer:
-
-- how much you currently owe each participant;
-- how much each participant currently owes you;
-- how much other participants owe one another where group visibility permits;
-- which expenses/refunds/settlements explain that relationship.
-
-Pairwise presentation must derive from the authoritative group records rather than becoming another mutable source of truth.
-
----
+Where the source allocations support it, the group UI answers: how much you owe each participant right now; how much each participant owes you right now; how much other participants owe each other, where the group's visibility allows; and which expenses, refunds and settlements explain that relationship. The pairwise view is worked out from the group records that are the real record; it never becomes another source of truth someone can edit.
 
 ### 18. Explainable relationship breakdown
 
-Example:
+For example:
 
 ```text
 You ↔ Brother 1
@@ -1197,15 +623,11 @@ Current net                -PHP   100
 You owe Brother 1           PHP   100
 ```
 
-The user must be able to inspect the source records behind the result.
-
----
+The user can always look at the source records behind the result.
 
 ### 19. Whole-group net positions
 
-The primary authoritative settlement basis is each participant's whole-group current net position.
-
-Example:
+The main basis for settling is each participant's current net position across the whole group. For example:
 
 | Person | Current position |
 | --- | ---: |
@@ -1214,21 +636,15 @@ Example:
 | Brother 2 | -PHP 400 |
 | Brother 3 | PHP 0 |
 
-The group is balanced because:
+The group balances because:
 
 ```text
 +100 + 300 - 400 + 0 = 0
 ```
 
----
-
 ### 20. Suggested settlements
 
-V2 must provide an explainable **Suggested settlements** view.
-
-It may reduce the number of payments by matching group debtors with group creditors.
-
-Example:
+V2 has a **Suggested settlements** view that explains itself. It can cut down the number of payments by matching the people in the group who owe with the people who are owed. For example:
 
 ```text
 Brother 2 → You
@@ -1238,71 +654,48 @@ Brother 2 → Brother 1
 PHP 300
 ```
 
-A settlement suggestion:
-
-- does not move money;
-- does not change group balances;
-- does not rewrite original bills;
-- does not mark anything as paid.
-
-It is a proposed way to resolve the current net positions.
-
----
+A suggestion doesn't move money, doesn't change group balances, doesn't rewrite the original bills, and doesn't mark anything as paid. It's a proposed way to settle the current net positions.
 
 ### 21. No false optimality claim
 
-The application does not need to guarantee the mathematically smallest possible number of payments unless an implemented algorithm formally guarantees that property.
-
-Use language such as:
+The app doesn't have to guarantee the mathematically smallest number of payments, unless an algorithm we've built formally guarantees it. Wording like:
 
 > Suggested way to settle
 
-rather than:
+is used instead of:
 
 > Minimum possible payments
 
-unless correctness is proven.
-
----
+unless it's been proven correct.
 
 ### 22. Redirected/indirect settlement
 
-Example:
+For example:
 
 ```text
 A owes B PHP 300
 B owes C PHP 300
 ```
 
-A possible suggestion is:
+One possible suggestion is:
 
 ```text
 A → C PHP 300
 ```
 
-Such redirection must preserve all participants' net positions.
-
-Original bills remain unchanged.
-
-Where redirected settlement discharges indirect obligations, affected participants must explicitly agree/confirm according to the finalized settlement model.
-
-Do not silently redirect obligations.
-
----
+A redirection like this keeps every participant's net position the same, and the original bills don't change. Where a redirected settlement clears indirect obligations, the people affected explicitly agree or confirm, following the settlement model once it's finalized. Obligations are never redirected quietly.
 
 ### 23. Settlement modes
 
-The settlement workflow must support at least:
+The settlement workflow supports at least these:
 
 #### Full balance
 
-Pay the entire amount currently due to the selected recipient under the chosen settlement scope.
+Pay everything currently owed to the chosen recipient, under the settlement scope picked.
 
 #### Custom amount
 
-Pay only part of the current amount.
-
-Example:
+Pay just part of the current amount. For example:
 
 ```text
 You owe Brother 1        PHP 2,000
@@ -1312,9 +705,7 @@ Expected remaining       PHP 1,000
 
 #### Selected expenses
 
-Pay only obligations connected to specific shared expenses.
-
-Example:
+Pay only what's tied to particular shared expenses. For example:
 
 ```text
 Dinner                    PHP 800
@@ -1329,13 +720,9 @@ Settlement                PHP 1,400
 Gas remains               PHP 600
 ```
 
----
-
 ### 24. Partial settlement of one expense
 
-A selected shared expense may itself be only partially settled.
-
-Example:
+A shared expense picked for settling can itself be settled only partly. For example:
 
 ```text
 Dinner outstanding        PHP 1,000
@@ -1343,17 +730,11 @@ Pay now                   PHP   400
 Remaining                 PHP   600
 ```
 
-The original bill remains unchanged.
-
-The settlement allocation explains the PHP 400 discharge.
-
----
+The original bill doesn't change; the settlement allocation explains the PHP 400 that was cleared.
 
 ### 25. One settlement across multiple expenses
 
-A single settlement may allocate its amount across multiple source expenses.
-
-Example:
+One settlement can spread its amount across several source expenses. For example:
 
 ```text
 Settlement to Brother 1
@@ -1365,36 +746,22 @@ Dinner                    PHP 600
 Groceries                 PHP 400
 ```
 
-Allocation totals must equal the applicable settlement amount except for an explicitly modeled advance/overpayment component.
-
----
+The allocations add up to the settlement amount that applies, apart from any advance or overpayment part that's modelled explicitly.
 
 ### 26. Recipient correctness
 
-A settlement must not silently clear an obligation owed to a different participant.
-
-Example:
-
-If the user owes:
+A settlement never quietly clears something owed to someone else. For example, if the user owes:
 
 ```text
 Brother 1        PHP 1,000
 Brother 2        PHP   500
 ```
 
-a payment to Brother 1 does not automatically discharge Brother 2's balance.
-
-Cross-recipient redirection requires an explicitly supported/accepted settlement-simplification path.
-
----
+a payment to Brother 1 doesn't automatically clear what's owed to Brother 2. Redirecting across recipients needs a settlement-simplification path that's explicitly supported and accepted.
 
 ### 27. Overpayment
 
-If a user attempts to settle more than the valid current obligation, do not silently truncate the payment or force balances to zero.
-
-Preview the consequence.
-
-Example:
+If someone tries to settle more than they actually owe right now, the app doesn't quietly cut the payment down or force balances to zero. It previews what happens instead. For example:
 
 ```text
 Current amount owed       PHP 1,000
@@ -1402,28 +769,15 @@ Payment                   PHP 1,200
 Advance/reverse balance   PHP   200
 ```
 
-Require explicit acknowledgement of the resulting advance/reverse position.
-
----
+The user has to explicitly acknowledge the advance or reverse position that results.
 
 ### 28. Reported versus confirmed settlement
 
-For registered participants, reporting that money was sent is not equivalent to recipient confirmation.
-
-A reported settlement remains pending until the recipient confirms receipt.
-
-Pending settlements:
-
-- remain visible;
-- preserve allocations;
-- do not reduce confirmed group balances;
-- may affect a separately labeled projected balance.
-
----
+For registered participants, saying money was sent isn't the same as the recipient confirming it. A reported settlement stays pending until the recipient confirms they got it. A pending settlement stays visible, keeps its allocations, doesn't reduce confirmed group balances, and can affect a separately labelled projected balance.
 
 ### 29. Sender view for pending settlement
 
-Example:
+For example:
 
 ```text
 Brother 1
@@ -1441,13 +795,11 @@ Projected remaining if confirmed
 PHP 1,000
 ```
 
-Do not simply show PHP 1,000 as the confirmed balance before confirmation.
-
----
+The confirmed balance isn't simply shown as PHP 1,000 before it's confirmed.
 
 ### 30. Recipient confirmation view
 
-The recipient should see:
+The recipient sees:
 
 ```text
 Rendel reports sending you PHP 1,000
@@ -1466,15 +818,11 @@ Groceries                 PHP 400
 [ Dispute ]
 ```
 
-Confirmation changes the applicable current confirmed balance.
-
----
+Confirming it changes the current confirmed balance that applies.
 
 ### 31. Pending settlement reporting
 
-Pending settlement visibility is a first-class requirement.
-
-Provide a settlement view with statuses/filters similar to:
+Seeing pending settlements is a first-class requirement. There's a settlement view with statuses or filters along the lines of:
 
 - Needs my confirmation
 - Waiting for others
@@ -1483,7 +831,7 @@ Provide a settlement view with statuses/filters similar to:
 - Reversed/Cancelled
 - All
 
-Example:
+For example:
 
 | Participant | Amount | Status |
 | --- | ---: | --- |
@@ -1491,26 +839,13 @@ Example:
 | Brother 2 | PHP 500 | Needs your confirmation |
 | Brother 3 | PHP 700 | Confirmed |
 
----
-
 ### 32. Group-level pending summary
 
-The group page should distinguish:
-
-- confirmed current balances;
-- pending outgoing settlements;
-- pending incoming settlements;
-- projected balances if pending settlements are confirmed.
-
-Do not combine projected and confirmed numbers without labels.
-
----
+The group page keeps these apart: confirmed current balances; pending outgoing settlements; pending incoming settlements; and projected balances if the pending settlements are confirmed. Projected and confirmed numbers are never mixed without labels.
 
 ### 33. Dashboard attention
 
-Pending settlements may appear in the global Dashboard attention surface.
-
-Examples:
+Pending settlements can show up in the Dashboard's global attention area. For example:
 
 ```text
 PHP 500 from Brother 2
@@ -1520,71 +855,31 @@ PHP 1,000 sent to Brother 1
 Waiting for confirmation
 ```
 
-Dashboard presentation must not expose group-sensitive information outside an authorized user's view.
-
----
+The Dashboard never shows group-sensitive information outside the view of a user who's allowed to see it.
 
 ### 34. Pending settlement aging
 
-The UI may display:
+The UI can show:
 
 > Awaiting confirmation · 3 days
 
-This is informational.
-
-When reminder delivery exists, the user may be offered an in-app or opted-in external reminder.
-
-Do not automatically harass participants or expose sensitive financial content through notification channels.
-
----
+That's just for information. Once reminder delivery exists, the user can be offered an in-app reminder or an external one they've opted into. Participants are never nagged automatically, and sensitive financial details never go out through notification channels.
 
 ### 35. Disputes
 
-A recipient who disagrees with a reported settlement can dispute it.
-
-A disputed settlement:
-
-- remains visible;
-- does not reduce confirmed group balances;
-- retains the original reported details;
-- records reason/evidence where supported;
-- must be resolved through an explicit correction/transition.
-
-Do not silently edit the payment amount after a dispute.
-
----
+A recipient who disagrees with a reported settlement can dispute it. A disputed settlement stays visible, doesn't reduce confirmed group balances, keeps the original reported details, records a reason and evidence where that's supported, and has to be settled through an explicit correction or transition. The payment amount is never quietly edited after a dispute.
 
 ### 36. Manual/nonregistered settlement confirmation
 
-A manual participant cannot perform authenticated confirmation.
-
-Manual confirmation must record:
-
-- who entered the confirmation;
-- confirmation type;
-- the fact that recipient-authenticated confirmation was unavailable.
-
-Present this limitation clearly.
-
----
+A manual participant can't confirm with an authenticated account. A manual confirmation records who entered it, the type of confirmation, and the fact that confirmation by an authenticated recipient wasn't possible. That limitation is shown clearly.
 
 ### 37. Private ledger integration
 
-Group records do not automatically mutate every participant's private financial ledger.
-
-Each registered participant controls adoption into their own workspace.
-
-A group bill can exist independently of private ledger adoption.
-
-This preserves privacy and prevents another participant from changing someone's private finances.
-
----
+Group records don't automatically change every participant's private financial ledger. Each registered participant decides what gets adopted into their own workspace, and a group bill can exist without anyone adopting it privately. That keeps things private and stops one participant from changing someone else's private finances.
 
 ### 38. Integrated Add Expense experience
 
-If the current user is recording a real purchase they paid for, the ordinary Add Expense flow should be capable of expanding into a shared expense.
-
-Conceptually:
+If the current user is recording a real purchase they paid for, the ordinary Add Expense flow can expand into a shared expense. Roughly:
 
 ```text
 Add Expense
@@ -1612,17 +907,11 @@ Participants
 [x] Sarah
 ```
 
-The user should not need to enter the PHP 2,400 purchase once in Expenses and again in Shared Expenses.
-
----
+Nobody should have to enter the PHP 2,400 purchase once in Expenses and then again in Shared Expenses.
 
 ### 39. Private accounting for payer's own share
 
-Example:
-
-You pay PHP 1,200 from GCash for dinner with two brothers, equally split.
-
-Your private linked result:
+Say you pay PHP 1,200 from GCash for dinner with two brothers, split equally. What that does privately for you:
 
 ```text
 GCash cash movement        -PHP 1,200
@@ -1630,9 +919,7 @@ Your spending                PHP   400
 Group receivable             PHP   800
 ```
 
-The other participants' private accounts remain untouched.
-
----
+The other participants' private accounts aren't touched.
 
 ### 40. Private accounting with multiple payers
 
@@ -1650,7 +937,7 @@ Brother 2 share       PHP 1,000
 Brother 3 share       PHP 1,000
 ```
 
-Your private adoption may represent:
+What you adopt privately can show:
 
 ```text
 Your actual funding movement      PHP 1,500
@@ -1658,27 +945,15 @@ Your own spending                 PHP 1,000
 Your group receivable             PHP   500
 ```
 
-Brother 1 independently controls their own private adoption.
-
-No participant sees another participant's selected private account.
-
----
+Brother 1 decides on their own private adoption, and nobody sees which private account anyone else picked.
 
 ### 41. Existing private purchase linking
 
-If a purchase has already been entered privately, converting/linking it to Shared Expenses must not create another cash/card deduction.
-
-Use the existing correction/reclassification/private-link model.
-
-Preview the result before applying.
-
----
+If a purchase was already entered privately, turning it into or linking it to a shared expense never takes another cash or card deduction. It goes through the existing correction, reclassification and private-link model, with a preview of the result before it's applied.
 
 ### 42. Credit-card integration
 
-A registered payer may privately fund their contribution using a credit card.
-
-Example:
+A registered payer can fund their contribution privately with a credit card. For example:
 
 ```text
 Restaurant bill
@@ -1697,98 +972,45 @@ Group receivable
 PHP 3,000
 ```
 
-Private result:
-
-- card liability increases by PHP 4,000;
-- personal spending reflects the user's PHP 1,000 share;
-- group receivable reflects PHP 3,000 advanced for others;
-- no duplicate purchase is created.
-
-Other participants cannot see the user's card details.
-
----
+Privately, that means: card liability goes up by PHP 4,000; personal spending shows the user's PHP 1,000 share; the group receivable shows the PHP 3,000 put up for others; and no duplicate purchase is created. Other participants can't see the user's card details.
 
 ### 43. Funding privacy with multiple payers
 
-At group level, users only need to see contribution meaning:
+At the group level, people only need to see what each contribution means:
 
 ```text
 Rendel paid           PHP 1,500
 Brother 1 paid        PHP 2,500
 ```
 
-They do not need to see:
+They don't need to see:
 
 ```text
 Rendel used BPI Visa
 Brother 1 used BDO account
 ```
 
-Private funding sources remain private unless the owner deliberately exposes permitted metadata later.
-
----
+Private funding sources stay private, unless later on the owner chooses to share metadata that's allowed.
 
 ### 44. Refunds
 
-A refund linked to a shared purchase must preserve the original bill and settlements.
-
-Refunds adjust applicable payer contribution/share effects.
-
-If participants already settled, a refund may create a new reverse amount owed.
-
-Do not delete historical settlements merely because the merchant refunded the purchase later.
-
----
+A refund on a shared purchase keeps the original bill and its settlements. Refunds adjust the payer contribution and share effects that apply. If people have already settled, a refund can create a new amount owed in the other direction. Historical settlements are never deleted just because the merchant refunded the purchase later.
 
 ### 45. Corrections
 
-Shared expenses use versioned immutable corrections.
-
-Changing:
-
-- total;
-- payers;
-- payer contribution amounts;
-- participants;
-- participant shares;
-- date;
-- other financial meaning
-
-creates a new reviewed revision.
-
-Previously accepted private ledger links may become:
+Shared expenses use corrections that are versioned and never change in place. Changing the total, the payers, the payer contribution amounts, the participants, the participant shares, the date, or anything else with financial meaning creates a new revision that gets reviewed. Private ledger links that were accepted earlier can become:
 
 > Needs private correction
 
-rather than being silently rewritten.
-
----
+instead of being quietly rewritten.
 
 ### 46. Group summary/reporting
 
-Group reporting should show at minimum:
-
-- total group spending;
-- current effective bills;
-- each participant's amount paid;
-- each participant's shares consumed;
-- each participant's confirmed settlements sent;
-- each participant's confirmed settlements received;
-- current net position;
-- pending outgoing settlements;
-- pending incoming settlements;
-- projected position if pending payments confirm;
-- refunds;
-- disputed amounts;
-- recent activity.
-
----
+Group reporting shows at least: total group spending; the current bills in effect; each participant's amount paid, shares consumed, confirmed settlements sent and confirmed settlements received; the current net position; pending outgoing and incoming settlements; the projected position if pending payments are confirmed; refunds; disputed amounts; and recent activity.
 
 ### 47. Per-person detail
 
-Selecting a participant should allow an explainable breakdown.
-
-Example:
+Picking a participant opens a breakdown that explains itself. For example:
 
 ```text
 Brother 1
@@ -1803,33 +1025,15 @@ Current confirmed position
 Gets back                   PHP 2,500
 ```
 
-The detail must link back to source bills and settlements.
-
----
+It links back to the source bills and settlements.
 
 ### 48. Per-expense detail
 
-Every bill should display:
-
-- who paid;
-- each payer contribution;
-- who participated;
-- each participant share;
-- split method;
-- current revision;
-- previous revisions where applicable;
-- settlements allocated to the bill;
-- pending allocations;
-- remaining unsettled source amounts where meaningful;
-- refund/correction history.
-
----
+Every bill shows: who paid and how much each payer put in; who took part and each participant's share; the split method; the current revision and earlier ones where they exist; settlements allocated to the bill; pending allocations; the source amounts still unsettled, where that means something; and its refund and correction history.
 
 ### 49. Equal-split rounding
 
-Use exact centavos.
-
-Example:
+Amounts are exact to the centavo. For example:
 
 ```text
 PHP 100 / 3
@@ -1839,56 +1043,23 @@ PHP 33.33
 PHP 33.33
 ```
 
-Persist/explain who receives the extra centavo.
-
-Do not silently lose or create money through rounding.
-
----
+Who gets the extra centavo is saved and explained. Rounding never quietly loses or creates money.
 
 ### 50. Security rules
 
-Shared-expense security must verify:
-
-- active group membership;
-- participant role;
-- group-scoped foreign references;
-- invitation authority;
-- settlement authority;
-- correction authority;
-- historical former-member access;
-- no private workspace leakage.
-
-Group tables require group-scoped RLS.
-
-Private adoption tables remain private workspace records.
-
----
+Shared-expense security checks: active group membership; the participant's role; that foreign references are scoped to the group; invitation authority; settlement authority; correction authority; what former members can still see historically; and that nothing leaks from private workspaces. Group tables need group-scoped RLS, and private adoption tables stay private workspace records.
 
 ### 51. Leaving a group
 
-Leaving/removing a member:
-
-- does not erase history;
-- does not forgive balances;
-- prevents unauthorized new activity;
-- retains approved historical visibility;
-- preserves settlement evidence.
-
-An active group should not accidentally become ownerless.
-
----
+Leaving a group, or being removed, doesn't erase history or forgive balances. It blocks new activity that isn't authorized, keeps the historical visibility that was approved, and keeps the settlement evidence. An active group shouldn't end up without an owner by accident.
 
 ### 52. Archive behavior
 
-Completed/inactive groups should normally be archived rather than deleting financial/shared history.
-
-Archive does not zero balances or remove settlement evidence.
-
----
+Groups that are finished or inactive are normally archived, not deleted along with their financial and shared history. Archiving doesn't zero balances or remove settlement evidence.
 
 ### 53. Required acceptance scenarios
 
-Before Shared Expenses is considered functionally complete, verify at minimum:
+Before Shared Expenses counts as working, check at least:
 
 1. Create a group with registered participants.
 2. Add a manual/nonregistered participant.
@@ -1931,118 +1102,45 @@ Before Shared Expenses is considered functionally complete, verify at minimum:
 39. Verify responsive/mobile behavior.
 40. Verify keyboard/accessibility behavior.
 
----
-
 ### 54. Suggested implementation milestones
 
-Milestone names may be adjusted after inspecting the repository.
+These milestone names can change once the repository's been looked at.
 
 #### V2-I1 — Group Identity and Authorization Foundation
 
-Focus on:
-
-- groups;
-- participants;
-- invitations;
-- membership;
-- manual participants;
-- roles;
-- group RLS;
-- command receipts;
-- historical-access foundation.
+Groups, participants, invitations, membership, manual participants, roles, group RLS, command receipts, and the groundwork for historical access.
 
 #### V2-I2 — Shared Bills and Multiple Payers
 
-Focus on:
-
-- expense revisions;
-- one/multiple payer contributions;
-- equal/exact participant shares;
-- exact rounding;
-- current group balance derivation;
-- per-person/per-expense reads.
+Expense revisions, contributions from one payer or several, equal and exact participant shares, exact rounding, working out the current group balance, and per-person and per-expense reads.
 
 #### V2-I3 — Private Ledger Adoption
 
-Focus on:
-
-- private group bindings;
-- existing-purchase linking;
-- new private postings;
-- receivable/payable treatment;
-- privacy boundary;
-- Add Expense integration.
+Private group bindings, linking existing purchases, new private postings, receivable and payable treatment, the privacy boundary, and Add Expense integration.
 
 #### V2-I4 — Settlements and Pending Confirmation
 
-Focus on:
-
-- full settlement;
-- custom partial settlement;
-- selected-expense allocations;
-- partial bill settlement;
-- pending confirmation;
-- recipient confirmation;
-- disputes;
-- overpayment;
-- pending reports.
+Full settlement, custom partial settlement, allocations to selected expenses, partly settling a bill, pending confirmation, recipient confirmation, disputes, overpayment, and pending reports.
 
 #### V2-I5 — Netting and Settlement Suggestions
 
-Focus on:
-
-- reciprocal netting;
-- relationship views;
-- whole-group net positions;
-- deterministic explainable settlement suggestions;
-- redirected settlement agreement where supported.
+Reciprocal netting, relationship views, whole-group net positions, settlement suggestions that are deterministic and explain themselves, and agreement on redirected settlement where that's supported.
 
 #### V2-I6 — Refunds, Corrections and Reporting
 
-Focus on:
-
-- shared refunds;
-- bill corrections;
-- settled-bill corrections;
-- private-link review;
-- group reports;
-- Dashboard attention.
+Shared refunds, bill corrections, corrections to settled bills, reviewing private links, group reports, and Dashboard attention.
 
 #### V2-I7 — Cross-Domain Integration and Acceptance
 
-Focus on:
-
-- card-funded shared purchases;
-- reminders/notifications where applicable;
-- imports/files where applicable;
-- browser acceptance;
-- security review;
-- accessibility;
-- full regressions.
-
----
+Shared purchases funded by card, reminders and notifications where they apply, imports and files where they apply, browser acceptance, a security review, accessibility, and full regressions.
 
 ### 55. Explicit V2 boundaries
 
-The following do not need to be implemented merely because Shared Expenses exists:
-
-- general personal lending;
-- interest-bearing peer loans;
-- multiple currencies within one group;
-- payment execution through banks/wallets;
-- mathematically guaranteed minimum settlement transfer count;
-- automatic identity matching by name;
-- silent settlement redirection without consent;
-- exposing private financial accounts to group members;
-- arbitrary deletion of settled history.
-
-Percentage, weighted and detailed item-level split methods may be added later unless separately promoted into V2 scope.
-
----
+None of these have to be built just because Shared Expenses exists: general personal lending; peer loans with interest; several currencies inside one group; making payments through banks or wallets; a mathematically guaranteed minimum number of settlement transfers; matching identities automatically by name; redirecting settlements quietly without consent; showing private financial accounts to group members; deleting settled history at will. Percentage, weighted and detailed item-level splits can come later, unless they're separately moved into V2 scope.
 
 ### 56. Final product rule
 
-The Shared Expenses experience should make this statement true:
+What the Shared Expenses experience is for, in one sentence:
 
 > A user can record real shared purchases exactly once, regardless of who paid or how many people paid, see everyone's explainable current position across all group activity, settle all or part of what is owed, understand pending confirmations, and preserve complete history without exposing anyone's private finances.
 
@@ -2050,7 +1148,7 @@ The Shared Expenses experience should make this statement true:
 
 ### Authority and boundary
 
-This domain consolidates Blueprint §6.9, System Architecture §12.4 and Database Architecture §12. The ledger remains the sole financial authority. V2-B implements planning only; Budgets, forecasts, external delivery, other domains and production deployment remain outside this assignment.
+This pulls together Blueprint §6.9, System Architecture §12.4 and Database Architecture §12. The ledger is still the only financial authority. V2-B is planning only; Budgets, forecasts, external delivery, other domains and production deployment were left out of this piece of work.
 
 ### Internal milestones
 
@@ -2058,7 +1156,7 @@ This domain consolidates Blueprint §6.9, System Architecture §12.4 and Databas
 2. B2: one-occurrence overrides/skips/cancellation, future supersession/archive, explicit partial financial links and immutable link reversals, correction conflicts and existing transaction creation workflows.
 3. B3: accessible responsive management/review, Agenda and in-app reminders, consolidated domain/regression/database/browser acceptance.
 
-Implementation proceeds sequentially. Focused checks protect intermediate contracts; one consolidated acceptance phase and one accepted domain commit/push supersede the earlier per-milestone full-suite/push workflow. This is the default for subsequent domains unless reassigned.
+I built these in order. Focused checks guarded the contracts in between, and one combined acceptance phase with one accepted commit/push for the domain replaced the earlier habit of a full suite and a push per milestone. That became the default for the domains after it, unless I decided otherwise.
 
 ### Rules and dates
 
@@ -2087,13 +1185,13 @@ Four documented `planning` tables use concrete scoped FKs, forced active-owner R
 
 Nullable SQL rule/reversal checks explicitly reject NULL when a selected grammar or correction requires evidence. Runtime SQL tests verify this independently of API validation. The source view emits its own calendar context; bounded reminder reads materialize the requested source projection once, avoiding repeated RLS joins without relaxing ownership or transaction isolation. Planning commands advance the existing workspace read revision as A5 evidence commands do; this is cache/review metadata, not a financial posting.
 
-Acceptance covers grammar/count/horizon/month-end/leap/DST, exact amounts, repeat/overlap generation, version boundaries/history, overrides/state/link reversal, partial/excess/duplicate/corrected/foreign actual evidence, same-command and competing capacity/version races, SQL/audit/receipt rejection, RLS/roles/lifecycle, financial nonduplication, reminder lifecycle/preferences, browser keyboard/Axe/320px/themes and unchanged V1/V2-A regressions. B1–B3 are locally accepted as of October 13, 2026 (Asia/Manila). Actual commands/results, bounded limits, deliberately omitted unrelated checks and V2-C prerequisites are recorded in handoff §22. No later domain is authorized.
+Acceptance covered grammar/count/horizon/month-end/leap/DST, exact amounts, repeat/overlap generation, version boundaries/history, overrides/state/link reversal, partial/excess/duplicate/corrected/foreign actual evidence, same-command and competing capacity/version races, SQL/audit/receipt rejection, RLS/roles/lifecycle, financial nonduplication, reminder lifecycle/preferences, browser keyboard/Axe/320px/themes and unchanged V1/V2-A regressions. B1–B3 were accepted locally on October 13, 2026 (Asia/Manila). The actual commands and results, the bounded limits, the unrelated checks I left out on purpose and the V2-C prerequisites are in handoff §22. Nothing after this domain had been started at that point.
 
 ## V2-C — Budgets
 
 ### Authority and scope
 
-Consolidates Database Architecture §12, System Architecture §15.2 and the Blueprint's planning/reporting requirements. Uses `planning.budget`; budgets are mutable audited spending limits, never financial actions or reservations. No rollover, replenishment, transfers, savings goals or forecasts.
+This pulls together Database Architecture §12, System Architecture §15.2 and the Blueprint's planning and reporting requirements. It uses `planning.budget`. Budgets are spending limits you can change, with an audit trail; they're never financial actions or reservations. There's no rollover, replenishment, transfers, savings goals or forecasts here.
 
 ### Internal milestones
 
@@ -2101,7 +1199,7 @@ Consolidates Database Architecture §12, System Architecture §15.2 and the Blue
 2. C2: repeatable snapshot comparisons from the existing immutable posting facts and net/gross definitions; historical corrections and refund dates remain authoritative.
 3. C3: accessible responsive Money management, Reports comparisons, Dashboard preview and consolidated acceptance.
 
-Implement sequentially with focused checks, then one consolidated verification and accepted domain commit/push. Retain V2-B's optimized workflow.
+I built these in order with focused checks, then did one combined verification and one accepted commit/push for the domain, the same streamlined workflow as V2-B.
 
 ### Domain decisions
 
@@ -2117,21 +1215,21 @@ Implement sequentially with focused checks, then one consolidated verification a
 
 ### Acceptance
 
-Verify exact/zero/large limits, leap/day/end boundaries, adjacency/overlaps, lifecycle and immutable audit history, source/category ownership, RLS/runtime grants, SQL bypass/forged receipts, concurrent saves/period moves/version races, permanent replay, ledger nonduplication, net/gross actual-period refunds and corrections, recurring exclusion, snapshot consistency, Money/Reports/Dashboard integration, browser keyboard/review/retry/Axe/320px/themes, migration upgrades, lifecycle/restore and unchanged V1/V2-A/B regressions. Record actual executed results and V2-D prerequisites in the handoff after acceptance.
+Acceptance checks exact/zero/large limits, leap/day/end boundaries, adjacency/overlaps, lifecycle and immutable audit history, source/category ownership, RLS/runtime grants, SQL bypass/forged receipts, concurrent saves/period moves/version races, permanent replay, ledger nonduplication, net/gross actual-period refunds and corrections, recurring exclusion, snapshot consistency, Money/Reports/Dashboard integration, browser keyboard/review/retry/Axe/320px/themes, migration upgrades, lifecycle/restore and unchanged V1/V2-A/B regressions. After acceptance, the results that actually ran and the V2-D prerequisites went into the handoff.
 
 ### Accepted implementation
 
-C1–C3 are implemented and accepted locally and in hosted CI. Seven forward migrations add one protected audited table, bringing the chain to 111 migrations / 75 tables with all prior definitions preserved. No dependencies or financial recipes changed.
+C1–C3 were built and accepted locally and in hosted CI. Seven forward migrations add one protected, audited table, which took the chain to 111 migrations / 75 tables with every earlier definition kept. No dependencies or financial recipes changed.
 
-Consolidated verification covers 901 passing unit/component/API tests, all 549 integration scenarios across the full run and affected reruns, all 44 browser scenarios across the full run and affected rerun, ten fresh/upgrade migration proofs, schema/runtime checks, production builds, dependency audit, isolated encrypted restore and restricted runtime artifacts. Guarded capacity with 100 budgets / 1,000 actual classified postings passed existing timing thresholds and financial nonduplication assertions. Exact commands, initial failures/resolutions, measured results and V2-D prerequisites are recorded in [handoff section 23](archive/web/V2_DEVELOPMENT_HANDOFF.md#23-v2-c--budgets).
+The combined verification covered 901 passing unit/component/API tests, all 549 integration scenarios across the full run and affected reruns, all 44 browser scenarios across the full run and affected rerun, ten fresh/upgrade migration proofs, schema/runtime checks, production builds, dependency audit, isolated encrypted restore and restricted runtime artifacts. Guarded capacity with 100 budgets / 1,000 actual classified postings passed existing timing thresholds and financial nonduplication assertions. The exact commands, the first failures and how I fixed them, the measured results and the V2-D prerequisites are in [handoff section 23](archive/web/V2_DEVELOPMENT_HANDOFF.md#23-v2-c--budgets).
 
-V2-D requires a separate explicit assignment. Budget remaining allowance is a spending-limit comparison and cannot become eligible savings cash or a reservation.
+V2-D was its own separate piece of work. A budget's remaining allowance is a comparison against a spending limit; it can't turn into eligible savings cash or a reservation.
 
 ## V2-D — Savings Goals
 
 ### Authority and internal milestones
 
-Consolidates Database Architecture §12 and System Architecture §15.2. D1 implements private goal management, protected reservations, audit/replay and atomic availability validation. D2 derives current funding health from finalized cash evidence. D3 integrates accessible Money management, Dashboard/Reports previews and consolidated acceptance. Implement sequentially; one consolidated verification, documentation and authorized commit/push. Stop before V2-E.
+This pulls together Database Architecture §12 and System Architecture §15.2. D1 is private goal management, protected reservations, audit/replay and atomic availability checks. D2 works out current funding health from finalized cash evidence. D3 brings in accessible Money management, Dashboard/Reports previews and combined acceptance. I built them in order, with one combined verification, the docs and one approved commit/push, and stopped there before V2-E.
 
 ### Decisions
 
@@ -2140,7 +1238,7 @@ Consolidates Database Architecture §12 and System Architecture §15.2. D1 imple
 - Availability is validated per account across **all goals**, including completed goals. Workspace totals sum these explicitly labelled positive eligible account pools; negative balances are disclosed separately, never described as net liquid funds. Reserves are not subtracted from ledger balances or asset totals.
 - Reviewed absolute reservation changes support increases, decreases and full release. Explicit reallocation can change goal, account or both atomically; it never transfers money. New/increased reservations require an active goal and an eligible destination whose final aggregate reservations fit current capacity. Releases/decreases remain possible when underfunded or archived. Reallocating unsupported reservations cannot create available cash; the increased destination must be supported after the complete command.
 - Completion is explicit management evidence and retains reservations. Reopen supports completed/archived goals. Archive requires reservations to be explicitly released first; no lifecycle action silently frees funds. Completed goals remain in current reservation totals. Targets may be revised below reservations; disclose excess instead of rewriting allocations.
-- Financial and metadata changes never rewrite reservations. If several goals share an underfunded account, do not invent which goal gets the remaining cash. For reservation R, account total T and eligible capacity C, supported funding lies in `[max(0,min(R,C-(T-R))),min(R,C)]`. Sum these exact bounds per goal; disclose shared shortfalls, exact reserved target progress and supported funding range. Fully funded requires the lower supported bound to meet target; unfunded means the upper bound is zero; otherwise distinguish partial funding and uncertain shared support.
+- Financial and metadata changes never rewrite reservations. If several goals share an underfunded account, the app doesn't invent which goal gets the remaining cash. For reservation R, account total T and eligible capacity C, supported funding lies in `[max(0,min(R,C-(T-R))),min(R,C)]`. Sum these exact bounds per goal; disclose shared shortfalls, exact reserved target progress and supported funding range. Fully funded requires the lower supported bound to meet target; unfunded means the upper bound is zero; otherwise distinguish partial funding and uncertain shared support.
 - Commands use active workspace locking, permanent normalized receipts, expected goal versions and current financial revision for reservation/reallocation review. Database guards, final aggregate validation and exact attributed audit/receipt result binding independently enforce integrity. Account/ledger eligibility metadata changes invalidate read revision metadata without posting money. Preserve approved lifecycle purge and all forced-RLS/restricted-role protections.
 - Reservation writes require the platform's normal read-committed write transaction. This independently protects against stale repeatable-read financial evidence even when a raw Finance SQL command omits the service-owned revision advance. Read-only comparisons retain repeatable snapshots; authorized lifecycle deletion is unchanged.
 - Database command graphs match the API: one goal for management, one goal/account for a reservation change, and two distinct reservation records for reallocation. Reallocation conserves the exact total with one decrease and one increase. One audit per changed record is required; orphan, extra and late goal history under completed or unrelated receipts is rejected.
@@ -2148,13 +1246,13 @@ Consolidates Database Architecture §12 and System Architecture §15.2. D1 imple
 
 ### Acceptance
 
-Verify exact/large/zero reservation amounts, target/date validation, owned eligible accounts, future/archived/noncash exclusion, same funds across goals, atomic reallocation, partial/full release, completion/archive/reopen history, excess targets, shared shortfalls and supported bounds. Test real spending, transfers, backdating, corrections/reversals and refunds without vetoing financial commands or altering reservations. Independently prove SQL finalization/audit/result binding, rollback, concurrency/replay/stale snapshots, RLS/restricted roles and complete scoped lifecycle deletion. Run focused domain/API/component tests, consolidated V1/V2-A–C regressions, fresh/upgrades/schema/runtime, checks/build, production browser/keyboard/retry/Axe/320px/themes, isolated restore/runtime artifacts and guarded new-query capacity. Record actual outcomes and V2-E prerequisites in the handoff.
+Acceptance checks exact/large/zero reservation amounts, target/date validation, owned eligible accounts, future/archived/noncash exclusion, same funds across goals, atomic reallocation, partial/full release, completion/archive/reopen history, excess targets, shared shortfalls and supported bounds. It tests real spending, transfers, backdating, corrections/reversals and refunds without vetoing financial commands or altering reservations. It separately proves SQL finalization/audit/result binding, rollback, concurrency/replay/stale snapshots, RLS/restricted roles and complete scoped lifecycle deletion. It runs focused domain/API/component tests, consolidated V1/V2-A–C regressions, fresh/upgrades/schema/runtime, checks/build, production browser/keyboard/retry/Axe/320px/themes, isolated restore/runtime artifacts and guarded new-query capacity. The actual outcomes and V2-E prerequisites go in the handoff.
 
-D1–D3 are implemented and locally accepted. Actual consolidated results, important boundary fixes, verification-harness decisions and V2-E prerequisites are recorded in [the development handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#24-v2-d--savings-goals). Savings Goals add no financial recipe; the targeted 100-goal/100-reservation/1,000-posting workload replaces an unnecessary repeat of the unchanged A6 financial benchmark. Hosted acceptance and exact verified remote commit accompany the completion report. Stop before V2-E.
+D1–D3 were built and accepted locally. The actual combined results, the important boundary fixes, verification-harness decisions and V2-E prerequisites are in [the development handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#24-v2-d--savings-goals). Savings Goals add no financial recipe; the targeted 100-goal/100-reservation/1,000-posting workload replaces an unnecessary repeat of the unchanged A6 financial benchmark. Hosted acceptance and the exact verified remote commit went with the completion report. I stopped there before V2-E.
 
 ## V2-E — Forecasts
 
-Consolidates System Architecture §15.2 and Database Architecture §12. E1 establishes read-only source coverage and calculations; E2 integrates explicit scenarios and private APIs; E3 delivers accessible Money management/navigation and consolidated acceptance. Stop before V2-F.
+This pulls together System Architecture §15.2 and Database Architecture §12. E1 sets up read-only source coverage and the calculations; E2 brings in explicit scenarios and private APIs; E3 delivers accessible Money management/navigation and combined acceptance. I stopped before V2-F.
 
 ### Calculation and source decisions
 
@@ -2170,13 +1268,13 @@ Consolidates System Architecture §15.2 and Database Architecture §12. E1 estab
 
 ### Acceptance
 
-Prove exact/large/negative arithmetic, local dates/leap years/horizon/bridge, source ordering and nonduplication, unmaterialized rules and terminal overrides, partial actual links, provider revisions and effective allocations, mutually exclusive card bases, unsupported dates/amounts/credits/overlaps, explicit scenarios, current reservations/budgets without new cash, correction/reversal refresh and consistent read snapshots. Test strict actor/origin/query/body validation, no-cache reads, foreign IDs/RLS, read-only nonmutation, response races, private browser navigation, keyboard/Axe/320px/themes and bounded performance. Run applicable regressions and checks/build/runtime security. Since persistence is unchanged, no new migration/upgrade path is required. Record actual acceptance and V2-F prerequisites in the handoff.
+Acceptance proves exact/large/negative arithmetic, local dates/leap years/horizon/bridge, source ordering and nonduplication, unmaterialized rules and terminal overrides, partial actual links, provider revisions and effective allocations, mutually exclusive card bases, unsupported dates/amounts/credits/overlaps, explicit scenarios, current reservations/budgets without new cash, correction/reversal refresh and consistent read snapshots. It tests strict actor/origin/query/body validation, no-cache reads, foreign IDs/RLS, read-only nonmutation, response races, private browser navigation, keyboard/Axe/320px/themes and bounded performance. It runs the regressions that apply plus checks/build/runtime security. Persistence didn't change, so no new migration or upgrade path was needed. The actual acceptance and V2-F prerequisites go in the handoff.
 
-E1–E3 are implemented and accepted locally on October 14, 2026 (Asia/Manila). Exact source, overlap, correction, isolation, nonmutation and scenario cases pass; full regressions and affected final reruns cover 929 unit/component/API tests, 573 integration tests and 50 browser scenarios. Production builds, check, dependency audit, restricted containers and targeted capacity acceptance pass. See [V2-E handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#25-v2-e--forecasts) for actual run details, bounds, deliberately skipped unchanged-persistence checks and V2-F prerequisites. The completion report supplies the exact pushed commit and hosted workflow outcome.
+E1–E3 were built and accepted locally on October 14, 2026 (Asia/Manila). The exact source, overlap, correction, isolation, nonmutation and scenario cases passed; full regressions and the affected final reruns covered 929 unit/component/API tests, 573 integration tests and 50 browser scenarios. Production builds, check, dependency audit, restricted containers and targeted capacity acceptance passed. See [V2-E handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#25-v2-e--forecasts) for actual run details, bounds, deliberately skipped unchanged-persistence checks and V2-F prerequisites. The exact pushed commit and the hosted workflow result are in the completion report.
 
 ## V2-F — Richer Career Analytics
 
-Extends the existing Career report, reporting periods, scoped repositories and CSV infrastructure. System Architecture §11 and Database Architecture §14 remain authoritative. F1 establishes evidence/metrics; F2 integrates filters, comparisons, Dashboard and exports; F3 delivers accessible views and consolidated acceptance. Stop before V2-G.
+This builds on the existing Career report, reporting periods, scoped repositories and CSV setup. System Architecture §11 and Database Architecture §14 are still the authority. F1 sets up the evidence and metrics; F2 brings in filters, comparisons, the Dashboard and exports; F3 delivers accessible views and combined acceptance. I stopped before V2-G.
 
 ### Evidence and metric definitions
 
@@ -2197,19 +1295,19 @@ Extends the existing Career report, reporting periods, scoped repositories and C
 
 ### Acceptance
 
-Prove compatible cohort denominators/intersections, repeated attempts/events, cancelled versus scheduled/completed activity, stage correction/supersession/reopening/same-day ordering, archived/saved/missing evidence, pre-submission exclusions, response/progression timing, open-stage censoring, empty rates, source labels/filters, bucket/date/timezone/cutoff boundaries, unequal cohort maturity, stable snapshots/nonmutation, RLS/foreign/spoof rejection and private field exclusion. Verify shared Reports/Dashboard/detail/export consistency, strict API errors, keyboard/320px/both themes/Axe, bounded rendering and targeted query capacity. Run applicable V1/A–E regression, check/build/security/container gates once stable, then affected reruns only. Persistence is unchanged, so new migration/schema/restore fixtures are unnecessary; established hosted gates remain. Record actual outcomes and V2-G prerequisites in the handoff.
+Acceptance proves compatible cohort denominators/intersections, repeated attempts/events, cancelled versus scheduled/completed activity, stage correction/supersession/reopening/same-day ordering, archived/saved/missing evidence, pre-submission exclusions, response/progression timing, open-stage censoring, empty rates, source labels/filters, bucket/date/timezone/cutoff boundaries, unequal cohort maturity, stable snapshots/nonmutation, RLS/foreign/spoof rejection and private field exclusion. It verifies shared Reports/Dashboard/detail/export consistency, strict API errors, keyboard/320px/both themes/Axe, bounded rendering and targeted query capacity. Once things were stable it ran the V1/A–E regressions that apply and the check/build/security/container gates, then only the affected reruns. Persistence didn't change, so new migration, schema or restore fixtures weren't needed; the established hosted gates stay. The actual outcomes and V2-G prerequisites go in the handoff.
 
-F1–F3 are implemented on October 14, 2026 (Asia/Manila). Full regressions and affected final checks cover 942 unit/component/API tests, 583 integration tests and 53 browser scenarios. Calculation, privacy, isolation, consistent snapshots and nonmutation checks pass; check, production builds, audit and targeted capacity pass. Runtime-artifact acceptance is recorded separately in the [V2-F handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#26-v2-f--richer-career-analytics). CSV schema 4 adds explicit Career calculation provenance, source/trend/comparison summaries and timing/rate fields; financial definitions and recipes are unchanged. Local Chrome 155 uses the existing configured channel after the bundled-browser download timed out; hosted CI retains bundled Chromium. The handoff/completion report records actual acceptance, justified omissions and the exact pushed commit.
+F1–F3 were built on October 14, 2026 (Asia/Manila). Full regressions and the affected final checks covered 942 unit/component/API tests, 583 integration tests and 53 browser scenarios. The calculation, privacy, isolation, consistent-snapshot and nonmutation checks passed; check, production builds, audit and targeted capacity passed. Runtime-artifact acceptance is recorded separately in the [V2-F handoff](archive/web/V2_DEVELOPMENT_HANDOFF.md#26-v2-f--richer-career-analytics). CSV schema 4 adds explicit Career calculation provenance, source/trend/comparison summaries and timing/rate fields; financial definitions and recipes are unchanged. Locally I used Chrome 155 through the existing configured channel after the bundled-browser download timed out; hosted CI keeps the bundled Chromium. The handoff and completion report record the actual acceptance, what I left out and why, and the exact pushed commit.
 
 ## V2-G — Scheduled Opted-In Notifications
 
 ### Authority and sequence
 
-This domain implements the notification boundaries in SYSTEM_ARCHITECTURE and
-DATABASE_ARCHITECTURE using existing V1 reminders and V2 A–F sources. G1 adds
+This builds the notification boundaries from SYSTEM_ARCHITECTURE and
+DATABASE_ARCHITECTURE on top of the existing V1 reminders and the V2 A–F sources. G1 adds
 explicit consent, forced-RLS evidence and lifecycle protections. G2 adds durable
-pg-boss scheduling, current-source revalidation and authenticated provider evidence.
-G3 adds Settings/status workflows and consolidated acceptance. No V2-H is authorized.
+pg-boss scheduling, rechecking the current source, and authenticated provider evidence.
+G3 adds the Settings and status workflows and combined acceptance. V2-H wasn't started as part of this.
 
 ### Product contract
 
@@ -2275,20 +1373,20 @@ Queue metadata expires within seven days; operational logs have a recommended
 Optional delivery requires NOTIFICATIONS_ENABLED=true independently of WORKER_PAUSED.
 Real Resend delivery additionally requires NOTIFICATIONS_EXTERNAL_ENABLED=true,
 reviewed sender/domain/quota configuration and authenticated webhook setup. These
-gates remain off in this implementation's real environments. Acceptance uses mock
-providers and local Mailpit. No deployment or real external send is authorized.
+gates stay off in this implementation's real environments. Acceptance uses mock
+providers and local Mailpit. I haven't deployed it or sent any real external mail.
 
 Acceptance covers consent/defaults/timezones/quiet hours, all source eligibility,
 transaction rollback, replay/concurrency, current verified recipient, generations,
 source resolution/corrections, opt-out, durable attempts/crash uncertainty, provider
 events, forced RLS/roles, deletion, exact unchanged financial evidence, settings
 origin/scope enforcement, accessibility, migration upgrades/schema drift, regression,
-restore, container and bounded scan performance. Actual results belong in the V2
-handoff; unexecuted infrastructure acceptance is never labelled passed.
+restore, container and bounded scan performance. Actual results go in the V2
+handoff; infrastructure acceptance that hasn't run is never labelled passed.
 
 ## V2-H — Supporting Files, Imports and Portability
 
-Authority: SYSTEM_ARCHITECTURE §18 and DATABASE_ARCHITECTURE §15. H covers one owned private workspace. No V2-I, shared history, V3, provider ingestion or redesign is authorized.
+The authority here is SYSTEM_ARCHITECTURE §18 and DATABASE_ARCHITECTURE §15. H covers one owned private workspace. V2-I, shared history, V3, provider ingestion and any redesign were out of scope for it.
 
 ### H1 — Private supporting files
 
@@ -2320,11 +1418,11 @@ Preview reports counts, exact cash/spending/income and ledger positions, mapping
 
 Live file bytes require explicit deletion or separately supported byte recovery before replacement. Incoming file metadata is unavailable/deleted; JSON never recreates bytes. Pending imports are cancelled and notification consent is reset. In-flight external delivery blocks replacement. Provider delivery/attempt/event evidence must match trusted owned current, recovery or immutable retired evidence; fabricated/foreign provider history is blocked. Executed notification generations and actual provider evidence remain in protected operational command records, preventing replay after restoration or timezone changes. User-controlled bundles cannot inject those records.
 
-Recovery bodies expire after 24 hours. Download the owned recovery bundle and reapply through the same preview/confirmation workflow. Operational retirement survives expiry. Infrastructure recovery uses a separate trusted backup/deletion-register procedure; portability never restores authentication or erases tombstones.
+Recovery bodies expire after 24 hours. To recover, you download your recovery bundle and reapply it through the same preview/confirmation workflow. Operational retirement survives expiry. Infrastructure recovery uses a separate trusted backup/deletion-register procedure; portability never restores authentication or erases tombstones.
 
 ### H4 — Interfaces and acceptance
 
 Settings provides owned source selection, files/unlinked cleanup, CSV review/resumption, exports, replacement preview and recovery links. Financial action, debt, application and statement pages expose files directly; all eight sources are available centrally. Labelled native controls, progressive disclosure, bounded pages and status feedback support keyboard/mobile use. Unconfirmed requests retain exact commands; confirmed rejections allow a new reviewed operation.
 
-Actual verification, decisions and remaining gates are in `docs/reference/V2_DEVELOPMENT_HANDOFF.md`. Production setup is tracked in `docs/reference/V2_H_MANUAL_SETUP_AND_PRODUCTION_CHECKLIST.md`. Local acceptance does not imply production configuration, a real malware scan or deployment.
-Local H1–H4 acceptance completed October 15, 2026. Household capacity verification defaults to 10,000 actions at the explicit request of the user; original latency, integrity and concurrent-load assertions remain unchanged. The 50,000-action stress profile remains optional. Production file integrations remain disabled pending the documented operating gates.
+Actual verification, decisions and remaining gates are in `docs/reference/V2_DEVELOPMENT_HANDOFF.md`. Production setup is tracked in `docs/reference/V2_H_MANUAL_SETUP_AND_PRODUCTION_CHECKLIST.md`. Passing locally doesn't mean production is configured, a real malware scan ran, or anything is deployed.
+I finished local H1–H4 acceptance on October 15, 2026. Household capacity verification defaults to 10,000 actions because I explicitly asked for that; original latency, integrity and concurrent-load assertions remain unchanged. The 50,000-action stress profile remains optional. Production file integrations remain disabled pending the documented operating gates.

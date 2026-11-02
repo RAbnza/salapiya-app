@@ -14,20 +14,20 @@
 **Repository:** `RAbnza/Personal-Management-Platform`  
 **Document version:** 1.0  
 **Decision/documentation date:** October 19, 2026 (Asia/Manila)  
-**Current status (29 October 2026):** Salapiya `0.6.1+8` is **APPROVED FULL RELEASE** for a small private group of users; development **COMPLETE**. [Final release and project closure](OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure) and section 26 supersede historical gate/release-blocker language within this audience and accepted scope. Earlier evidence and unexecuted tests are preserved.
-**Inspected web baseline:** `b721b0c6ef4c102a351e30df107b8f9b86ede588` — merged M6 redesign acceptance. Local HEAD and GitHub `main` matched when checked for this document.
+**Current status (29 October 2026):** Salapiya `0.6.1+8` is **APPROVED FULL RELEASE** for a small private group of users; development **COMPLETE**. [Final release and project closure](OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure) and section 26 override the older gate and release-blocker wording for that audience and scope. I've kept the earlier evidence and the tests I never ran.
+**Inspected web baseline:** `b721b0c6ef4c102a351e30df107b8f9b86ede588`, the merged M6 redesign acceptance. Local HEAD and GitHub `main` matched when I checked them for this document.
 
 ### 1. Purpose, authority, and approval boundaries
 
-This is the approved planning blueprint for revising the existing application into Salapiya: a primarily financial personal-management application for Windows and Android, with offline operation, optional Google-connected synchronization, Shared Expenses, and a useful Life area.
+This is the plan I approved for turning the existing app into Salapiya: a personal-management app for Windows and Android that's mostly about money. It works offline, can sync through a Google connection if you want, and has Shared Expenses and a useful Life area.
 
-The revised scope was approved after the discovery workshop, and the previously considered name was replaced with **Salapiya**. The tagline is **Your money, on your terms.** The earlier name and earlier recommendations to delay advanced Money features are superseded. The repository name is not automatically changed by this product naming decision.
+I settled the new scope after the discovery workshop and replaced the old working name with **Salapiya**. The tagline is **Your money, on your terms.** The earlier name, and my earlier idea of holding back the advanced Money features, are both dropped. Renaming the product doesn't rename the repository.
 
-This document authorizes a documented direction, not immediate implementation, cloud provisioning, spending, deployment, destructive database work, or deletion of the existing application. Future engineering assignments should explicitly identify their milestone. A dependency gate is a requirement to produce evidence before proceeding; it is not evidence that the technology has already passed.
+This document sets a direction. It doesn't by itself approve building anything, provisioning cloud services, spending money, deploying, destructive database work or deleting the existing app. Each later piece of engineering work should say which milestone it belongs to. A dependency gate means "produce the evidence before going further"; it doesn't mean the technology has already passed.
 
 #### 1.1 Relationship to existing documentation
 
-Read this document together with:
+Read this together with:
 
 - [Product vision and feature blueprint](#project-vision-and-feature-blueprint).
 - [System architecture](ARCHITECTURE.md#system-architecture).
@@ -39,328 +39,327 @@ Read this document together with:
 - [Platform-transition ADR 0005](adr/0005-v3-scope-and-platform-transition.md).
 - [M6 redesign acceptance](archive/web/REDESIGN_M6_ACCEPTANCE.md).
 
-This blueprint supersedes the existing documents only for the future product name, replacement-platform direction, local/online identity, synchronization, navigation, approved launch/deferred scope, and explicitly described native adaptations. Existing financial meaning, ownership boundaries, correction evidence, and source-derived reporting remain authoritative unless a later approved decision explicitly changes them.
+This plan replaces the older documents only on these points: the product name, the move to a new platform, local and online identity, sync, navigation, what's in the launch and what's deferred, and the native adaptations I describe. Everything else stays as those documents say: what the financial records mean, who owns what, how corrections keep their evidence, and how reports come from source records. Only a later decision I record changes those.
 
-The existing web application remains governed by its current implementation contracts. This document does not make its PostgreSQL security, Better Auth, or server transaction boundaries optional before replacement.
+The web app still follows its own implementation contracts. Nothing here makes its PostgreSQL security, Better Auth or server transaction boundaries optional before it's replaced.
 
-Some older document introductions still say redesign milestones are unstarted. The newer M2–M6 records and actual merged implementation establish the current web state. Historical instructions to stop before later milestones are records of earlier assignments, not a reason to ignore the newly approved planning scope.
+Some older introductions still say the redesign milestones haven't started. The M2–M6 records and the merged code are what show the web app's real state. Old instructions to stop before a later milestone were about those earlier tasks; they aren't a reason to ignore the scope I've now approved.
 
 #### 1.2 Decision vocabulary
 
 | Label | Meaning |
 | --- | --- |
-| Approved requirement | Explicit choice or recommendation accepted in the workshop. Preserve it unless a later recorded decision changes it. |
-| Selected baseline, gated | Technology/architecture selected for planning; prove the named compatibility, correctness, and cost conditions before extensive implementation. |
-| Proposed implementation detail | A concrete engineering starting point, not an independently approved product change. Resolve through design and evidence within the approved scope. |
-| Deferred | Deliberately outside initial release; do not silently promote it into launch work. |
-| Open gate | An unresolved technical/operational condition with an identified closure criterion. Do not invent a passing result. |
+| Approved requirement | Something I chose or accepted in the workshop. It stays unless I record a later decision that changes it. |
+| Selected baseline, gated | A technology or architecture I picked for planning. It has to prove the named compatibility, correctness and cost conditions before I build much on it. |
+| Proposed implementation detail | A concrete engineering starting point, not a product change I've approved on its own. Work it out through design and evidence inside the approved scope. |
+| Deferred | Deliberately left out of the first release. Don't quietly move it into launch work. |
+| Open gate | A technical or operational question that isn't settled yet, with a clear way to close it. Don't invent a passing result. |
 
 ### 2. Product definition and intended users
 
-Salapiya helps people record and understand their money, manage debts and cards, plan financial commitments, and settle shared expenses while keeping personal information under their control. Its Life area connects personal commitments, tasks, learning, reading, and job applications.
+Salapiya helps people record and understand their money, manage debts and cards, plan what they've committed to and settle shared expenses, while keeping their personal information under their own control. Its Life area ties in personal commitments, tasks, learning, reading and job applications.
 
-The initial users are a small private group, potentially extended to a small number of friends. The initial distribution is private. This is not a public SaaS launch, a payment service, a bank-connected aggregator, or a general no-code platform.
+The first users are a small private group, maybe extended to a few friends, and the first distribution is private. It isn't a public SaaS launch, a payment service, a bank-connected aggregator or a general no-code platform.
 
 #### 2.1 Approved product priorities
 
-1. All existing implemented financial capabilities belong to the initial complete release.
-2. Expense tracking, Shared Expenses, and Debts are central use cases.
-3. Most ordinary work must function with no internet connection.
-4. The same person's Windows and Android installations must synchronize private records as well as shared records when connected.
-5. Each installation has one active local profile; no multi-profile switcher is planned.
-6. Local profile creation does not require Google or a cloud account.
-7. Google connection enables cross-device identity, synchronization, and collaboration.
-8. Life must contain useful nonfinancial workflows at launch.
-9. Core meaning and access to features remain consistent across Windows and Android; layouts and interactions adapt to each platform.
-10. Prefer maintained tools and manageable operations for a solo developer. Small trusted groups do not justify weak data isolation or inaccurate financial synchronization.
+1. Every financial feature that already exists is part of the first complete release.
+2. Expense tracking, Shared Expenses and Debts are the main use cases.
+3. Most everyday work has to work with no internet connection.
+4. When connected, the same person's Windows and Android installs sync their private records as well as shared ones.
+5. Each install has one active local profile; I'm not planning a profile switcher.
+6. Creating a local profile doesn't need Google or a cloud account.
+7. Connecting Google gives you one identity across devices, sync and collaboration.
+8. Life has to have useful non-financial workflows at launch.
+9. Features mean the same thing and are reachable on both Windows and Android; layouts and interactions adapt to each.
+10. I prefer maintained tools and operations a solo developer can handle. A small, trusted group is still no excuse for weak data isolation or inaccurate financial sync.
 
-Development may proceed in small vertical milestones and private test builds. An incomplete test build is not the completed launch release. Do not use milestone sequencing to silently remove advanced Money requirements.
+I can build in small vertical milestones and private test builds. An unfinished test build isn't the launch release, and sequencing milestones isn't a way to quietly drop advanced Money requirements.
 
 #### 2.2 Explicit exclusions
 
-The initial scope does not add bank connections, payment execution, bank/provider credentials, full card numbers/CVV, automatic provider interest or settlement calculations, investments, FX/multicurrency accounting, standalone lending, in-transit transfers, refinancing, general shared workspaces, receipt OCR, AI advice, external calendar synchronization, or a public store/web launch. Existing implemented multiple-payer Shared Expenses must not be confused with deferred multiple-source funding for arbitrary private transactions.
+The first release doesn't add bank connections, making payments, bank or provider credentials, full card numbers or CVVs, automatic provider interest or settlement calculations, investments, FX or multi-currency accounting, standalone lending, in-transit transfers, refinancing, general shared workspaces, receipt OCR, AI advice, external calendar sync, or a public store or web launch. The existing multiple-payer Shared Expenses feature is a different thing from the deferred idea of funding an arbitrary private transaction from several sources; don't mix them up.
 
 ### 3. Verified starting point and reuse strategy
 
-The inspected web application is a Next.js/React/TypeScript modular monolith using PostgreSQL, Drizzle, Better Auth, scoped server transactions, row-level security, and background workers. Private startup depends on an authenticated server identity. Domain functions, services, repositories, and presentation are separated, but substantial behavior also resides in PostgreSQL constraints/functions/triggers.
+The web app I inspected is a Next.js/React/TypeScript modular monolith on PostgreSQL, Drizzle, Better Auth, scoped server transactions, row-level security and background workers. Private startup depends on an authenticated server identity. Domain functions, services, repositories and presentation are separate layers, but a lot of behaviour also lives in PostgreSQL constraints, functions and triggers.
 
-V1 core finance/Career/Calendar, V2 financial maturity and sharing, V3 trackers, and the M1–M6 visual redesign are implemented. The V3 handoff records 125 declarative tables and 206 migrations through `0205`. The M6 record accounts for 71 page files, including the deliberately excluded design-proof route, and records acceptance with device/operational limitations. These are historical web facts, not native-platform capacity or correctness guarantees.
+V1 core finance, Career and Calendar, V2 financial maturity and sharing, V3 trackers, and the M1–M6 visual redesign are all built. The V3 handoff records 125 declarative tables and 206 migrations through `0205`. The M6 record counts 71 page files, including the design-proof route I deliberately left out, and records acceptance with device and operational limits. These are facts about the old web app, not promises about the native app's capacity or correctness.
 
-Selected code inspected includes `src/shared/money.ts`, `src/platform/db/scoped-transaction.ts`, `src/app/_lib/private-app-bootstrap.ts`, `src/modules/sharing/services/groups.ts`, `src/modules/sharing/services/operations.ts`, `src/modules/sharing/services/invitations.ts`, tracker presets, and the portability format/services. The existing sharing service enforces creator-only corrections and expected revisions. Settlements distinguish reported and confirmed states. Portable bundles explicitly exclude attachment bytes.
+The code I looked at includes `src/shared/money.ts`, `src/platform/db/scoped-transaction.ts`, `src/app/_lib/private-app-bootstrap.ts`, `src/modules/sharing/services/groups.ts`, `src/modules/sharing/services/operations.ts`, `src/modules/sharing/services/invitations.ts`, the tracker presets, and the portability format and services. The sharing service only lets the creator correct a bill and checks expected revisions. Settlements tell reported and confirmed apart. Portable bundles leave attachment bytes out on purpose.
 
-Reuse the business definitions, worked examples, test fixtures, financial acceptance scenarios, source relationships, and design principles. A Dart implementation will require porting rather than direct execution of TypeScript rules. PostgreSQL constraints cannot simply be copied into SQLite; existing database-specific guarantees need explicit replacement and fresh tests.
+What carries over: the business definitions, worked examples, test fixtures, financial acceptance scenarios, source relationships and design principles. The TypeScript rules have to be ported to Dart, not run as they are. PostgreSQL constraints can't just be copied into SQLite, so every guarantee the old database gave needs an explicit replacement and new tests.
 
-All current user records are disposable test data (decision D17). No legacy production-data conversion or backward-compatible web export importer is a launch requirement. Preserve the existing application and migration history as references; do not automatically purge test databases or rewrite old migration files.
+All current user records are throwaway test data (decision D17). Converting old production data, or importing old web exports, isn't needed for launch. I keep the existing app and its migration history as references; don't purge the test databases or rewrite old migration files automatically.
 
 ### 4. Launch feature inventory and disposition
 
-Every financial row below is a launch requirement. Later implementation must maintain a traceability checklist against the source documents and current code, including rejection rules and advanced cases, rather than treating screen labels as complete specifications.
+Every financial row below is a launch requirement. Later work keeps a traceability checklist against the source documents and the current code, including the rejection rules and the advanced cases, instead of treating a screen's labels as the whole spec.
 
 #### 4.1 Money, Debts, planning, and supporting workflows
 
 | ID | Existing purpose/behavior | Approved disposition and required continuity |
 | --- | --- | --- |
-| M01 | Cash, wallet, checking, savings accounts; metadata, opening balances/cutoffs, archive/history | Retain; intuitive local setup, exact balances, owned receiving accounts, no editable independent balance. |
-| M02 | Income, expenses, category splits, completed transfers, fees, categories and activity/history | Retain; quick ordinary entry, optional advanced details, exact split totals, transfers are not income/spending. |
-| M03 | Corrections, refunds, reversals, negative-balance acknowledgements, reconciliation and adjustments | Retain; previews and evidence-preserving changes; acknowledge actual uncertainty; no silent history rewriting or balance resets. |
-| M04 | Existing-debt import/setup and borrowing/net proceeds | Retain; distinguish opening liability, funds received, withheld fees, financed spending and income; unknown breakdowns remain explicit. |
-| M05 | Debt payments, classifications, due allocations, schedule revisions and allocation mapping | Retain; exact cash/principal/interest/fee distinctions, preserved revisions and explicit dependent-record resolution. |
-| M06 | Provider-confirmed early debt settlement, residual closure and adjustments | Retain; no guessed payoff calculator or hidden zeroing. Debt detail and payment evidence remain inspectable. |
-| M07 | Credit-card metadata, purchases, payments, fees, interest, refunds, overpayment and utilization | Retain; available credit is not liquid money; purchases recognize spending and card payment does not count it again. |
-| M08 | Statements, statement revisions/reconciliation, payment allocations and installment plans/applications | Retain all implemented workflows; no assumed minimum-payment satisfaction, inferred statement matching or provider interest rules. |
-| M09 | Recurring income/bills/subscriptions, rule versions, occurrences, overrides/skips and explicit links to actuals | Retain; planning never posts money by itself; preserve logical dates, exact links and partial completion. |
-| M10 | Category budgets, explicit periods, net/gross bases, comparisons and history | Retain; same-category overlap rules, zero-limit behavior, full-period labels and actual-spending definitions. |
-| M11 | Savings goals, reservations, release/reallocation, progress and supported-funding ranges | Retain; reservations are not extra assets, transfers, or a guarantee that cash cannot be spent. |
-| M12 | Read-only forecasts, source coverage, recorded future cash and hypothetical scenarios | Retain; distinguish actual/expected/hypothetical values and prevent recurring/card double counting. |
-| M13 | Financial Overview, reports, charts, exact drilldowns, coverage and CSV export | Retain; local derivation from complete relevant data, explicit sync freshness and evidence links. |
-| M14 | Financial supporting files and links to source records | Retain; private local files, controlled cloud upload/download, on-demand attachment availability and recovery coverage. |
-| M15 | Reviewed CSV cash-history import, duplicate warnings, cutoff-safe posting and bounded processing | Retain supported formats; preserve existing limits/interpretation unless reviewed. Do not advertise generic bank/card/debt imports. |
-| M16 | Financial reminders and Calendar projections | Retain source meaning; adapt delivery to local native notifications, with consent, stale-source cancellation and no balance changes. |
-| M17 | Export, backup, restore, account/profile lifecycle, settings and help | Redesign for local/connected modes; self-contained recoverability, separate destructive actions and useful user guidance. |
+| M01 | Cash, wallet, checking, savings accounts; metadata, opening balances/cutoffs, archive/history | Keep. Easy local setup, exact balances, owned receiving accounts, and no balance you can edit on its own. |
+| M02 | Income, expenses, category splits, completed transfers, fees, categories and activity/history | Keep. Quick everyday entry with optional extra detail; split totals add up exactly; a transfer isn't income or spending. |
+| M03 | Corrections, refunds, reversals, negative-balance acknowledgements, reconciliation and adjustments | Keep. Show a preview and keep the evidence of every change; ask for acknowledgement where there's real uncertainty; never rewrite history or reset a balance quietly. |
+| M04 | Existing-debt import/setup and borrowing/net proceeds | Keep. Tell apart the opening liability, money received, fees withheld, financed spending and income; a breakdown you don't know stays marked as unknown. |
+| M05 | Debt payments, classifications, due allocations, schedule revisions and allocation mapping | Keep. Exact split between cash, principal, interest and fees; earlier revisions are kept, and records that depend on a change are resolved explicitly. |
+| M06 | Provider-confirmed early debt settlement, residual closure and adjustments | Keep. No guessed payoff calculator and nothing zeroed out behind the scenes. Debt details and payment evidence stay viewable. |
+| M07 | Credit-card metadata, purchases, payments, fees, interest, refunds, overpayment and utilization | Keep. Available credit isn't money you have; a purchase counts as spending and paying the card doesn't count it again. |
+| M08 | Statements, statement revisions/reconciliation, payment allocations and installment plans/applications | Keep every built workflow. Don't assume the minimum payment was met, don't guess which statement a payment matches, and don't apply provider interest rules. |
+| M09 | Recurring income/bills/subscriptions, rule versions, occurrences, overrides/skips and explicit links to actuals | Keep. Planning never posts money by itself; keep logical dates, exact links and partial completion. |
+| M10 | Category budgets, explicit periods, net/gross bases, comparisons and history | Keep. Same-category overlap rules, zero-limit behaviour, labels for the full period and the definition of actual spending all stay. |
+| M11 | Savings goals, reservations, release/reallocation, progress and supported-funding ranges | Keep. A reservation isn't an extra asset or a transfer, and it doesn't stop the cash from being spent. |
+| M12 | Read-only forecasts, source coverage, recorded future cash and hypothetical scenarios | Keep. Actual, expected and hypothetical values stay apart, and recurring items and cards are never counted twice. |
+| M13 | Financial Overview, reports, charts, exact drilldowns, coverage and CSV export | Keep. Worked out locally from complete data, with how fresh the sync is stated plainly and links back to the evidence. |
+| M14 | Financial supporting files and links to source records | Keep. Private local files, controlled cloud upload and download, attachments fetched when needed, and covered by recovery. |
+| M15 | Reviewed CSV cash-history import, duplicate warnings, cutoff-safe posting and bounded processing | Keep the supported formats, and keep the current limits and interpretation unless reviewed. Don't advertise generic bank, card or debt imports. |
+| M16 | Financial reminders and Calendar projections | Keep what they mean; deliver them as local native notifications, with consent, cancelled when the source goes stale, and never changing a balance. |
+| M17 | Export, backup, restore, account/profile lifecycle, settings and help | Redesign for local and connected modes: recovery that stands on its own, destructive actions kept apart, and guidance that actually helps. |
 
-Ordinary reading, entry, reporting, and local-only management must operate offline. Connected operations whose validity depends on another device's current state follow Section 8; a preview/draft may be offline even when finalization requires connectivity.
+Reading, entering, reporting and managing local-only data all have to work offline. Connected actions that depend on another device's current state follow Section 8. A preview or draft can still be made offline even when saving it needs a connection.
 
 #### 4.2 Shared Expenses
 
 > **P6 private-release exception, approved on 28 October 2026:**
-> M14 may launch with encrypted **device-local attachment bytes only** for this
-> private release. Metadata can synchronize, but original bytes require independent
-> protected backup and exact original reselection on another device. Standard
-> portable archives exclude original bytes; local files remain unscanned.
-> Controlled cloud-byte upload/download and production scanning remain future
-> work, not certified availability. This exception does not waive lifecycle,
-> recovery, signing, native accessibility or other release gates. See
+> For this private release, M14 can launch with encrypted **attachment bytes
+> kept on the device only**. Their details can sync, but the original files need
+> their own protected backup, and on another device the exact original has to
+> be chosen again. Standard portable archives leave the original bytes out, and
+> local files aren't scanned. Controlled cloud upload and download of the files,
+> and production scanning, are still future work, not something I've certified.
+> This exception doesn't waive the lifecycle, recovery, signing, native
+> accessibility or other release gates. See
 > [P6 acceptance](archive/salapiya/P6_PRIVATE_RELEASE_HANDOFF.md).
 
 | ID | Existing capability | Launch treatment |
 | --- | --- | --- |
-| S01 | Groups, owner/member roles, manual/registered/deleted participants, invitations and membership intervals | Retain; replace web-account linkage with Google-connected identity and deliberate claims. |
-| S02 | Single/multiple payers, selected participants, equal/exact custom shares | Retain; deterministic centavo remainder allocation and clear contribution/share previews. |
-| S03 | Creator-only finalized bill revisions/corrections and historical views | Retain; conflict review and reasons, no owner power to silently rewrite another person's bill. |
-| S04 | Group refunds and changed private source evidence | Retain; received-money allocation and consumed-share credits remain distinct and exact. |
-| S05 | Full/custom/selected settlements, partial individual bills, multiple allocations and advances | Retain the complete implemented financial scope; put advanced allocation controls behind disclosure rather than defer them. |
-| S06 | Pending, confirmed, disputed, cancelled and reversed settlement history | Retain; recipient confirmation and manual-confirmation limitations remain explicit. |
-| S07 | Reciprocal netting, zero-sum balances, pairwise explanations and group suggestions | Retain; suggestions do not post money, promise a minimum transaction count, or authorize redirection of obligations. |
-| S08 | Integrated Add Expense, existing-purchase conversion, cash/card/unpaid private adoption | Retain; explicit own-private authorization and no duplicate spending, cash movement, or card liability. |
-| S09 | Private settlement/refund clearing, reclassification, retained-evidence review and coverage | Retain; synchronization must not overwrite accepted private facts automatically. |
-| S10 | Group history/export, former-member entitlements, ownership/lifecycle handling and attention | Retain required history/privacy semantics; redesign online identity and native notifications as described below. |
+| S01 | Groups, owner/member roles, manual/registered/deleted participants, invitations and membership intervals | Keep. Replace the web-account link with a Google-connected identity and deliberate claims. |
+| S02 | Single/multiple payers, selected participants, equal/exact custom shares | Keep. The extra centavo goes to the same person every time, and the preview shows clearly who paid and whose part is what. |
+| S03 | Creator-only finalized bill revisions/corrections and historical views | Keep. Conflicts are reviewed with a reason; the owner can't quietly rewrite someone else's bill. |
+| S04 | Group refunds and changed private source evidence | Keep. Money received and credit for a consumed share stay separate and exact. |
+| S05 | Full/custom/selected settlements, partial individual bills, multiple allocations and advances | Keep the whole financial scope that's built; put the advanced allocation controls behind a disclosure instead of deferring them. |
+| S06 | Pending, confirmed, disputed, cancelled and reversed settlement history | Keep. The recipient's confirmation, and the limits of a manual confirmation, stay stated plainly. |
+| S07 | Reciprocal netting, zero-sum balances, pairwise explanations and group suggestions | Keep. Suggestions don't post money, don't promise the fewest payments and don't let anyone redirect who owes whom. |
+| S08 | Integrated Add Expense, existing-purchase conversion, cash/card/unpaid private adoption | Keep. You authorize the effect on your own private records explicitly, with no duplicate spending, cash movement or card liability. |
+| S09 | Private settlement/refund clearing, reclassification, retained-evidence review and coverage | Keep. Sync never overwrites private facts you've already accepted. |
+| S10 | Group history/export, former-member entitlements, ownership/lifecycle handling and attention | Keep the history and privacy rules; redesign online identity and native notifications as described below. |
 
-Primary domain references: [Shared Expenses implementation](archive/web/SHARED_EXPENSES_IMPLEMENTATION.md) and [Shared Expenses requirements](DOMAIN_RULES.md#v2-shared-expenses-and-settlements). The implementation record resolves stale earlier statements that multiple payers or advanced settlements are still future work.
+Main domain references: [Shared Expenses implementation](archive/web/SHARED_EXPENSES_IMPLEMENTATION.md) and [Shared Expenses requirements](DOMAIN_RULES.md#v2-shared-expenses-and-settlements). The implementation record settles older notes that still call multiple payers or advanced settlements future work: they're built.
 
 #### 4.3 Life and shared application foundations
 
 | ID | Capability | Disposition |
 | --- | --- | --- |
-| L01 | Personal appointments/events, mixed Agenda/Calendar and reminders | Launch; real nonfinancial events as well as generated financial commitments. |
-| L02 | Personal Tasks preset | Launch; entries, statuses, deadlines, completion/reopening, archive/history and reminders. |
-| L03 | Learning and Books presets | Launch; useful typed records and basic current progress/list filtering. |
-| L04 | Career applications, stages, interviews/assessments, follow-ups, notes and history | Launch essentials, including relevant supporting documents and Calendar links. |
-| L05 | Advanced Career analytics | Deferred; essentials do not require the full historical analytics surface. |
-| L06 | Custom tracker template editor, arbitrary supported fields and reviewed template migrations | Deferred UI/workflows; keep stable preset identities and version-readable history so later evolution is safe. |
-| L07 | Advanced tracker reports/customization | Deferred; simple preset progress can launch without reproducing all V3 analysis. |
-| F01 | Theme, navigation preferences, onboarding, search, help and accessibility | Launch; adapt to native input and local data. Hiding a module does not delete data or silently disable reminders. |
-| F02 | Web registration/password verification/reset and web sessions | Replace with optional Google connection plus native device/session management; no separate Salapiya password required initially. |
-| F03 | Scheduled external email reminders and current web worker topology | Replace initial reminder channel with device-local delivery. External email/push delivery is not a launch dependency; financial source/reminder behavior remains required. |
-| F04 | Web production deployment, hosted web readiness and disposable web-data conversion | Not part of this migration. Native/cloud-service operational checks remain required before real use. |
+| L01 | Personal appointments/events, mixed Agenda/Calendar and reminders | Launch. Real non-financial events alongside the financial commitments the app generates. |
+| L02 | Personal Tasks preset | Launch. Entries, statuses, deadlines, completing and reopening, archive and history, and reminders. |
+| L03 | Learning and Books presets | Launch. Useful typed records, with basic current progress and list filters. |
+| L04 | Career applications, stages, interviews/assessments, follow-ups, notes and history | Launch the essentials, including the supporting documents that matter and Calendar links. |
+| L05 | Advanced Career analytics | Deferred. The essentials don't need the full historical analytics. |
+| L06 | Custom tracker template editor, arbitrary supported fields and reviewed template migrations | The UI and workflows are deferred. Keep the preset identities stable and the history readable by version, so changing them later is safe. |
+| L07 | Advanced tracker reports/customization | Deferred. Simple preset progress can launch without rebuilding all of V3's analysis. |
+| F01 | Theme, navigation preferences, onboarding, search, help and accessibility | Launch, adapted to native input and local data. Hiding a module doesn't delete its data or quietly turn off its reminders. |
+| F02 | Web registration/password verification/reset and web sessions | Replaced by an optional Google connection plus native device and session management; no separate Salapiya password at first. |
+| F03 | Scheduled external email reminders and current web worker topology | The first reminder channel is on the device. External email or push delivery isn't needed for launch; the financial sources and reminder behaviour still are. |
+| F04 | Web production deployment, hosted web readiness and disposable web-data conversion | Not part of this migration. The native app and cloud service still need their operational checks before real use. |
 
 #### 4.4 Financial semantic details that must survive simplification
 
-- Launch currency remains PHP; preserving currency fields does not implement exchange rates or mixed-currency totals.
-- Financial amounts use exact integer minor units and lossless boundaries. Avoid floating-point monetary calculations or lossy JSON numbers. Aggregate ranges and SQLite/driver conversion must be proved, not assumed.
-- An opening cutoff is through the end of its accounting date; subsequent activity and historical import must not count the baseline twice.
-- Budgets compare actual recognized category spending; recurring expectations do not consume a budget by being scheduled.
-- Savings reservations cannot include credit limits, future-dated cash, expected salary, debt balances or forecast values. Underfunding remains visible without choosing an arbitrary winning goal.
-- Forecasts remain read-only. Their current supported automatic sources are not expanded to every debt installment merely because Debts is prominent; explicit assumptions and source coverage remain necessary.
-- Civil dates remain dates. Timed events retain UTC instants and IANA timezone context. DST ambiguity, recurrence month-end rules, exclusive period ends and backdated corrections need explicit tests.
-- Ordinary recurring records link to eligible actual income/purchases; they do not automatically infer card payments, debt payments, or settlement allocations.
-- Correction dependencies, unknown debt classifications, provider-confirmed card facts and incomplete coverage must remain honest. Simpler screens do not authorize invented values.
+- The launch currency stays PHP. Keeping currency fields doesn't mean exchange rates or mixed-currency totals are built.
+- Amounts are exact integers in minor units, and nothing loses precision at a boundary. No floating-point money maths and no lossy JSON numbers. Aggregate ranges and SQLite/driver conversion have to be proven, not assumed.
+- An opening cutoff runs through the end of its accounting date, so later activity and historical imports must never count the starting balance twice.
+- Budgets compare against actual recognized category spending; a recurring expectation doesn't use up a budget just by being scheduled.
+- Savings reservations can't include credit limits, cash dated in the future, an expected salary, debt balances or forecast values. If goals are underfunded, that stays visible; the app doesn't pick one goal to win.
+- Forecasts stay read-only. Their automatic sources don't grow to include every debt installment just because Debts is now prominent; the assumptions and source coverage still have to be explicit.
+- Civil dates stay dates. Timed events keep their UTC instant and IANA timezone. DST ambiguity, month-end recurrence rules, exclusive period ends and backdated corrections all need explicit tests.
+- Ordinary recurring records link to eligible actual income or purchases. They don't infer card payments, debt payments or settlement allocations on their own.
+- Correction dependencies, unknown debt classifications, card facts confirmed by the provider and incomplete coverage all stay honest. A simpler screen is never a reason to invent a value.
 
 ### 5. Navigation and platform experience
 
-The approved primary destinations are **Overview, Money, Debts, Shared Expenses, and Life**. Settings, backup/sync status and help are accessible without adding competing primary destinations.
+The main destinations are **Overview, Money, Debts, Shared Expenses, and Life**. Settings, backup and sync status, and help are reachable without becoming competing destinations.
 
 | Destination | Content and priority |
 | --- | --- |
-| Overview | Upcoming debt/card commitments, recent money activity, group confirmations/review needs, tasks/events and data freshness. Exact financial summaries link to their sources. |
-| Money | Accounts, transactions, cards/statements/installments, recurring obligations, budgets, savings, forecasts and reports. |
-| Debts | Prominent independent navigation into the existing specialized finance domain: borrowing, imported debts, balances, schedules, payments and settlement. No second debt ledger. |
-| Shared Expenses | Groups, people, bills, payments, explanations and private-effect review. Group and private scope are visually distinct. |
-| Life | Calendar/Agenda, Personal Tasks, Career essentials, Learning and Books. This label is navigation, not a generic replacement data model. |
+| Overview | Upcoming debt and card commitments, recent money activity, group confirmations and things to review, tasks and events, and how fresh the data is. Exact financial summaries link to their sources. |
+| Money | Accounts, transactions, cards, statements and installments, recurring obligations, budgets, savings, forecasts and reports. |
+| Debts | Its own prominent place in the navigation, leading into the existing finance domain: borrowing, imported debts, balances, schedules, payments and settlement. There's no second debt ledger. |
+| Shared Expenses | Groups, people, bills, payments, explanations and review of private effects. Group scope and private scope look visibly different. |
+| Life | Calendar and Agenda, Personal Tasks, Career essentials, Learning and Books. The name is for navigation; it isn't a generic data model that replaces the others. |
 
 #### 5.1 Windows
 
-Use resizable layouts, keyboard shortcuts, predictable Tab order, visible focus, searchable lists, aligned numeric tables, list/detail views where useful, native file selection, and explicit close behavior for unsaved work. Dense workflows such as statements, allocation review and reports can use more screen space. Do not require mouse-only hover interactions. A navigation rail/sidebar or suitable dock can be selected through design proof; the web dock geometry is not binding on the native product.
+Resizable layouts, keyboard shortcuts, a predictable Tab order, a visible focus ring, searchable lists, aligned number tables, list and detail views where they help, native file selection, and clear behaviour when closing unsaved work. Dense work like statements, allocation review and reports can use more of the screen. Nothing should need mouse-only hover. Whether it's a navigation rail, a sidebar or a dock is a design choice to prove out; the web app's dock layout doesn't bind the native app.
 
 #### 5.2 Android
 
-Use compact primary navigation, readable touch targets, system Back/predictive-back behavior where supported, safe-area and keyboard-inset handling, accessible sheets/full-screen forms, share/file pickers, and quick expense capture. Complex debt/card/settlement functions remain available through focused steps, not removed because a phone screen is smaller.
+Compact main navigation, readable touch targets, system Back and predictive back where supported, safe areas and keyboard insets handled, accessible sheets and full-screen forms, share and file pickers, and quick expense capture. Complex debt, card and settlement features stay available through focused steps; a smaller screen isn't a reason to remove them.
 
 #### 5.3 Shared experience requirements
 
-- Match business capabilities and record meaning, not pixel-identical screens.
-- Preserve drafts safely through navigation, backgrounding and process termination where practicable; a draft is not a posted action.
-- Use task-focused financial forms: essential fields first, advanced funding/splits/allocations on demand.
-- Show truthful saved/synced/confirmed states without technical queue terminology in ordinary flows.
-- Reports disclose filters, dates, coverage, pending local effects and last synchronized state when relevant.
-- Offer light/dark/system theme, text scaling, screen-reader labels, reduced motion and non-color status cues.
-- Never label incomplete downloaded data as an empty account, zero balance, or complete report.
-
+- Match what each feature does and what records mean, not pixel-identical screens.
+- Keep drafts safe through navigation, backgrounding and the process being killed, where that's practical. A draft isn't a posted action.
+- Financial forms are focused on the task: the essential fields first, with advanced funding, splits and allocations when you ask for them.
+- Show honest saved, synced and confirmed states, without technical queue words in everyday flows.
+- Reports say which filters, dates and coverage they use, any local changes still pending, and when they last synced, where that matters.
+- Light, dark and system theme, text scaling, screen-reader labels, reduced motion, and status cues that don't rely on color.
+- Never show data that's still downloading as an empty account, a zero balance or a complete report.
 ### 6. Profiles, Google identity, and onboarding
 
 #### 6.1 Identity model
 
-Keep these concepts separate: local profile, remote account, device installation, financial account, group, group participant, and membership. A Google identity is mapped by the authenticated provider/Supabase identity, not by trusting a user-entered email or matching display names.
+These are separate things and stay separate: the local profile, the remote account, the device install, a financial account, a group, a group participant, and a membership. A Google identity is matched through the authenticated provider and Supabase identity, never by trusting an email someone typed or by matching display names.
 
-One remote Salapiya account owns one private profile. The profile can have multiple registered installations. One installation has one active profile and no routine profile switcher. Separate OS user contexts may have separate installations/data directories; an app profile is not a replacement for OS account isolation.
+One remote Salapiya account owns one private profile, and that profile can have several registered installs. One install has one active profile and no everyday profile switcher. Different OS users can have separate installs and data folders; an app profile doesn't replace the isolation the OS gives between accounts.
 
-A purely local profile uses a stable local identifier and needs no network request or anonymous Supabase session. When connected, its ownership relationship is established through a trusted, explicit enrollment transaction. Identifiers can be preserved where valid, but the server must validate the graph and ownership; possession of an arbitrary profile UUID proves nothing.
+A purely local profile has a stable local id and needs no network request and no anonymous Supabase session. When it connects, its ownership is set up through a trusted, explicit enrollment transaction. Ids can be kept where they're valid, but the server checks the whole graph and who owns it; having some profile's UUID proves nothing.
 
 #### 6.2 First-run choices
 
-1. **Create a local profile:** choose a display name and initial preferences, create the local database, and start without network access. Module/account setup is progressive.
-2. **Continue with Google:** authenticate online. Retrieve the existing profile if present; otherwise create a connected profile. Do not force a disposable local profile first.
-3. **Restore from backup:** validate a backup and preview its identity, coverage, dates and consequences before activating it. A backup does not itself confer current group membership.
+1. **Create a local profile:** pick a display name and starting preferences, the local database is created, and you start without the network. Modules and accounts are set up as you go.
+2. **Continue with Google:** sign in online. If you already have a profile it's retrieved; otherwise a connected profile is created. Nobody is forced to make a throwaway local profile first.
+3. **Restore from backup:** check a backup and preview whose it is, what it covers, its dates and what restoring will do, before it becomes active. A backup doesn't give you back current group membership by itself.
 
-Google is the selected initial online sign-in method. Additional providers, passkeys and a separate Salapiya password flow are deferred. Local app locking is a separate device security feature.
+Google is the first online sign-in method I picked. Other providers, passkeys and a separate Salapiya password are deferred. Locking the app on the device is a separate security feature.
 
 #### 6.3 Connect an existing local profile
 
-The user selects **Connect Google account** and is shown the account and the fact that enabling sync uploads private records to Salapiya's services. Successful Google authentication establishes identity, not completed data transfer.
+You choose **Connect Google account** and the app shows the account, and says plainly that turning on sync uploads your private records to Salapiya's services. A successful Google sign-in only establishes who you are; it doesn't mean the data has moved.
 
-Use a resumable, idempotent enrollment/import operation. Validate source identities, references, money totals, versions, ownership and quotas; stage incomplete data so other devices cannot see a partially valid financial graph. Keep an enrollment receipt/checkpoint and recover from interruption without another opening balance or duplicated actions. Either freeze affected writes briefly during final publication or catch up a durable local command tail; select and prove the mechanism in Gate G2.
+Enrollment and import run as one operation that can resume and is safe to repeat. It checks source identities, references, money totals, versions, ownership and quotas, and stages incomplete data so other devices never see a half-valid financial graph. It keeps an enrollment receipt or checkpoint, so an interruption doesn't produce a second opening balance or duplicate actions. Either the affected writes freeze briefly while the final data is published, or a durable tail of local commands catches up afterwards; Gate G2 is where I pick one and prove it.
 
-If the account already owns a cloud profile and the device holds a different populated local profile, do not merge or overwrite silently. Initial behavior is to preserve/export the local profile and explicitly switch to the existing cloud profile after confirmation. Full two-profile financial merge is deferred. Cancel must leave local records intact. Simultaneous enrollment attempts must resolve the one-profile-per-account constraint safely.
+If the account already owns a cloud profile and this device has a different local profile with data in it, nothing merges or overwrites quietly. At first the app keeps or exports the local profile and, once you confirm, switches to the existing cloud profile. A full merge of two profiles' finances is deferred. Cancel leaves local records as they were. Two enrollments at the same time have to settle the one-profile-per-account rule safely.
 
 #### 6.4 Retrieve a profile on another device
 
-Authenticate using the same Google account, select the existing profile implicitly through that account, download a consistent usable dataset, and indicate initial-sync progress. No manual matching by name/email and no need for both devices to be online together. Android must upload a new record before Windows can receive it.
+Sign in with the same Google account, which picks the existing profile for you, download a consistent dataset you can use, and see how far the first sync has got. There's no matching by name or email, and the two devices don't need to be online at the same time. Android has to upload a new record before Windows can receive it.
 
-Enable complete financial views only when their required snapshot is available. Attachments may remain explicitly online-only until downloaded. Once initialized, local access remains available offline; expired online tokens pause synchronization rather than destroying or hiding private local records. Reauthentication is required before new remote access resumes.
+A full financial view only turns on once the snapshot it needs is there. Attachments can stay online-only, said plainly, until they're downloaded. Once set up, local access keeps working offline. An expired online token pauses sync; it never destroys or hides your private local records. You sign in again before remote access resumes.
 
 #### 6.5 Google configuration
 
-Use supported Supabase/Google libraries and the platform-supported browser/native flow. Configure a Google Cloud project, OAuth clients, consent/audience settings, Android application/signing configuration, Supabase callback URLs and allowlisted return-to-app URLs. Use the system browser/appropriate native sign-in and PKCE where applicable; do not collect Google passwords or embed OAuth client secrets in distributed binaries. Handle cancellation, wrong-account choice and interrupted callbacks.
+Use the supported Supabase and Google libraries and the browser or native flow each platform supports. That means setting up a Google Cloud project, OAuth clients, the consent and audience settings, the Android app and signing configuration, Supabase callback URLs and the allow-listed return-to-app URLs. Use the system browser or the right native sign-in, with PKCE where it applies; never collect Google passwords or ship OAuth client secrets inside the app. Handle cancelling, choosing the wrong account and interrupted callbacks.
 
-Request only basic identity scopes. Gmail, Drive and Calendar access are unnecessary. Google identifies the user; it does not store the Salapiya dataset or perform synchronization. Branding/audience verification requirements are checked during setup; private distribution does not exempt the application from OAuth policies. Basic identity support and platform setup are documented by [Supabase Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google) and [Google OAuth app states](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview).
+Ask only for the basic identity scopes; Gmail, Drive and Calendar access aren't needed. Google identifies the user; it doesn't hold the Salapiya data or do the syncing. Branding and audience verification get checked during setup, and private distribution doesn't exempt the app from OAuth policies. [Supabase Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google) and [Google OAuth app states](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview) document basic identity support and platform setup.
 
 #### 6.6 Sign-out, disconnect, device loss and account changes
 
-Define separate actions for pausing sync, locking the app, signing out/removing a device, deleting local data and deleting the cloud account. Before removing local access, disclose unsynchronized commands and offer backup; no routine sign-out silently discards them. Private app lock can reopen an existing local profile without contacting Google.
+These are separate actions: pausing sync, locking the app, signing out or removing a device, deleting local data, and deleting the cloud account. Before taking away local access, the app says what hasn't synced and offers a backup; an ordinary sign-out never quietly throws that work away. The private app lock can reopen an existing local profile without talking to Google.
 
-Google recovery restores access to the identity; downloading from Salapiya restores only successfully synchronized data. Unsynced data requires a surviving device or backup. Revoking a device blocks future authorized cloud access but cannot erase data from a disconnected or copied device. Do not promise remote wipe.
+Recovering a Google account gives you back the identity; downloading from Salapiya gives back only what synced successfully. Anything unsynced needs a surviving device or a backup. Revoking a device blocks its future cloud access, but it can't erase data from a device that's offline or a copy someone made. Don't promise a remote wipe.
 
-Changing the connected Google account or recovering into a different identity is not a simple display-name edit. Defer automatic reassignment; require an explicit reviewed recovery/transfer design. Retain a documented backup route and explain this limitation before real use.
+Changing the connected Google account, or recovering into a different identity, isn't like editing a display name. Automatic reassignment is deferred; it needs an explicit recovery or transfer design that I've reviewed. Until then there's a documented backup route, and the app explains the limit before anyone relies on it.
 
 ### 9. Shared Expenses identity, permissions and lifecycle
 
 #### 9.1 Group participation
 
-An online-connected identity is required to create/join synchronized groups. Local-only users may keep private records but do not receive shared membership through a display name. A user can be a member of multiple groups. Their devices act as the same member; they are not additional people or payers.
+Creating or joining a synced group needs an online-connected identity. Local-only users can keep private records, but they don't get shared membership through a display name. One person can be in several groups. Their devices all act as the same member, not as extra people or payers.
 
-Group owners administer membership, not infrastructure. The service remains available when the owner's phone/computer is off. Losing a device does not transfer ownership; recover the account or use an explicit online ownership transfer.
+Group owners manage membership, not infrastructure. The service keeps working when the owner's phone or computer is off. Losing a device doesn't hand ownership to anyone; you recover the account or transfer ownership deliberately, online.
 
 #### 9.2 Permission baseline
 
 | Action | Authority |
 | --- | --- |
-| Read current group records | Active members, subject to defined history rules |
+| Read current group records | Active members, within the history rules |
 | Create bill with one/multiple payers | Active members |
-| Correct own bill | Creator, current revision, reason and applicable dependency checks |
-| Correct someone else's bill | Not silently permitted; request correction/dispute; exceptional administrative handling requires a separately designed attributed workflow |
-| Report own settlement | Active payer with valid recipient/source references |
-| Confirm/dispute receipt | Registered recipient; never inferred from successful sync |
-| Manual recipient confirmation | Owner with explicit manual/unverified limitation; retain historical evidence after later identity claim |
-| Invite/remove members, manage group, transfer ownership | Owner, online, current permission and reviewed action |
-| Mutate another person's private ledger | Never granted by group role |
-| Delete published financial facts | Use allowed versioned corrections/reversals; lifecycle removal is separately reviewed |
+| Correct own bill | The creator, on the current revision, with a reason and the dependency checks that apply |
+| Correct someone else's bill | Never quietly allowed. Ask for a correction or dispute it; any exceptional admin handling needs its own attributed workflow, designed separately |
+| Report own settlement | An active payer, with valid recipient and source references |
+| Confirm/dispute receipt | The registered recipient; never assumed because a sync succeeded |
+| Manual recipient confirmation | The owner, clearly marked as manual and unverified; the historical evidence stays after the person later claims their identity |
+| Invite/remove members, manage group, transfer ownership | The owner, online, with current permission and a reviewed action |
+| Mutate another person's private ledger | No group role ever allows it |
+| Delete published financial facts | Use the allowed versioned corrections and reversals; removing something through the lifecycle is reviewed separately |
 
-Offline bill submission is automatically validated by the service; there is no new owner approval queue for every ordinary bill.
+The service checks bills submitted offline automatically; there's no new owner approval queue for every ordinary bill.
 
 #### 9.3 Invitations and manual participants
 
-Retain short-lived, single-use, revocable invitation tokens, hash-only storage and explicit acceptance of history visibility. Seven days is the inherited starting lifetime, configurable only through a deliberate policy change. Prefer a token bound to a verified target identity/email obtained through authentication; possession of an invitation URL alone must not silently claim an existing participant. Do not build a searchable public user directory.
+Invitation tokens stay short-lived, single-use and revocable, stored only as hashes, and accepting one means explicitly accepting what history you'll see. Seven days is the starting lifetime I inherited, and it only changes through a deliberate policy change. Ideally a token is tied to a verified target identity or email that comes from signing in; just having an invitation URL must never quietly claim an existing participant. No searchable public user directory.
 
-Links must work through an installed-app callback or a clear manual invite-code path, including when the application was not installed at first click. Deep-link routing is part of platform acceptance. No automatic invitation-email service is required; secure copy/share is sufficient initially.
+Links have to work through the installed app's callback, or through a clear manual invite-code path, including when the app wasn't installed at the first click. Deep-link routing is part of platform acceptance. No automatic invitation email service is needed; copying or sharing securely is enough at first.
 
-Manual participants remain available. Claiming one requires an explicit owner-approved nomination and the recipient's authenticated acceptance/review. Never match by name automatically. Preserve old manual-confirmation labels after a real person claims that participant.
+Manual participants stay. Claiming one takes a nomination the owner approves explicitly, plus the recipient signing in and accepting or reviewing it. Never match by name automatically. Old manual-confirmation labels stay after a real person claims that participant.
 
 #### 9.4 Settlements, corrections, refunds and private effects
 
-Payer contributions and participant shares each equal the bill total exactly. Confirmed participant positions sum to zero. Pending/disputed settlements affect only labelled projections. Suggestions do not create financial movements. Preserve source caps, exact selected-bill allocations, advances and correction/refund histories.
+What the payers put in and what the participants' shares come to each equal the bill total exactly. Confirmed positions of all participants add up to zero. Pending or disputed settlements only affect projections that say so. Suggestions don't create any money movement. Source caps, exact allocations to chosen bills, advances, and correction and refund history all stay.
 
-A private financial action and remote group acceptance cannot be one cross-device database transaction. Preserve the independent actual-money record, durable group intent, and explicit link/review state. If group acceptance fails, the actual expenditure remains; the user can correct sharing or retain private evidence. Group corrections cannot silently rewrite previously adopted private costs/funding.
+A private financial action and the group accepting it remotely can't be one database transaction across devices. So the app keeps three things: the independent record of the actual money, a durable group intent, and an explicit link or review state. If the group doesn't accept it, the actual spending still stands; you can correct how it's shared or keep your private evidence. A group correction never quietly rewrites private costs or funding you've already taken on.
 
-Likewise, reporting a private settlement may record actual cash once in clearing. Recipient confirmation classifies accepted coverage; it never deducts cash again. Reversal of group confirmation is not proof that money was physically returned. New group refunds must distinguish who received money and whose consumed share is reduced.
+In the same way, reporting a private settlement can record the actual cash once, in clearing. The recipient's confirmation classifies what's covered; it never takes the cash out a second time. Reversing a group confirmation doesn't prove the money physically came back. New group refunds have to say who received the money and whose consumed share goes down.
 
 #### 9.5 Exit, removal and owner loss
 
-Retain the existing distinction between historical entitlements and new membership access. Former members may see the records entitled at exit, their relevant later corrections and permitted settlement resolution; they do not gain unrelated subsequent bills. Synchronization subscriptions must implement this precisely, not just query every record in any group a person once joined.
+The existing difference between what you're entitled to historically and access as a new member stays. Former members can see the records they were entitled to when they left, later corrections that concern them and the settlement resolution they're allowed; they don't get unrelated bills from afterwards. Sync subscriptions have to do exactly this, not just fetch every record in every group someone once joined.
 
-Removal stops new authorized group writes when the service processes them. Cached/downloaded data cannot be reliably recalled. Member removal is not debt cancellation. Account deletion pseudonymizes/detaches identity as appropriate while retaining legitimate shared financial evidence under the declared policy.
+Removal stops new authorized group writes once the service processes it. Data already cached or downloaded can't be reliably recalled. Removing a member doesn't cancel their debt. Deleting an account pseudonymizes or detaches the identity as appropriate, while keeping the legitimate shared financial evidence under the declared policy.
 
-Support explicit ownership transfer. A lost device alone is solved through identity recovery. If ownership is permanently unavailable, freeze owner-only administration and use the documented recovery/archive policy; do not invent peer takeover. If deletion would leave a group ownerless, follow an explicit transfer-or-archive outcome, preserving access to entitled history. The exact administrative recovery policy is an operational gate.
-
+Ownership can be transferred explicitly. A lost device on its own is solved by recovering the identity. If the owner is gone for good, owner-only administration freezes and the documented recovery or archive policy applies; members don't get to take over on their own say-so. If a deletion would leave a group without an owner, it ends in either a transfer or an archive, with access to entitled history kept. The exact admin recovery policy is an operational gate.
 ### 12. Files, imports, exports and backup/recovery
 
 #### 12.1 Attachments
 
-Retain private source-linked supporting files; group membership does not make a privately linked receipt or funding account public. Initial allowed formats and bounds can inherit PDF/JPEG/PNG and the reviewed web limits, but confirm them against local/cloud capacity before release. Metadata availability is not byte availability.
+Private supporting files linked to their source stay. Being in a group doesn't make a privately linked receipt or funding account public. The first allowed formats and limits can carry over from the web app (PDF, JPEG, PNG and the reviewed limits), but I need to check them against local and cloud capacity before release. Having a file's details isn't the same as having its bytes.
 
-Validate actual size/type/checksum, authorize both upload/download, use opaque private object keys and bounded resumable transfer, and maintain pending/available/rejected/deleting states. Decide the native preview/scanning strategy explicitly. Do not silently drop existing upload-safety controls or represent unscanned files as verified safe. No active document execution. Prefer platform viewers or sandboxed supported rendering. A real scanner/storage path must be validated before shared cloud file use; local test adapters are not evidence.
+Check the real size, type and checksum; authorize both upload and download; use opaque private object keys and bounded, resumable transfers; and keep the pending, available, rejected and deleting states. Decide the native preview and scanning approach deliberately. Don't quietly drop the existing upload safety controls, and never show an unscanned file as verified safe. Documents never execute anything. Prefer the platform's own viewers or sandboxed rendering of supported formats. A real scanner and storage path has to be validated before files are used in the shared cloud; local test adapters don't count as evidence.
 
-Track local-only, uploading, cloud-available, downloaded and failed status. Cloud uploads survive app restarts; a failed file does not hold up unrelated structured transactions. Cloud-backed attachments can be downloaded on demand or marked keep offline. Retain recoverable local bytes until transfer outcome is known. Explicit deletion and orphan cleanup must not remove another source's evidence.
+Track local-only, uploading, available in the cloud, downloaded and failed. Cloud uploads survive restarting the app, and a failed file doesn't hold up unrelated transactions. Cloud-backed attachments can be downloaded when needed or marked to keep offline. The local bytes stay recoverable until the transfer's outcome is known. Deleting on purpose, and cleaning up orphans, must never remove another source's evidence.
 
 #### 12.2 CSV and portable exports
 
-Preserve the implemented reviewed cash-history CSV contract: explicit columns/date format/account/currency/cutoff, duplicate warnings, preview, confirmation, bounded batches and permanent recognized-row provenance. Existing support is income/expense cash history, not arbitrary provider ingestion. Rebase historical opening and selected historical rows atomically with an exact coverage equation.
+The reviewed cash-history CSV contract that's built stays: explicit columns, date format, account, currency and cutoff; duplicate warnings; a preview; a confirmation; bounded batches; and permanent provenance for each recognized row. What's supported is income and expense cash history, not reading in any provider's format. Rebasing the historical opening and the chosen historical rows happens in one atomic step, with an exact coverage equation.
 
-CSV reports are readable exports, not a full backup. Generate formula-safe cells and accurate period/source/freshness metadata. Do not expose private rows through group exports.
+CSV reports are readable exports, not a full backup. Cells are safe from formula injection, and the period, source and freshness details are accurate. Group exports never expose private rows.
 
 #### 12.3 New Salapiya backup contract
 
-Design a versioned, encrypted, portable archive containing private records and history, the definitions required to interpret them, a manifest with checksums/counts/currency/schema versions, and clearly declared attachment coverage. Offer a self-contained attachment-inclusive backup; if an export excludes undownloaded files, state the exact omission. Backups must be recoverable on a different compatible device using a user-controlled recovery secret rather than a key available only on the lost device.
+A versioned, encrypted, portable archive holding the private records and their history, the definitions needed to read them, a manifest with checksums, counts, currency and schema versions, and a clear statement of which attachments it covers. There's a self-contained backup that includes attachments; if an export leaves out files that weren't downloaded, it says exactly what's missing. A backup has to be recoverable on a different compatible device with a recovery secret the user controls, not a key that only existed on the lost device.
 
-Do not export reusable online credentials, OAuth tokens or private server secrets. Include pending work only under an explicit format that cannot blindly replay already accepted commands. Preserve immutable command IDs and import provenance. A backup's group snapshot is historical evidence, not current group authority or an invitation to overwrite group data.
+Never export reusable online credentials, OAuth tokens or private server secrets. Pending work only goes in under an explicit format that can't blindly replay commands already accepted. Command ids never change, and import provenance is kept. A backup's group snapshot is historical evidence; it's not current authority over the group and not permission to overwrite group data.
 
-Use local rolling snapshots for quick recovery plus user-directed portable exports to a separate location. Explain that a backup on the same lost device is insufficient. Cloud synchronization is not backup because it can propagate mistakes; hosted recovery and user archives have different purposes. Retention and storage limits are operational decisions to document before real use.
+Rolling local snapshots for quick recovery, plus portable exports the user saves somewhere separate. The app explains that a backup on the same device you lose isn't enough. Cloud sync isn't a backup, because it can spread mistakes; hosted recovery and your own archives do different jobs. Retention and storage limits are operational decisions to write down before real use.
 
 #### 12.4 Restore modes
 
-- **Local recovery:** validate, preview and restore private data into a safe local profile, with explicit treatment of attachment coverage and pending work.
-- **Connected-device recovery:** sign in, reconcile existing cloud state and original receipts, then restore only supported missing/private intent through reviewed commands. An older backup cannot blindly replace accepted newer history.
-- **Historical inspection/export:** permit reading an old private snapshot without making it the current connected dataset where useful.
+- **Local recovery:** check, preview and restore private data into a safe local profile, saying exactly what happens to attachment coverage and pending work.
+- **Connected-device recovery:** sign in, reconcile with what's already in the cloud and the original receipts, then restore only the supported missing private intent through reviewed commands. An older backup can't blindly replace newer accepted history.
+- **Historical inspection/export:** where useful, let someone read an old private snapshot without making it the current connected data.
 
-A full connected-profile rollback is destructive and must be separately designed; no generic overwrite-cloud button is implied. Test corrupted/truncated archives, wrong passphrases, unknown schemas, wrong-owner data, huge/deeply nested inputs, path traversal in archives, missing bytes, and restoration after credential revocation or account deletion.
+Rolling a whole connected profile back is destructive and needs its own design; nothing here implies a generic overwrite-the-cloud button. Test corrupted and truncated archives, wrong passphrases, unknown schemas, another owner's data, huge or deeply nested input, path traversal inside archives, missing bytes, and restoring after credentials are revoked or the account is deleted.
 
 ### 13. Calendar, reminders and background execution
 
-Calendar entries from debts, cards, recurring obligations, Career and trackers remain projections of their authoritative records. Editing a projected deadline opens the source; do not create an independently editable duplicate. Source IDs, occurrence identity and generation/version handle updates, completion, archive and reminders.
+Calendar entries from debts, cards, recurring obligations, Career and trackers are projections of the records they come from. Editing a projected deadline opens its source; there's no separate copy you can edit. Source ids, occurrence identity and a generation or version number handle updates, completion, archiving and reminders.
 
-Use local native notifications for launch. Notification permission is optional and does not block records. Store reminder intent durably, reconcile scheduled notifications after restart/reboot/timezone changes as supported, respect quiet hours, and cancel obsolete generations. Hide sensitive content by default on lock screens. Reminder dismissal is not debt payment or task completion.
+Launch uses local native notifications. Notification permission is optional and never blocks records. Reminder intent is stored durably; scheduled notifications are reconciled after a restart, reboot or timezone change where the platform allows; quiet hours are respected; and old generations are cancelled. Sensitive content is hidden on the lock screen by default. Dismissing a reminder doesn't pay a debt or complete a task.
 
-Each device has its own delivery permissions/settings. A connected profile may receive reminders on both devices unless the user disables delivery on one; do not promise global exactly-once notifications while devices are offline. Financial data and relevant reminder definitions can sync, while local scheduling IDs/permissions remain device-specific.
+Each device has its own delivery permissions and settings. A connected profile can get reminders on both devices unless you turn delivery off on one; I don't promise exactly-once notifications across devices while they're offline. Financial data and the reminder definitions that matter can sync, while local scheduling ids and permissions stay on each device.
 
-Sync on app opening/resume and while active; offer Sync now. Background attempts are best effort under platform constraints and must never be the only path to progress. Android restricts background work and WorkManager observes power/constraint scheduling; precise alarms need a separate justified platform design. [Android persistent work](https://developer.android.com/develop/background-work/background-tasks/persistent).
+Sync when the app opens or resumes and while it's in use, plus Sync now. Background attempts are best effort within what each platform allows, and they're never the only way forward. Android limits background work and WorkManager follows power and constraint scheduling; exact alarms would need their own justified design. [Android persistent work](https://developer.android.com/develop/background-work/background-tasks/persistent).
 
-New group activity is refreshed through synchronization; remote push/email alerts are deferred unless explicitly selected later. Existing opted-in web email notification infrastructure is not carried over as a mandatory native service. No stale reminder delivery is assumed recallable after it has been shown.
+New group activity arrives through sync. Remote push or email alerts are deferred unless I choose them later. The opt-in email notifications from the web app don't become a required native service. Once a reminder has been shown, I don't assume it can be taken back.
 
-### 22. Deferred decisions and future-agent instructions
+### 22. Deferred decisions and what to do next
 
-The following do not prevent this document from recording the approved product direction, but must not be silently guessed when they become implementation dependencies:
+These don't stop this document from recording the product direction, but none of them should be guessed when the work comes to depend on them:
 
-- Exact dependency versions, state/routing/chart packages, database encryption integration and schema layout.
-- Minimum supported OS versions/architectures and the representative physical-device list.
-- Per-command connected-offline finalization policy, local/remote rule parity mechanism and durable checkpoint implementation.
-- Cloud regions, storage/scanner configuration, backup retention, sync-history retention and explicit paid budget ceiling.
-- Native notification scheduling details, installer/signing/update tools, stable package IDs and private distribution channel.
-- Group owner-loss administrative recovery and exact account deletion/retained-history operations.
-- Final logo/icon assets and brand availability checks before broader distribution.
+- Exact dependency versions, state, routing and chart packages, database encryption integration and schema layout.
+- The minimum supported OS versions and architectures, and the list of physical devices to test on.
+- The policy for finishing each connected command offline, how local and remote rules stay in step, and how durable checkpoints are built.
+- Cloud regions, storage and scanner configuration, backup retention, sync-history retention and a clear paid budget ceiling.
+- Native notification scheduling details, installer, signing and update tools, stable package ids and the private distribution channel.
+- Administrative recovery when a group loses its owner, and exactly how account deletion and kept history work.
+- The final logo and icon assets, and checking the brand is available before wider distribution.
 
-**Known limits left by the native UI redesign (2026-11-02).** Each needs logic, a rule, a migration or server work outside the UI, so each stays deferred until it's assigned as its own stage. The screens already say so where it matters.
+**Known limits left by the native UI redesign (2026-11-02).** Each needs logic, a rule, a migration or server work outside the UI, so each stays deferred until I take it on as its own piece of work. The screens already say so where it matters.
 
 - **Native Google account sheet on Android.** Sign-in opens the browser. The system account sheet needs a sign-in package, an Android OAuth client for each signing key, `signInWithIdToken`, and a retest of account deletion, whose server check expects a recent `oauth` sign-in.
-- **Restore on a device that can't open its profile.** The rules refuse a restore unless the device holds no profile, so a missing or damaged profile can't be restored on that installation. Offering it where the key can't be read could overwrite the only key.
-- **A preserved profile can't be reached.** Nothing reopens it, and its own backup can't restore on that installation while its file is there.
+- **Restore on a device that can't open its profile.** The rules refuse a restore unless the device holds no profile, so a missing or damaged profile can't be restored on that install. Offering it where the key can't be read could overwrite the only key.
+- **A preserved profile can't be reached.** Nothing reopens it, and its own backup can't restore on that install while its file is there.
 - **Leftover `.staging` files.** An interrupted restore or a same-profile refusal leaves one behind with its key gone. Nothing cleans them up.
 - **The device is listed before the disclosure.** `boundary()` registers the device during review. The screens say so; moving it changes the flow.
 - **A deleted account after a restart.** Nothing on the device records it, so the profile reads as signed out and paused. It needs a saved marker or a call to `p7_deletion_status`.
@@ -372,70 +371,70 @@ The following do not prevent this document from recording the approved product d
 - **Overview figures not built:** payoff progress by balance, net position, "last synced", and group balances on the Overview.
 - **The sync rule for connected profiles** (`dependencySensitive`): relaxing the one-minute limit or allowing a first schedule offline.
 
-For the next engineering assignment:
+Before starting the next piece of engineering work:
 
-1. Read this blueprint and the relevant current domain documentation/code.
-2. Confirm the current repository state; do not assume the baseline SHA remains latest.
-3. Start with P0 and the explicitly assigned gates, not a full application rewrite in one change.
-4. Preserve existing web files and published migrations unless an assignment explicitly authorizes their modification.
-5. Record evidence, decisions and unresolved issues separately. Do not mark a gate passed from documentation or a vendor marketing claim.
-6. Do not alter approved launch scope, bill permissions, money meaning, privacy or paid commitments silently.
-7. Maintain feature-to-test traceability and update this blueprint/ADRs when a later approved decision supersedes a detail.
+1. Read this plan and the current domain docs and code that apply.
+2. Check where the repository actually is; don't assume the baseline SHA is still the latest.
+3. Start with P0 and the gates I've assigned, not a full rewrite of the app in one change.
+4. Keep the existing web files and published migrations unless I've said they can change.
+5. Keep evidence, decisions and open issues as separate records. Never mark a gate passed because of documentation or a vendor's marketing.
+6. Never quietly change the approved launch scope, bill permissions, what money means, privacy or anything I'm paying for.
+7. Keep features traceable to their tests, and update this plan or the ADRs when a later decision replaces a detail.
 
 ## Project Vision and Feature Blueprint
 
-> **Historical scope:** this is the original web-application vision for V1–V3. The Salapiya blueprint above supersedes it for product direction; status statements below date from mid-October 2026.
+> **Historical scope:** this is the original vision for the web app, V1 to V3. The Salapiya plan above replaces it for product direction; status notes below date from mid-October 2026.
 
-**Working application identity:** Personal workspace — approved October 17, 2026; repository name remains tentative, final branding deferred\
-**Document version:** 1.5 — approved redesign alignment, October 17, 2026\
+**Working application identity:** Personal workspace, approved October 17, 2026; the repository name was still tentative and final branding deferred\
+**Document version:** 1.5, approved redesign alignment, October 17, 2026\
 **Created:** October 5, 2026  
-**Purpose:** Foundational product document, consolidated from the “Strengthen Tracker Project” brainstorm and refined into a coherent vision and staged delivery plan.
+**Purpose:** The founding product document, pulled together from the "Strengthen Tracker Project" brainstorm and shaped into one vision and a staged delivery plan.
 
-This document describes the intended product, its core behaviors, and its boundaries. It is a starting point for requirements, interface design, data modeling, and development planning. The full vision is larger than the first release; future features are included here so they can be added deliberately without delaying a usable product.
+This describes the product I meant to build: what it does at its core and where it stops. It's the starting point for requirements, interface design, data modelling and planning. The full vision is bigger than the first release; I wrote the later features down here so they could be added on purpose later without holding up a usable product.
 
-**Current development direction:** V1 and V2-A through V2-I are complete under their documented acceptance scopes; [V3-A through V3-D are complete and locally accepted under approved targeted verification](archive/web/V3_DEVELOPMENT_HANDOFF.md). The [V3 impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records selected local checks; broader automatic CI passed separately at implementation commit `239c360` ([run](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106)). No production or manual/hosted product acceptance is implied.
+**Current development direction:** V1 and V2-A through V2-I are complete under their documented acceptance scopes; [V3-A through V3-D are complete and locally accepted under approved targeted verification](archive/web/V3_DEVELOPMENT_HANDOFF.md). The [V3 impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records the local checks I chose; the broader automatic CI passed separately at implementation commit `239c360` ([run](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106)). That doesn't imply any production, manual or hosted product acceptance.
 
-The [comprehensive UI/UX redesign](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) and [current decisions](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md) were approved on October 17, 2026. M1 foundations are completed and explicitly approved October 17, 2026 (Asia/Manila); M2 is ready for separate assignment ([handoff](archive/web/REDESIGN_M1_HANDOFF.md)); M2-M6 have not started. The approved sequence is **completed V3 → UI/UX Redesign → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance**. The existing web application remains the implementation/verification environment through redesign; its production deployment/readiness completion is no longer planned under [ADR 0005](adr/0005-v3-scope-and-platform-transition.md). Future direction remains mostly offline Windows/Android personal use with device-local private data and selected online collaboration; replacement architecture and final branding remain deferred. Preserve all implemented V1–V3 capabilities, business rules, privacy, authorization, security and integrity.
+I approved the [comprehensive UI/UX redesign](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), the [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) and the [current decisions](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md) on October 17, 2026. M1 foundations were finished and approved on October 17, 2026 (Asia/Manila); M2 was ready to start on its own ([handoff](archive/web/REDESIGN_M1_HANDOFF.md)), and M2-M6 hadn't started. The order I approved is **completed V3 → UI/UX Redesign → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance**. The web app stayed the place to build and verify things through the redesign; finishing its production deployment and readiness was dropped under [ADR 0005](adr/0005-v3-scope-and-platform-transition.md). The direction stays mostly-offline personal use on Windows and Android, with private data on the device and some online collaboration; the replacement architecture and final branding were still deferred. Everything built in V1–V3 stays: the features, business rules, privacy, authorization, security and integrity.
 
 ### 1. Product vision
 
 > A modular personal management platform that helps people understand their money, manage obligations, organize job applications, and see upcoming commitments through one dashboard, a connected calendar, and reusable trackers.
 
-The application should help its user answer:
+The app should help its user answer:
 
 - Where is my money, and what changed it?
 - How much did I spend, including interest and transaction fees?
-- What do I owe, what is due next, and what have I already paid?
-- Which applications need attention, and what is my next interview or assessment?
-- What needs my attention today, this week, or this month?
-- How has my financial position, job search, or personal progress changed over time?
+- What do I owe, what's due next, and what have I already paid?
+- Which applications need attention, and when is my next interview or assessment?
+- What needs me today, this week or this month?
+- How have my finances, job search or personal progress changed over time?
 
-The defining feature is the connection between modules. A debt installment appears in the calendar, an interview links to its application, and a payment updates the account, debt history, dashboard, and reports together.
+What sets it apart is how the modules connect. A debt installment shows up in the calendar, an interview links to its application, and a payment updates the account, the debt's history, the dashboard and the reports all at once.
 
 ### 2. Problem and target users
 
-Personal information is often scattered across wallet apps, bank statements, notes, spreadsheets, calendars, and job boards. Each tool shows only part of the picture. This creates forgotten deadlines, incomplete spending records, unclear debt balances, and lost application histories.
+Personal information tends to be scattered across wallet apps, bank statements, notes, spreadsheets, calendars and job boards, and each one shows only part of the picture. That's how deadlines get forgotten, spending goes half-recorded, debt balances get fuzzy and application histories get lost.
 
-The initial target user is a recent graduate or early-career professional who is job searching, uses several financial accounts, and wants to organize adult responsibilities. The initial real-world user is the developer. The design should still support other users and institutions without hardcoding personal details.
+The first target user is a recent graduate or early-career professional who's job hunting, uses several financial accounts and wants to get adult responsibilities in order. The first real user is me, the developer. The design should still work for other people and institutions, without my personal details hard-coded in.
 
-Users should be able to start with only the modules they need. Someone with no debt or credit card should still have a useful experience.
+People should be able to start with only the modules they need. Someone with no debts or credit cards should still find it useful.
 
-The completed product must support multiple users, such as several members of one family. Each person has a separate sign-in account and private personal workspace from V1. A sign-in account identifies a person; a financial account represents their bank, wallet, or cash balance. Family members use their own identities rather than sharing login credentials.
+The finished product has to support several users, like members of one family. From V1, each person has their own sign-in account and a private personal workspace. A sign-in account identifies a person; a financial account represents their bank, wallet or cash balance. Family members sign in as themselves rather than sharing one login.
 
-Users can also join explicitly shared expense groups when that module is released. Being family or belonging to a group does not grant access to each other's salary, private account balances, lender debts, applications, or trackers. Shared expense groups are narrower than shared personal workspaces. General shared workspaces, teams, and delegated access remain later extensions.
+Users can also join explicitly shared expense groups once that module is out. Being family, or being in a group, doesn't give anyone access to someone else's salary, private balances, lender debts, applications or trackers. A shared expense group is much narrower than a shared personal workspace. General shared workspaces, teams and delegated access stay later extensions.
 
-Disabling a module hides it from normal navigation without deleting its records; the user can restore it. Explain whether its existing deadlines remain visible and let the user control their reminders separately.
+Turning a module off hides it from the normal navigation without deleting its records, and the user can turn it back on. The app says whether its existing deadlines stay visible, and reminders are controlled separately.
 
 ### 3. Product principles
 
-1. **Accuracy and traceability.** Every amount should have an explainable source and history.
-2. **Manual entry first.** Actual amounts entered by the user take precedence over estimates or suggested rules.
-3. **Connected modules.** Share identity, dates, reminders, tags, and navigation while preserving each module’s business rules.
-4. **Provider independence.** GCash, Maya, MariBank, GLoan, SLoan, SPayLater, banks, and personal lenders are configurable names, not separate application models.
-5. **Progressive setup.** A user can become productive without completing every configuration screen.
-6. **Clear distinctions.** Show actual versus planned, cash versus credit, and expense versus repayment.
-7. **Practical scope.** Deliver a useful release before building broad customization or integrations.
-8. **User control.** Support corrections, exports, notification preferences, and a replayable guide.
+1. **Accuracy and traceability.** Every amount should have a source and a history you can explain.
+2. **Manual entry first.** Actual amounts the user enters win over estimates and suggested rules.
+3. **Connected modules.** Modules share identity, dates, reminders, tags and navigation, while each keeps its own business rules.
+4. **Provider independence.** GCash, Maya, MariBank, GLoan, SLoan, SPayLater, banks and personal lenders are names you configure, not separate models in the app.
+5. **Progressive setup.** Someone can get useful work done without filling in every settings screen.
+6. **Clear distinctions.** Actual against planned, cash against credit, and an expense against a repayment are always shown apart.
+7. **Practical scope.** Ship a useful release before building wide customization or integrations.
+8. **User control.** Corrections, exports, notification preferences and a guide you can replay.
 
 ### 4. Product structure
 
@@ -448,85 +447,84 @@ Disabling a module hides it from normal navigation without deleting its records;
 | Trackers | Implemented presets and versioned custom templates/trackers | Dates, status, reminders, reports where applicable |
 | Shared foundation | User settings, categories, tags, history, onboarding, navigation | Used by all modules |
 
-Use specialized finance and career records. Sharing common capabilities does not require forcing every record into a generic tracker schema. Financial balances require stricter validation than a reading list.
+Finance and career keep their own specialized records. Sharing common features doesn't mean forcing every record into one generic tracker schema; a financial balance needs far stricter checks than a reading list.
 
 ### 5. Dashboard
 
-The home screen answers “What needs my attention?” before presenting detailed analytics.
+The home screen answers "What needs my attention?" before it shows detailed analysis.
 
 Suggested sections:
 
-- **Financial snapshot:** tracked liquid funds, expenses in the selected period, outstanding liabilities, and upcoming payments.
-- **Career snapshot:** active applications, interviews, assessments, and follow-ups.
-- **Upcoming agenda:** mixed deadlines ordered by date, with module filters.
-- **Attention needed:** overdue obligations, incomplete records, and reconciliation differences.
-- **Recent activity:** payments, transfers, application changes, and completed tracker items.
-- **Quick actions:** add expense, transfer money, record payment, add application, and create event.
+- **Financial snapshot:** tracked liquid funds, spending in the chosen period, outstanding liabilities and upcoming payments.
+- **Career snapshot:** active applications, interviews, assessments and follow-ups.
+- **Upcoming agenda:** deadlines from every module in date order, with module filters.
+- **Attention needed:** overdue obligations, incomplete records and reconciliation differences.
+- **Recent activity:** payments, transfers, application changes and finished tracker items.
+- **Quick actions:** add an expense, transfer money, record a payment, add an application and create an event.
 
-Every summary must explain what it includes and link to the records behind it. Available credit is never included in cash or liquid funds. Net position should be labeled “tracked net position” until all relevant assets and liabilities are included.
+Every summary says what it includes and links to the records behind it. Available credit is never counted as cash or liquid funds. Net position is labelled "tracked net position" until every relevant asset and liability is included.
 
 ### 6. Money module
 
 #### 6.1 Financial accounts
 
-An account represents a place where money is held. Initial types are cash, e-wallet, checking/bank, and savings. Investment tracking is a later extension.
+An account is a place where money is held. The first types are cash, e-wallet, checking or bank, and savings; tracking investments is a later extension.
 
-Account information includes name, type, optional institution, currency, opening balance and date, calculated balance, active/archived state, and notes. Examples include Cash Wallet, GCash Wallet, Maya Wallet, Maya Savings, and MariBank.
+An account has a name, a type, an optional institution, a currency, an opening balance and date, a calculated balance, an active or archived state and notes. Examples: Cash Wallet, GCash Wallet, Maya Wallet, Maya Savings and MariBank.
 
-The opening balance establishes the starting point; it is not income. Subsequent balances are derived from recorded financial movements. Archived accounts retain their history. Do not allow deletion of accounts referenced by transactions.
+The opening balance sets the starting point; it isn't income. From there the balance comes from the money movements you record. Archived accounts keep their history, and an account that transactions refer to can't be deleted.
 
-Begin with PHP and one currency per workspace. Preserve currency information in the design, but postpone exchange rates and cross-currency transfers. Do not sum unrelated currencies without conversion.
+Start with PHP and one currency per workspace. The design keeps currency information, but exchange rates and cross-currency transfers come later. Unrelated currencies never get added together without conversion.
 
 #### 6.2 Transaction ledger
 
-The ledger is the financial source of truth. Expense screens, account histories, and reports are views of these records rather than independent copies.
+The ledger is where financial truth lives. Expense screens, account histories and reports are all views of these records, not copies of their own.
 
-Supported financial actions should grow to include income, expense, internal transfer, borrowing, financed purchase, debt payment, credit-card purchase/payment, refund, fee, rebate, and balance adjustment.
+The financial actions supported should grow to cover income, expenses, internal transfers, borrowing, financed purchases, debt payments, credit-card purchases and payments, refunds, fees, rebates and balance adjustments.
 
-Each action records relevant accounts or liabilities, amount, currency, effective date, category, description, optional reference, linked fees or adjustments, and creation/change history. Credit cards additionally distinguish transaction and posting dates.
+Each action records the accounts or liabilities involved, the amount, currency, effective date, category, description, an optional reference, any linked fees or adjustments, and its history of creation and changes. Credit cards also tell the transaction date and the posting date apart.
 
 ##### Receiving money into a specific account
 
-Every actual receipt of money must identify the user's receiving account. Recording the receipt updates that account's balance automatically through the ledger; the user must not need to edit the balance separately. A sender or income source identifies where the receipt came from, while the receiving account identifies where the money is now held.
+Every real receipt of money names the account it went into. Recording it updates that account's balance through the ledger; nobody should have to edit the balance separately. The sender or income source says where the money came from, and the receiving account says where it is now.
 
-Examples, using illustrative account names rather than required providers:
+Examples, with account names that are only illustrations, not providers you need:
 
 | Receipt | User-entered details | Result after saving |
 | --- | --- | --- |
-| Salary of PHP 10,000 received into BDO | Type: income; category: salary; source: employer; receiving account: user's BDO account; actual receipt date; amount: PHP 10,000 | If BDO held PHP 2,000, its balance becomes PHP 12,000. Other accounts remain unchanged. Income for the receipt period increases by PHP 10,000, and BDO's history shows the linked salary transaction. |
-| Gift of PHP 500 received into GCash | Type: income; category: gift; source: another person; receiving account: user's GCash wallet; actual receipt date; amount: PHP 500 | If GCash held PHP 200, its balance becomes PHP 700. Other accounts remain unchanged. The gift appears in income reports and GCash's history. |
+| Salary of PHP 10,000 received into BDO | Type: income; category: salary; source: employer; receiving account: user's BDO account; actual receipt date; amount: PHP 10,000 | If BDO held PHP 2,000, its balance becomes PHP 12,000. Other accounts don't change. Income for the receipt period goes up by PHP 10,000, and BDO's history shows the linked salary transaction. |
+| Gift of PHP 500 received into GCash | Type: income; category: gift; source: another person; receiving account: user's GCash wallet; actual receipt date; amount: PHP 500 | If GCash held PHP 200, its balance becomes PHP 700. Other accounts don't change. The gift shows in income reports and in GCash's history. |
 
-The user selects the actual receiving account for each receipt. Salary is not tied permanently to BDO or any particular bank. An optional saved/default salary account can prefill the form, but remains editable. If the receiving account has not been created, prompt the user to add it before posting the receipt.
+The user picks the real receiving account for each receipt. Salary isn't tied to BDO or any one bank for good. An optional saved default salary account can prefill the form, but it stays editable. If the receiving account doesn't exist yet, the app asks the user to add it before posting the receipt.
 
-Receiving money from another person does not always mean income. Ask for its meaning: a gift is income, borrowed money also creates a debt, a purchase refund offsets spending, and a transfer from another account the user owns moves existing funds. Repayment of money lent uses the later receivables workflow. All supported receipt types increase the chosen receiving account by the amount actually received, while their effects on income, spending, and liabilities follow their respective rules.
+Getting money from another person isn't always income, so the app asks what it was: a gift is income, borrowed money also creates a debt, a purchase refund offsets spending, and a transfer from another account the user owns just moves money they already had. Being repaid money you lent uses the receivables workflow that comes later. Every supported kind of receipt raises the chosen account by the amount actually received; what it does to income, spending and liabilities follows its own rules.
 
-If salary is split between accounts, V1 can use separate receipts for each actual deposit, with an optional common reference and amounts totaling the actual salary received. A later split-destination form may capture them together without duplicating total income. Record the actual deposited amount; optional gross salary, deductions, and payslip tracking are future extensions and must not inflate cash received.
+If salary is split across accounts, V1 can record a separate receipt for each actual deposit, with an optional shared reference and amounts that add up to the salary actually received. A later split-destination form could capture them together without counting income twice. Record the amount actually deposited; gross salary, deductions and payslips are optional future extensions and must never inflate the cash received.
 
-Before saving, show a preview such as: “GCash decreases by PHP 5,015; MariBank increases by PHP 5,000; fee expense is PHP 15.”
+Before saving, the app shows a preview such as: "GCash decreases by PHP 5,015; MariBank increases by PHP 5,000; fee expense is PHP 15."
 
-**Planned records do not change actual balances.** A due installment, expected salary, or recurring bill becomes an actual financial action only when the user records it as received or paid. Pending entries must be visibly excluded from posted balances.
+**Planned records do not change actual balances.** A due installment, an expected salary or a recurring bill only becomes an actual financial action when the user records it as received or paid. Pending entries are visibly left out of posted balances.
 
-**Transfers may finish on different dates.** V1 assumes an internal transfer has completed and records both sides together. If money has actually left the source but has not arrived at the destination, do not label it as an ordinary unposted plan or completed transfer. A later transfer workflow should represent money in transit, completion, failure, and return, with separate departure/arrival dates and explicit fee refunds. In-transit funds are shown separately from spendable account balances, and movement within owned tracked funds is not income or spending.
+**Transfers may finish on different dates.** V1 assumes an internal transfer has completed and records both sides together. If money has really left the source but hasn't arrived yet, it mustn't be labelled an ordinary unposted plan or a completed transfer. A later transfer workflow should handle money in transit, completion, failure and return, with separate departure and arrival dates and explicit fee refunds. Money in transit is shown apart from spendable balances, and moving money between accounts you own and track isn't income or spending.
 
-For manual tracking, an entry that would make a cash/wallet balance negative should show a warning and allow investigation. Do not silently discard a real transaction because older records are missing. Accounts that genuinely allow overdrafts require an explicit later policy. Negative liquid balances must never appear as available funds.
-
+For manual tracking, an entry that would take a cash or wallet balance below zero shows a warning and lets you look into it. A real transaction never gets quietly thrown away because older records are missing. Accounts that genuinely allow overdrafts need their own explicit policy later. A negative liquid balance is never shown as money available.
 #### 6.3 Expense tracking
 
-Provide categories such as food, transport, housing, utilities, subscriptions, shopping, healthcare, education, entertainment, interest, transaction fees, and other. Users can manage categories and optional tags.
+Categories like food, transport, housing, utilities, subscriptions, shopping, healthcare, education, entertainment, interest, transaction fees and other. Users can manage categories and optional tags.
 
-Support search, date filters, account filters, category totals, spending comparisons, and transaction details. A financed purchase counts as spending when recorded; paying its principal later does not create the same expense again.
+Search, date filters, account filters, category totals, spending comparisons and transaction details. A financed purchase counts as spending when it's recorded; paying off its principal later doesn't create the same expense again.
 
-Support splitting one purchase across expense categories in V1: a PHP 1,000 receipt might contain PHP 700 groceries and PHP 300 household supplies. Category portions must equal the purchase amount, and adding splits must not create another account deduction. Associated fees remain separately identified. Split funding across multiple payment accounts can follow later and must satisfy the same total checks.
+V1 supports splitting one purchase across expense categories: a PHP 1,000 receipt might be PHP 700 of groceries and PHP 300 of household supplies. The category parts have to equal the purchase amount, and adding splits never takes money from the account a second time. Fees that go with it stay identified separately. Splitting the funding across several payment accounts can come later and has to pass the same total checks.
 
-Credit-card and shared-expense support extend this purchase-entry experience rather than creating duplicate purchase trackers. When V2 is released, a credit card can be selected as the funding source for an expense. The purchase is still recorded once: spending is recognized when the purchase occurs, while the funding effect is card liability rather than a cash deduction. Paying the card later reduces cash and liability without recording the purchase expense again.
+Credit cards and shared expenses extend this purchase entry instead of creating their own duplicate purchase trackers. From V2 you can pick a credit card as the funding source for an expense. The purchase is still recorded once: spending is recognized when the purchase happens, and the funding effect is card liability rather than cash leaving an account. Paying the card later lowers cash and the liability without recording the purchase expense again.
 
-A purchase can also be marked as shared with a group. The same real-world purchase should not need to be entered once as a private expense and again as a shared expense. The shared workflow records payer contributions and participant shares while the private financial integration records only the current user's authorized financial effects. A purchase may eventually be both card-funded and shared without duplicating spending or liability.
+A purchase can also be marked as shared with a group. The same real purchase shouldn't need entering once as a private expense and again as a shared one. The shared workflow records what the payers put in and each participant's share, while the private side records only the financial effects the current user has authorized for themselves. Eventually a purchase can be both paid by card and shared, without doubling the spending or the liability.
 
-Use progressive disclosure for advanced funding and sharing details. An ordinary expense should remain simple when no card, installment, or participant-sharing behavior is needed.
+Advanced funding and sharing details stay tucked away until needed. An ordinary expense stays simple when there's no card, installment or sharing involved.
 
 #### 6.4 Transfers and fees
 
-Moving money between owned accounts does not create income or spending. Associated fees are expenses.
+Moving money between your own accounts isn't income or spending. Any fees on it are expenses.
 
 Example: transfer PHP 5,000 from GCash to MariBank with a PHP 15 fee paid from GCash:
 
@@ -535,42 +533,42 @@ Example: transfer PHP 5,000 from GCash to MariBank with a PHP 15 fee paid from G
 - Total liquid funds decrease by PHP 15.
 - Expense reports show PHP 15 in transaction fees, not PHP 5,015 in spending.
 
-Allow multiple fee components with a label, amount, date, and the account or liability bearing the fee. Defaults can simplify entry, but users must be able to represent a fee paid separately or deducted from the received amount. The final preview must reflect the chosen treatment.
+A transfer can have several fee parts, each with a label, amount, date and the account or liability that bore it. Defaults can make entry quicker, but users have to be able to say a fee was paid separately or taken out of the amount received. The final preview reflects whichever they chose.
 
-Manual fees are the default. Optional saved rules can later suggest values, but must remain editable and cannot claim to represent a provider’s current policy.
+Fees are entered by hand by default. Saved rules could suggest values later, but they stay editable and never claim to be a provider's current policy.
 
 #### 6.5 Debts and installment obligations
 
-Support personal loans, installment loans, buy-now-pay-later purchases, and flexible credit obligations. Provider/product names are metadata. Their repayment rules can differ.
+Personal loans, installment loans, buy-now-pay-later purchases and flexible credit. Provider and product names are just metadata, and their repayment rules can differ.
 
 A debt record can include:
 
-- Lender/provider, product name, debt type, and notes.
-- Original principal, start date, and optional linked disbursement or purchase.
-- Opening outstanding liability when importing an existing debt.
-- Known posted interest, fees, penalties, and adjustments.
-- Contractual scheduled amounts and remaining scheduled total.
-- Payment frequency, due dates, installment count, and optional manual schedule.
-- Actual payments and allocation details where known.
-- Status: active, settled, settled early, or cancelled where appropriate.
+- Lender or provider, product name, debt type and notes.
+- Original principal, start date and an optional linked disbursement or purchase.
+- The opening outstanding liability when importing a debt you already have.
+- Known posted interest, fees, penalties and adjustments.
+- Scheduled amounts under the contract and the scheduled total remaining.
+- Payment frequency, due dates, number of installments and an optional manual schedule.
+- Actual payments and how they were allocated, where known.
+- Status: active, settled, settled early or cancelled, where those apply.
 
-Track overdue status from unpaid due amounts and dates; retain it independently of the overall lifecycle state.
+Overdue status comes from unpaid due amounts and dates, and is kept separate from the debt's overall lifecycle state.
 
-**Outstanding principal, recognized liability, and future scheduled payable are different figures.** Future interest included in a payment schedule is not automatically a charge already owed in the ledger. If the provider does not supply a principal/interest breakdown, show that limitation instead of inventing one.
+**Outstanding principal, recognized liability, and future scheduled payable are different figures.** Future interest built into a payment schedule isn't automatically a charge already owed in the ledger. If the provider doesn't give a principal and interest breakdown, the app says so instead of making one up.
 
-For initial debt support, prioritize user-entered provider schedules and actual amounts. Do not implement a universal interest calculator or assume every installment is equal. Use generated schedules only for clearly supported terms, with a preview and rounding adjustment.
+For the first debt support, user-entered provider schedules and actual amounts come first. No universal interest calculator, and no assuming every installment is the same. Generated schedules are only for clearly supported terms, with a preview and a rounding adjustment.
 
-Payments can be partial, late, extra, or allocated across multiple installments. A payment and its ledger movement must reference each other so the user does not enter the same payment twice. A partial payment leaves the remaining due amount visible.
+Payments can be partial, late, extra, or spread across several installments. A payment and its ledger movement point to each other so the user doesn't enter the same payment twice. A partial payment leaves the rest of the due amount visible.
 
-Loan proceeds and principal may differ. If a PHP 10,000 loan pays out PHP 9,800 after a confirmed PHP 200 upfront fee, record PHP 9,800 into the receiving account, PHP 10,000 liability, and the PHP 200 fee separately. Borrowed cash is not earned income. Fees added to the debt instead of deducted from proceeds require a different preview; do not deduct them twice.
+Loan proceeds and principal can differ. If a PHP 10,000 loan pays out PHP 9,800 after a confirmed PHP 200 upfront fee, record PHP 9,800 into the receiving account, PHP 10,000 of liability, and the PHP 200 fee separately. Borrowed cash isn't earned income. Fees added onto the debt instead of taken from the proceeds need a different preview; never deduct them twice.
 
-When a lender changes a schedule, preserve the old version, payments, reason, and effective date. Distinguish a corrected due date from a renegotiated agreement. V1 can support explicit manual revisions with a before/after preview; refinancing and complex restructuring are later workflows. Replacing an old loan with a new one must eventually record settlement and the new borrowing rather than erase the old debt.
+When a lender changes a schedule, the old version, the payments, the reason and the effective date are kept. A corrected due date isn't the same thing as a renegotiated agreement. V1 can support explicit manual revisions with a before-and-after preview; refinancing and complex restructuring are later workflows. Replacing an old loan with a new one will eventually record the settlement and the new borrowing, never erase the old debt.
 
 #### 6.6 Early settlement and adjustments
 
-Allow the user to settle a 12-month obligation during month 6 or any other point. Capture the settlement date, actual payment, provider-confirmed payoff amount, known rebate or waiver, extra fees, and optional reference.
+You can settle a 12-month obligation in month 6, or at any other point. The app records the settlement date, the actual payment, the payoff amount the provider confirmed, any known rebate or waiver, extra fees and an optional reference.
 
-Illustrative case, assuming the entire PHP 6,400 is already recorded as a liability:
+An example, assuming the whole PHP 6,400 is already recorded as a liability:
 
 | Item | Liability effect | Cash effect |
 | --- | ---: | ---: |
@@ -579,211 +577,210 @@ Illustrative case, assuming the entire PHP 6,400 is already recorded as a liabil
 | Confirmed interest waiver | Decrease PHP 400 | No cash movement |
 | Balance after settlement | PHP 0 | — |
 
-If PHP 6,400 is merely the remaining schedule including unposted future interest, preserve the original schedule and record that PHP 400 of future charges were avoided; do not reverse an expense that was never recorded.
+If the PHP 6,400 is only the remaining schedule, including future interest that was never posted, the original schedule is kept and the app records that PHP 400 of future charges were avoided. It doesn't reverse an expense that was never recorded.
 
-Once confirmed and reconciled, mark the debt settled early and cancel remaining due events and reminders. Keep the original schedule and settlement history visible. A mismatch must be resolved through an explicit charge, waiver, allocation, or correction; never silently force the balance to zero.
+Once confirmed and reconciled, the debt is marked settled early, and its remaining due events and reminders are cancelled. The original schedule and the settlement history stay visible. Any mismatch is resolved with an explicit charge, waiver, allocation or correction; the balance is never forced to zero behind the scenes.
 
-Distinguish:
+These are different things:
 
-- **Liability waiver/rebate:** reduces an amount already owed, without necessarily adding cash.
-- **Cashback received:** increases a specified account when actually received.
-- **Purchase refund:** reverses or reduces the original spending and updates the relevant account/liability.
-- **Expected cashback:** remains pending until received.
-- **Correction:** fixes a record with a reason and retained history.
+- **Liability waiver/rebate:** lowers an amount already owed, without necessarily adding cash.
+- **Cashback received:** raises a named account when it actually arrives.
+- **Purchase refund:** reverses or reduces the original spending and updates the account or liability involved.
+- **Expected cashback:** stays pending until it arrives.
+- **Correction:** fixes a record, with a reason and its history kept.
 
-The same benefit must not be recorded both as a debt reduction and as cash received unless both actually occurred.
+The same benefit is never recorded both as a debt reduction and as cash received, unless both really happened.
 
-Allow partial refunds and multiple refund events linked to one purchase. Show gross spending, refunds, and net spending separately. The default actual-period report records a refund when it occurs, even if the purchase was in a previous period; an optional purchase-level effective-cost view can combine the linked records. Define cashback as either a linked spending offset or separately labeled reward income, based on its meaning, and apply that choice consistently. Never treat the same cashback as both.
+A purchase can have partial refunds and several refund events linked to it. Gross spending, refunds and net spending are shown separately. By default the actual-period report records a refund when it happens, even if the purchase was in an earlier period; an optional effective-cost view per purchase can put the linked records together. Cashback is either a linked spending offset or separately labelled reward income, depending on what it is, and that choice is applied consistently. The same cashback is never treated as both.
 
 #### 6.7 Credit cards
 
-Credit cards are liability accounts with their own billing lifecycle, but a credit-card purchase remains a purchase and should integrate with the ordinary expense-entry workflow rather than requiring duplicate entry in a separate card tracker.
+Credit cards are liability accounts with their own billing cycle, but a card purchase is still a purchase. It goes through the ordinary expense entry, not a separate card tracker where you'd enter it twice.
 
-When V2 is released, the user can select a credit card as the funding source for an expense. A posted purchase increases spending and card liability without reducing liquid cash. A later card payment reduces the selected cash account and card liability without creating the purchase expense again.
+From V2 you can pick a credit card as the funding source for an expense. A posted purchase raises spending and card liability without touching liquid cash. A later card payment lowers the chosen cash account and the card liability, without creating the purchase expense again.
 
-Keep these events distinct:
+These events stay separate:
 
-Credit-card purchase: recognizes the purchase expense and card liability.
+Credit-card purchase: recognizes the purchase expense and the card liability.
 
-Installment plan: describes provider-confirmed scheduling for an already recognized purchase and must not repeat the purchase expense every month.
+Installment plan: records the scheduling the provider confirmed for a purchase that's already recognized; it never repeats the purchase expense every month.
 
-Credit-card payment: moves actual cash to reduce card liability and does not create another purchase expense.
+Credit-card payment: moves actual cash to lower the card liability, and doesn't create another purchase expense.
 
-Track issuer/name, credit limit, outstanding posted balance, available credit estimate, statement cycles, statement balance, remaining statement amount due, minimum due, due date, payments, fees, interest, refunds, card credits/overpayments, and optional installment plans.
+Track the issuer and name, credit limit, outstanding posted balance, an estimate of available credit, statement cycles, statement balance, the remaining statement amount due, minimum due, due date, payments, fees, interest, refunds, card credits and overpayments, and optional installment plans.
 
-Keep these concepts distinct:
+These ideas stay distinct:
 
-Transaction date: when a purchase occurred.
+Transaction date: when a purchase happened.
 
 Posting date: when the provider posted it.
 
 Statement period/date: which verified billing cycle includes it.
 
-Outstanding posted balance: all recognized unpaid posted card activity.
+Outstanding posted balance: all the recognized, unpaid, posted card activity.
 
-Statement balance: the fixed provider balance recorded for a closed cycle.
+Statement balance: the fixed balance from the provider, recorded for a closed cycle.
 
-Remaining statement amount due: that cycle's amount still unpaid after applicable payments and credits.
+Remaining statement amount due: what's still unpaid on that cycle after the payments and credits that apply.
 
-Card credit: an overpayment or excess credit on the card; it is not liquid cash.
+Card credit: an overpayment or extra credit on the card; it isn't liquid cash.
 
-Pending authorizations are informational until they become recognized posted activity. Do not treat a pending authorization as a finalized purchase or statement entry.
+Pending authorizations are for information only until they become recognized posted activity. A pending authorization is never treated as a finished purchase or a statement entry.
 
-The ordinary expense form should remain the primary entry surface for purchases. Selecting a card may progressively expose card-specific details such as posting state/date, provider reference, or installment information. A dedicated Credit Cards surface still manages card-specific liability, statements, reconciliation, payments, utilization, fees, interest, refunds, installment plans, and history; it is not a second expense tracker.
+The ordinary expense form stays the main place to enter purchases. Choosing a card can reveal card-specific details as needed, like the posting state and date, the provider's reference or installment information. A dedicated Credit Cards area still manages what's specific to cards: liability, statements, reconciliation, payments, utilization, fees, interest, refunds, installment plans and history. It's not a second expense tracker.
 
-Use manually verified statement values initially. Closing or recording a statement creates provider evidence, not another purchase or liability posting. Statement corrections preserve versions. Remaining statement due derives from the verified statement and applicable payment/credit allocations rather than being independently editable.
+Statement values are verified by hand at first. Closing or recording a statement creates evidence from the provider, not another purchase or liability posting. Statement corrections keep their versions. The remaining statement due comes from the verified statement and the payment and credit allocations that apply; it can't be edited on its own.
 
-Do not assume that payment allocation, interest, minimum-payment, statement membership, installment math, or available-credit rules are identical across issuers. Provider-confirmed information and explicit user evidence take precedence over guessed formulas.
+Don't assume payment allocation, interest, minimum payments, which statement a charge belongs to, installment maths or available-credit rules are the same across issuers. What the provider confirms, and the evidence the user gives, win over any guessed formula.
 
-A card installment plan links the original recognized purchase to provider-confirmed expected obligations. Merely selecting an installment count must not cause the application to invent interest, fees, total repayment, or provider due-date rules.
+A card installment plan links the original recognized purchase to the obligations the provider confirmed. Just choosing a number of installments must never make the app invent interest, fees, a total repayment or the provider's due-date rules.
 
-Refunds reduce the applicable spending and card liability, or create/increase a card credit where appropriate. Link them to the original purchase when possible. Card fees and recognized interest are separate expenses.
+Refunds lower the spending and card liability they apply to, or create or raise a card credit where that's right. Link them to the original purchase where possible. Card fees and recognized interest are separate expenses.
 
-Utilization can be shown as eligible outstanding balance divided by eligible credit limit, with the balance date identified. Handle a missing or zero limit without dividing by zero. Aggregate utilization uses total eligible outstanding balances divided by total eligible limits, not the average of individual percentages. Credit balances are excluded from used-credit amounts. Available credit remains an estimate and is never cash.
+Utilization can be shown as the eligible outstanding balance divided by the eligible credit limit, with the date of that balance stated. A missing or zero limit is handled without dividing by zero. Across cards, utilization is total eligible outstanding balances divided by total eligible limits, not the average of each card's percentage. Credit balances don't count towards credit used. Available credit stays an estimate and is never cash.
 
-A purchase may also participate in Shared Expenses. For example, one user can pay a restaurant bill using a credit card and split the bill with friends. The purchase, card liability, personal share, and group receivable must remain linked without requiring duplicate entry or exposing the user's private card information to other group members.
-
+A purchase can also be part of Shared Expenses. For example, someone pays a restaurant bill by card and splits it with friends. The purchase, the card liability, their own share and the group receivable stay linked, without entering anything twice and without showing their private card details to the rest of the group.
 #### 6.8 Reconciliation and corrections
 
-Let users compare an app balance against an actual account or provider statement at a chosen date. Show the difference and allow investigation of missing entries or duplicates.
+Users can compare the app's balance with a real account or provider statement on a date they pick. The app shows the difference and helps look for missing entries or duplicates.
 
-If the user chooses a balance adjustment, require an amount, date, and reason. Show adjustments separately in reports; an unexplained correction is not automatically income or expense.
+If the user chooses a balance adjustment, it needs an amount, a date and a reason. Adjustments are shown separately in reports; an unexplained correction isn't automatically income or an expense.
 
-Posted financial records should be corrected with traceable revisions or reversals. A simple audit trail is sufficient initially; a complex event-sourcing system is unnecessary. Backdated corrections must update affected balances and reports consistently.
+Posted financial records are corrected with traceable revisions or reversals. A simple audit trail is enough at first; a complex event-sourcing system isn't needed. Backdated corrections update every affected balance and report consistently.
 
 #### 6.9 Planning and recurring obligations
 
-Later planning features include category budgets, expected cash flow, recurring income/bills, subscriptions, and savings goals or sinking funds.
+Later planning features: category budgets, expected cash flow, recurring income and bills, subscriptions, and savings goals or sinking funds.
 
-Recurring definitions create expected occurrences. Completing one records or links an actual transaction; merely reaching its due date must not assume it was paid. Support skipped occurrences and changes to one occurrence versus future occurrences.
+A recurring definition creates expected occurrences. Completing one records or links an actual transaction; reaching its due date never assumes it was paid. Skipping an occurrence is supported, and so is changing just one occurrence or all future ones.
 
-A savings goal reserves part of tracked money conceptually. It must not create a second asset or duplicate the account balance. Show goal allocations separately from physical account balances and prevent allocating the same funds beyond the allowed total.
+A savings goal sets aside part of your tracked money on paper. It never creates a second asset or copies the account balance. Goal allocations are shown apart from the real account balances, and the same money can't be allocated beyond the allowed total.
 
-Cash-flow projections should identify their assumptions and expected dates. They remain separate from actual reports.
+Cash-flow projections state their assumptions and expected dates, and stay separate from actual reports.
 
-For monthly recurrence on the 29th, 30th, or 31st, offer an explicit rule such as the last valid day in shorter months. Do not automatically move a provider due date for weekends or holidays without a confirmed rule. Users should see the next few occurrences before saving a recurrence.
+For a monthly recurrence on the 29th, 30th or 31st, there's an explicit rule to choose, like using the last valid day in shorter months. A provider's due date never moves for weekends or holidays without a confirmed rule. Before saving a recurrence you see its next few occurrences.
 
 #### 6.10 Optional future financial extensions
 
-Money lent to another person is a receivable, distinct from money owed to a lender. A future lending tracker should record cash given, outstanding receivable, repayments, and any explicit write-off. Repayment of lent principal is not earned income. Exclude untracked or uncertain receivables from available cash, and identify whether they are included in tracked net position.
+Money you've lent someone is a receivable, not the same as money you owe a lender. A future lending tracker would record the cash given, the outstanding receivable, repayments and any explicit write-off. Being repaid principal you lent isn't earned income. Untracked or uncertain receivables never count as available cash, and the app says whether they're in the tracked net position.
 
-Other future extensions can include employer reimbursements and manually tracked noncash assets. Each needs its own reporting rules before inclusion. Group shared expenses are a required completed-product module described below.
+Other later extensions could include employer reimbursements and noncash assets tracked by hand. Each needs its own reporting rules first. Group shared expenses are a required module of the finished product, described below.
 
 #### 6.11 Shared expenses and settlements: Splitwise / Settle Up reference
 
-Build a shared-expense and settlement system inspired by **Splitwise** and **Settle Up**: record who paid, split costs among participants, show who owes or is owed money, and record repayments. This is a separate debt-management workflow from lender loans, interest-bearing installments, and credit-card statements.
+A shared-expense and settlement system inspired by **Splitwise** and **Settle Up**: record who paid, split costs between participants, show who owes or is owed, and record repayments. It's a separate way of managing debts from lender loans, interest-bearing installments and credit-card statements.
 
-Product references: [Splitwise](https://secure.splitwise.com/), [Settle Up](https://settleup.io/), and [Splitwise's debt simplification explanation](https://kb.splitwise.com/balances-and-expenses/what-is-simplify-debts). These identify the inspiration; the requirements below describe this project's intended behavior rather than promise feature parity with either service.
+Product references: [Splitwise](https://secure.splitwise.com/), [Settle Up](https://settleup.io/), and [Splitwise's debt simplification explanation](https://kb.splitwise.com/balances-and-expenses/what-is-simplify-debts). These are where the idea came from; the requirements below are how this project should behave, not a promise to match either service feature for feature.
 
 ##### Groups and privacy
 
-- Create groups such as Family Household, Brothers, Vacation, or Shared Apartment. A two-person group can cover a one-to-one shared bill.
-- Invite registered users through a controlled invitation they accept. Group membership does not expose unrelated private data.
-- Optionally add a nonregistered participant by display name. They have no private ledger or automatic notifications; their entries are explicitly marked as manually recorded. Linking them to a real user later requires acceptance and balance review, not a name-only identity match.
-- Define owner and member roles. Owners manage membership/settings; members record and review permitted group activity. Group owners cannot inspect private accounts or act as platform administrators.
-- Members see group expense and settlement history, with this visibility explained on joining. Shared receipts and comments must contain information appropriate for the group.
-- Leaving/removing a member preserves history and does not forgive balances. Define read-only historical access for former members and prevent new activity under their membership. Archive completed groups rather than erase history.
+- Create groups like Family Household, Brothers, Vacation or Shared Apartment. A two-person group covers a one-to-one shared bill.
+- Invite registered users through a controlled invitation they accept. Being in a group doesn't expose unrelated private data.
+- Optionally add someone who isn't registered, by display name. They have no private ledger and get no automatic notifications, and their entries are clearly marked as recorded by hand. Linking them to a real user later takes acceptance and a balance review, not a match on name alone.
+- Owner and member roles. Owners manage membership and settings; members record and review the group activity they're allowed to. Group owners can't look at private accounts and aren't platform administrators.
+- Members see the group's expense and settlement history, and the app explains that when they join. Shared receipts and comments should only hold what's appropriate for the group.
+- Leaving or being removed keeps the history and doesn't forgive balances. Former members get read-only access to history, and no new activity under their membership. Finished groups are archived, not erased.
 
 ##### Bills and allocations
 
-A shared expense includes group, description, date, currency, total, payer contributions, selected participants, each person's share, category, notes, optional receipt, creator, and change history.
+A shared expense has a group, description, date, currency, total, what each payer put in, the participants chosen, each person's share, a category, notes, an optional receipt, who created it and its change history.
 
-V2 supports one or multiple payers for the same shared expense. Single payer remains the default simple interaction, with additional payers added progressively when needed. Each payer records an exact contribution amount.
+V2 supports one payer or several for the same shared expense. One payer stays the simple default, and more payers can be added when needed. Each payer has an exact amount they put in.
 
-Payer contributions and participant shares are separate dimensions:
+What payers put in and what participants' shares are measure different things:
 
-a payer can contribute more or less than their own share;
+a payer can put in more or less than their own share;
 
-a payer may consume no share;
+a payer might have no share at all;
 
-a participant may consume a share without paying;
+a participant can have a share without paying anything;
 
-only a subset of group members may participate in a particular bill.
+only some of the group's members might be in a given bill.
 
 For every finalized bill:
 
 sum(payer contributions) = expense total
 sum(participant shares) = expense total
 
-Both equalities must hold independently and exactly.
+Both have to hold, each on its own, exactly.
 
-V2 initially supports equal and exact/custom participant splits. Percentage, weighted, and detailed itemized splits may follow later unless separately promoted into scope.
+V2 starts with equal and exact (custom) splits between participants. Percentage, weighted and detailed itemized splits can follow later unless I pull them into scope.
 
-Use exact centavos and preview rounding. PHP 100 divided three ways becomes PHP 33.34, PHP 33.33, and PHP 33.33, with the recipient of the extra centavo identified and retained.
+Exact centavos, with the rounding previewed. PHP 100 split three ways becomes PHP 33.34, PHP 33.33 and PHP 33.33, and who gets the extra centavo is shown and kept.
 
-Start with PHP-only groups. Bill fees can be shared or assigned explicitly.
+Groups start PHP-only. Bill fees can be shared or given to one person explicitly.
 
-Shared expenses are not isolated debts that must each be settled independently. Current participant positions derive across all effective bills, refunds, and confirmed settlements. Preserve each bill as source evidence while presenting continuously derived group and participant balances.
+Shared expenses aren't separate little debts that each have to be settled on their own. Each participant's current position comes from all the bills in effect, refunds and confirmed settlements together. Every bill is kept as source evidence, while the group and participant balances are worked out continuously from them.
 
-Reciprocal obligations cancel in the current balance. If one effective bill means A owes B PHP 1,000 and another means B owes A PHP 800, the current relationship is A owing B PHP 200. Both original bills remain visible and explainable.
+Debts in opposite directions cancel out in the current balance. If one bill means A owes B PHP 1,000 and another means B owes A PHP 800, then right now A owes B PHP 200. Both original bills stay visible and explainable.
 
-Show amounts paid, shares consumed, refunds, confirmed settlements, pending settlements, and current net position per person. Confirmed group net positions must sum to zero.
+For each person: what they paid, the shares they had, refunds, confirmed settlements, pending settlements and their current net position. Confirmed net positions in a group add up to zero.
 
-Distinguish category splits within a purchase from participant splits across people.
+Splitting a purchase across categories is different from splitting it between people.
 
 ##### Shared-expense example and private financial integration
 
 You pay PHP 1,200 from GCash for dinner with two brothers, split equally:
 
-1. Your share is PHP 400; each brother's share is PHP 400.
-2. When you explicitly link the bill to your GCash account, cash decreases by PHP 1,200, personal spending is PHP 400, and a group receivable of PHP 800 is recorded.
-3. Each brother has a PHP 400 group payable. If they accept/post their allocation into their own ledger, personal spending increases by PHP 400 but cash remains unchanged until payment.
-4. When one brother pays you PHP 400 and the settlement is confirmed and linked, his chosen payment account decreases by PHP 400 and your chosen receiving account increases by PHP 400. His payable and your receivable decrease; neither person records another dinner expense or salary/gift income.
-5. The other brother still owes PHP 400. If he pays PHP 150, his remaining balance is PHP 250.
+1. Your share is PHP 400, and each brother's share is PHP 400.
+2. When you link the bill to your GCash account, cash goes down by PHP 1,200, your personal spending is PHP 400, and a group receivable of PHP 800 is recorded.
+3. Each brother has a PHP 400 group payable. If they accept their part into their own ledger, their personal spending goes up by PHP 400, but their cash doesn't change until they pay.
+4. When one brother pays you PHP 400 and the settlement is confirmed and linked, his chosen payment account goes down by PHP 400 and your chosen receiving account goes up by PHP 400. His payable and your receivable both go down; neither of you records another dinner expense, or salary or gift income.
+5. The other brother still owes PHP 400. If he pays PHP 150, he has PHP 250 left.
 
-Group records never reveal personal account balances or bank details. Each user privately selects their own accounts. Adding a group bill must not automatically write into another user's ledger: they accept their allocation or use the group module independently of personal tracking. Reports disclose pending/unlinked allocations instead of implying complete personal coverage.
+Group records never show anyone's personal balances or bank details. Each user picks their own accounts privately. Adding a group bill never writes into another user's ledger on its own: they accept their part, or use the group module without it touching their personal tracking. Reports say when allocations are pending or unlinked, instead of implying personal records are complete.
 
-Link an existing private purchase/payment rather than deducting it again. If the full bill was previously personal spending, conversion to a shared bill explicitly reclassifies others' shares into receivables with a preview and history. Group payables/receivables must not be duplicated as standalone personal loans. Cash advanced for the group differs from one's own spending, and receivables are not spendable cash.
+Link an existing private purchase or payment instead of taking the money out again. If the whole bill was already personal spending, turning it into a shared bill reclassifies the others' shares as receivables, explicitly, with a preview and history. Group payables and receivables are never duplicated as standalone personal loans. Cash you fronted for the group isn't your own spending, and receivables aren't cash you can spend.
 
 ##### Settlements and disputes
 
-A settlement records payer, recipient, amount, date, group, optional reference, allocations, and state such as proposed/pending, confirmed, disputed, cancelled, or reversed. The application records payments made elsewhere; it does not execute bank or wallet transfers.
+A settlement records the payer, recipient, amount, date, group, an optional reference, allocations and a state: proposed or pending, confirmed, disputed, cancelled or reversed. The app records payments made somewhere else; it doesn't move money between banks or wallets.
 
 V2 supports:
 
-full settlement of a current balance;
+settling a current balance in full;
 
-a user-entered custom partial amount;
+a custom partial amount the user enters;
 
-settlement allocated to selected shared expenses;
+settling chosen shared expenses;
 
-partial settlement of one shared expense;
+partly settling one shared expense;
 
-one settlement allocated across multiple shared expenses;
+one settlement spread across several shared expenses;
 
-explicit overpayment/advance treatment rather than silently truncating excess.
+handling an overpayment or advance explicitly, instead of quietly cutting off the extra.
 
-Settlement allocations explain which obligations were discharged. Paying one participant must not silently discharge an amount owed to another participant unless an explicitly supported redirected-settlement path has been agreed.
+Settlement allocations explain which obligations were cleared. Paying one participant never quietly clears an amount owed to someone else, unless there's an explicitly supported, agreed path for redirecting the payment.
 
-For registered participants, a reported payment remains pending until the recipient confirms receipt. Pending and disputed settlements do not reduce the confirmed group balance.
+With registered participants, a reported payment stays pending until the recipient confirms they got it. Pending and disputed settlements don't lower the confirmed group balance.
 
-The interface must clearly distinguish:
+The interface clearly separates:
 
-confirmed current balance;
+the confirmed current balance;
 
-outgoing settlements waiting for another participant;
+outgoing settlements waiting on someone else;
 
-incoming settlements requiring the current user's confirmation;
+incoming settlements waiting for the current user to confirm;
 
-projected balance if pending settlements are confirmed.
+the projected balance if pending settlements are confirmed.
 
-A sender who already reported payment should be able to see that the payment exists and is awaiting acknowledgement. A recipient should be able to confirm or dispute the reported payment. Pending settlement details should retain their source-expense allocations and age/status.
+Someone who already reported a payment can see that it exists and is waiting for acknowledgement. The recipient can confirm or dispute it. Pending settlements keep their allocations to source expenses, their age and their status.
 
-The payer may record actual private cash sent before recipient confirmation through the supported private clearing path so confirmation does not deduct cash again. The recipient similarly controls their own private receipt/linkage. Group confirmation never selects or exposes another user's private account.
+The payer can record the actual cash they sent privately before the recipient confirms, through the supported private clearing path, so confirming doesn't take the cash out again. The recipient likewise controls their own private receipt and linking. Group confirmation never picks or shows anyone else's private account.
 
-Manual confirmation involving a nonregistered participant must identify who recorded the confirmation and clearly state that authenticated recipient confirmation was unavailable.
+A manual confirmation for someone who isn't registered says who recorded it and states clearly that a signed-in confirmation from the recipient wasn't possible.
 
-Allow partial repayments. Overpayments preview the resulting reverse balance or advance instead of silently zeroing the obligation. A settlement transfer fee is the payer's private expense unless a separately agreed group allocation shares it.
+Partial repayments are allowed. An overpayment previews the reverse balance or advance it creates, instead of quietly zeroing the obligation. A transfer fee on a settlement is the payer's own expense, unless the group separately agreed to share it.
 
-Initially only the expense creator revises their bill. Owners may flag disputes or propose corrections rather than silently rewriting another participant's bill. Edits retain before/after versions and affected registered participants are informed. Changes to settled bills require explicit corrections.
+At first only the expense's creator revises their bill. Owners can flag disputes or propose corrections; they don't quietly rewrite someone else's bill. Edits keep their before and after versions, and the registered participants affected are told. Changing a settled bill takes an explicit correction.
 
-A shared purchase refund reverses the applicable participant shares and payer effects without deleting prior settlements. If participants already settled, the refund can create new amounts owed back.
+Refunding a shared purchase reverses the participant shares and payer effects it applies to, without deleting earlier settlements. If people already settled, the refund can create new amounts owed back.
 
 ##### Netting and settlement suggestions
 
-V2 includes explainable settlement suggestions based on the current confirmed net positions of participants.
+V2 includes settlement suggestions you can follow the reasoning of, based on participants' current confirmed net positions.
 
-The authoritative source remains the effective bills, payer contributions, participant shares, refunds, and confirmed settlements. Suggestions are derived views and never rewrite those records.
+The real source stays the bills in effect, what payers put in, participants' shares, refunds and confirmed settlements. Suggestions are a derived view and never rewrite those records.
 
 For example, if:
 
@@ -791,27 +788,27 @@ A owes B PHP 300;
 
 B owes C PHP 300;
 
-the application may suggest:
+the app might suggest:
 
 A pays C PHP 300.
 
-The suggestion preserves every participant's final net position while potentially reducing the number of payments.
+The suggestion keeps everyone's final net position the same while possibly needing fewer payments.
 
-A suggestion is not a payment and does not alter any balance until actual settlements are recorded and confirmed.
+A suggestion isn't a payment and doesn't change any balance until real settlements are recorded and confirmed.
 
-Do not promise the mathematically minimum possible number of payments unless the implemented algorithm guarantees that property. Present the result as a suggested way to settle.
+Don't promise the mathematically fewest payments unless the algorithm actually guarantees it. Present the result as a suggested way to settle.
 
-Direct reciprocal netting is part of normal balance derivation. Redirecting payment through participants who do not have a direct current obligation requires the applicable participants' explicit agreement/confirmation. Never simplify across unrelated groups, currencies, private loans, or disputed amounts.
+Netting debts that run directly in both directions is part of working out balances normally. Routing a payment through people who don't owe each other directly right now needs those people's explicit agreement or confirmation. Never simplify across unrelated groups, currencies, private loans or disputed amounts.
 
-Preserve allocations explaining which source obligations a redirected settlement discharges.
+Keep the allocations that explain which source obligations a redirected settlement clears.
 
-Prioritize explainable balances, pending-payment visibility, confirmation, private-ledger linking, exact payer contributions, explicit fee allocation, contextual guidance, group reports, and member-controlled reminders.
+What matters most: balances you can explain, seeing pending payments, confirmation, linking to private ledgers, exact payer amounts, explicit fee allocation, guidance in context, group reports and reminders each member controls.
 
-The Dashboard distinguishes lender debt, card balances, group payables, group receivables, and pending shared settlements. Group membership never implies collective ownership or visibility of private money.
+The Dashboard keeps lender debt, card balances, group payables, group receivables and pending shared settlements apart. Being in a group never implies owning money together or seeing each other's private money.
 
 ### 7. Financial accuracy rules and examples
 
-These are product acceptance rules to preserve through later implementation:
+These are acceptance rules for the product that every later implementation has to keep:
 
 | Action | Spending effect | Cash/liquid-fund effect | Liability effect |
 | --- | --- | --- | --- |
@@ -823,53 +820,53 @@ These are product acceptance rules to preserve through later implementation:
 | Pay PHP 1,000 principal plus PHP 100 newly recorded interest and PHP 10 fee | +110 | −1,110 | −1,000 net |
 | Repay PHP 1,100 of liability whose interest was already recorded, plus PHP 10 fee | +10 | −1,110 | −1,100 |
 
-Debt-payment summaries may include principal and interest for visibility, but report totals must not add that entire payment to expenses again. Report labels should make overlap explicit.
+A debt-payment summary can show principal and interest so you can see them, but report totals never add the whole payment to expenses again. Report labels make any overlap obvious.
 
-Use exact monetary arithmetic, such as integer centavos or fixed-decimal values, with defined rounding. Save all parts of a financial action together or none of them. Repeated submissions must not create duplicate transfers or payments. Validate ownership of every linked account, debt, and transaction.
+Money maths is exact, like integer centavos or fixed decimals, with defined rounding. All the parts of a financial action save together or not at all. Submitting twice never creates a duplicate transfer or payment. Every linked account, debt and transaction is checked for ownership.
 
-An existing loan imported at setup contributes an opening liability, not new income, spending, or borrowing during the reporting period. Historical installments already paid must not become new payments or reminders.
+An existing loan imported during setup adds an opening liability, not new income, spending or borrowing in the reporting period. Installments already paid in the past never turn into new payments or reminders.
 
 ### 8. Career module: job applications
 
-Store company, role, posting URL, source, application date, location, work arrangement, optional salary range/currency, technologies, contact details, resume version, notes, and next action/date. Saved opportunities should be distinct from submitted applications.
+Company, role, posting URL, where you found it, application date, location, work arrangement, an optional salary range and currency, technologies, contact details, resume version, notes, and the next action and its date. Saved opportunities are kept apart from submitted applications.
 
-Suggested stages: Saved, Applied, Screening, Interview, Technical Assessment, Final Interview, Offer, and Accepted. Rejected and Withdrawn are terminal outcomes. Allow skipped stages, repeated interviews, and changes supported by history; companies do not all use one fixed pipeline.
+Suggested stages: Saved, Applied, Screening, Interview, Technical Assessment, Final Interview, Offer and Accepted. Rejected and Withdrawn are final outcomes. Stages can be skipped, interviews repeated, and changes are kept in history; companies don't all follow one fixed pipeline.
 
-Provide a searchable table and, later, a board view. Each application has a timeline of submissions, responses, stage changes, interviews, assessments, follow-ups, and outcomes. Stage history retains the event date and the time it was entered.
+A searchable table, and later a board view. Each application has a timeline of submissions, responses, stage changes, interviews, assessments, follow-ups and outcomes. Stage history keeps both the date of the event and when it was entered.
 
-Interviews and assessments include scheduled time, location/link, preparation notes, and completion outcome. Follow-up suggestions should be configurable. “No response” is a dated observation, not an automatic rejection.
+Interviews and assessments have a scheduled time, a location or link, preparation notes and an outcome once done. Follow-up suggestions are configurable. "No response" is an observation with a date, not an automatic rejection.
 
-Store a user-entered snapshot of the role description or key requirements because a posting URL can expire. Resume versions should identify the exact version used, not only the latest resume. Treat a later application to the same company/role as a separate attempt when appropriate; offer a duplicate warning without assuming it is an error. Explicitly support declining an offer, an expired offer, and an employer-cancelled opening as distinct outcomes. Save actual dates rather than infer them from the current stage.
+Keep a snapshot of the role description or key requirements as the user typed it, since a posting URL can expire. Resume versions record the exact version used, not just the latest resume. A later application to the same company and role can be a separate attempt; the app warns about a possible duplicate without assuming it's a mistake. Declining an offer, an offer expiring and the employer cancelling the opening are separate outcomes. Save the actual dates instead of inferring them from the current stage.
 
-Analytics can include applications submitted, responses, applications reaching interviews, offers, rejections, time in stage, and results by source. Separate the number of interview events from the number of applications interviewed.
+Analytics could include applications submitted, responses, applications that reach interviews, offers, rejections, time in each stage and results by source. The number of interview events is kept apart from the number of applications that got interviews.
 
-Conversion reports must define the cohort: for example, applications submitted in September that have received a response as of October 5. Do not divide this month’s offers by this month’s interviews if they belong to different applications. Use “not applicable” for an empty denominator.
+Conversion reports define their cohort: for example, applications submitted in September that had a response by October 5. Don't divide this month's offers by this month's interviews if they belong to different applications. An empty denominator reads "not applicable".
 
 ### 9. Calendar, timeline, and reminders
 
 #### Calendar and agenda
 
-Combine debt due dates, card due dates, bills, interviews, assessments, follow-ups, tracker deadlines, and manually created personal events. Start with an agenda, then add month/week views and filters.
+Debt due dates, card due dates, bills, interviews, assessments, follow-ups, tracker deadlines and personal events you add yourself, all in one place. Start with an agenda, then add month and week views and filters.
 
-Each generated event links to its source. Rescheduling an interview or installment updates its calendar representation without creating a duplicate. Editing a generated event routes through the source workflow. Completed, cancelled, and overdue events have clear states.
+Every generated event links to its source. Moving an interview or installment updates its place on the calendar without creating a duplicate. Editing a generated event goes through its source's workflow. Completed, cancelled and overdue events have clear states.
 
-Treat all-day due dates as dates, not midnight timestamps that shift across time zones. Timed events use the user’s timezone, initially Asia/Manila. History timelines show what happened; the calendar primarily shows what is scheduled.
+All-day due dates are dates, not midnight timestamps that shift between time zones. Timed events use the user's timezone, Asia/Manila at first. History timelines show what happened; the calendar mainly shows what's scheduled.
 
 #### Reminders
 
-Allow per-event reminders, optional module defaults, and settings such as seven days before, one day before, or on the due date. Begin with in-app due/overdue indicators. Scheduled email or push delivery belongs to a later phase with explicit opt-in and delivery status.
+Reminders per event, optional defaults per module, and settings like seven days before, one day before or on the due date. Start with due and overdue indicators inside the app. Scheduled email or push delivery is a later phase, with explicit opt-in and delivery status.
 
-Support dismissing, snoozing, and disabling reminders. Source changes must reschedule or cancel reminders. Retried deliveries must not duplicate notifications. An overdue debt reminder stops when the relevant unpaid obligation is resolved.
+Reminders can be dismissed, snoozed and turned off. Changing the source reschedules or cancels them. Retried deliveries never send a notification twice. An overdue debt reminder stops once the unpaid obligation is sorted out.
 
-Notification settings should include timezone, quiet hours for external delivery, and whether amounts or company names may appear on a device notification. Dismissing a reminder does not mark a debt paid or an interview completed. Calendar conflicts may be flagged for timed events, but the application must not reschedule them automatically.
+Notification settings cover the timezone, quiet hours for external delivery, and whether amounts or company names can appear in a notification on the device. Dismissing a reminder doesn't mark a debt paid or an interview done. Timed events that clash can be flagged, but the app never reschedules them by itself.
 
-External calendar-provider synchronization is outside V3 and deferred until future platform architecture planning explicitly designs and approves its permissions, synchronization direction, conflict handling and deletion behavior. V3 includes internal source-driven Calendar/Agenda integration and existing appropriate reminder behavior; it does not require external calendar providers.
+Syncing with external calendar providers is outside V3, and deferred until later platform architecture planning designs and approves its permissions, sync direction, conflict handling and deletions. V3 has the internal Calendar and Agenda driven by source records, and the existing reminder behaviour that fits; it doesn't need external calendar providers.
 
 ### 10. Generic tracker templates
 
-Templates extend the platform to learning, books, personal tasks, goals, and other structured activities. A template defines fields; a tracker is a user’s instance of that template; entries contain its records.
+Templates stretch the platform to learning, books, personal tasks, goals and other structured activities. A template defines the fields; a tracker is one user's copy of a template; entries hold its records.
 
-V3 begins with preset Learning, Books and Personal Tasks templates, then adds user-created templates and custom fields. Supported field types are text, number, date, checkbox and single-select. Templates can mark fields required and identify a primary title, status and deadline field for shared views. Definitions are versioned; entries retain immutable history, with validation and explicit safe migrations between versions.
+V3 starts with preset Learning, Books and Personal Tasks templates, then adds templates and custom fields users create themselves. Supported field types are text, number, date, checkbox and single-select. A template can mark fields as required and name a main title, status and deadline field for shared views. Definitions are versioned; entries keep a history that never changes, with validation and explicit safe migrations between versions.
 
 Examples:
 
@@ -880,27 +877,27 @@ Examples:
 | Personal tasks | Title, priority, status, due date | Calendar and reminders |
 | Habits, later | Habit, frequency, target, dated check-ins | Needs actual check-in history for streaks |
 
-Financial subscriptions belong to recurring obligations. A template may link to them later, but must not maintain a competing financial balance. Likewise, the specialized application tracker remains authoritative for job pipelines.
+Financial subscriptions belong with recurring obligations. A template could link to them later, but never keeps a competing financial balance of its own. In the same way, the specialized application tracker stays the real record for job pipelines.
 
-User-created templates and custom fields are part of V3; richer relations and template sharing remain later extensions. Editing a template must preserve existing entries or provide an explicit migration; removing a field must not silently discard data. V3 also includes tracker reporting/statistics, internal Calendar/Agenda deadlines and reminders, and relevant onboarding, navigation, exports, lifecycle, accessibility and security integration. Arbitrary formulas, scripting, a general page builder and habit-streak functionality are outside V3.
+Templates and custom fields users create are part of V3; richer relations and sharing templates stay later extensions. Editing a template keeps existing entries or offers an explicit migration, and removing a field never quietly throws data away. V3 also includes tracker reports and statistics, internal Calendar and Agenda deadlines and reminders, and the onboarding, navigation, exports, lifecycle, accessibility and security work that goes with them. Arbitrary formulas, scripting, a general page builder and habit streaks are outside V3.
 
 ### 11. Reports
 
-Use one period-based reporting system for **weekly, monthly, quarterly, yearly, and custom date ranges**. Initially use calendar quarters, a configurable week start, and the user’s timezone.
+One period-based reporting system for **weekly, monthly, quarterly, yearly, and custom date ranges**. At first, calendar quarters, a configurable start of the week and the user's timezone.
 
 #### Financial reports
 
-Include income, recognized expenses, category breakdowns, fees/interest/penalties, refunds/rebates, external cash inflows/outflows, borrowing, debt payments, opening/closing tracked liquid funds, liability changes, and tracked net position. Later add budget comparisons, card utilization, savings-goal progress, and forecasts.
+Income, recognized expenses, category breakdowns, fees, interest and penalties, refunds and rebates, external cash in and out, borrowing, debt payments, opening and closing tracked liquid funds, liability changes and tracked net position. Later: budget comparisons, card utilization, savings-goal progress and forecasts.
 
-Separate spending from cash flow: a card purchase affects spending today but cash later; borrowing affects cash but is not income. Internal transfers are shown for reference and excluded from consolidated cash-flow totals.
+Spending and cash flow stay separate: a card purchase is spending today but cash later, and borrowing is cash but not income. Internal transfers are shown for reference and left out of combined cash-flow totals.
 
-Reconciliation identity for tracked liquid funds:
+The reconciliation identity for tracked liquid funds:
 
 `Closing funds = Opening funds + External cash inflows − External cash outflows + Explicit balance adjustments`
 
-Internal transfers cancel in the combined total. Fees remain external outflows. “Income minus expenses” must not be labeled cash flow when financed purchases, borrowing, or principal repayments are present.
+Internal transfers cancel out in the combined total. Fees stay external outflows. "Income minus expenses" is never labelled cash flow when there are financed purchases, borrowing or principal repayments.
 
-Illustrative cash-flow report, with categories deliberately separated:
+An example cash-flow report, with the categories deliberately kept apart:
 
 | Item | Amount |
 | --- | ---: |
@@ -913,67 +910,67 @@ Illustrative cash-flow report, with categories deliberately separated:
 | Net cash change | +PHP 12,415 |
 | Closing liquid funds | PHP 36,915 |
 
-In this example, recognized expenses total PHP 13,085; principal repayment is excluded. Actual reports must also account for any credit purchases, borrowing, noncash changes, and adjustments present.
+In this example, recognized expenses come to PHP 13,085; the principal repaid isn't one of them. Real reports also have to account for any credit purchases, borrowing, noncash changes and adjustments there are.
 
 #### Career and tracker reports
 
-Summarize application activity, cohort conversion rates, upcoming actions, completed learning topics, and eligible tracker counts. A yearly personal review can combine financial trends, career milestones, and goals without pretending unrelated metrics share one scoring system.
+Application activity, cohort conversion rates, upcoming actions, finished learning topics and the tracker counts that apply. A yearly personal review can bring together financial trends, career milestones and goals without pretending unrelated measures share one score.
 
-Show date range, filters, currency, data coverage, calculation definitions, and an “as of” time. Missing history should be disclosed. Link totals to detail records. Start with on-screen reports and CSV export; printable/PDF reports can follow.
+Reports show the date range, filters, currency, how much data they cover, how they're calculated and an "as of" time. Missing history is called out. Totals link to the records behind them. Start with on-screen reports and CSV export; printable or PDF reports can follow.
 
 ### 12. Onboarding and tutorial experience
 
-The finished application should teach users how to use it, beginning with their goal rather than a tour of every button.
+The finished app should teach people how to use it, starting from what they want to do rather than a tour of every button.
 
 #### First-use setup
 
-1. **Choose a starting goal.** Track money, organize job applications, or both. Explain that other modules can be enabled later.
-2. **Confirm preferences.** Choose timezone, currency, week start, and optional reminder settings.
-3. **Add the first account, if using Money.** Enter its current balance and the date that balance represents. Explain why this is an opening balance rather than income.
-4. **Record one real transaction.** Enter an expense or income and inspect the before/after balance. Offer a transfer-with-fee example as the next lesson.
-5. **Add existing debt, optionally.** Enter remaining liability, known schedule, and next unpaid due date. Do not require full historical reconstruction.
-6. **Add a credit card, when supported and applicable.** Explain outstanding versus statement balance and capture the latest verified statement.
-7. **Add one job application, if using Career.** Record company, role, stage, and the next action. Add an interview or follow-up date.
-8. **Review the agenda.** Show how records automatically produce deadlines and how to open the original record.
-9. **Choose reminders.** Explain the difference between in-app alerts and optional external notifications.
-10. **Review the dashboard and first report.** Explain that reports become more useful as actual records accumulate.
-11. **Explore optional trackers and planning tools.** Introduce these only after the core workflow is understood.
+1. **Choose a starting goal.** Track money, organize job applications, or both. The app explains other modules can be turned on later.
+2. **Confirm preferences.** Timezone, currency, start of the week and optional reminder settings.
+3. **Add the first account, if using Money.** Enter its current balance and the date that balance is from. The app explains why this is an opening balance and not income.
+4. **Record one real transaction.** Enter an expense or income and look at the balance before and after. A transfer with a fee is offered as the next lesson.
+5. **Add existing debt, optionally.** Enter what's left to pay, the schedule if known and the next unpaid due date. No need to rebuild the full history.
+6. **Add a credit card, when supported and applicable.** The app explains outstanding balance against statement balance, and records the latest verified statement.
+7. **Add one job application, if using Career.** Company, role, stage and the next action. Add an interview or follow-up date.
+8. **Review the agenda.** See how records turn into deadlines by themselves, and how to open the original record.
+9. **Choose reminders.** The difference between in-app alerts and optional external notifications.
+10. **Review the dashboard and first report.** Reports get more useful as real records build up.
+11. **Explore optional trackers and planning tools.** Only once the core workflow makes sense.
 
-When shared expenses are released, add a guided flow: create/join a group → review privacy → record a bill → choose payer/participants → preview shares → review balances → record/confirm settlement → optionally link your own account. Joining a group never requires sharing the personal workspace.
+When shared expenses come out, there's a guided flow: create or join a group → review privacy → record a bill → choose payers and participants → preview shares → review balances → record or confirm a settlement → optionally link your own account. Joining a group never means sharing your personal workspace.
 
-Users can skip optional steps, save progress, and resume later. Career-only users bypass financial setup. Features not yet released must not appear as required onboarding steps.
+People can skip optional steps, save their progress and come back later. Career-only users skip the financial setup. Features that aren't out yet never appear as required onboarding steps.
 
 #### Ongoing guidance
 
-- A “Getting started” checklist remains available until completed or dismissed.
-- Empty states show the next useful action and a short example.
-- Contextual help explains fees, transfers, partial payments, statements, and reconciliation.
-- A Help/Guide area provides short task-based instructions and a replayable tour.
-- An optional demo workspace uses isolated sample data, clearly labeled, with a safe reset that affects only demo records.
-- Destructive or consequential actions explain their effect before submission, especially settlement and financial corrections.
+- A "Getting started" checklist stays available until it's done or dismissed.
+- Empty states show the next useful thing to do and a short example.
+- Help in context explains fees, transfers, partial payments, statements and reconciliation.
+- A Help/Guide area has short task-based instructions and a tour you can replay.
+- An optional demo workspace uses separate sample data, clearly labelled, with a safe reset that only touches demo records.
+- Destructive or consequential actions explain what they'll do before you submit, especially settlements and financial corrections.
 
 #### Suggested routine
 
-**Daily:** record spending, update applications, and review upcoming commitments.  
-**Weekly:** reconcile accounts, review follow-ups, and check the weekly report.  
-**Monthly:** verify obligations/statements and review financial and career trends.  
-**Quarterly/yearly:** review progress and adjust goals using the available history.
+**Daily:** record spending, update applications and check upcoming commitments.  
+**Weekly:** reconcile accounts, review follow-ups and check the weekly report.  
+**Monthly:** check obligations and statements, and review financial and career trends.  
+**Quarterly/yearly:** review progress and adjust goals using the history you have.
 
 ### 13. Main screens
 
-The [approved redesign frame](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts) uses **Home** (the current Dashboard route), an integrated module switcher, contextual actions and local section navigation rather than a mandatory permanent global sidebar. The directory exposes Money, Career, Calendar, Trackers, Shared expenses when enabled, and Reports; More/Account provides Getting started, Settings and Help. Mobile uses labeled Home / Calendar / Modules / More navigation. Preserve current routes, capability flags and contextual source links.
+The [approved redesign frame](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#6-application-frame-navigation-and-shared-interaction-contracts) uses **Home** (the current Dashboard route), an integrated module switcher, contextual actions and local section navigation instead of a permanent global sidebar. The directory lists Money, Career, Calendar, Trackers, Shared expenses when it's turned on, and Reports; More/Account has Getting started, Settings and Help. On mobile, labelled Home / Calendar / Modules / More navigation. Current routes, capability flags and contextual source links all stay.
 
-Shared expenses has its own directory entry and group-local navigation for its implemented group list, details, bill entry, member balances, settlement history, invitations and settings. Private financial integration remains owned by Money; navigation placement does not change group/private authority. Group reports show total bills, individual shares, advances, confirmed repayments, and remaining balances; personal reports include only that user's posted private-ledger effects. Group and personal totals must not be summed as though they were separate spending.
+Shared expenses has its own directory entry and navigation inside each group for the group list, details, bill entry, member balances, settlement history, invitations and settings that are built. Money still owns the private financial side; where something sits in the navigation doesn't change group or private authority. Group reports show total bills, each person's share, advances, confirmed repayments and remaining balances; personal reports include only that user's own posted private-ledger effects. Group and personal totals are never added together as if they were separate spending.
 
-Implemented Money pages include accounts, ledger, transaction detail/entry, debts/schedules, reconciliation, cards, budgets, goals, recurring obligations and forecasts. Career pages include the application list, application details/timeline, and analytics. Reports share consistent period and filter controls.
+The Money pages built are accounts, the ledger, transaction details and entry, debts and schedules, reconciliation, cards, budgets, goals, recurring obligations and forecasts. Career has the application list, application details and timeline, and analytics. Reports share the same period and filter controls.
 
-The redesign reorganizes presentation and navigation without changing module capabilities or business rules. Its approved visual specification governs colors, typography, density and adaptive list/detail layouts; this blueprint does not duplicate that system or authorize new features/native architecture. Prioritize a responsive interface suitable for entering an expense or updating an application on a phone. Use readable labels, keyboard-accessible forms, visible validation, and status indicators that do not rely only on color.
+The redesign reorganizes how things look and where they sit, without changing what modules can do or their business rules. Its approved visual spec covers colours, typography, density and adaptive list and detail layouts; this document doesn't repeat that system or approve new features or a native architecture. Put a responsive interface first, good enough to enter an expense or update an application on a phone. Readable labels, keyboard-accessible forms, visible validation and status indicators that don't rely only on colour.
 
-Include visible saving/saved/failed states and preserve recoverable form input after an error. The current web development/verification environment remains online through V3 and redesign. If a connection fails, show that an action has not been confirmed; do not imply it is safely stored. Future mostly offline Windows/Android behavior, device synchronization and packaging require separate approved platform architecture; they are not V3 work or a decision to build a PWA.
+Saving, saved and failed states are visible, and form input you can recover survives an error. The web development and verification environment stays online through V3 and the redesign. If a connection fails, the app shows that the action wasn't confirmed; it never implies it's safely stored. Mostly-offline Windows and Android behaviour, syncing between devices and packaging need their own approved platform architecture later; they aren't V3 work and aren't a decision to build a PWA.
 
 ### 14. Scope and delivery sequence
 
-The full vision is a roadmap, not a commitment to implement every later idea. The first usable slice and V1/V2/V3 stages below are completed under their documented acceptance scopes; historical handoffs preserve that evidence. M1 foundations are completed with explicit final visual approval October 17, 2026 (Asia/Manila). M2 is ready for separate assignment and has not started. Later stages require separate assignments; the current web environment remains through redesign and its production release is no longer planned.
+The full vision is a roadmap, not a promise to build every later idea. The first usable slice and the V1, V2 and V3 stages below are finished under their documented acceptance scopes, and the historical handoffs keep that evidence. M1 foundations are finished, with final visual approval on October 17, 2026 (Asia/Manila). M2 is ready to start on its own and hasn't started. Later stages need their own pieces of work; the current web environment stays through the redesign, and releasing it to production is no longer planned.
 
 | Stage | Deliverable | Release boundary |
 | --- | --- | --- |
@@ -982,22 +979,22 @@ The full vision is a roadmap, not a commitment to implement every later idea. Th
 | V2: financial maturity | Credit cards/statements, recurring obligations, budgets, savings goals, forecasts, richer career analytics, scheduled opted-in notifications | Card and planning workflows verified with realistic cases |
 | V2: shared expenses and settlements | Groups for family/friends/roommates/trips, registered/manual participants, one or multiple payers, equal/exact splits, net balances, partial/full/selected-expense settlements, pending confirmation, settlement suggestions, private ledger links | Participants can record and settle realistic shared spending without exposing private data or duplicating financial effects |
 | V3: adaptable trackers | Learning, Books and Personal Tasks presets; versioned custom templates/fields, validated entries/history and safe migrations; reporting/statistics; internal Calendar/Agenda, reminders and relevant cross-domain integration | Existing records survive customization; external calendar synchronization, offline support and platform packaging are excluded |
-| Comprehensive UI/UX Redesign | M1 completed and finally approved October 17, 2026; M2 ready for separate assignment; M2-M6 not started | Preserve all V1–V3 behavior; targeted change-impact checks and final redesign-wide acceptance, unchanged CI |
+| Comprehensive UI/UX Redesign | M1 completed and finally approved October 17, 2026; M2 ready to start as its own piece of work; M2-M6 not started | Preserve all V1–V3 behavior; targeted change-impact checks and final redesign-wide acceptance, unchanged CI |
 | Platform Architecture Planning | Reassess features, infrastructure and architecture for Windows/Android, mostly offline personal use and selected online synchronization/collaboration | Approve the replacement architecture before implementation; no binding technology selection yet |
 | Windows/Android Development → Platform-Specific Acceptance | Implement and verify the subsequently approved platform plan | Separate assignments and acceptance criteria; no current web production-readiness prerequisite |
 | Later, selectively | Receipt OCR, suggested categorization, import integrations, investments, multiple currencies, shared workspaces, annual-review exports | Added only for a demonstrated user need and supportable accuracy |
 
-Tutorials and contextual guidance evolve with each release. They are part of the product, not a final task after all features are built.
+Tutorials and contextual guidance grow with each release. They're part of the product, not a last task after every feature is built.
 
-Completed V3 has four internal milestones: **V3-A — Tracker Foundation and Presets; V3-B — Custom Templates and Versioned Migrations; V3-C — Reporting, Calendar, and Cross-Domain Integration; V3-D — Consolidated Acceptance and Documentation**. They were delivered in two assignments. Assignment 2 explicitly replaced the originally proposed comprehensive campaign with approved change-impact verification; the [handoff](archive/web/V3_DEVELOPMENT_HANDOFF.md) and [targeted acceptance matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) govern actual results. Historical V1–V3 evidence supports unchanged behavior and does not certify future redesigned interfaces. M1–M5 verify changed/affected UI and contracts; M6 provides redesign-wide screen, navigation, theme, responsive, accessibility, consequential workflow and changed-performance coverage. Broaden only for changed shared contracts, failures or significant security/financial risks; retain mandatory assertions and existing CI.
+The finished V3 had four internal milestones: **V3-A — Tracker Foundation and Presets; V3-B — Custom Templates and Versioned Migrations; V3-C — Reporting, Calendar, and Cross-Domain Integration; V3-D — Consolidated Acceptance and Documentation**. I delivered them in two pieces of work. The second one explicitly swapped the big verification campaign I'd first proposed for approved change-impact verification; the [handoff](archive/web/V3_DEVELOPMENT_HANDOFF.md) and the [targeted acceptance matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) are where the actual results are. The historical V1–V3 evidence supports behaviour that didn't change; it doesn't certify future redesigned screens. M1–M5 verify the UI and contracts that changed or were affected; M6 covers the whole redesign: screens, navigation, themes, responsiveness, accessibility, consequential workflows and changed performance. Only widen testing for changed shared contracts, failures or serious security or financial risks, and keep the mandatory assertions and the existing CI.
 
-Initially defer automatic provider fee lookup, bank connections, payment execution, automatic loan settlement calculations, credit scoring, AI financial recommendations, collaborative editing, and a fully general no-code builder. The app records and organizes information; executing bank payments is a separate future product decision.
+Deferred to start with: automatic provider fee lookup, bank connections, making payments, automatic loan settlement calculations, credit scoring, AI financial advice, collaborative editing and a fully general no-code builder. The app records and organizes information; actually making bank payments would be a separate product decision for the future.
 
-Additional release boundaries: V1 includes separate sign-in accounts/private workspaces for multiple users, category splits, loan net-disbursement entry, manual schedule revisions, recovery, and account/data lifecycle controls. V2 can add supporting-file uploads, CSV imports, and portable workspace export/restore. Credit-card purchases integrate with the existing expense-entry experience while card-specific statements, payments and liability remain specialized. Shared Expenses and Settlements support family, friends, roommates, trips and other groups; they include group receivables/payables, one or multiple payers per bill, equal/exact participant shares, reciprocal netting, partial/full/selected-expense settlements, pending recipient confirmation, and explainable settlement suggestions. Percentage/weighted/itemized split methods, general standalone lending, mathematically optimal settlement minimization, transfers in transit, refinancing, split funding from multiple private payment accounts, and offline synchronization remain later unless separately promoted. Core refund/correction rules apply when the corresponding transaction type is released.
+More release boundaries: V1 has separate sign-in accounts and private workspaces for several users, category splits, entering a loan's net disbursement, manual schedule revisions, recovery, and controls over the account and data lifecycle. V2 can add supporting-file uploads, CSV imports and portable workspace export and restore. Credit-card purchases fit into the existing expense entry, while card-specific statements, payments and liability stay specialized. Shared Expenses and Settlements support family, friends, roommates, trips and other groups: group receivables and payables, one or more payers per bill, equal or exact shares, netting debts in both directions, partial, full and selected-expense settlements, pending recipient confirmation and settlement suggestions you can follow. Percentage, weighted and itemized splits, general standalone lending, mathematically optimal settlement minimization, money in transit, refinancing, funding a split from several private payment accounts, and offline sync stay for later unless I pull them in. The core refund and correction rules apply once the matching transaction type is out.
 
 ### 15. Conceptual model and engineering boundaries
 
-Potential concepts, to refine in a separate data-model document:
+Possible concepts, to be refined in a separate data-model document:
 
 - **Shared:** User, Preferences, Category, Tag, Activity, Reminder.
 - **Group expenses:** ExpenseGroup, Membership, Invitation, Participant, SharedExpense, PayerContribution, ParticipantShare, GroupSettlement, SettlementAllocation, PrivateLedgerLink, Dispute.
@@ -1009,106 +1006,106 @@ Potential concepts, to refine in a separate data-model document:
 - **Time:** PersonalEvent and calendar projections from source records.
 - **Trackers:** TrackerTemplate, FieldDefinition, Tracker, TrackerEntry.
 
-A debt payment is one financial action linked to its allocations, not two separate records both deducted from cash. The calendar projects source dates rather than independently owning another copy of each deadline. Financial history and general activity history serve related but distinct purposes.
+A debt payment is one financial action linked to its allocations, not two separate records both taken out of cash. The calendar projects dates from their sources instead of owning its own copy of each deadline. Financial history and general activity history are related but do different jobs.
 
-Begin with one application divided into clear modules and one transactional database. A modular monolith is sufficient; microservices are unnecessary for this scope. The current web stack is already established in [System Architecture](ARCHITECTURE.md#system-architecture) and remains through redesign. Select no replacement native stack until the separately approved post-redesign platform architecture phase.
+Start with one app split into clear modules and one transactional database. A modular monolith is enough; microservices aren't needed at this size. The current web stack is set out in [System Architecture](ARCHITECTURE.md#system-architecture) and stays through the redesign. No native replacement stack gets picked until the separately approved platform architecture phase after the redesign.
 
 ### 16. Quality, privacy, and trust
 
-- Isolate each user’s data and validate access to linked records, reports, and exports.
-- Validate group membership and role permissions separately from private-record ownership, including files, notification recipients, exports, and invitations. Changes to group membership must revoke inappropriate access.
-- Use secure authentication and session handling; never collect bank passwords, wallet PINs, or full card credentials for manual tracking.
-- Protect sensitive data in transport and storage; keep private financial/contact data out of ordinary logs and public demo data.
-- Retain an explainable correction history while supporting intentional user data deletion under a defined retention policy.
-- Back up data and verify restoration; allow practical exports and clear explanations of their coverage.
-- Validate amounts, required fields, dates, currencies, allocation totals, and duplicate requests.
-- Handle missing provider details visibly rather than guessing.
-- Use confirmations for consequential actions and clear recovery paths for ordinary mistakes.
+- Each user's data is isolated, and access to linked records, reports and exports is checked.
+- Group membership and role permissions are checked separately from who owns private records, including files, notification recipients, exports and invitations. Changes to membership take away access that's no longer right.
+- Secure authentication and session handling. Never ask for bank passwords, wallet PINs or full card credentials for manual tracking.
+- Sensitive data is protected in transit and in storage, and private financial and contact data stays out of ordinary logs and public demo data.
+- A correction history you can explain, while still supporting deleting your data on purpose under a defined retention policy.
+- Data is backed up and restores are verified; practical exports, with a clear explanation of what they cover.
+- Amounts, required fields, dates, currencies, allocation totals and duplicate requests are validated.
+- Missing provider details are shown as missing, not guessed.
+- Consequential actions get confirmations, and ordinary mistakes have clear ways back.
 
 #### Account lifecycle and data ownership
 
-Support registration, sign-in, sign-out, and a secure recovery path appropriate to the selected sign-in method. Users should be able to update their profile and revoke active sessions. Authentication details can be chosen later, but losing access must have a defined recovery experience.
+Registration, sign-in, sign-out and a secure recovery path that fits the sign-in method chosen. Users can update their profile and revoke active sessions. The authentication details can be decided later, but losing access needs a defined way back.
 
-Separate archiving from deletion. Archived applications and trackers retain their history. Financial corrections retain linked evidence; ordinary record removal must not leave orphaned calendar events or reminders. Whole-workspace deletion requires an explicit scope preview, confirmation, and a stated policy covering retained backups and eventual expiry. Do not promise immediate removal from every backup if that is not how the product works.
+Archiving and deleting are different. Archived applications and trackers keep their history. Financial corrections keep their linked evidence, and removing an ordinary record never leaves orphaned calendar events or reminders. Deleting a whole workspace needs a preview of exactly what goes, a confirmation, and a stated policy for backups that are kept and when they expire. Don't promise instant removal from every backup if that's not how the product works.
 
 #### Imports, exports, and restoration
 
-V1 CSV exports should clearly state which records and fields they contain. A report export is not a complete backup. A later portable workspace export should cover the supported records, relationships, template definitions, and version information needed for restoration, with attachment handling clearly stated.
+V1 CSV exports say clearly which records and fields they contain. A report export isn't a complete backup. A later portable workspace export would cover the supported records, relationships, template definitions and version information needed to restore, and say clearly how attachments are handled.
 
-CSV import should begin with supported formats and a preview showing field mappings, date/currency interpretation, totals, invalid rows, and suspected duplicates. Do not guess ambiguous date formats or overwrite existing data silently. Show imported, skipped, and failed counts; retrying the same import must not duplicate confirmed records. Starting with opening balances and importing history also requires a cutoff rule so past transactions are not counted twice.
+CSV import starts with supported formats and a preview showing field mappings, how dates and currency are read, totals, invalid rows and likely duplicates. Ambiguous date formats are never guessed and existing data is never overwritten quietly. Imported, skipped and failed counts are shown, and retrying the same import never duplicates confirmed records. Starting from opening balances and importing history also needs a cutoff rule so past transactions aren't counted twice.
 
-Restoring a workspace must preview whether it creates a separate workspace or replaces existing data. User-controlled restoration and service disaster recovery are different workflows, both requiring verification.
+Restoring a workspace previews whether it makes a separate workspace or replaces existing data. Restores the user controls and disaster recovery on the service side are different workflows, and both need verifying.
 
 #### Supporting records and attachments
 
-V1 can store notes and reference links. Later allow receipts, provider statements, settlement confirmations, resume versions, and assessment documents to attach to their source record. Restrict file types/sizes, enforce private access, and define retention/export behavior. Do not expose a private file through a public link by default. Uploaded files supply evidence; they do not automatically change balances or application stages.
+V1 can store notes and reference links. Later, receipts, provider statements, settlement confirmations, resume versions and assessment documents can attach to their source record. File types and sizes are limited, access is private, and retention and export behaviour is defined. A private file is never exposed through a public link by default. Uploaded files are evidence; they don't change balances or application stages by themselves.
 
 #### Operational expectations
 
-Existing production/human-configuration checklists remain historical and conditional operational requirements. They do not require provisioning external services or completing a current-web launch. Local verification and all applicable integrity, privacy, authorization, security and recovery guarantees continue; future platform operational requirements will be designed during architecture planning.
+The existing production and manual-configuration checklists stay as historical, conditional operational requirements. They don't require setting up external services or finishing a launch of the current web app. Local verification and every integrity, privacy, authorization, security and recovery guarantee that applies carry on; operational requirements for the future platform get designed during architecture planning.
 
-Define measurable performance and storage limits before launch, using a realistic multi-year personal dataset. Large histories need search, filtering, and pagination. Expose actionable failure messages and a support/feedback route. Report generation and reminder failures must be detectable without logging sensitive contents. Agree on backup frequency and recovery expectations before storing real user data.
+Set measurable performance and storage limits before launch, using a realistic dataset covering several years of personal use. Large histories need search, filtering and pagination. Failure messages say what to do, and there's a way to get support or give feedback. Failures in report generation and reminders have to be detectable without logging sensitive contents. Agree on how often to back up and what recovery to expect before storing real user data.
 
 ### 17. Acceptance scenarios
 
-Before considering the coherent V1 complete, verify that a user can:
+Before calling the coherent V1 complete, check that a user can:
 
-1. Start with two accounts, record a transfer with a fee, and see consistent balances and fee-only spending.
-2. Record income and expenses, then reconcile the app with an actual balance using an explainable correction.
-3. Import an existing debt without duplicating historical borrowing or payments.
-4. Record partial and full debt payments without double-counting principal as spending.
-5. Settle a debt early, preserve its schedule/history, handle a confirmed waiver appropriately, and remove future unpaid reminders.
-6. Track an application through multiple interviews and create calendar events without duplicate source records.
-7. View weekly, monthly, quarterly, and yearly reports using the same definitions and inspect supporting details.
-8. Complete or skip onboarding, resume it, and replay relevant help without creating unintended data.
-9. Correct a backdated entry and see affected balances and reports update together.
-10. Access only their own records, including when attempting to reference another user’s account or application.
+1. Start with two accounts, record a transfer with a fee, and see balances that agree and spending that's only the fee.
+2. Record income and expenses, then reconcile the app against a real balance with a correction they can explain.
+3. Import an existing debt without duplicating past borrowing or payments.
+4. Record partial and full debt payments without counting principal as spending twice.
+5. Settle a debt early, keep its schedule and history, handle a confirmed waiver properly, and clear future unpaid reminders.
+6. Follow an application through several interviews and create calendar events without duplicating source records.
+7. See weekly, monthly, quarterly and yearly reports that use the same definitions, and inspect the details behind them.
+8. Finish or skip onboarding, come back to it, and replay the relevant help without creating data by accident.
+9. Correct a backdated entry and see every affected balance and report update together.
+10. Reach only their own records, including when trying to point at someone else's account or application.
 
-11. Split a purchase between categories while preserving one financial deduction and correct report totals.
-12. Record loan proceeds net of an upfront fee without labeling borrowing as income or duplicating the fee.
-13. Revise a debt schedule while retaining previous terms and payment history and updating future reminders.
-14. Recover access through the supported sign-in recovery workflow and revoke an existing session.
-15. Disable and re-enable a module without losing its records, and review the stated scope before workspace deletion.
-16. Encounter a failed save without receiving a false success message or duplicating the action on retry.
-17. Record PHP 10,000 salary into a selected BDO account with an opening balance of PHP 2,000 and see PHP 12,000 in that account, PHP 10,000 additional period income, and no changes to other accounts.
-18. Record a PHP 500 gift into a selected GCash wallet with PHP 200 and see PHP 700 there, with a linked gift income record. Recording borrowed money instead must increase that wallet and the debt without increasing earned/gift income.
+11. Split a purchase between categories while keeping one financial deduction and correct report totals.
+12. Record loan proceeds net of an upfront fee without calling the borrowing income or doubling the fee.
+13. Revise a debt schedule while keeping the earlier terms and payment history, and updating future reminders.
+14. Get access back through the supported sign-in recovery and revoke an existing session.
+15. Turn a module off and on again without losing its records, and review exactly what goes before deleting the workspace.
+16. Hit a failed save without being told it succeeded, and without the action being duplicated on retry.
+17. Record PHP 10,000 salary into a chosen BDO account with an opening balance of PHP 2,000, and see PHP 12,000 in that account, PHP 10,000 more income for the period, and no change to other accounts.
+18. Record a PHP 500 gift into a chosen GCash wallet holding PHP 200 and see PHP 700 there, with a linked gift income record. Recording it as borrowed money instead has to raise that wallet and the debt without raising earned or gift income.
 
-For the credit-card release, additionally verify purchase, statement closure, partial payment, refund, fee, overpayment, and installment behavior. For generic trackers, verify field validation and preservation of existing entries after template changes.
+For the credit-card release, also check purchases, closing a statement, partial payments, refunds, fees, overpayments and installments. For generic trackers, check field validation and that existing entries survive template changes.
 
-For later imports and portability, verify ambiguous-date handling, duplicate detection, historical balance cutoffs, and restoration of relationships. For supported refunds, verify that a later-period partial refund changes that period's refund totals while preserving the original purchase history.
+For later imports and portability, check how ambiguous dates are handled, duplicate detection, historical balance cutoffs and restoring relationships. For supported refunds, check that a partial refund in a later period changes that period's refund totals while keeping the original purchase's history.
 
-For the family shared-expense release, verify:
+For the family shared-expense release, check that:
 
-1. Two family users have independent logins; neither can read the other's private data even when they share a group.
-2. The PHP 1,200 dinner example produces PHP 400 shares, PHP 800 receivable for the payer, and consistent cash/spending without duplicate ledger records.
-3. Partial, pending, confirmed, disputed, reversed, and overpaid settlements preserve explainable balances.
-4. Nonregistered participants have clearly marked manual history and cannot be silently merged into a real user's identity.
-5. Rounding, refunds, corrected settled bills, and leaving a group preserve history and zero-sum group net balances.
-6. When simplification is released, suggestions preserve individual net positions and original bills and do not apply without agreement.
+1. Two family users have their own logins, and neither can read the other's private data even when they share a group.
+2. The PHP 1,200 dinner example gives PHP 400 shares, a PHP 800 receivable for the payer, and consistent cash and spending without duplicate ledger records.
+3. Partial, pending, confirmed, disputed, reversed and overpaid settlements all leave balances you can explain.
+4. People who aren't registered have clearly marked manual history and can't be quietly merged into a real user's identity.
+5. Rounding, refunds, corrected settled bills and leaving a group keep the history and keep group net balances at zero overall.
+6. Once simplification is out, suggestions keep each person's net position and the original bills, and don't apply without agreement.
 
 ### 18. Success and portfolio value
 
-Product success means the primary user can use the application in daily life, explain balances and reports, identify next actions, and keep using it without relying on scattered notes for the same workflows. Measure onboarding completion, repeat usage, reconciliation differences, and whether due items are resolved; set numeric targets after an initial usage period.
+Success means the main user can use the app in daily life, explain balances and reports, see what to do next, and keep using it without falling back on scattered notes for the same jobs. Measure finished onboarding, repeat use, reconciliation differences and whether due items get resolved; set number targets after a first period of use.
 
-The portfolio should demonstrate coherent business rules, relational data modeling, transactional consistency, authorization, validation, date handling, reporting, and useful interface design. A small deployed product with realistic demonstration data and verified workflows is more useful than a long list of unfinished modules.
+As a portfolio piece it should show coherent business rules, relational data modelling, transactional consistency, authorization, validation, date handling, reporting and a useful interface. A small deployed product with realistic demo data and workflows that are verified is worth more than a long list of half-done modules.
 
-Build in focused sessions alongside job applications. Each session should end with a concrete result: a workflow, a corrected rule, a reviewed screen, or a meaningful verification. Defer a feature when it prevents the next usable release.
+Build in focused sessions alongside job applications. Each session should end with something concrete: a workflow, a fixed rule, a reviewed screen or a meaningful check. Put a feature off if it's blocking the next usable release.
 
 ### 19. Decisions to make next
 
-**Current next step — October 17, 2026:** individually assign M1 using the approved redesign documents. D01/D03/D04 and the working identity are resolved; final branding and F01–F07 remain deferred and non-blocking. The initial planning checklist and proposed-choice table below are retained as historical product rationale, not unresolved M1 prerequisites. Implemented V1–V3 contracts and accepted handoffs supersede their original tentative wording; do not reopen them or infer new features from this list.
+**Current next step — October 17, 2026:** start M1 on its own, using the approved redesign documents. D01/D03/D04 and the working identity are settled; final branding and F01–F07 stay deferred and don't block anything. I've kept the initial planning checklist and the table of proposed choices below as the historical reasoning behind the product, not as open prerequisites for M1. The contracts built in V1–V3 and the accepted handoffs replace their original tentative wording; don't reopen them or read new features into this list.
 
 1. Choose the first usable slice and its exact user stories.
-2. Define report terminology and the treatment of known versus unposted interest.
-3. Decide which debt types and schedule behaviors V1 supports explicitly.
-4. Design account, transaction, debt-payment, application, and agenda screens.
-5. Create the data model and financial invariants before implementing balances.
-6. Select the stack, hosting, authentication approach, and backup strategy.
-7. Create a development backlog with acceptance criteria and a small release boundary.
+2. Define report terminology and how known and unposted interest are treated.
+3. Decide which debt types and schedule behaviours V1 supports explicitly.
+4. Design the account, transaction, debt-payment, application and agenda screens.
+5. Create the data model and financial invariants before building balances.
+6. Choose the stack, hosting, authentication approach and backup strategy.
+7. Write a development backlog with acceptance criteria and a small release boundary.
 
 #### Historical initial product decisions
 
-These were initial questions for the affected releases; use accepted implementation evidence for current behavior and separately scope any genuinely new extension:
+These were the first questions for the releases they affected. For how things work now, use the accepted implementation evidence, and scope any genuinely new extension on its own:
 
 | Decision | Proposed starting position | What must be confirmed |
 | --- | --- | --- |
@@ -1121,56 +1118,56 @@ These were initial questions for the affected releases; use accepted implementat
 | Shared expenses | One payer, equal/exact splits, confirmed settlements, explicit private-ledger linking | Invitation/role policies, historical access, disputes, and private-ledger correction behavior when group records change |
 | Uploads and growth | Notes/links first, private uploads later | Supported formats, file limits, dataset targets, and costs |
 
-This historical table does not override implemented rules or promise every option. New changes require explicit scope and updated requirements before implementation; it authorizes no native-platform choices.
+This historical table doesn't override rules that are built, and doesn't promise every option. New changes need an explicit scope and updated requirements before they're built; it doesn't approve any native-platform choices.
 
-The intended result is one connected personal workspace that grows with the user—from job searching and everyday spending to managing credit, recurring responsibilities, and long-term goals.
+What I'm aiming for is one connected personal workspace that grows with the person using it, from job hunting and everyday spending to managing credit, recurring responsibilities and long-term goals.
 
 ## V1 user guide
 
-After registering, use the verification email and sign in explicitly. Password recovery uses a short-lived link and revokes existing sessions after a successful reset. Settings → Sessions shows the current session and other sessions and supports individual or all-device revocation.
+After registering, use the verification email and then sign in. Password recovery uses a short-lived link and signs out existing sessions once the reset succeeds. Settings → Sessions shows the current session and the others, and can revoke them one at a time or on all devices.
 
-Onboarding can be skipped, resumed from the Dashboard, or replayed through Help. Replaying guidance does not recreate records. Choose theme, timezone, week start and modules in Settings. Hiding a module retains records; restoring it restores access. Hidden module sources remain visible in Agenda according to the source contract and can offer a restore action.
+Onboarding can be skipped, picked up again from the Dashboard, or replayed from Help. Replaying the guidance doesn't recreate records. Theme, timezone, start of the week and modules are in Settings. Hiding a module keeps its records, and bringing it back restores access. Sources from hidden modules still appear in Agenda as their source contract says, and can offer to restore the module.
 
-Open accounts with a confirmed opening cutoff and balance. Record salary and gifts as income into the selected account. Borrowing increases cash and debt and is not income. A transfer moves funds between accounts; only its recognized fees are spending. An expense may have several category allocations while making one cash deduction. Review exact effects before confirmation. A transaction that makes an account negative requires an explicit acknowledgement recorded with its evidence.
+Open accounts with a confirmed opening cutoff and balance. Record salary and gifts as income into the account you choose. Borrowing raises cash and debt and isn't income. A transfer moves money between accounts; only its recognized fees count as spending. An expense can have several category allocations while taking cash out once. Check the exact effects before confirming. A transaction that takes an account below zero needs an explicit acknowledgement, recorded with its evidence.
 
-Import existing debts using recognized opening liability and only supplied dates/history. The import does not create past cash payments or expenses. Accounting components and contractual due allocations answer different questions. Confirm the displayed allocation when recording a payment; do not guess unknown accounting components. External fees do not satisfy installments. An uncertain accounting payment uses clearing until resolved.
+Import existing debts using the recognized opening liability and only the dates and history you give. The import doesn't create past cash payments or expenses. The accounting parts of a payment and the contractual due allocations answer different questions. Confirm the allocation shown when you record a payment; don't guess accounting parts you don't know. External fees don't count towards installments. An accounting payment you're unsure of goes to clearing until it's sorted out.
 
-Schedule revisions preserve old schedules and historical allocations. Settlement requires an explicit payoff, confirmed waiver/charge information and accounting resolution. Avoided future charges differ from recognized expense reversals. No reminder control pays or settles a debt.
+Schedule revisions keep the old schedules and historical allocations. Settling a debt needs an explicit payoff, confirmed waiver or charge information, and the accounting resolved. Avoided future charges aren't the same as reversing a recognized expense. No reminder control pays or settles a debt.
 
-Reconciliation compares the tracked balance at a cutoff with an observed balance. A difference does not automatically change the account. Explicit unexplained adjustments use adjustment equity, not income. Later/backdated financial changes can require a comparison to be reviewed again. Correct posted economic meaning with a reason through reversal and replacement; original evidence remains. A genuine later purchase refund retains the purchase and uses the refund date, without becoming income.
+Reconciliation compares the tracked balance at a cutoff with a balance you observed. A difference doesn't change the account by itself. Explicit unexplained adjustments use adjustment equity, not income. Later or backdated financial changes can mean a comparison needs reviewing again. Correct what a posted record means with a reason, through a reversal and a replacement; the original evidence stays. A real later refund of a purchase keeps the purchase and uses the refund's date, without becoming income.
 
-Career applications retain stage and event history. Repeated interviews, assessments and follow-ups are separate occurrences. Agenda projects authoritative deadlines; it does not duplicate them as editable Calendar events. Reminder dismissal/snoozing is independent of source completion. Reports use shared period definitions, exact posting classifications and supporting drilldowns. CSV export descriptions state their scope and dates; an export is not a workspace backup.
+Career applications keep their stage and event history. Repeated interviews, assessments and follow-ups are each their own occurrence. Agenda shows the real deadlines; it doesn't copy them into editable Calendar events. Dismissing or snoozing a reminder is separate from completing its source. Reports use shared period definitions, exact posting classifications and drill-downs to the details. CSV export descriptions say what they cover and the dates; an export isn't a workspace backup.
 
-If a save is unconfirmed, keep the form open and retry the same save. If authentication expired, sign in in another tab before retrying. Do not recreate the action while the first command may have committed.
+If a save isn't confirmed, keep the form open and retry the same save. If your sign-in has expired, sign in again in another tab before retrying. Don't create the action again while the first attempt might already have gone through.
 
-Settings → Data lifecycle previews the entire account/workspace deletion scope. Deletion requires recent password verification, explicit acknowledgement and exact confirmation text. A seven-day grace period allows cancellation. The separate lifecycle operator removes live records in resumable steps. Retained backups may contain older records until the actual configured retention period expires; deletion is not a promise of immediate erasure from backups. Help contains guidance and the configured support/feedback destination.
+Settings → Data lifecycle previews everything that deleting the account and workspace would remove. Deleting needs a recent password check, an explicit acknowledgement and the exact confirmation text. A seven-day grace period lets you cancel. The separate lifecycle operator removes live records in steps that can resume. Backups that are kept may still hold older records until their configured retention period actually runs out; deleting isn't a promise of instant erasure from backups. Help has guidance and the configured support or feedback destination.
 
 ## Adaptable Trackers workflows
 
-Open **Trackers** from primary navigation. Start with Learning, Books or Personal Tasks, or publish a custom template. Every template and entry belongs to the current private workspace. Settings can hide Trackers without deleting records; Calendar visibility and reminders are separate preferences.
+Open **Trackers** from the main navigation. Start with Learning, Books or Personal Tasks, or publish a template of your own. Every template and entry belongs to the current private workspace. Settings can hide Trackers without deleting records; Calendar visibility and reminders are separate preferences.
 
 ### Templates and entries
 
-Custom fields support text, exact decimal numbers, civil dates, checkboxes and one select choice. Configure the title, optional status/deadline and completion mappings. Review a version before publication. Stable identifiers retain history when labels change; retire removed fields/options. Published definitions and entry revisions remain immutable. Edits create successors with a reason and reject stale concurrent changes. Archive/restore retains history.
+Custom fields can be text, exact decimal numbers, civil dates, checkboxes or one select choice. Set the title, the optional status and deadline, and the completion mappings. Review a version before publishing it. Stable ids keep the history when labels change; removed fields and options are retired. Published definitions and entry revisions never change. Edits create a successor with a reason and reject stale concurrent changes. Archiving and restoring keep the history.
 
-A changed definition does not silently transform an existing tracker. Open its migration section, choose mappings/defaults/conversions and review counts, samples and invalid-entry links. Confirm the reviewed plan, then process batches of at most 50. Confirmed work pauses ordinary edits. Cancellation keeps committed batches; resume the same partial plan to finish. The tracker version advances only after every entry is resolved.
+A changed definition never quietly transforms an existing tracker. Open its migration section, choose mappings, defaults and conversions, and review the counts, samples and links to invalid entries. Confirm the reviewed plan, which then runs in batches of at most 50. Confirmed work pauses ordinary edits. Cancelling keeps the batches already committed; resume the same partial plan to finish it. The tracker only moves to the new version once every entry is resolved.
 
 ### Reports and Calendar
 
-**Reports and statistics** supports week, month, quarter, year and custom ranges (at most 366 days). Current entries/progress are a snapshot at query time. Period activity comes from recorded immutable revisions in the workspace timezone. A manually entered completion date is a field value, not an event timestamp. Creation while already complete is a creation; later completion/reopening is counted once per recorded transition. Migration revisions use their command evidence and are reported separately from user activity.
+**Reports and statistics** covers week, month, quarter, year and custom ranges (366 days at most). Current entries and progress are a snapshot taken when you ask. Activity in a period comes from the recorded revisions, which never change, in the workspace's timezone. A completion date typed in by hand is a field value, not an event timestamp. Creating an entry that's already complete counts as a creation; completing or reopening it later counts once per recorded change. Migration revisions use their command evidence and are reported separately from user activity.
 
-Completion progress excludes definitions without a compatible completion mapping. Version coverage identifies the definitions used by current records and activity. Archived selection uses current entry or tracker archival state; the report does not reconstruct a historical period-end archive state. Current detail and historical activity link to owned entry/history pages. CSV exports the selected current and activity rows with period/timezone/version metadata and formula-safe text; it is not a backup. Narrow a selection above 10,000 entries or 20,000 activity revisions.
+Completion progress leaves out definitions with no compatible completion mapping. Version coverage shows which definitions current records and activity use. Choosing archived items uses the current archive state of the entry or tracker; the report doesn't rebuild what was archived at the end of a past period. Current details and historical activity link to the entry and history pages you own. CSV exports the chosen current and activity rows with period, timezone and version details and formula-safe text; it isn't a backup. Narrow a selection that's above 10,000 entries or 20,000 activity revisions.
 
-Mapped incomplete active deadlines appear once as date-only Calendar sources. The entry remains authoritative; edit its linked source to move the deadline. Completion/archive removes the source; reopening/restoration creates a current generation. Template mappings can remove or change a source. Workspace civil dates are preserved across timezone display boundaries; no external calendar synchronization occurs.
+Mapped, incomplete, active deadlines appear once each as date-only sources in the Calendar. The entry stays the real record; edit its linked source to move the deadline. Completing or archiving removes the source, and reopening or restoring creates a current generation. Template mappings can remove or change a source. The workspace's civil dates are kept the same across timezone display boundaries, and nothing syncs with external calendars.
 
-Open **Deadline reminders** on an entry for inherited/override/off settings, dismissal, restore or snooze. Navigation hiding does not itself disable reminders. Module reminder settings, explicit notification consent, quiet hours, verified identity and current source generation continue to govern delivery. Messages omit private entry titles. Completion/archive and stale generations cancel pending work; restored provider history never authorizes a resend.
+Open **Deadline reminders** on an entry for inherited, override or off settings, dismissing, restoring or snoozing. Hiding something from navigation doesn't turn its reminders off. Delivery still follows the module's reminder settings, explicit notification consent, quiet hours, a verified identity and the source's current generation. Messages leave out private entry titles. Completing or archiving, and stale generations, cancel pending work; history restored from a provider never justifies sending something again.
 
 ### Export, replacement and account deletion
 
-Settings → Portability includes all nine tracker tables: templates, versions, identities, field definitions/options, tracker instances, entries, revisions and migration evidence. The existing 10,000-row/10-MiB graph limits include every domain. Strict typed validation checks definitions, normalized values, current/predecessor relationships, migration evidence and evolution rules before preview and again before replacement. Literal dynamic field values remain unchanged during owner/UUID remapping.
+Settings → Portability includes all nine tracker tables: templates, versions, identities, field definitions and options, tracker instances, entries, revisions and migration evidence. The existing 10,000-row and 10-MiB graph limits cover every domain. Strict typed validation checks definitions, normalized values, current and predecessor relationships, migration evidence and evolution rules before the preview and again before replacing. Literal dynamic field values don't change while owners and UUIDs are remapped.
 
-Original V2-H and V2-I graph fingerprints remain supported with exact original provenance; their absent tracker graph means an empty tracker replacement. Existing financial balance checks, trusted own-workspace shared-history requirements, excluded attachment bytes and retained external effects remain enforced. Privileged replacement retains a 24-hour recovery graph and resets notification consent. In-flight/failed restored migrations become cancelled; a partial migration retains editing locks until explicitly resumed. Preview-only plans can be freshly reviewed after remapping.
+Original V2-H and V2-I graph fingerprints stay supported, with their exact original provenance; a graph with no trackers means replacing them with an empty set. Existing financial balance checks, the requirements for trusted shared history in your own workspace, attachment bytes being left out, and external effects being kept are all still enforced. A privileged replacement keeps a 24-hour recovery graph and resets notification consent. Migrations that were running or had failed in a restore become cancelled; a partial migration keeps its editing locks until it's explicitly resumed. Plans that were only previewed can be reviewed fresh after remapping.
 
-Account deletion preview includes tracker records. The established lifecycle guard blocks writes once deletion starts, and the controlled purge removes all nine private tracker tables while preserving other owners and shared group evidence. Full environment backup drills are separate from these verified graph replacement/recovery paths.
+The account deletion preview includes tracker records. The existing lifecycle guard blocks writes once deletion starts, and the controlled purge removes all nine private tracker tables while keeping other owners' data and shared group evidence. Full environment backup drills are separate from these verified graph replacement and recovery paths.
 
-See [targeted acceptance](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) and [deferred gates](OPERATIONS_AND_RELEASE.md#v3-manual-actions-and-deferred-gates) for evidence and limits.
+See [targeted acceptance](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) and [deferred gates](OPERATIONS_AND_RELEASE.md#v3-manual-actions-and-deferred-gates) for the evidence and its limits.

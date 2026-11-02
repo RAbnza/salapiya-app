@@ -32,15 +32,15 @@
 ### Release decision and scope
 
 Salapiya `0.6.1+8` is a full release, not a beta or trial, for a small private
-group of users. It was released after the maintainer's own hands-on testing,
-with the limitations below accepted.
+group of users. I released it after my own hands-on testing, and I accepted the
+limitations below.
 
 The release scope accepts the existing encrypted backup/recovery,
 Supabase/PowerSync infrastructure, financial/authentication/synchronization and
 physical-device evaluation, unsigned Windows distribution, manual free-tier
 monitoring, local-only attachments and narrow device scope. Advanced permanent
-sole-owner recovery is deferred. These decisions supersede the earlier release
-scope and mandatory-gate classification; they do not manufacture missing evidence.
+sole-owner recovery is deferred. These decisions replace the earlier release
+scope and mandatory-gate classification; they don't stand in for evidence that was never gathered.
 
 The original [P6 handoff](archive/salapiya/P6_PRIVATE_RELEASE_HANDOFF.md) and
 [post-P6 closure handoff](archive/salapiya/POST_P6_RELEASE_GATE_CLOSURE_HANDOFF.md) retain their
@@ -172,8 +172,8 @@ In **Profile → Backup & recovery**, generate a recovery secret, save it separa
 confirm it is stored safely, and choose **Save encrypted backup**. Keep protected
 copies after meaningful changes and before updates. The accepted retention policy
 is seven recent generations plus four weekly generations in two independent
-protected destinations; permanent destinations and scheduling are operated manually
-and are not claimed configured by this release.
+protected destinations; permanent destinations and scheduling are handled by hand,
+and this release doesn't set them up.
 
 On a fresh installation without an active profile, choose **Restore from backup**,
 enter the separate recovery secret, choose and inspect the archive, review the
@@ -193,7 +193,7 @@ and the detailed fail-closed security reconciliation procedure remain in the
 
 ### Accepted limitations
 
-- Windows distribution is unsigned; no trusted publisher certification is claimed.
+- Windows distribution is unsigned; there's no trusted publisher certification.
 - Existing backups/recovery are accepted. Permanent independent backup locations,
   scheduled hosted exports, durable independent current deletion/revocation journal
   and complete managed-provider disaster recovery are not newly configured or
@@ -207,15 +207,15 @@ and the detailed fail-closed security reconciliation procedure remain in the
   Same-identity recovery and already-authorized ownership transfer remain available.
 - Original attachments stay local, encrypted and unscanned; metadata synchronization
   and financial archives do not transfer original bytes.
-- Recorded engineering support is the maintainer's Windows 11 x64 build 26200 host and
+- Recorded engineering support is my Windows 11 x64 build 26200 host and
   Android 17/API 37 x86_64 emulators. APK ARMv7/ARM64 packaging and minAPI 24 are
   compatibility configuration, not physical-device certification. Device evaluation
-  is limited to the maintainer's own devices; no additional phone model or user
+  is limited to my own devices; no additional phone model or user
   device matrix is independently certified here.
 - Human Narrator/TalkBack, every installed Google/deletion/callback/notification
   journey, connected pending/receipt and interrupted-update combinations, storage
   exhaustion, installed release performance and complete provider recovery were
-  not newly executed. Historical partial/not-run results stay truthful. Existing
+  not run again. Historical partial/not-run results stay as they were recorded. Existing
   financial/authentication/sync/device evaluation is accepted as sufficient for this release.
 
 These are accepted operating limitations and optional future work. Public stores,
@@ -246,8 +246,8 @@ The byte-identical installer retains the actual historical fresh installation,
 rejection and uninstall proof, with protected profile/key bytes unchanged. Existing
 231 passing Flutter tests, native runtime and signed Android update/restore evidence
 remain historical results. No new compilation, application launch, installation,
-broad acceptance campaign, benchmark, destructive data test or screenshot is
-claimed or needed for promoting these unchanged packages.
+broad acceptance campaign, benchmark, destructive data test or screenshot was
+run, or needed, to promote these unchanged packages.
 
 The normal repository integration uses a merge commit into `main`, preserving the
 entire feature history and the release work branch. Release tag
@@ -306,8 +306,8 @@ Current procedures, 29 October 2026 (Asia/Manila). Version `0.6.1+8`.
 [final release and project closure](#salapiya--final-release-and-project-closure) records
 the release decision, final local artifacts/hashes and installation instructions
 for the small private user group. The existing infrastructure, backups and unsigned
-Windows distribution are explicitly accepted. No public binary publication, paid
-services, automatic migration or additional development milestone is authorized.
+Windows distribution are explicitly accepted. There's no public binary publication, paid
+services, automatic migration or further development milestone planned under this release.
 
 Historical [P6](archive/salapiya/P6_PRIVATE_RELEASE_HANDOFF.md) and
 [post-P6](archive/salapiya/POST_P6_RELEASE_GATE_CLOSURE_HANDOFF.md) results remain unchanged.
@@ -400,19 +400,19 @@ rejected a downgrade, uninstalled and verified protected profile/key bytes uncha
 
 ### Android signing and updates
 
-Use the **existing** maintainer-controlled PKCS12 key:
+Use my **existing** PKCS12 key:
 `%LOCALAPPDATA%\Salapiya\signing\salapiya-private-release.p12`, alias
 `salapiya-private-release`. Approved SHA-256 certificate:
 `d45ef96f19ce9e9df9c23711bc9f843b2bb34350352f06aba347187980dc787e`.
 Never generate a replacement, rotate it or edit its identity record to bypass a mismatch.
-The key is backed up and its password is kept in a password manager; do not request passwords in chat.
+The key is backed up and its password is kept in a password manager; never ask for it or paste it anywhere.
 
 Run `scripts/salapiya/sign-android-interactive.ps1` in a local interactive PowerShell console,
 with the installed JDK `-Keytool` and Android SDK `-AndroidBuildTools` paths. The updated
 workflow refuses a missing existing key, uses masked input and process-only environment
 variables, verifies the certificate **before** compiling and checks the APK signature
 against it. Never enable a transcript. Do not pass passwords in argv, Dart defines, CI,
-logs or Git. `-WaitForChecks` is an assignment-local coordination option: use a new verified
+logs or Git. `-WaitForChecks` is a coordination option for a single run: use a new verified
 signing-ready marker after checks, never an old marker as fresh evidence.
 
 The four secure build variables remain `SALAPIYA_KEYSTORE`, `SALAPIYA_STORE_PASSWORD`,
@@ -447,7 +447,7 @@ These are separate operations in Profile / Devices:
   This is logical local deletion, not forensic secure erase or remote device revocation.
 - **Device revocation** identifies authenticated provider sessions, not attested hardware.
   A reinstall or new Google sign-in can create another session on the same physical device.
-  Earlier sessions with unknown hardware are labelled honestly. Registration uses the signed
+  Earlier sessions with unknown hardware are labelled as unknown. Registration uses the signed
   provider `session_id`; a caller-selected UUID or label cannot grant authority. Revocation
   records that session, deletes its provider refresh-session chain and leaves peers intact.
   Already-issued commands finish before the revocation transaction commits; subsequent RPCs
@@ -528,8 +528,8 @@ after schema, provider, key or consequential release changes. Recent/weekly sets
 missing weeks are not fabricated. Retention is generation-based and must not be described as
 an automatic time-purge guarantee when backups stop.
 
-Proposed concrete arrangement: a dedicated folder on an already maintainer-controlled encrypted
-removable drive, rotated offline, plus a separate maintainer-controlled private NAS/off-site
+Proposed concrete arrangement: a dedicated folder on an encrypted removable drive I already
+control, rotated offline, plus a separate private NAS/off-site I control
 storage location containing client-encrypted archives. Verify independent device/site/failure
 boundaries, ACLs, capacity and provider entitlements. Keep the encryption/recovery secrets in
 the password manager, separate from both archive copies. No drive purchase, storage account,
@@ -741,7 +741,7 @@ release reference. Future enhancements are optional and do not block this releas
 
 ## Salapiya native development foundation
 
-Assignment: P0 repository/workspace preparation, October 20-21, 2026 (Asia/Manila).
+P0 repository/workspace preparation, October 20-21, 2026 (Asia/Manila).
 The [approved blueprint](PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint) governs
 the product. This foundation does not close G0-G4 or implement P1 features.
 
@@ -865,8 +865,8 @@ append `--cold` to the command above if snapshot startup stalls.
 Use the installed Android CLI/Device Manager for future AVD creation. The installed
 `sdkmanager` compatibility wrapper is deprecated and mishandled Flutter's semicolon
 NDK argument. The supported correction is `android --no-metrics --sdk <sdk-root>
-sdk install ndk/28.2.13676358`, using the SDK root reported by doctor. During this
-assignment the CLI initially chose its default SDK root; only the just-installed
+sdk install ndk/28.2.13676358`, using the SDK root reported by doctor. During the P0
+setup the CLI first chose its default SDK root; only the just-installed
 NDK was moved into Flutter's configured SDK after checking both absolute paths and
 refusing an existing destination. No existing toolchain was reinstalled, no system
 security/virtualization setting was changed and no data was reset.
@@ -932,9 +932,9 @@ implemented here. Airplane-mode tests must re-enable connectivity afterward.
 ### Git, CI, evidence and continuation
 
 Started from clean `main` at `7662ce9cb22d6aa1ca5d18ca6604b7bdb416fc66`, matching
-`origin/main`. Work uses `feat/salapiya-p0-foundation`; only assignment files are
-staged, with no automatic merge or force push. See the completion report for the
-final SHA and verified remote result.
+`origin/main`. Work happened on `feat/salapiya-p0-foundation`; only the P0 files were
+staged, with no automatic merge or force push. The completion report has the
+final SHA and the verified remote result.
 
 `salapiya-flutter.yml` performs locked dependency resolution, formatting, analysis
 and widget tests on Ubuntu with the exact tested SDK. It is source validation,
@@ -944,18 +944,18 @@ no paid runner, cloud credentials or emulator build matrix was introduced.
 
 Actual commands/results, initial failures and limits are recorded in
 [P0 verification](archive/salapiya/P0_VERIFICATION.md). Follow-up objectives and explicit exclusions
-are in [P0 next assignments](archive/salapiya/P0_NEXT_ASSIGNMENTS.md). The recommended next
-assignment is bounded G0 dependency/device compatibility plus early G7 cost
-feasibility; do not start P1 until G0-G4 have sufficient evidence.
+are in [P0 next assignments](archive/salapiya/P0_NEXT_ASSIGNMENTS.md). The next step I planned
+was bounded G0 dependency/device compatibility plus early G7 cost
+feasibility, with P1 waiting until G0-G4 had enough evidence.
 
-Official command references checked for this assignment:
+Official command references I checked during P0:
 [Flutter CLI](https://docs.flutter.dev/reference/flutter-cli) and
 [Android emulator command line](https://developer.android.com/studio/run/emulator-commandline).
 Prefer the installed CLI's help where command syntax has changed.
 
 ## Verification
 
-For assigned redesign milestones, use the [approved change-impact strategy](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#145-approved-change-impact-verification-and-delivery-boundaries). M1–M5 test changed/affected components, workflows and shared contracts with relevant responsive/theme/keyboard/accessibility and correctness/security checks. M6 covers the complete redesigned screen/route inventory and meaningful cross-screen workflows/accessibility; it is not an automatic complete V1–V3 regression campaign. Broaden only for changed shared contracts, discovered failures or significant security/financial risks. Preserve assertions and existing CI; record executed tests, results, coverage, exclusions and rationale. Historical evidence supports unchanged behavior, not redesigned screens.
+For the web redesign milestones, I used the [approved change-impact strategy](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md#145-approved-change-impact-verification-and-delivery-boundaries). M1–M5 test changed/affected components, workflows and shared contracts with relevant responsive/theme/keyboard/accessibility and correctness/security checks. M6 covers the complete redesigned screen/route inventory and meaningful cross-screen workflows/accessibility; it is not an automatic complete V1–V3 regression campaign. Broaden only for changed shared contracts, discovered failures or significant security/financial risks. Preserve assertions and existing CI; record executed tests, results, coverage, exclusions and rationale. Historical evidence supports unchanged behavior, not redesigned screens.
 
 The commands below are general full-suite and specialized verification references, not a requirement to run every campaign for each milestone. Documentation-only approval runs none of the application tests, builds, benchmarks or Docker operations. Broader automatic CI remains enabled and its outcomes are reported separately.
 
@@ -1020,7 +1020,7 @@ Before private real-data release: all launch rows complete; all applicable A sce
 
 ## V3 change-impact acceptance
 
-Assignment 2 supersedes the complete V1–V3 regression campaign. The selected local checks cover new trackers and materially affected contracts. Historical V1/V2 evidence remains in its original handoffs. A passing result below does not claim comprehensive, hosted, human assistive-technology or production acceptance.
+For the second piece of V3 work I replaced the complete V1–V3 regression campaign with selected local checks covering the new trackers and the contracts they materially affect. Historical V1/V2 evidence stays in its original handoffs. A passing result below isn't comprehensive, hosted, human assistive-technology or production acceptance.
 
 | Changed contract / risk                                                                                                          | Selected evidence and actual result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Exclusions / rationale                                                                                                                                   |
 | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1040,7 +1040,7 @@ Reproduce the PostgreSQL selection with `pnpm test:integration` and the named fi
 
 Observed failures were fixed and only affected checks rerun: reminder SQL aliasing, legacy fixture construction after graph extension, updated module/guide expectations, migration reason classification, dynamic receipt-value owner substitution, report JSX lint structure and a strict nullable TypeScript check. A Windows Vitest fork startup timeout was rerun successfully using one thread worker. Browser locator corrections selected the actual source link/combobox; product assertions remained intact. Production build reruns were required by those source/type corrections; no historical build/container campaign was performed. The existing local-file adapter tracing warning remains disclosed.
 
-Automatic CI is unchanged and will be reported separately for the exact remote main SHA. No comprehensive local V1/V2 unit/integration/browser, historical benchmarks, hosted/manual or production acceptance is claimed.
+Automatic CI is unchanged and its result is reported separately for the exact remote main SHA. I didn't run comprehensive local V1/V2 unit/integration/browser, historical benchmarks, or hosted/manual or production acceptance.
 
 The initial automatic CI run for `32441fb` passed project checks and all 1,104 unit tests. Integration reported 680 passes and one stale expectation in `get-current-user-overview`: its exact module array omitted the newly supported Trackers module. The fixture expectation was extended without removing any existing module assertions, and the affected PostgreSQL file was rerun. Later automatic CI outcomes are reported in the completion report; these hosted full-suite runs are separate from targeted local acceptance.
 
@@ -1227,7 +1227,7 @@ deleted data; immediate backup erasure is never promised by this release.
 
 ## V2-H manual setup and production checklist
 
-V2-H development does not authorize deployment. No secrets belong in this document, Git, screenshots, or test logs. Local protocol simulations do not establish production storage or malware-scanner readiness. Keep file features disabled until the checks below pass. Portable bundles exclude attachment bytes and authentication; they are not infrastructure backups.
+Building V2-H didn't include deploying it. No secrets belong in this document, Git, screenshots, or test logs. Local protocol simulations do not establish production storage or malware-scanner readiness. Keep file features disabled until the checks below pass. Portable bundles exclude attachment bytes and authentication; they are not infrastructure backups.
 
 ### Configuration contract
 
@@ -1263,7 +1263,7 @@ Existing queue, lifecycle, backup, authentication, TLS and `WORKER_PAUSED` contr
 - Upload a synthetic PDF/PNG/JPEG through an owned source record. Confirm no download before scanning, then matching checksum/size after a real successful scan. Check another account and unauthenticated requests cannot list, upload or download it. Verify attachment-only, no-store and nosniff headers.
 - Use a scanner test signature in a synthetic file under an approved staging test procedure. Confirm quarantine/rejection and cleanup, never availability. Interrupt storage/scanner networking and confirm retries do not create availability or financial changes.
 - Retry the identical upload command after a lost response. Confirm one object, one logical command and no financial posting. Test oversized/mismatched bytes and disabled/stale scanners.
-- Unlink, explicitly delete, and purge a disposable account with attachments. Interrupt deletion and resume; verify actual provider object absence before database metadata disappears. Inventory evidence-prefix objects independently and investigate any object without durable metadata. This inventory is a production operations requirement, not a claim established by local adapter tests.
+- Unlink, explicitly delete, and purge a disposable account with attachments. Interrupt deletion and resume; verify actual provider object absence before database metadata disappears. Inventory evidence-prefix objects independently and investigate any object without durable metadata. This inventory is a production operations requirement; local adapter tests don't establish it.
 - Export a disposable workspace; verify consistent totals, explicit byte exclusions, authenticated expiry, preview blockers and notification consent reset. Download recovery within 24 hours and preview/reapply it through the normal workflow. Maintain an independent infrastructure backup for operational rollback beyond this support window.
 - Confirm previously executed notification generations cannot replay after restoring an earlier snapshot or changing timezone, and fabricated provider history is blocked. Confirm expiry housekeeping removes artifact bodies and raw CSV support data while preserving compact posted provenance. Review production backup retention separately; application expiry does not erase older backups automatically.
 
@@ -1271,7 +1271,7 @@ Existing queue, lifecycle, backup, authentication, TLS and `WORKER_PAUSED` contr
 
 - [x] Production S3 and clamd configuration contracts implemented; disabled by default.
 - [x] Controlled local adapters provided for synthetic database/browser verification.
-- [x] H persistence, security, services, APIs, UI, regressions, browser, encrypted recovery, runtime artifacts and the user-approved 10,000-action capacity profile accepted locally; results are in the development handoff.
+- [x] H persistence, security, services, APIs, UI, regressions, browser, encrypted recovery, runtime artifacts and the 10,000-action capacity profile I approved accepted locally; results are in the development handoff.
 - [ ] Dedicated production bucket/IAM, real scanner, deployment secrets and verified TLS configured by operator.
 - [ ] Real-provider policy, scanning, deletion, inventory, monitoring and recovery acceptance performed.
 - [ ] Backup/retention/cost review completed and independent attachment recovery tested.
@@ -1281,7 +1281,7 @@ Optional enhancements include image metadata stripping, verified versioned-bucke
 
 ### Household capacity verification
 
-The user-approved default for pnpm verify:performance is 10,000 financial actions. Existing financial integrity assertions, latency budgets and concurrent-load checks remain enabled. PMP_PERFORMANCE_ACTIONS can explicitly select the original 50,000-action stress profile when desired; it is optional for routine household verification. This changes synthetic test volume, not application limits or accounting rules.
+I set the default for pnpm verify:performance to 10,000 financial actions. Existing financial integrity assertions, latency budgets and concurrent-load checks remain enabled. PMP_PERFORMANCE_ACTIONS can explicitly select the original 50,000-action stress profile when desired; it is optional for routine household verification. This changes synthetic test volume, not application limits or accounting rules.
 
 ## V2-I manual setup and production checklist
 
@@ -1291,7 +1291,7 @@ October 16, 2026 (Asia/Manila). I1-I7 are locally accepted and all 40 approved s
 
 1. Use pinned Node 24.21.0, pnpm 12.9.1 and PostgreSQL 17.11. Run `pnpm install --frozen-lockfile` in the checkout. Retain ignored environment files and existing restricted role provisioning. Never use migration/operator credentials in the web process.
 2. Back up before upgrading. Set `DATABASE_MIGRATION_URL` in ignored `.env.migration` to the migration-owner connection. Run `pnpm db:migrate`; use `pnpm db:migrate:test` only for the guarded synthetic test database. The chain has **200 migrations through `0199_v2_i_sealed_allocation_validation`**, extending the accepted H chain of 156. Do not edit published migrations or skip intermediate files.
-3. Set `SHARED_EXPENSES_ENABLED=true` in the ignored local `.env` and restart `pnpm dev`. It defaults false. This is the complete-domain flag. Legacy `SHARED_EXPENSES_PREVIEW_ENABLED=true` still works only in local/test. Enabling the complete flag in production requires the release gates below; this assignment does not authorize deployment.
+3. Set `SHARED_EXPENSES_ENABLED=true` in the ignored local `.env` and restart `pnpm dev`. It defaults false. This is the complete-domain flag. Legacy `SHARED_EXPENSES_PREVIEW_ENABLED=true` still works only in local/test. Enabling the complete flag in production requires the release gates below; this work didn't include a deployment.
 4. Sign in with a verified email. Open `/sharing` or choose **Split with people** in Add Expense. Create a group, add manual participants, then create bills with independent payer/share allocation. Money is PHP with exact centavo strings.
 5. Before invitations or membership/settings changes, use the existing password verification flow. Its assurance lasts five minutes and is checked again by PostgreSQL. Create a secure invitation and hand it privately to the specified recipient. The recipient must sign in with that exact verified email, open the fragment link, review the history/balance, consent, and accept. Links expire after seven days. Revoke/reissue incorrect invitations; never merge identities by display name.
 6. Adopt only your own allocation. Choose an existing private purchase when already recorded; otherwise explicitly approve new cash/card funding or an unpaid share. Private approval is independent for every participant. Group owners cannot approve or inspect someone else's books.
@@ -1324,22 +1324,22 @@ October 16, 2026 (Asia/Manila). I1-I7 are locally accepted and all 40 approved s
 3. Approve history/retention policy version 1. Joining exposes existing group bills. Exit retains bills visible then and their authorized subsequent resolution; unrelated later records stay hidden. Shared evidence is not privately owned workspace data. Free-text descriptions/reasons can still identify people after structured pseudonymization and need a legal/support policy.
 4. Plan owner handoff before deletion. Approved deletion detaches the user's structured group identity, removes their private graph and preserves others' history. Ownerless groups archive automatically; they are not silently reassigned. Former participants retain read-only group history and can review/correct their own private evidence. Verify this in staging with the operator path and independent deletion register.
 5. Configure encrypted backups/PITR, independent deletion register, backup-key custody/rotation, retention and least-privilege storage. Perform a production-like restore drill into an isolated environment, revoke old sessions, reapply approved deletions, verify shared net-zero positions and other-owner private/provenance preservation, then review reconciliation. Never restore users' identity links by importing group-history JSON.
-6. Retain existing G/H external infrastructure gates: verified email provider, webhook secrets and replay protection; S3 IAM/lifecycle/versioned erasure; quarantine/scanner updates; object inventories/retention/backups. Missing real credentials did not block synthetic acceptance. No real mail/object operation or production restore is claimed.
+6. Retain existing G/H external infrastructure gates: verified email provider, webhook secrets and replay protection; S3 IAM/lifecycle/versioned erasure; quarantine/scanner updates; object inventories/retention/backups. Missing real credentials did not block synthetic acceptance. No real mail/object operation or production restore has been done.
 7. Configure privacy-safe alerts for failed/stale commands, lock timeouts/deadlocks, missing confirmation, reconciliation backlog, invitation expiry/retention and operator schedules. Use aggregate codes and scoped IDs, not financial payloads. Verify restore, worker and backup health endpoints with deployed infrastructure before release.
 8. Run staging scenarios across two verified accounts and one manual participant: invite/claim, equal/multiple-payer/card entry, partial pending/confirmed payment, dispute/reversal, settled refund/correction, independent private review, former-member visibility, deletion and restore. Check mobile, keyboard and assistive technology in the actual supported environment. Automated Axe checks do not replace human screen-reader validation.
 9. Respect reviewed limits: 100 identities/group, 100 revisions/bill, 1,000 bills/refunds/settlements per group, 100 explicitly selected bill allocations per payment, 10,000 current source positions, 100 source revisions in manual-claim review. Read pagination and historical coverage labels are intentional. Profile a larger required capacity before increasing bounds. Suggestions are deterministic projections; indirect discharge/agreement automation is unavailable and no minimal-count claim is made.
 10. Enable `SHARED_EXPENSES_ENABLED=true` only after approved staging/release policy. Roll back by disabling the flag and running the prior compatible image only when it understands the current private graph; do not roll database migrations backward or run H private replacement against I evidence. Prefer a reviewed forward fix or isolated full restore with deletion reapplication.
 
-No production deployment, real provider acceptance or human screen-reader certification is implied by local automated acceptance. V3 and a broad visual redesign remain outside this assignment.
+Local automated acceptance doesn't mean a production deployment, real provider acceptance or human screen-reader certification. V3 and a broad visual redesign were outside this piece of work.
 
 ## V3 manual actions and deferred gates
 
-No human-only configuration is required for the verified local V3 workflows. No production deployment or external integration activation is part of this assignment. Follow [ADR 0005](adr/0005-v3-scope-and-platform-transition.md).
+The verified local V3 workflows don't need any manual configuration. No production deployment or external integration activation was part of this work. Follow [ADR 0005](adr/0005-v3-scope-and-platform-transition.md).
 
 | Conditional action         | Steps and verification criteria                                                                                                                                                                                                                                                                                             | Status                                                                                                                                              |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Another local checkout     | Use the pinned Node/pnpm versions and established private local environment; run `pnpm db:migrate` and `pnpm db:migrate:test`. Confirm 206 migration records through `0205`, 125 declared tables, and no drift from `pnpm db:generate`. Open `/trackers`; instantiate a preset and verify its entry deadline in Calendar.   | Existing development and synthetic test databases migrated. No credentials committed.                                                               |
-| Optional reminder email    | Keep the existing local Mailpit adapter, explicit account consent, Trackers reminder preference and current eligible deadline. Verify one logical delivery, generic message content and cancellation on completion. Real provider activation requires a separately authorized assignment and the existing provider runbook. | Local/test adapters verified; real external delivery remains disabled.                                                                              |
+| Optional reminder email    | Keep the existing local Mailpit adapter, explicit account consent, Trackers reminder preference and current eligible deadline. Verify one logical delivery, generic message content and cancellation on completion. Real provider activation needs its own approved piece of work and the existing provider runbook. | Local/test adapters verified; real external delivery remains disabled.                                                                              |
 | Human assistive technology | If later requested, use keyboard and a screen reader through template publication, migration confirmation, reports and replacement confirmation; verify accessible names, focus and announcements.                                                                                                                          | Automated axe, mobile reflow, keyboard and both themes verified. Human screen-reader testing was not performed and is not represented as completed. |
 | Hosted execution           | Review automatically triggered repository CI at the exact pushed SHA. Keep the existing broader workflow enabled; distinguish its result from the selected local tests.                                                                                                                                                     | Final remote SHA and CI outcome recorded in the completion report.                                                                                  |
 | Later platform work        | Create a separate approved design/platform plan before comprehensive redesign, Windows/Android, offline sync, external calendar synchronization or production infrastructure work.                                                                                                                                          | Deferred by scope; no configuration requested.                                                                                                      |

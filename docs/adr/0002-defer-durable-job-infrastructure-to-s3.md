@@ -10,7 +10,7 @@ C5 introduces the pinned pg-boss namespace, separate migration/worker processes,
 encrypted security-email intents and a rollback-proven intent/job transaction
 using the public Drizzle adapter. It replaces the interim direct authentication
 sender. Better Auth's preceding user/token transaction remains library-owned;
-the callback does not claim atomicity with that hidden transaction. See
+the callback isn't atomic with that hidden transaction. See
 [ADR 0004](0004-v1-c5-security-mail-and-recovery.md). Actual cloud scheduling,
 delivery, retention and staging acceptance remain deployment gates.
 
@@ -69,7 +69,7 @@ opening-account, income, expense or account-history command.
 
 Before S3 is complete:
 
-- domain services must not claim that an asynchronous side effect is durable;
+- domain services must not report an asynchronous side effect as durable;
 - no ad hoc in-memory queue or fire-and-forget replacement may be introduced;
 - no application-owned queue table may be created merely as a temporary
   substitute for pg-boss;
@@ -120,7 +120,7 @@ application is considered production-ready.
 V1-C4 explicitly brings forward the documented scoped deletion maintenance
 path through [ADR 0003](0003-v1-c4-reviewed-lifecycle-maintenance.md). Its deletion
 request is durable lifecycle intent/checkpoint, with a separate operator process;
-it does not introduce a general queue or claim a configured scheduler. General
+it doesn't introduce a general queue or assume a configured scheduler. General
 durable delivery and production scheduling remain V1-C5 acceptance work.
 
 Any future pre-S3 design that introduces required asynchronous side effects

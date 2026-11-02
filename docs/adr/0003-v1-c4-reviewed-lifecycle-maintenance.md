@@ -1,6 +1,6 @@
 # ADR 0003: Reviewed V1 lifecycle maintenance
 
-- Status: Accepted under the explicitly requested V1-C4 lifecycle scope
+- Status: Accepted under the V1-C4 lifecycle scope I explicitly asked for
 - Date: 2026-10-09
 
 ## V1-C5 update
@@ -44,8 +44,8 @@ minimum policy date but are **not automatically deleted** while actual retained
 backup windows remain unverified. Export the register to independent controlled
 storage and reapply it before reopening any restored database.
 
-This resolves the C4 lifecycle dependency described in ADR 0002 without claiming
-an unconfigured background scheduler. V1-C5 must configure and demonstrate
+This resolves the C4 lifecycle dependency described in ADR 0002 without assuming
+a background scheduler that isn't configured. V1-C5 must configure and demonstrate
 maintenance scheduling, independent register retention, backup expiry, restore
 with tombstones, operational monitoring and durable security-email delivery
 before production acceptance. pg-boss remains the selected general job system;

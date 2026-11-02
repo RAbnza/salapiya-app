@@ -10,44 +10,44 @@
 
 ### 10. Data model, integrity and schema evolution
 
-Retain specialized financial actions, immutable revisions, journals/postings, debt/card details, planning records and group facts. Reports/Calendar are derived views. Do not flatten the application into a generic tracker database or adopt full event-sourcing as a requirement solely because some history is immutable.
+The specialized financial actions, revisions that never change, journals and postings, debt and card details, planning records and group facts all stay. Reports and the Calendar are derived views. The app doesn't get flattened into a generic tracker database, and full event-sourcing isn't required just because some history is immutable.
 
-Proposed cross-platform records need stable UUID-style identities, owner scope, current version/predecessor where applicable, civil/effective dates, authoritative server receipt time for synchronized acceptance, device provenance, command references and archive/tombstone state. Device wall clocks never decide financial conflict winners or confer membership.
+Records that cross platforms need stable UUID-style ids, an owner scope, the current version and predecessor where that applies, civil and effective dates, the server's receipt time as the authority for synced acceptance, which device it came from, command references and an archive or tombstone state. A device's wall clock never decides who wins a financial conflict and never grants membership.
 
-Local tables, server tables and sync transport schema may differ. Document their mapping and which fields are writable or derived. Define deletion markers and retention so an old offline device cannot recreate deleted records during resync. Do not purge receipts/tombstones while they are needed for supported retry and stale-device behavior.
+Local tables, server tables and the sync transport schema can differ, so their mapping, and which fields are writable or derived, is written down. Deletion markers and their retention are defined so an old offline device can't recreate deleted records when it syncs again. Receipts and tombstones aren't purged while supported retries and stale devices still need them.
 
-Required transaction units include the entire financial action/journal/evidence, complete settlement allocation/state transition, complete local intent/receipt update and explicit import batches. Test failures between intermediate writes. PostgreSQL RLS and triggers remain defense in depth for the backend; configure replication access and sync streams independently because replication must not be assumed to apply client RLS automatically.
+Things that have to commit as one unit: the whole financial action with its journal and evidence, a settlement's complete allocation and state change, a complete local intent and receipt update, and explicit import batches. Test failures between the intermediate writes. PostgreSQL RLS and triggers stay as defence in depth on the backend; replication access and sync streams are configured on their own, because replication can't be assumed to apply client RLS for you.
 
-Use separate version numbers for local database schema, server schema, sync protocol/command payload, backup format, and domain calculation definitions. Record compatible ranges. Server changes should allow a deliberate client upgrade window. Unsupported clients retain safe local read/export where possible while unsafe writes are blocked with a recovery path. Never solve incompatibility by silently deleting a database and downloading over unsynced work.
+The local database schema, the server schema, the sync protocol and command payload, the backup format and the domain calculation definitions each have their own version number, with compatible ranges recorded. Server changes leave a deliberate window for clients to upgrade. An unsupported client keeps safe local reading and export where possible, while unsafe writes are blocked with a way to recover. Incompatibility is never solved by quietly deleting a database and downloading over unsynced work.
 
-Use reviewed forward migrations, pre-upgrade backup where appropriate, transactional migration where supported, and recovery from interruption. Binary rollback is not automatically safe after a database migration; pair installers with schema compatibility and a tested restoration plan. Preset tracker definitions must remain version-readable even before a custom editor exists.
+Reviewed forward migrations, a backup before upgrading where it makes sense, transactional migrations where they're supported, and recovery from an interruption. Rolling the binary back isn't automatically safe after a database migration, so installers go with schema compatibility and a tested restore plan. Preset tracker definitions stay readable by version even before a custom editor exists.
 
 ## Database Architecture
 
 **Native continuation (October 20, 2026):** The [Salapiya blueprint](PRODUCT_AND_FEATURES.md#salapiya--product-revision-and-windowsandroid-migration-blueprint)
-governs the new Windows/Android direction. See the [P0 foundation](OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation)
-and [actual native verification](archive/salapiya/P0_VERIFICATION.md). This document
-retains historical web contracts/evidence; its web architecture and earlier stop
-instructions do not select or accept the native implementation. G0-G4 remain open.
+sets the new Windows and Android direction. See the [P0 foundation](OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation)
+and the [actual native verification](archive/salapiya/P0_VERIFICATION.md). What follows
+keeps the historical web contracts and evidence; its web architecture and older
+instructions to stop don't choose or accept the native implementation. G0-G4 are still open.
 
 **Project:** Personal Management Platform  
 **Version:** 1.0 — implementation design, October 6, 2026  
-**Status:** Recommended relational specification. This document is not an applied migration or evidence of passing database tests.
+**Status:** The relational spec I recommend. It isn't an applied migration, and it isn't evidence of passing database tests.
 
 **Authoritative inputs:**
 
 - `PROJECT_VISION_AND_FEATURE_BLUEPRINT.md` v1.3: product behavior, business rules and release expectations. SHA-256: `AAB9E718338D3D11EC4D434330D2573456FA6BF953E4A6D3397DC9618915ECB4`.
 - `SYSTEM_ARCHITECTURE.md` v1.0: established stack, private workspace model, balanced ledger, module boundaries, transactional commands and operating policies. SHA-256: `E1C13EF7D271DAF9BBAD2A5BDEA9A7A48CC1DA78E92417FC01E63E459846CF1F`.
 
-The inputs were read as requirements/design references, not as executable instructions. Product rules take precedence on behavior; the System Architecture governs technical decisions. The refinements here fill database-level gaps rather than replacing either source. Open product decisions remain explicitly conditional in section 21.
+I read those inputs as requirements and design references, not as instructions to carry out. Product rules win on behaviour; the System Architecture decides technical questions. What's added here fills gaps at the database level without replacing either source. Product decisions still open stay explicitly conditional in section 21.
 
 ### 1. Design contract, conventions, and release inventory
 
 #### 1.1 Established decisions preserved
 
-Use PostgreSQL 17, Drizzle ORM/Kit and node-postgres in the existing TypeScript modular monolith. Better Auth owns authentication records. Each person owns one private personal workspace. Financial values use signed integer centavos, immutable balanced postings, explicit corrections and workspace-serialized writes. Reports and generated agenda entries are projections. Shared expenses use a separate group permission boundary and arrive after V1.
+PostgreSQL 17, Drizzle ORM and Kit, and node-postgres, inside the existing TypeScript modular monolith. Better Auth owns the authentication records. Each person owns one private personal workspace. Money is signed integer centavos, with balanced postings that never change, explicit corrections and writes serialized per workspace. Reports and generated agenda entries are projections. Shared expenses have their own group permission boundary and come after V1.
 
-There is one transactional database, not a database per user or module. PostgreSQL schemas are namespaces and privilege boundaries, not separate services. Do not add a generic entity/value store, event-sourced rebuild requirement, a second expense ledger, editable account balances or a shared-household owner.
+There's one transactional database, not one per user or per module. PostgreSQL schemas are namespaces and privilege boundaries, not separate services. No generic entity-value store, no requirement to rebuild from events, no second expense ledger, no editable account balances and no shared household owner.
 
 #### 1.2 Navigation
 
@@ -62,7 +62,7 @@ There is one transactional database, not a database per user or module. PostgreS
 
 #### 1.3 Schema namespaces and table inventory
 
-Release codes: **S** = first usable slice; **C** = coherent V1 addition; **F2** = V2 financial maturity; **G2** = V2 shared-expense companion; **T3** = V3 trackers; **L** = selective later extension. S is included in V1. Future tables are documented now but created only with their feature. Authentication/queue schemas are generated from pinned library versions rather than copied from this conceptual inventory.
+Release codes: **S** = first usable slice; **C** = coherent V1 addition; **F2** = V2 financial maturity; **G2** = V2 shared-expense companion; **T3** = V3 trackers; **L** = selective later extension. S is part of V1. Future tables are written up now but only created along with their feature. Authentication and queue schemas are generated from the pinned library versions, not copied from this conceptual list.
 
 | Namespace / release | Tables to introduce | Responsibility |
 | --- | --- | --- |
@@ -84,7 +84,7 @@ Release codes: **S** = first usable slice; **C** = coherent V1 addition; **F2** 
 | `ops`, C/F2 | C: `export_run`; F2: `import_batch`, `import_row`, `restore_run`, `restore_id_map` | Export provenance, resumable imports and staged portable restore. |
 | Later only | Tables in section 16 for transit, lending, external-calendar synchronization, habits and settlement simplification | Clean extensions; not prerequisites for V1 migrations. |
 
-This inventory distinguishes persisted records from projections. There are no authoritative `account_balance`, `expense_total`, `generated_calendar_event`, `dashboard_total`, `weekly_report` or `monthly_report` tables in V1.
+This list separates stored records from projections. V1 has no authoritative `account_balance`, `expense_total`, `generated_calendar_event`, `dashboard_total`, `weekly_report` or `monthly_report` tables.
 
 #### 1.4 Naming and table-contract notation
 
@@ -92,7 +92,7 @@ Use singular snake_case SQL names and camelCase TypeScript properties mapped exp
 
 In table specifications, `!` means NOT NULL, `?` means nullable, and `= value` gives a database default. Unstated defaults do not exist. PK, UQ, FK and CK mean primary key, unique, foreign key and check constraint. `WFK(x → table)` means `(workspace_id, x) REFERENCES table(workspace_id, id)`; `GFK` similarly includes `group_id`. These are real composite database FKs, not ORM-only relations.
 
-The following column/constraint bundles are inherited exactly wherever named, avoiding hundreds of repeated lines:
+These bundles of columns and constraints apply exactly as written wherever they're named, which saves hundreds of repeated lines:
 
 | Bundle | Columns and required constraints |
 | --- | --- |
@@ -105,7 +105,7 @@ The following column/constraint bundles are inherited exactly wherever named, av
 
 Unless specified otherwise, FKs use ON DELETE RESTRICT / ON UPDATE RESTRICT, and tables inherit the scope-first lookup index implicit in their UQ. Every FK's referencing columns need an index unless an existing index has those columns as a useful left prefix. Composite references involving currency/parent identity use additional UQs explicitly listed below. Use short deterministic names: `pk_<table>`, `uq_<table>_<purpose>`, `fk_<table>_<parent>`, `ck_<table>_<rule>`, `ix_<table>_<query>`; keep PostgreSQL's identifier-length limit in mind.
 
-Archive is an aggregate state or `archived_at`, not universal `deleted_at`. Immutable facts are corrected, not hidden by a soft-delete flag. Routine history retention is until workspace deletion unless a table states otherwise. Whole-workspace purging is a privileged, ordered process and is the explicit exception to evidence immutability.
+Archiving is an aggregate state or `archived_at`, not a universal `deleted_at`. Facts that never change get corrected, not hidden behind a soft-delete flag. History is kept until the workspace is deleted unless a table says otherwise. Purging a whole workspace is a privileged, ordered process, and the one explicit exception to evidence never changing.
 
 ### 2. Types, ORM, and database tooling
 
@@ -127,7 +127,7 @@ Archive is an aggregate state or `archived_at`, not universal `deleted_at`. Immu
 
 Journal line amounts are nonzero and bounded to ±100,000,000,000 centavos (PHP 1 billion per component). User-entered positive amount fields use `CHECK(amount_minor>0 AND amount_minor<=100000000000)`. Totals can exceed one component limit, so validate aggregate limits explicitly and accumulate with PostgreSQL numeric/native bigint before range checking. Opening zero balance is represented without a zero posting: the account stores its cutoff and may have no opening action until nonzero value exists.
 
-`now()` is the transaction timestamp, not an exact database commit timestamp. Do not promise historical “as known at” reconstruction from `created_at` alone. A report's consistent snapshot, captured workspace financial revision and generation timestamp explain its coverage. True historical published-report reconstruction needs an exported artifact or a separately designed snapshot feature.
+`now()` is the transaction's timestamp, not the exact moment of commit. Don't promise to rebuild what was "known at" a point in history from `created_at` alone. A report's consistent snapshot, the workspace financial revision it captured and when it was generated explain what it covers. Truly rebuilding a report as it was published needs an exported artifact or a separately designed snapshot feature.
 
 #### 2.2 Ownership of database tooling
 
@@ -145,7 +145,7 @@ Journal line amounts are nonzero and bounded to ±100,000,000,000 centavos (PHP 
 | `@testcontainers/postgresql` | Optional additional test dependency | Per-test-run real PostgreSQL lifecycle | Helpful if CI/container setup supports it; not required alongside an already isolated Compose/CI service database. Avoid adopting both lifecycle approaches without a reason. |
 | `pg_stat_statements` | Optional managed PostgreSQL extension | Aggregate slow-query analysis | Enable only if host permissions allow; do not log financial parameter values. No new database service. |
 
-Drizzle schemas should use explicit `pgSchema` mappings and named constraints; SQL migration files remain the authoritative deployed schema. Keep a reviewed schema snapshot and trigger/function tests in source control. Pin library versions and review generated auth/queue migrations separately from domain migrations. Current PostgreSQL/Drizzle documentation was consulted for constraint, trigger, RLS and migration behavior; product semantics are derived from the two input documents.
+Drizzle schemas use explicit `pgSchema` mappings and named constraints; the SQL migration files are the real deployed schema. A reviewed schema snapshot and the trigger and function tests live in source control. Library versions are pinned, and generated auth and queue migrations are reviewed separately from domain migrations. I checked the current PostgreSQL and Drizzle docs for constraint, trigger, RLS and migration behaviour; what the product means comes from the two input documents.
 
 #### 2.3 High-level domain relationships
 
@@ -200,7 +200,7 @@ Sessions expire under the established seven-day refresh/thirty-day absolute cap.
 | `core.category` / P,M | `kind text!` in income/expense; `code text?`; `name text!`; `archived_at timestamptz?`; `sort_order integer! = 0` | UQ `(workspace_id,kind,code)` for nonnull seeded codes; UQ `(workspace_id,kind,lower(name))` among active rows. Categories referenced by postings cannot be deleted; archive instead. Kind immutable once referenced. |
 | `core.tag` / P,M | `name text!`; `color text?`; `archived_at timestamptz?` | UQ `(workspace_id,lower(name))` among active rows; color is validated token/hex, not raw CSS. Hard-delete only if unreferenced; otherwise archive. Domain joins are concrete tables. |
 
-Validate timezone against supported IANA names at the service boundary; do not put a mutable system-catalog subquery in a CHECK. Currency is immutable after any postings, enforced by trigger. Provision profile, workspace, settings, module defaults and seeded categories in one transaction after verified authentication; a unique owner key handles concurrent first requests. Auth user creation can have committed earlier and is safely retried.
+The timezone is checked against supported IANA names at the service boundary; a CHECK never holds a subquery on the system catalogue, which can change. A trigger stops the currency changing once there are postings. The profile, workspace, settings, module defaults and seeded categories are set up in one transaction after authentication is verified, and a unique owner key handles two first requests at once. The auth user might already have been committed earlier, and that's safe to retry.
 
 ```mermaid
 erDiagram
@@ -219,9 +219,9 @@ erDiagram
 
 #### 4.1 Concrete ownership enforcement
 
-Every private domain child has workspace ownership. Identity-root tables use user ownership; group facts use group membership. Operational/library tables have narrowly scoped service roles. These are explicit exceptions to the private-child pattern, not nullable-owner shortcuts.
+Every private domain child is owned by a workspace. Identity-root tables are owned by the user; group facts go by group membership. Operational and library tables have narrowly scoped service roles. These are deliberate exceptions to the private-child pattern, not shortcuts with a nullable owner.
 
-For a financial account reference, the database must require both the workspace and the account identity:
+For a reference to a financial account, the database requires both the workspace and the account identity:
 
 ```sql
 UNIQUE (workspace_id, id)
@@ -232,13 +232,13 @@ FOREIGN KEY (workspace_id, receiving_account_id)
   ON DELETE RESTRICT ON UPDATE RESTRICT
 ```
 
-The same pattern applies to categories, tags, actions, debts, payments, applications, tracker entries, reminder sources and files. Add parent identity to composite keys when same-workspace is insufficient: an installment referenced by a debt payment must belong to that same debt, and an action revision must belong to the stated action.
+The same pattern covers categories, tags, actions, debts, payments, applications, tracker entries, reminder sources and files. Where being in the same workspace isn't enough, the parent's identity goes into the composite key too: an installment a debt payment refers to has to belong to that same debt, and an action revision has to belong to the action it names.
 
-For a composite FK with required scope and optional target, ordinary MATCH SIMPLE is appropriate: null target means no relationship. When a relationship has several optional target components, require all-or-none with a CHECK (or MATCH FULL over those components in an appropriate key). Otherwise `(debt_id, installment_id=NULL)` can accidentally bypass intended validation. PostgreSQL's [constraint rules](https://www.postgresql.org/docs/17/ddl-constraints.html) explain FK/NULL and unique semantics; migration tests must verify the chosen combinations.
+For a composite FK with a required scope and an optional target, plain MATCH SIMPLE is right: a null target means there's no relationship. When a relationship has several optional target parts, a CHECK requires all or none (or MATCH FULL over those parts in a suitable key). Otherwise `(debt_id, installment_id=NULL)` could slip past the validation it was meant to get. PostgreSQL's [constraint rules](https://www.postgresql.org/docs/17/ddl-constraints.html) explain how FKs, NULLs and unique constraints behave; migration tests have to verify the combinations chosen.
 
 #### 4.2 RLS policy shape and scoped transactions
 
-Use transaction-local `app.user_id` and `app.workspace_id` set by a trusted server transaction helper after session verification. Missing values must evaluate to no access; use `NULLIF(current_setting('app.user_id',true),'')::uuid`, not an unguarded cast of an empty string. The workspace policy compares owner_user_id with the user context; child policy additionally checks workspace identity and active/readable lifecycle. Both `USING` and `WITH CHECK` are required. Scope columns are immutable independently of RLS.
+Transaction-local `app.user_id` and `app.workspace_id` are set by a trusted server transaction helper after the session is verified. A missing value has to mean no access; use `NULLIF(current_setting('app.user_id',true),'')::uuid`, not an unguarded cast of an empty string. The workspace policy compares owner_user_id with the user context; child policies also check the workspace identity and an active, readable lifecycle. Both `USING` and `WITH CHECK` are required. Scope columns can't change, independently of RLS.
 
 ```sql
 -- Illustrative policy predicate for a private child; grants/roles omitted.
@@ -252,9 +252,9 @@ AND EXISTS (
 )
 ```
 
-Do not make `core.workspace` policy recursively inspect itself. Workspace lifecycle endpoints use a narrowly scoped identity-authorized query/procedure rather than relaxing every table's active-state policy. Auth credentials are accessed by the auth adapter role, never through private-domain RLS. Use `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` on private tables, no owner/BYPASSRLS runtime roles, and `security_invoker=true` on exposed report views. [PostgreSQL's RLS documentation](https://www.postgresql.org/docs/17/ddl-rowsecurity.html) is the authority for bypass behavior.
+The `core.workspace` policy never looks at itself recursively. Workspace lifecycle endpoints use a narrowly scoped query or procedure authorized by identity, rather than loosening every table's active-state policy. Auth credentials are reached by the auth adapter role, never through private-domain RLS. Private tables use `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY`, runtime roles are never owner or BYPASSRLS, and exposed report views use `security_invoker=true`. [PostgreSQL's RLS documentation](https://www.postgresql.org/docs/17/ddl-rowsecurity.html) is the authority on bypass behaviour.
 
-All scoped reads/writes run in one transaction on one checked-out connection. Use `set_config(..., true)` for transaction-local context; never use persistent pool-wide SET. Passing a workspace context from a trusted worker still requires validating the current owner/lifecycle. RLS is defense against missing predicates, not protection from a fully compromised server setting arbitrary context.
+All scoped reads and writes run in one transaction on one checked-out connection, with `set_config(..., true)` for the transaction-local context and never a lasting pool-wide SET. Even a workspace context passed from a trusted worker still has its current owner and lifecycle checked. RLS defends against a forgotten predicate; it doesn't protect against a fully compromised server setting whatever context it likes.
 
 #### 4.3 Privilege map
 
@@ -267,9 +267,9 @@ All scoped reads/writes run in one transaction on one checked-out connection. Us
 | `worker_domain` | Same scoped domain services with explicit worker identity | No blanket tenant bypass. |
 | `lifecycle_operator` | Execute audited, scope-specific purge/restore operations | Not a public application administrator or a user-supplied bypass switch. |
 
-Do not let a custom setting such as `app.skip_immutability=true` bypass triggers: ordinary application code can set custom GUCs. A purge exception must be authorized by a separate ungrantable-to-runtime role or narrowly owned procedure with fixed search_path, checked arguments and no PUBLIC execute grant. RLS helper functions for group membership must be specifically reviewed for recursion and privilege leakage.
+No custom setting like `app.skip_immutability=true` can bypass triggers, because ordinary application code can set custom GUCs. The purge exception has to be authorized by a separate role that can't be granted to the runtime, or a narrowly owned procedure with a fixed search_path, checked arguments and no PUBLIC execute grant. RLS helper functions for group membership get their own review for recursion and privilege leaks.
 
-Database ownership checks do not decide user intent, fresh login, invitation consent, allowable business transitions, or whether a recipient actually confirmed payment. Those remain application service checks backed by transition evidence and applicable constraints. Sanitize FK/UQ errors so failures do not reveal another user's record existence.
+Database ownership checks don't decide what the user meant, whether they signed in recently, invitation consent, which business transitions are allowed, or whether a recipient really confirmed a payment. Those stay as application service checks, backed by transition evidence and the constraints that apply. FK and UQ errors are cleaned up so a failure never reveals that another user's record exists.
 
 ### 5. Financial actions, revisions, and journals
 
@@ -279,7 +279,7 @@ Database ownership checks do not decide user intent, fresh login, invitation con
 
 **`finance.financial_account` (S, P+M)** is the user's cash, bank or wallet location. Columns: `ledger_account_id uuid!`; `name text!`; `account_type text!` in cash/e_wallet/checking/savings; `institution_name text?`; `currency text!`; `opening_cutoff_date date!`; `opening_action_id uuid?`; `notes text?`; `archived_at timestamptz?`. WFK ledger account and opening action; UQ `(workspace_id,ledger_account_id)`; UQ `(workspace_id,id,currency)`; workspace/currency FK. Trigger verifies mapped ledger kind cash_asset/currency and opening action belongs to this account. Index `(workspace_id,archived_at,name,id)`. Do not force account names or institution names to be globally unique; optionally warn on an active duplicate name.
 
-There is no `current_balance` or duplicated authoritative `opening_balance` column. The opening action's postings establish nonzero starting value, and the cutoff establishes coverage. Zero opening creates no posting. Opening-cutoff changes after activity require the explicit history/baseline workflow and audit. Negative cash is allowed after service warning; do not enforce `balance>=0` in a database trigger. Archived accounts remain in balance reports and permit historical correction commands, but ordinary new activity requires restoration.
+There's no `current_balance` column, and no duplicated authoritative `opening_balance`. The opening action's postings set a nonzero starting value and the cutoff sets the coverage; a zero opening creates no posting. Changing the opening cutoff once there's activity needs the explicit history and baseline workflow, with an audit. Negative cash is allowed after the service warns; no database trigger enforces `balance>=0`. Archived accounts stay in balance reports and still allow historical correction commands, but ordinary new activity needs the account restored first.
 
 #### 5.2 Action and revision contracts
 
@@ -290,13 +290,13 @@ There is no `current_balance` or duplicated authoritative `opening_balance` colu
 | `finance.journal` / P,AR | `sequence_no smallint!`; `effective_date date!`; `currency text!`; `role text!` in economic/reversal; `reverses_journal_id uuid?`; `state text! = 'building'`; `finalized_at timestamptz?` | UQ `(workspace_id,action_revision_id,sequence_no)`, `(workspace_id,action_revision_id,id,currency)`; partial UQ `(workspace_id,reverses_journal_id)` when nonnull. WFK reversal parent. Index `(workspace_id,effective_date DESC,id DESC)`. Reversal parent required iff role=reversal. Finalized journals cannot be edited or extended. |
 | `finance.posting` / P,AR | `journal_id uuid!`; `ledger_account_id uuid!`; `currency text!`; `line_no smallint!`; `amount_minor bigint!`; `category_id uuid?`; `expense_class text! = 'none'`; `income_class text! = 'none'`; `cash_flow_kind text! = 'none'`; `cash_flow_direction text! = 'none'`; `liability_component text?`; `reverses_posting_id uuid?`; `memo text?` | Composite journal FK includes revision and currency; composite ledger FK includes currency; WFK category/reversal line. UQ `(workspace_id,journal_id,line_no)`, `(workspace_id,action_revision_id,id)`; partial UQ reversal line. CK nonzero bounded amount and line_no>0. Index `(workspace_id,ledger_account_id,journal_id,id)` and `(workspace_id,category_id,journal_id)` for nonnull categories. Immutable after parent finalization. |
 
-The actual schema declares referenced UQs before adding circular deferred FKs. An action and its first revision are inserted in one transaction with preallocated UUIDs, so `current_revision_id` need not be nullable in a committed row. Revision creation and current pointer change are controlled by the financial service/finalization protocol, not arbitrary PATCH fields.
+The real schema declares the referenced UQs before adding circular deferred FKs. An action and its first revision are inserted in one transaction with UUIDs allocated in advance, so `current_revision_id` never has to be nullable in a committed row. Creating revisions and moving the current pointer are controlled by the financial service's finalization protocol, never by arbitrary PATCH fields.
 
-`action_kind` values introduced by release:
+`action_kind` values, by the release that adds them:
 
 - S: `opening_cash`, `income`, `expense`, `transfer`, `standalone_fee`.
 - C: `opening_debt`, `borrowing`, `financed_purchase`, `debt_charge`, `debt_payment`, `debt_settlement`, `refund`, `cashback`, `liability_waiver`, `balance_adjustment`, `payment_reclassification`.
-- Later values are added alongside their typed contracts: card activity/payment, group adoption/settlement, transit and lending. No `custom_journal` end-user command.
+- Later values arrive with their typed contracts: card activity and payment, group adoption and settlement, transit and lending. There's no `custom_journal` command for end users.
 
 `change_kind=create` requires revision_no=1 and no previous revision. Replace/void requires the immediately preceding revision of the same action and a nonblank reason. A void has reversal journals but no new economic journals. The latest revision pointer must equal the highest finalized revision, enforced at commit. Financial-action kind can be corrected through a new revision only if dependent typed links/refunds/payments are corrected consistently; otherwise reject and require an explicit dependent-record resolution. This avoids trapping an incorrectly classified receipt permanently while preventing an incompatible rewrite underneath existing allocations.
 
@@ -311,17 +311,17 @@ The actual schema declares referenced UQs before adding circular deferred FKs. A
 | `liability_component` | principal/interest/fee/penalty/unclassified, or NULL for non-debt lines | Required on debt-liability postings; distinguishes recognized components without inventing a principal breakdown. Extend card/group classification only when needed. |
 | `category_id` | Owned income/expense category or NULL | Required for categorized income/expense lines, kind must match bucket. Other ledger kinds must not masquerade as category expense lines. |
 
-Use validation at finalization to enforce the cross-table kind/class rules; ordinary CHECK cannot query another table. Zero-sum alone does not prove correct financial meaning, so supported command recipes also validate allowed accounts/classifications/typed detail totals.
+Validation at finalization enforces the kind and class rules that span tables, since an ordinary CHECK can't query another table. Summing to zero doesn't prove the financial meaning is right, so the supported command recipes also check the allowed accounts, classifications and typed detail totals.
 
-For a PHP 5,000 transfer with a PHP 15 fee, use separate source cash lines: -500,000 centavos with transfer/internal and -1,500 with fee/out, alongside +500,000 destination transfer/internal and +1,500 expense gross. This is a database refinement of the architecture's combined preview, not an extra deduction. It lets reports exclude internal principal without excluding its real fee.
+For a PHP 5,000 transfer with a PHP 15 fee, the source cash gets separate lines: -500,000 centavos as transfer/internal and -1,500 as fee/out, next to +500,000 transfer/internal at the destination and +1,500 expense gross. It's a database-level refinement of the architecture's combined preview, not an extra deduction, and it lets reports leave out the internal principal without leaving out the real fee.
 
-Corrections must not create fake new inflows: cash outflow is `-SUM(amount_minor)` for lines with direction=out, including oppositely signed reversals, rather than `SUM(ABS(negative lines))`. Income, expenses, refunds and liabilities likewise use their documented signed classes. Display current logical actions separately from the all-postings financial sums.
+Corrections never create fake new inflows: cash outflow is `-SUM(amount_minor)` over lines with direction=out, reversals with the opposite sign included, not `SUM(ABS(negative lines))`. Income, expenses, refunds and liabilities use their documented signed classes in the same way. Current logical actions are shown separately from the financial sums over all postings.
 
 #### 5.4 Finalization and immutability
 
-Use ordinary row triggers for immediate lifecycle/immutability checks and deferred constraint triggers for aggregate checks. [PostgreSQL constraint triggers](https://www.postgresql.org/docs/17/sql-createtrigger.html) can check the final transaction state; they are not a substitute for explicit write locking.
+Ordinary row triggers handle the immediate lifecycle and immutability checks, and deferred constraint triggers handle the aggregate ones. [PostgreSQL constraint triggers](https://www.postgresql.org/docs/17/sql-createtrigger.html) can check the final state of a transaction, but they don't replace explicit write locking.
 
-Required trigger/function contracts:
+The trigger and function contracts needed:
 
 1. `guard_journal_write`: entries can be inserted/updated/deleted only while their parent is building. Lock the journal row when mutating its children. A posted journal cannot return to building. Ordinary roles cannot change ownership, monetary fields or finalized timestamps.
 2. `validate_journal_at_commit`: every surviving newly changed journal is posted, contains at least two nonzero lines, and `SUM(amount_minor::numeric)=0`; all referenced accounts/currency/scope and classifications match. Register checks on the journal and relevant child changes so an empty posted journal is also rejected.
@@ -329,9 +329,9 @@ Required trigger/function contracts:
 4. `validate_reversal_at_commit`: each reversal refers to a prior economic journal of the immediately superseded revision; every original line is reversed exactly once with the same ledger/category/classes/currency/date and negated amount. A reversal cannot point to another reversal. New economic journals form the replacement.
 5. `guard_ledger_metadata`: bucket kind/currency and posted scope cannot change; archive does not mutate financial history.
 
-A metadata-only action edit produces a private audit revision, not a new financial revision. Economic corrections create new revisions and postings. No trigger performs hidden balancing entries or silently repairs totals.
+Editing only an action's metadata produces a private audit revision, not a new financial revision. Economic corrections create new revisions and postings. No trigger ever makes hidden balancing entries or quietly repairs totals.
 
-Current balances sum **all posted journals**: originals + reversing journals + replacements. Do not filter out superseded originals while retaining their reversals. Current receipt/purchase/payment semantics use the action's current nonvoid revision. A financial reclassification that is a genuinely later event (for example resolving a payment clearing balance) is a new action linked to the earlier fact, not a backdated replacement unless the earlier record was erroneous.
+Current balances sum **all posted journals**: originals + reversing journals + replacements. Superseded originals are never filtered out while their reversals stay in. What a receipt, purchase or payment currently means comes from the action's current non-void revision. A financial reclassification that genuinely happens later (resolving a payment clearing balance, say) is a new action linked to the earlier fact, not a backdated replacement, unless the earlier record was simply wrong.
 
 ```mermaid
 erDiagram
@@ -350,7 +350,7 @@ erDiagram
 
 ### 6. Action details, refunds, fees, and reconciliation
 
-Typed detail records explain intent and enforce destinations/allocations. They do not independently change balances. All AR tables inherit scope, revision identity and immutable-after-finalization behavior. For tables with one row per revision, use PK `(workspace_id,action_revision_id)` plus their stated AR FKs instead of bundle P's surrogate ID; they also have `created_at timestamptz! DEFAULT now()` and private RLS. This one-per-revision pattern is called **D** below.
+Typed detail records explain the intent and enforce destinations and allocations; they don't change balances on their own. Every AR table inherits the scope, revision identity and the rule that it can't change after finalization. Tables with one row per revision use PK `(workspace_id,action_revision_id)` plus their stated AR FKs instead of bundle P's surrogate id, and also have `created_at timestamptz! DEFAULT now()` and private RLS. Below, this one-row-per-revision pattern is called **D**.
 
 | Table / release / bundle | Columns beyond bundle | Constraints, indexes and important behavior |
 | --- | --- | --- |
@@ -365,11 +365,11 @@ Typed detail records explain intent and enforce destinations/allocations. They d
 | `finance.reconciliation` / C / P,E | `financial_account_id uuid!`; `cutoff_date date!`; `observed_minor,calculated_minor bigint!`; `financial_revision bigint!`; `reference text?`; `notes text?`; `supersedes_reconciliation_id uuid?` | WFK account/prior comparison; signed balances allowed; difference is derived observed-calculated. Index `(workspace_id,financial_account_id,cutoff_date DESC,id DESC)`. Immutable observation; later changes make it stale by revision/date comparison. A new comparison supersedes rather than edits evidence. |
 | `finance.adjustment_detail` / C / D,AR | `financial_account_id uuid!`; `signed_adjustment_minor bigint!`; `reason text!`; `reconciliation_id uuid?` | WFK account/reconciliation; nonzero bounded signed adjustment; nonblank reason; adjustment cash/equity postings must equal intended effect. Index reconciliation. No automatic income/expense classification and no forced balance. |
 
-For refund allocations, avoid an unnecessary duplicate physical `refund_action_revision_id`: the table uses the inherited `action_revision_id`; the explanatory name in the table identifies its role. Refund and benefit entities are introduced only when their transaction types are exposed, as the architecture's V1 refund recommendation remains a product scope gate.
+Refund allocations don't need a duplicate physical `refund_action_revision_id`: the table uses the inherited `action_revision_id`, and the explanatory name in the table says what it's for. Refund and benefit entities only come in when their transaction types are exposed, since the architecture's V1 refund recommendation is still a product scope gate.
 
-**Purchase corrections with refunds:** locking the workspace serializes refunds and source corrections. Keep original allocation evidence pointing to immutable postings. Validate cumulative effective refunds against the current purchase total and matching categories. If a source correction changes affected category portions/amounts, require explicit reallocation through correction of the refund action in the same command group, or reject the source correction until that resolution is supplied. Do not silently mutate old refund allocations or move money again. One command receipt may group multiple *child* commands with their own IDs when such a multi-action correction is introduced; V1 can initially reject dependent corrections and guide the user through an explicit reviewed correction transaction. This limitation must not allow an inconsistent parent change.
+**Purchase corrections with refunds:** locking the workspace makes refunds and source corrections run one at a time. The original allocation evidence keeps pointing to postings that never change. Cumulative refunds in effect are checked against the current purchase total and matching categories. If correcting the source changes the category parts or amounts a refund touches, either the refund action is corrected in the same command group to reallocate it explicitly, or the source correction is rejected until that's done. Old refund allocations never change quietly, and money never moves again. When a multi-action correction like this arrives, one command receipt can group several *child* commands with their own ids; at first V1 can reject dependent corrections and walk the user through an explicit, reviewed correction. That limit must never let a parent change through that leaves things inconsistent.
 
-**Cutoff and fee dates:** ordinary cash activity must be after the relevant account's opening cutoff; opening/reversal/import baseline operations are controlled exceptions. Each dated fee belongs to a journal on its actual date. A multi-date action may have several journals but one atomic save. The draft preview validates every affected account cutoff, not only the main date.
+**Cutoff and fee dates:** ordinary cash activity has to come after the account's opening cutoff; opening, reversal and import baseline operations are controlled exceptions. Each dated fee belongs to a journal on its actual date. An action spanning several dates can have several journals but still saves in one go. The draft preview checks every affected account's cutoff, not just the main date.
 
 #### 6.1 Canonical financial examples in minor units
 
@@ -386,13 +386,13 @@ For refund allocations, avoid an unnecessary duplicate physical `refund_action_r
 | Recognized debt 6,400 settled for 6,000 + waiver | Cash -600,000; debt +600,000 and +40,000; eligible recognized-cost offset -40,000 | Settlement confirms zero residual; preserve prior schedule. |
 | Scheduled 6,400, recognized 6,000, pay 6,000 | Cash -600,000; debt +600,000 | Avoided future charge 40,000 is settlement metadata only; no expense offset. |
 
-These examples use distinct ledger kinds, not sign-only heuristics. Journal balance is necessary, but command-kind and category/component checks establish the correct meaning.
+These examples use distinct ledger kinds, not rules of thumb based only on signs. A journal has to balance, but it's the command-kind and category and component checks that establish what it means.
 
 ### 7. Debts, schedules, payments, and settlements
 
 #### 7.1 Debt identity and recognized accounting
 
-All tables in this section are C and private. `debt` is a liability/terms aggregate, not another financial account or editable balance. Debt-related IDs in children include debt identity in composite keys where indicated.
+Every table in this section is C and private. `debt` is an aggregate of a liability and its terms, not another financial account and not an editable balance. Where marked, debt-related ids in child tables carry the debt's identity in composite keys.
 
 | Table / bundle | Columns beyond bundle | Keys, rules, indexes and lifecycle |
 | --- | --- | --- |
@@ -402,9 +402,9 @@ All tables in this section are C and private. `debt` is a liability/terms aggreg
 | `finance.debt_schedule_version` / P,E | `debt_id uuid!`; `version_no integer!`; `previous_version_id uuid?`; `effective_date date!`; `revision_kind text!` in initial/date_correction/renegotiation/allocation_correction/settlement; `reason text!`; `frequency text!` in manual/weekly/monthly/other; `state text! = 'building'`; `finalized_at timestamptz?` | UQ `(workspace_id,debt_id,version_no)`, `(workspace_id,debt_id,id)`; same-debt previous FK; positive version; state building/finalized. Debt pointer selects active schedule; no redundant is_active flag. Finalized header/entries/mappings immutable. No building version may commit. |
 | `finance.scheduled_installment` / P | `debt_id,schedule_version_id,obligation_id uuid!`; `sequence_no integer!`; `due_date date!`; `contractual_minor bigint!`; `known_principal_minor,known_interest_minor,known_fee_minor bigint?`; `breakdown_complete boolean! = false`; `opening_satisfied_minor bigint! = 0`; `disposition text! = 'scheduled'` in scheduled/cancelled; `cancellation_reason text?`; `notes text?` | Composite FKs to same-debt schedule and obligation; UQ `(workspace_id,schedule_version_id,obligation_id)`, `(workspace_id,schedule_version_id,sequence_no)`, `(workspace_id,debt_id,id)`, `(workspace_id,debt_id,schedule_version_id,id)`. Positive contractual, components nonnegative/unknown, known sums <= total; if breakdown_complete, every component is nonnull and sum=total. Opening satisfied 0..total. Index `(workspace_id,due_date,id)` and schedule. Immutable with parent. |
 
-The recognized liability is `-SUM(debt liability postings)`, not `original_principal_minor`, sum of installments or a `remaining_balance` column. Outstanding principal is the classified principal roll-forward only when the breakdown is sufficiently known; otherwise expose null/unknown. The contractual schedule can include future unrecognized interest without creating a posting.
+The recognized liability is `-SUM(debt liability postings)`; it isn't `original_principal_minor`, the sum of installments or a `remaining_balance` column. Outstanding principal is the classified principal roll-forward only when the breakdown is known well enough; otherwise it's null or unknown. The contractual schedule can include future interest that isn't recognized yet without creating a posting.
 
-Opening_satisfied is strictly historical setup evidence already reflected in the imported opening liability/cash cutoff. It is not a new payment. Copy it deliberately when a surviving obligation is revised and do not increase it to hide a later payment. An imported fully paid installment has opening_satisfied=contractual and produces no reminder. For a newly originated debt, it is zero. Store source notes for unknown past history.
+opening_satisfied is purely historical setup evidence, already reflected in the imported opening liability and cash cutoff. It isn't a new payment. It's copied deliberately when an obligation that survives is revised, and never increased to hide a later payment. An imported installment that was fully paid has opening_satisfied=contractual and gives no reminder. For a newly originated debt it's zero. Source notes are stored for past history that isn't known.
 
 #### 7.2 Payment records and the two allocation axes
 
@@ -417,19 +417,19 @@ Opening_satisfied is strictly historical setup evidence already reflected in the
 | `finance.schedule_allocation_map` / P | `debt_id,target_schedule_version_id,payment_revision_id uuid!`; `source_allocation_id uuid?`; `source_kind text!` in allocation/unapplied; `target_installment_id uuid?`; `amount_minor bigint!`; `target_kind text!` in installment/unapplied | Same-debt FKs for source payment/allocation and target schedule/entry. CHECK source ID iff allocation; target ID iff installment. Positive; UQ NULLS NOT DISTINCT on `(workspace_id,target_schedule_version_id,payment_revision_id,source_allocation_id,target_installment_id)`. Index each source and target. Immutable when target schedule finalized. |
 | `finance.payment_reclassification` / P,AR | `debt_id,payment_id,source_component_id,clearing_credit_posting_id uuid!`; `amount_minor bigint!`; `reason text!` | Same-debt payment/component FKs; revision-scoped posting FK; UQ `(workspace_id,clearing_credit_posting_id)`; index source component. Positive; source disposition clearing/advance. Cumulative current reclassifications <= original unresolved component. New journal reduces clearing and identifies expense/liability without another cash deduction. |
 
-`payment_reclassification` is a necessary additional concrete model beyond the conceptual System Architecture inventory; include it in the C migration set. It implements that architecture's explicit clearing-resolution command, not a new feature.
+`payment_reclassification` is an extra concrete model the conceptual System Architecture list didn't have, and it's needed; it goes in the C migration set. It implements that architecture's explicit clearing-resolution command, not a new feature.
 
-A debt without supplied due dates can still accept payment: create an initial manual schedule version with zero installments, and record its contractual amount as unapplied. Do not invent a due date. Optional schedules are therefore compatible with required payment schedule-context references.
+A debt with no due dates given can still take a payment: an initial manual schedule version with zero installments is created, and the payment's contractual amount is recorded as unapplied. No due date is invented. That's how optional schedules fit with payments that require a schedule-context reference.
 
-Payment components explain accounting allocation. Due allocations explain contractual satisfaction. They are separate and are never added together as expenses or cash outflow. Unknown principal/interest can reduce a confirmed unclassified liability; if even the recognized reduction is unknown, debit payment clearing instead. Due satisfaction requires explicit user/provider confirmation even if accounting classification remains unresolved. Clearing is excluded from spendable funds and default tracked net position.
+Payment components explain the accounting allocation; due allocations explain what's satisfied under the contract. They're separate and are never added together as expenses or cash outflow. An unknown split between principal and interest can reduce a confirmed unclassified liability; if even the recognized reduction is unknown, debit payment clearing instead. Satisfying a due amount needs explicit confirmation from the user or provider, even if the accounting classification is still open. Clearing stays out of spendable funds and the default tracked net position.
 
 #### 7.3 Schedule version and allocation algorithm
 
-When a schedule changes, preserve prior header, entries and original payment allocations. Build the new schedule with stable obligation IDs for unchanged obligations and new IDs for replacements. Record the reason as a date correction, renegotiation, allocation correction or settlement.
+When a schedule changes, the earlier header, entries and original payment allocations are kept. The new schedule keeps stable obligation ids for obligations that don't change and new ids for replacements, and the reason is recorded as a date correction, renegotiation, allocation correction or settlement.
 
-For every **current nonvoid** payment revision whose paid-against schedule is older than the new version, map each original due allocation and its explicit unapplied contractual pool into new installments or an explicit unapplied remainder. For each source pool, map amounts must sum exactly to the pool; no source can be consumed twice. Verify the source allocation belongs to the stated payment revision. Preserve all old maps for historical inspection.
+For every **current non-void** payment revision paid against a schedule older than the new version, each original due allocation and its explicit unapplied contractual pool is mapped onto new installments or an explicit unapplied remainder. For each source pool the mapped amounts sum exactly to the pool, and no source is used twice. The source allocation is checked to belong to the payment revision named. All the old maps are kept so history can be inspected.
 
-Current schedule satisfaction is:
+What's satisfied on the current schedule:
 
 ```text
 opening_satisfied_minor
@@ -437,11 +437,11 @@ opening_satisfied_minor
 + mapped allocations from older schedules by current payment revisions
 ```
 
-A payment is included by one of direct or mapped paths, never both. Remaining due = contractual − satisfaction; it cannot be negative. Excess payment goes to an explicit unapplied/advance pool. Mapped rows do not create cash postings or count as additional payments.
+A payment counts through either the direct path or the mapped one, never both. Remaining due = contractual − satisfaction, and it can't go negative. Any excess goes to an explicit unapplied or advance pool. Mapped rows don't create cash postings and don't count as extra payments.
 
-If a financial payment correction changes its amount or due allocations after a schedule revision, atomically create a new allocation-correction schedule version with the same terms and rebuilt maps; do not mutate the finalized old map. The history labels this as an allocation correction, not a renegotiation. A no-op metadata correction does not need a new schedule. Limit generated versions to meaningful commands, and keep projections rebuildable from these records.
+If a payment correction changes its amount or due allocations after a schedule revision, a new allocation-correction schedule version with the same terms and rebuilt maps is created in the same transaction; the finalized old map never changes. The history calls this an allocation correction, not a renegotiation. A metadata correction that changes nothing needs no new schedule. Versions are only generated for meaningful commands, and projections stay rebuildable from these records.
 
-Finalizing the new schedule validates all row totals, mapping exhaustiveness, no over-satisfied installment and same-debt references. Update `debt.current_schedule_version_id`, debt version, required audit and reminder generations together. Rounding differences cannot be hidden in `opening_satisfied_minor`.
+Finalizing the new schedule checks every row total, that the mapping covers everything, that no installment is over-satisfied, and that references stay within the same debt. `debt.current_schedule_version_id`, the debt version, the required audit and the reminder generations all update together. Rounding differences can't be hidden in `opening_satisfied_minor`.
 
 #### 7.4 Settlement evidence
 
@@ -477,7 +477,7 @@ erDiagram
 
 ### 8. Career and job applications
 
-Career is independent of finance. An application is one attempt; neither company name nor role URL is unique. Data is private, including contacts and salary expectations.
+Career doesn't depend on finance. An application is one attempt; neither the company name nor the role URL is unique. The data is private, contacts and salary expectations included.
 
 | Table / release / bundle | Columns beyond bundle | Keys, rules, indexes and lifecycle |
 | --- | --- | --- |
@@ -491,7 +491,7 @@ Stages: saved/applied/screening/interview/technical_assessment/final_interview/o
 
 Event kinds: interview/assessment/follow_up/submission/response/offer/no_response/note. Only scheduled actionable event kinds appear as future agenda items; dated responses and no-response observations are history. Do not infer response/submission timestamps from stage changes. The first submitted history/event sets applied_date explicitly; corrections retain prior evidence. Optional date precision is day-level for stage changes; same-day `effective_order` provides deterministic ordering and durations remain day-resolution unless future requirements add timestamps.
 
-`next_action_event_id` is the only next-action date authority. A form can create/update a follow-up event and set this pointer together; there is no second `next_action_date` that duplicates the event. When an event is completed/cancelled, clear or explicitly replace the pointer without inventing a next action. Deletion of an unneeded event checks reminder references; archive/cancellation is preferred for occurred events.
+`next_action_event_id` is the only source of truth for the next action's date. A form can create or update a follow-up event and set this pointer in one go; there's no second `next_action_date` copying the event. When an event is completed or cancelled, the pointer is cleared or explicitly replaced, without inventing a next action. Deleting an event that isn't needed checks reminder references first; for events that happened, archiving or cancelling is preferred.
 
 ```mermaid
 erDiagram
@@ -509,11 +509,11 @@ erDiagram
 
 `time.personal_event` (S, P+M+E) columns: `title text!`; `temporal_kind text!` in date/timed; `event_date date?`; `end_date_exclusive date?`; `starts_at,ends_at timestamptz?`; `timezone text?`; `status text! = 'scheduled'` in scheduled/completed/cancelled; `description,location,reference_url text?`; `completed_at timestamptz?`; `notification_generation integer! = 1`. Date mode requires event_date, optional end_date_exclusive>event_date, and all timed columns NULL. Timed mode requires starts_at/timezone, optional ends_at>starts_at and all date columns NULL. Application events use the corresponding XOR without a multi-day end-date field initially. Completed timestamp exists iff completed. Index date and timed starts separately within workspace/status. Audited edits; no automatic scheduling changes on timezone preference change.
 
-`time.agenda_v` is an invoker-security UNION ALL projection of eligible personal events, application events, active-schedule unpaid installments and later statements/expected occurrences/tracker deadlines. It exposes `source_kind`, `source_id`, `occurrence_key`, `notification_generation`, temporal fields and status. These source keys are not another persisted appointment. Calendar editing dispatches to the original table/service.
+`time.agenda_v` is an invoker-security UNION ALL projection of eligible personal events, application events, unpaid installments on active schedules, and later statements, expected occurrences and tracker deadlines. It exposes `source_kind`, `source_id`, `occurrence_key`, `notification_generation`, the time fields and status. These source keys aren't another stored appointment; editing from the Calendar goes to the original table and service.
 
 #### 9.2 Reminder sources and rule/state tables
 
-For V1 source-specific reminder references, use a **closed, checked union of nullable concrete FK columns**, not an unconstrained `(type,id)` relation: `personal_event_id uuid?`, `application_event_id uuid?`, `debt_obligation_id uuid?`. Exactly one must be nonnull when a source is required. All use WFKs. Later migrations add statement/expected-occurrence/tracker-entry references only with those domains. A rule that is a module default has all source columns NULL and a module key instead.
+V1's source-specific reminder references use a **closed, checked union of nullable concrete FK columns**, not an unconstrained `(type,id)` relation: `personal_event_id uuid?`, `application_event_id uuid?`, `debt_obligation_id uuid?`. When a source is required, exactly one is non-null, and all use WFKs. Later migrations add statement, expected-occurrence and tracker-entry references only along with those domains. A rule that's a module default has every source column NULL and a module key instead.
 
 | Table / release / bundle | Columns beyond bundle | Constraints, indexes and lifecycle |
 | --- | --- | --- |
@@ -523,7 +523,7 @@ For V1 source-specific reminder references, use a **closed, checked union of nul
 
 The source `debt_obligation_id` is stable across schedule date corrections. Resolve its entry through the current schedule. If obligations are replaced, cancel old reminder identities and create new ones. For debt notification generation, use the current schedule version identity encoded in occurrence_key plus explicit relevant changes; application/personal event generations avoid resending merely because a note changed. A paid/cancelled source suppresses reminders even if stale occurrence rows exist. When satisfaction cancels persisted debt reminders, advance the source setting's notification generation atomically, preserving its mode. The Agenda generation is the current schedule version number plus this reminder epoch minus one. If a later correction makes the same obligation due again within the same schedule, its new generation must not inherit a cancelled reminder. This is reminder metadata; it never rewrites obligation/payment/schedule evidence or opening satisfaction. Rules and occurrences must be scoped to the same resolved source/module; validate before dispatch and with deferred relation checks on mutation.
 
-Past occurrences can be retained for user history under a bounded policy (recommended 90 days after terminal state), unless needed for delivery deduplication. Preserve compact delivery keys for the configured delivery-retention window. Do not store a full copy of sensitive source content in each reminder.
+Past occurrences can be kept for the user's history under a bounded policy (90 days after the final state is my recommendation), unless delivery deduplication still needs them. Compact delivery keys are kept for the configured delivery-retention window. A reminder never stores a full copy of sensitive source content.
 
 #### 9.3 External notification tables, F2
 
@@ -534,7 +534,7 @@ Past occurrences can be retained for user history under a bounded policy (recomm
 | `time.delivery_attempt` / P | `delivery_id uuid!`; `attempt_no integer!`; `started_at timestamptz!`; `finished_at timestamptz?`; `outcome text!` in in_progress/accepted/failed/uncertain; `provider_request_id text?`; `safe_error_code text?` | WFK delivery; UQ `(workspace_id,delivery_id,attempt_no)`; no full content or bearer URLs. Terminal attempts immutable; retention tied to delivery audit policy. |
 | `time.provider_event_receipt` / P | `delivery_id uuid!`; `provider text!`; `provider_event_id text!`; `event_kind text!`; `received_at timestamptz!`; `processed_at timestamptz?` | WFK delivery; global UQ `(provider,provider_event_id)` in restricted webhook ingestion path; index delivery. Signature verified before insert. Store minimal event data, not arbitrary raw webhook payload. |
 
-Webhook processing first resolves an opaque provider message to its authorized delivery through a narrow service role; it does not take workspace ID from the webhook as trusted context. Treat accepted, delivered and read as different facts; no read fact is assumed. Queue/provider deduplication limits and uncertain delivery reconciliation remain as established in the System Architecture.
+Webhook processing first matches an opaque provider message to its authorized delivery through a narrow service role; it never trusts a workspace id that came from the webhook. Accepted, delivered and read are different facts, and nothing is assumed read. Queue and provider deduplication limits, and reconciling uncertain deliveries, stay as the System Architecture set them.
 
 ```mermaid
 erDiagram
@@ -546,7 +546,7 @@ erDiagram
     NOTIFICATION_DELIVERY ||--o{ DELIVERY_ATTEMPT : retries
 ```
 
-The three source relationships are exclusive alternatives; the XOR constraint, not the diagram alone, enforces that one occurrence has one source.
+The three source relationships exclude each other; it's the XOR constraint, not the diagram, that makes one occurrence have exactly one source.
 
 ### 10. Audit, jobs, commands, and account lifecycle
 
@@ -558,25 +558,25 @@ The three source relationships are exclusive alternatives; the XOR constraint, n
 | `audit.private_revision` / S / P,E | `command_receipt_id uuid!`; `subject_kind text!`; `subject_id uuid!`; `subject_version integer!`; `operation text!`; `before_json,after_json jsonb?`; `reason text?`; `effective_date date?` | WFK command; UQ `(workspace_id,command_receipt_id,subject_kind,subject_id,subject_version,operation)`; indexes subject chronology and `(workspace_id,created_at DESC,id DESC)`. Append-only. Subject kind/ID is intentional audit metadata, not a financial FK or permission grant. |
 | `audit.private_activity` / S / P | `revision_id uuid?`; `activity_kind text!`; `subject_kind text!`; `subject_id uuid!`; `summary_json jsonb!`; `occurred_at timestamptz!` | WFK revision; UQ `(workspace_id,revision_id,activity_kind)` when revision exists; index `(workspace_id,occurred_at DESC,id DESC)`. Sanitized presentation, not monetary truth. Regenerable; can retain a bounded period independently of financial evidence. |
 
-Two identities appear in command handling: row `id` is the receipt PK used by other FKs; `client_command_id` is the client's idempotency key. All `command_receipt_id` and `original_command_receipt_id` columns reference **receipt.id**. The client key is unique within the workspace, never a substitute for a receipt FK or ownership check.
+Command handling has two identities: the row `id` is the receipt's PK that other FKs use, and `client_command_id` is the client's idempotency key. Every `command_receipt_id` and `original_command_receipt_id` column points to **receipt.id**. The client key is unique within the workspace, and never stands in for a receipt FK or an ownership check.
 
-Canonical payload hashing is versioned and excludes volatile request IDs/server timestamps. Same scope/key/hash returns the original saved result IDs/revision; same key/different hash conflicts. Store minimal result DTOs, not session secrets. Original response balances, if retained, are labeled as at-commit evidence rather than current balances. Re-fetch current summaries after replay.
+Canonical payload hashing is versioned and leaves out volatile request ids and server timestamps. The same scope, key and hash returns the original saved result ids and revision; the same key with a different hash is a conflict. Minimal result DTOs are stored, never session secrets. Balances from the original response, if kept, are labelled as evidence at commit time, not current balances. Current summaries are fetched again after a replay.
 
-Grouped corrections in C use a parent receipt plus child receipts in one transaction. The parent describes all dependent source/refund/payment changes; children each own one action revision and unique internal command key. None of the group commits on failure. A retry first finds the completed parent, so it does not generate new children. This implements dependent corrections without loosening per-revision command uniqueness.
+Grouped corrections in C use a parent receipt and child receipts in one transaction. The parent describes every dependent change to sources, refunds and payments; each child owns one action revision and a unique internal command key. If anything fails, none of the group commits. A retry finds the completed parent first, so it never generates new children. That's how dependent corrections work without loosening command uniqueness per revision.
 
-Mandatory financial audit is part of the action finalization check: at least one appropriate revision fact exists for the same receipt/action/revision, and the before/after references match. Audit payloads contain private data and receive the same scope policy. Do not log them to Pino/Sentry by default. General subject references may outlive a removed nonfinancial record as deliberate audit evidence; they never imply that the subject still exists or is accessible.
+The required financial audit is part of the action's finalization check: at least one suitable revision fact exists for the same receipt, action and revision, and the before and after references match. Audit payloads hold private data and get the same scope policy, and they aren't logged to Pino or Sentry by default. General subject references can outlive a removed non-financial record as deliberate audit evidence; they never imply the subject still exists or can be reached.
 
 #### 10.2 Queue and email records
 
-pg-boss owns its versioned tables in a dedicated `pgboss` namespace. Do not reproduce an assumed internal `job` schema or build a parallel custom queue. Its migrations and worker permissions are applied by deployment setup; ordinary workers must not need domain-table ownership or broad DDL grants. Public APIs cannot access queue payloads.
+pg-boss owns its versioned tables in a dedicated `pgboss` namespace. Don't recreate a guessed internal `job` schema or build a parallel custom queue. Deployment setup applies its migrations and worker permissions; ordinary workers never need to own domain tables or have broad DDL grants. Public APIs can't reach queue payloads.
 
-Application envelopes carry a schema version, purpose, scope identity, source ID/generation and idempotency key. Enqueue through the tested transaction adapter using the existing transaction. If that integration cannot provide rollback-safe enqueue, the documented fallback is an `ops.outbox` introduced by an ADR: UUID PK, scope, event type/version, minimal payload, unique dedupe key, available_at, processed_at and attempt/lease metadata. The outbox is **not** part of the default schema alongside transactional pg-boss.
+Application envelopes carry a schema version, a purpose, the scope identity, the source id and generation, and an idempotency key. They're enqueued through the tested transaction adapter, inside the existing transaction. If that integration can't enqueue safely under rollback, the documented fallback is an `ops.outbox` brought in by an ADR: UUID PK, scope, event type and version, a minimal payload, a unique dedupe key, available_at, processed_at, and attempt and lease metadata. The outbox is **not** in the default schema alongside transactional pg-boss.
 
 **`ops.email_delivery` (S)** supports account verification/recovery before a workspace exists. Fields: `id uuid!` PK; `user_id uuid!` FK auth.user RESTRICT; `purpose text!` in verify_email/password_reset/security_notice; `logical_key text!` UQ; `status text!` in queued/accepted/delivered/failed/uncertain/expired/cancelled; `recipient_ciphertext bytea!`; `payload_ciphertext bytea?`; `key_id text!`; `expires_at timestamptz!`; `provider_message_id text?`; `accepted_at timestamptz?`; `created_at,updated_at timestamptz!`; `last_error_code text?`. Index `(status,expires_at,id)` and user. Restrict to email/auth/lifecycle roles; no normal domain SELECT. The payload may contain a short-lived secret link and must be encrypted, excluded from logs, and wiped after acceptance/expiry. Keep only nonsecret delivery evidence for the short operational retention period.
 
-G2 invitations can use an additional explicit `invitation_id` FK and a checked user/invitation recipient union, introduced then. An invitation send does not require pretending a nonregistered recipient has an auth user. Notification emails use their own source/delivery records and user opt-in; they are not classified as required security notices to bypass preferences.
+G2 invitations can add an explicit `invitation_id` FK and a checked union of user or invitation recipients, brought in then. Sending an invitation never means pretending an unregistered recipient has an auth user. Notification emails use their own source and delivery records and the user's opt-in; they're never classed as required security notices to get round preferences.
 
-Queue execution does not imply exactly-once external delivery. It must consult the application's logical delivery record and recheck lifecycle/source state before sending. Restored jobs are paused until reconciliation with possible already-sent effects.
+Running a queued job doesn't mean exactly-once external delivery. It checks the app's logical delivery record and rechecks the lifecycle and source state before sending. Restored jobs stay paused until they're reconciled against effects that might already have been sent.
 
 #### 10.3 Deletion requests and tombstones
 
@@ -585,17 +585,17 @@ Queue execution does not imply exactly-once external delivery. It must consult t
 | `ops.deletion_request` | `id uuid!` PK; `user_id uuid?` FK auth.user; `workspace_id uuid?` FK workspace; `target_user_id uuid!`, `target_workspace_id uuid!` copied identity keys; `requested_at,purge_after timestamptz!`; `state text!` in pending/cancelled/purging/completed/failed; `scope_manifest jsonb!`; `scope_hash bytea!`; `progress_json jsonb! = '{}'`; `completed_at timestamptz?`; `last_error_code text?` | FK links are retained until final purge then explicitly cleared, not deleted by cascade. Copied target IDs support minimal post-purge evidence. Partial UQ active target_user_id for pending/purging/failed; index `(state,purge_after,id)`. Narrow lifecycle access, no workspace-active RLS dependency. Scope hash length32; purge_after>=requested_at. |
 | `ops.deletion_tombstone` | `id uuid!` PK; `target_user_id,target_workspace_id uuid!`; `purged_at,expires_at timestamptz!`; `request_id uuid!` FK deletion_request; `register_exported_at timestamptz?` | UQ `(target_user_id,target_workspace_id)`; expiry index; no FK to deleted identity/workspace. No amounts, contact details or notes. Export to independently retained deletion register before reopening a restored database. |
 
-The deletion scope manifest is a count/type preview, not a copy of the dataset. After completion, purge sensitive manifest/progress details and keep minimal verification for the configured backup window. Seven-day grace/thirty-day retention are inherited recommendations and must be confirmed before production. Cancellation is allowed only before purging begins; partial purges never return to active state.
+The deletion scope manifest is a preview of counts and types, not a copy of the data. Once it's done, sensitive manifest and progress details are purged, and only minimal verification is kept for the configured backup window. The seven-day grace and thirty-day retention are recommendations carried over, and have to be confirmed before production. Cancelling is only possible before purging starts; a partial purge never goes back to active.
 
 Released V1-C4 adds `client_command_id uuid!` and `payload_hash bytea!` (32 bytes) to `ops.deletion_request`, unique by `(target_user_id,client_command_id)`, for same-command replay and changed-payload conflicts. Request ownership does not depend on an active workspace, allowing limited grace-period access. The implemented grace is seven days; current deployment backup expiry remains explicitly unverified. A revocation completion marker is validated against absence of pre-request auth sessions; newer sign-ins provide limited lifecycle access while domain state remains blocked. Cancelled request FK links may be detached and their manifests scrubbed during a later identity purge; copied IDs remain minimal evidence.
 
 The reviewed operator role has scoped RLS SELECT/DELETE only for the implemented private graph, guarded by its confirmed expired-grace request. No web credential can switch roles or delete immutable evidence. Current action revision, debt schedule, application history and next-action pointer FKs use deferred `NO ACTION` deletion checks: `RESTRICT` would prevent atomic removal of those circular graphs even when marked deferrable. Composite ownership and current-version integrity remain enforced at commit. Projection removal is batched; the remaining graph has a bounded total-row budget and rolls back completely on failure. Tombstones validate request identity, preserve immutable completion fields and allow only a first register-export timestamp. Their recommended expiry date does not cause automatic deletion before backup retention is verified. See [ADR 0003](adr/0003-v1-c4-reviewed-lifecycle-maintenance.md).
 
-Purge order: disable/revoke sessions and writes; cancel/remove jobs and deliveries; inventory/delete private objects; remove private links/child tables; remove financial immutable rows through the privileged lifecycle procedure; remove workspace/profile; detach permitted shared participant identities and remove auth records; record and export tombstone. Remove blocking FKs deliberately in this controlled order rather than relying on a blanket user CASCADE. Null shared registered_user_id under the agreed anonymization policy; never delete other members' bills because one user leaves.
+Purge order: disable and revoke sessions and writes; cancel or remove jobs and deliveries; list and delete private objects; remove private links and child tables; remove immutable financial rows through the privileged lifecycle procedure; remove the workspace and profile; detach the shared participant identities that are allowed to be, and remove auth records; record and export the tombstone. Blocking FKs are removed on purpose in this controlled order, rather than relying on a blanket CASCADE from the user. Shared registered_user_id values are nulled under the agreed anonymization policy; other members' bills are never deleted because one user leaves.
 
 ### 11. Credit cards and statements (F2)
 
-All card tables are private. They extend existing ledger buckets and action kinds. No card balance column independently owns money. Statement snapshots are provider evidence, not another posting source.
+All the card tables are private. They extend the existing ledger buckets and action kinds. No card balance column owns money on its own, and statement snapshots are evidence from the provider, not another source of postings.
 
 | Table / bundle | Columns beyond bundle | Constraints, indexes and lifecycle |
 | --- | --- | --- |
@@ -612,7 +612,7 @@ For statement allocations, an effective row has `reverses_allocation_id IS NULL`
 
 `card_statement.current_revision_id` refers to a verified statement version; it does not change merely because a payment occurs. Remaining due is current statement amount minus applicable effective payment/credit allocations with a zero floor for the due display and separate excess credit. A correction to the snapshot validates existing allocations and exposes excess rather than erasing them. Statement balance can legitimately differ from all currently recognized activity because of missing imported history; disclose/reconcile that difference.
 
-The two date bases are explicitly stored. Transaction-date spending for recognized purchases is the architectural recommendation; posting-date statements remain provider-specific. Finalize the reporting basis before card migration. Overpayment is a credit-normal negative liability shown as a card credit, not liquid cash. No provider minimum-interest/payment-allocation formula is assumed by the schema.
+Both date bases are stored explicitly. The architecture recommends reporting recognized purchases by transaction date; statements by posting date stay provider-specific. Settle the reporting basis before the card migration. An overpayment is a credit-normal negative liability, shown as a card credit, not liquid cash. The schema assumes no provider formula for minimum interest or payment allocation.
 
 ### 12. Recurring obligations, budgets, and goals (F2)
 
@@ -628,15 +628,15 @@ The two date bases are explicitly stored. Transaction-date spending for recogniz
 
 An effective occurrence/action link has `reverses_link_id IS NULL` and no reversing row. Its reversal must match the original occurrence, action and amount and cannot itself be reversed. Reversals and replacements commit together. Validate aggregate linked amounts against the action's current eligible amount across all occurrences; a financial correction must update affected links/completion state or fail with an explicit dependency conflict. This preserves useful planning links without creating another financial source of truth.
 
-Saving/spending after a valid reservation can make it underfunded. Do not reject a real cash transaction or retroactively mutate reservations to maintain a permanently false balance constraint. The allocation command prevents new over-reservation; reports derive present underfunding. Budgets, goal targets, future bills and expected cashback never enter asset totals.
+Saving or spending after a valid reservation can leave it underfunded. A real cash transaction is never rejected, and reservations are never changed after the fact, to keep up a balance constraint that would be permanently false. The allocation command stops new over-reservation, and reports work out the underfunding as it stands. Budgets, goal targets, future bills and expected cashback never count in asset totals.
 
-One-occurrence edits change its override fields with history. Future-rule changes add a recurrence version and cancel/regenerate only outstanding future occurrences; completed and skipped history remains. No weekend/holiday adjustment without an explicit supported rule. Forecasts normally need no table: query actual opening funds plus expected occurrences with a calculation version and assumptions. Add a saved forecast artifact only if a user explicitly saves a scenario.
+Editing one occurrence changes its override fields, with history. Changing the rule for the future adds a recurrence version and cancels or regenerates only the outstanding future occurrences; completed and skipped history stays. Nothing moves for weekends or holidays without an explicit supported rule. Forecasts usually need no table: query the actual opening funds plus expected occurrences, with a calculation version and the assumptions. A saved forecast artifact only comes in if a user explicitly saves a scenario.
 
 ### 13. Shared expenses (G2 companion)
 
 #### 13.1 Group identity, membership, and invitations
 
-Group-owned facts use bundle G, never the creator's private workspace. All normal group financial writes lock the group aggregate. Immutable actor attribution uses a participant reference so deleting an auth identity need not destroy another member's settlement evidence. Proposed shared-history retention remains subject to section 21's gate.
+Facts the group owns use bundle G, never the creator's private workspace. Every normal group financial write locks the group aggregate. Who did something is recorded, unchangeably, as a participant reference, so deleting an auth identity doesn't have to destroy another member's settlement evidence. How long shared history is kept is still subject to section 21's gate.
 
 | Table / bundle | Columns beyond bundle | Constraints, indexes and lifecycle |
 | --- | --- | --- |
@@ -647,7 +647,7 @@ Group-owned facts use bundle G, never the creator's private workspace. All norma
 | `sharing.participant_claim` / G,M | `participant_id,invitation_id uuid!`; `claiming_user_id uuid!`; `balance_review_json jsonb!`; `review_group_version integer!`; `state text!` in pending/accepted/rejected/expired; `reviewed_at timestamptz?` | GFK manual participant/invitation; FK user; one live claim per participant; index claimant/state. Acceptance checks verified identity, explicit history/balance consent and unchanged reviewed group version. Preserve compact consent evidence, expire unnecessary snapshots. |
 | `sharing.group_command_receipt` / G | `client_command_id uuid!`; `actor_participant_id uuid!`; `command_type text!`; `payload_hash bytea!`; `result_json jsonb?`; `state text!` in claimed/completed; `completed_at timestamptz?` | GFK actor; UQ `(group_id,client_command_id)`; hash32 and same no-unfinished-commit rule as private receipts. Returned result must still pass current group authorization. Retain financial uniqueness evidence for group history life. |
 
-Group membership is 1:N historical intervals for a registered participant, with at most one active interval. Group owners can manage membership but cannot access private workspaces. Owner removal/exit requires another owner or archive; enforce this under the group lock so two owners cannot both concurrently leave an active ownerless group.
+Group membership is a 1:N series of historical intervals for a registered participant, with at most one active at a time. Group owners can manage membership but can't get into private workspaces. Removing or losing an owner needs another owner, or the group archived; this is enforced under the group lock so two owners can't both leave at once and strand an active group with no owner.
 
 #### 13.2 Bills and shares
 
@@ -658,22 +658,22 @@ Group membership is 1:N historical intervals for a registered participant, with 
 | `sharing.payer_contribution` / G | `expense_id,expense_revision_id,participant_id uuid!`; `amount_minor bigint!` | Same-expense revision FK; GFK participant; UQ `(group_id,expense_revision_id,participant_id)` and `(group_id,expense_revision_id,id)`; positive. One or more rows are allowed. Deferred aggregate validation requires exact sum = current revision total. |
 | `sharing.participant_share` / G | `expense_id,expense_revision_id,participant_id uuid!`; `amount_minor bigint!`; `rounding_rank integer!`; `rounding_extra_minor smallint! = 0` | Same-expense revision FK; GFK participant; UQ `(group_id,expense_revision_id,participant_id)`, `(group_id,expense_revision_id,rounding_rank)`, `(group_id,expense_revision_id,id)`; amount>=0, rank>=0, extra 0/1 for equal split. Deferred aggregate validation requires exact sum = current revision total. Zero share is allowed explicitly; omitted member need not have a row. |
 
-Only current nonvoid bill revisions contribute to present group balances. Historic reports with an explicit saved revision use that revision. Do not sum all replacement revisions or bills will be duplicated.
+Only current, non-void bill revisions count towards group balances now. Historic reports with an explicit saved revision use that revision. Never sum every replacement revision, or bills get counted twice.
 
-Multiple payer contributions are part of the initial V2 shared-expense contract. Do not add a trigger restricting a finalized revision to exactly one payer.
+Several payer contributions are part of the first V2 shared-expense contract, so no trigger limits a finalized revision to exactly one payer.
 
-The contribution axis and share axis are independent:
+What people put in and what their shares are measure separate things:
 
 ```text
 sum(current payer contributions) = expense total
 sum(current participant shares) = expense total
 ```
 
-A participant may pay without consuming a share, consume a share without paying, or contribute an amount different from their share.
+A participant can pay without having a share, have a share without paying, or put in an amount different from their share.
 
-Equal split uses quotient/remainder with persisted rank. Exact split ignores `rounding_extra_minor` and requires exact user-entered sum equality.
+An equal split uses quotient and remainder with a stored rank. An exact split ignores `rounding_extra_minor` and needs the amounts the user entered to add up exactly.
 
-Shared bill fees included in the group bill participate in the agreed bill/share totals. A payer's private settlement-transfer fee remains separate unless the group records a distinct agreed shared fee.
+Fees included in a shared bill are part of the agreed bill and share totals. A payer's own fee for transferring a settlement stays separate unless the group records a distinct shared fee it agreed on.
 
 
 #### 13.3 Group refunds
@@ -685,7 +685,7 @@ Shared bill fees included in the group bill participate in the agreed bill/share
 | `sharing.refund_payer_allocation` / G | `refund_revision_id,participant_id uuid!`; `amount_minor bigint!` | GFK revision/participant; UQ `(group_id,refund_revision_id,participant_id)`; positive; sum=refund total. Records who receives the merchant's returned money; initial policy restricts to original payer. |
 | `sharing.refund_share_allocation` / G | `refund_revision_id,participant_id uuid!`; `amount_minor bigint!` | Same pattern; reduces applicable consumed shares. Sum=refund total; cumulative effective refunds cannot exceed the current bill/participant shares absent an explicit separately modeled compensation. |
 
-Group refunds affect group balances as negative contributions for the refunded payer and negative consumed shares for beneficiaries. They never delete previous confirmed settlements. If the bill was already settled, a refund can make the payer owe other members money back. A private owner must explicitly link the actual receipt/reclassification; group refund creation alone cannot credit a private cash account.
+A group refund shows up in group balances as a negative contribution for the payer who got money back and negative shares for the people it benefits. It never deletes earlier confirmed settlements. If the bill was already settled, a refund can leave the payer owing other members money back. The private owner has to link the money actually received, or the reclassification, explicitly; creating a group refund alone can't credit anyone's private cash account.
 
 #### 13.4 Settlements, disputes, and historical access
 
@@ -699,23 +699,23 @@ Group refunds affect group balances as negative contributions for the refunded p
 | `audit.group_revision` / G | `actor_participant_id uuid?`; `actor_kind text!` in participant/system; `command_receipt_id uuid!`; `subject_kind text!`; `subject_id uuid!`; `subject_version integer!`; `operation text!`; `before_json,after_json jsonb?`; `reason text?` | GFK actor/group receipt; unique command+subject+version+operation; subject timeline index. Immutable, group-authorized. No private account identifiers or financial balances in payload. |
 | `audit.group_activity` / G | `revision_id uuid?`; `activity_kind text!`; `subject_kind text!`; `subject_id uuid!`; `summary_json jsonb!`; `occurred_at timestamptz!` | GFK revision; dedupe revision/kind; group/time index. Presentation only; honors historical visibility and redaction policy. |
 
-Settlement amounts may discharge the full eligible balance, a custom partial amount, one selected bill, part of one bill, or multiple selected bills. `settlement_allocation` is the explanatory source for which obligations are discharged.
+A settlement can clear the whole eligible balance, a custom partial amount, one chosen bill, part of one bill, or several chosen bills. `settlement_allocation` is what explains which obligations it cleared.
 
-The sum of effective settlement allocations must equal the settlement amount. Explicit `advance` allocation represents an accepted overpayment/reverse position; excess must never be silently truncated.
+The settlement allocations in effect add up to the settlement amount. An explicit `advance` allocation represents an accepted overpayment or reverse position; any excess is never quietly cut off.
 
-A direct payment to one participant cannot discharge another participant's obligation unless it follows the explicit redirected-settlement/simplification agreement model.
+A direct payment to one participant can't clear what's owed to someone else, unless it follows the explicit agreement model for redirected settlements and simplification.
 
-For registered participants, a newly reported payment remains proposed/pending until recipient confirmation. Proposed/disputed/cancelled settlements contribute zero to confirmed balances. Confirmation transitions the settlement into the current balance source; it must not create another private cash movement if the sender/recipient already recorded that movement through their private clearing/link path.
+With registered participants, a newly reported payment stays proposed or pending until the recipient confirms it. Proposed, disputed and cancelled settlements add nothing to confirmed balances. Confirming moves the settlement into the current balance source; it never creates a second private cash movement if the sender or recipient already recorded the money through their private clearing or link path.
 
-Read models should expose pending outgoing and incoming settlement amounts separately from confirmed balances and may derive a clearly labeled projected balance after pending confirmation. Do not persist that projection as authoritative financial state.
+Read models show pending outgoing and incoming settlement amounts separately from confirmed balances, and can work out a clearly labelled projected balance for after pending confirmations. That projection is never stored as authoritative financial state.
 
-Settlement suggestions are derived from current confirmed participant net positions and are not stored as completed settlements merely because they were displayed. Redirected suggestions preserve original bills and participant net positions and require the applicable agreement before becoming real settlement evidence.
+Settlement suggestions are worked out from participants' current confirmed net positions, and never stored as completed settlements just because they were shown. Redirected suggestions keep the original bills and everyone's net position, and need the relevant agreement before they become real settlement evidence.
 
-Leaving members retain only their authorized historical entitlements. Later revisions resolving previously visible obligations remain visible according to the approved historical-access policy; unrelated new group records remain hidden. Allocation-only historical projections must not leak another participant's unrelated current activity.
+Members who leave keep only the historical access they're entitled to. Later revisions that resolve obligations they could already see stay visible under the approved historical-access policy; unrelated new group records stay hidden. Historical projections built only from allocations must never leak another participant's unrelated current activity.
 
 #### 13.5 Private adoption records
 
-These tables are in `finance` and use **private** RLS, even though they reference group IDs. A group member cannot enumerate them.
+These tables live in `finance` and use **private** RLS, even though they point at group ids. Group members can't list them.
 
 | Table / bundle | Columns beyond bundle | Keys, rules, indexes and lifecycle |
 | --- | --- | --- |
@@ -725,9 +725,9 @@ These tables are in `finance` and use **private** RLS, even though they referenc
 
 For concrete enforcement, private_group_link_revision additionally stores `group_id uuid!`, the matching `expense_id/refund_id/settlement_id uuid?` union, and `participant_id uuid!` copied from its parent, with one composite parent FK covering these fields or a parent-consistency trigger where nullable unions prevent a useful FK. Add same-source composite FKs for group revision IDs. These are constrained relationship keys, not a JSON polymorphic shortcut.
 
-Compare accepted source version/hash with the current group source to derive “needs private correction.” Do not persist an authoritative synced boolean that can become stale. Corrected private accounting gets a new action/link revision, preserving what the user previously accepted. Link an existing purchase through reversal/reclassification of the same logical action, not a second cash deduction. Validate the linked action's purpose/amount so it cannot be adopted twice through different links.
+"Needs private correction" comes from comparing the accepted source version and hash with the group source as it is now; no authoritative synced flag is stored, since it could go stale. Corrected private accounting gets a new action or link revision, keeping what the user accepted before. An existing purchase is linked by reversing or reclassifying the same logical action, never by taking the cash out a second time. The linked action's purpose and amount are checked so it can't be taken in twice through different links.
 
-Registered members can use the group without adopting their private allocation. Payer cash recorded before confirmation goes through outgoing clearing; recipient cash recorded before linkage goes through incoming clearing. Later confirmation/classification reduces clearing without repeating cash. Actual private cash and confirmed group net balances can therefore differ temporarily and must remain explainable.
+Registered members can use the group without taking their share into their private records. Cash the payer records before confirmation goes through outgoing clearing; cash the recipient records before it's linked goes through incoming clearing. Later confirmation or classification reduces the clearing without moving the cash again. So actual private cash and confirmed group net balances can differ for a while, and the difference always has to be explainable.
 
 #### 13.6 Group balance source
 
@@ -741,23 +741,23 @@ net_receivable(participant)
  - confirmed settlement amounts received
 ```
 
-Reversed, cancelled, proposed/pending and disputed settlements contribute zero to the current confirmed-settlement term. Transition history preserves their evidence.
+Reversed, cancelled, proposed or pending, and disputed settlements add nothing to the current confirmed-settlement term. The transition history keeps their evidence.
 
-Current participant balances always derive from the current effective bill/refund/settlement state. Do not persist pairwise "A owes B" balances as an independently mutable source of truth.
+Current participant balances always come from the bills, refunds and settlements in effect now. "A owes B" balances between two people are never stored as a source of truth that can be edited on its own.
 
-Current group balances must sum exactly to zero:
+Current group balances add up to exactly zero:
 
 ```text
 sum(net_receivable(all current participants)) = 0
 ```
 
-Positive means the participant is owed money. Negative means the participant owes money.
+Positive means the participant is owed money; negative means they owe money.
 
-Because the current balance is derived across all group activity, reciprocal effects cancel automatically. For example, if one bill produces A owing B PHP 1,000 and another produces B owing A PHP 800, their current pairwise presentation may show A owing B PHP 200 while both source bills remain intact.
+Since the current balance is worked out across all the group's activity, debts running both ways cancel out automatically. If one bill leaves A owing B PHP 1,000 and another leaves B owing A PHP 800, the view between the two of them can show A owing B PHP 200 while both source bills stay as they were.
 
-Whole-group settlement suggestions are derived by matching current negative positions with current positive positions. A suggestion is not persisted as a payment and does not affect this formula until the resulting settlement is actually recorded and confirmed.
+Settlement suggestions for the whole group come from matching current negative positions with current positive ones. A suggestion isn't stored as a payment and doesn't affect this formula until the settlement it leads to is actually recorded and confirmed.
 
-Pending reported settlements may have a separate derived projection for presentation:
+Settlements reported but still pending can have a separate derived projection for display:
 
 ```text
 projected_net_after_pending_confirmation(participant)
@@ -766,9 +766,9 @@ projected_net_after_pending_confirmation(participant)
  - eligible pending settlements received
 ```
 
-This projection must be clearly labeled and is not authoritative while confirmation remains pending.
+That projection is clearly labelled, and isn't authoritative while confirmation is still pending.
 
-Personal journal postings are not added directly to the group-balance formula. Each private ledger remains independently correct for the subset of group records its owner adopted.
+Personal journal postings never go straight into the group-balance formula. Each private ledger stays correct on its own for the group records its owner chose to take in.
 
 ```mermaid
 erDiagram
@@ -789,7 +789,7 @@ erDiagram
 
 ### 14. Trackers and template evolution (T3)
 
-Preset template definitions are source-controlled seed content cloned into the user's private workspace. This avoids a nullable “global or private owner” model and ensures later customization cannot change another user's template. Preset origin/version is metadata, not permission sharing.
+Preset template definitions are seed content kept in source control and copied into the user's private workspace. That avoids a nullable "global or private owner" model, and means later customization can never change someone else's template. Where a preset came from, and its version, are metadata, not shared permissions.
 
 | Table / bundle | Columns beyond bundle | Keys, rules, indexes and lifecycle |
 | --- | --- | --- |
@@ -803,9 +803,9 @@ Preset template definitions are source-controlled seed content cloned into the u
 | `tracker.entry_revision` / P,E | `entry_id,template_version_id uuid!`; `revision_no integer!`; `previous_revision_id uuid?`; `values_json jsonb!`; `reason text?` | WFK entry/version; same-entry previous FK; UQ entry/revision and `(workspace_id,entry_id,id)`; JSON object keyed by stable field UUID/key; size cap. Immutable; validate required fields, types and option membership in version. |
 | `tracker.template_migration` / P,M | `tracker_id,from_version_id,to_version_id uuid!`; `mapping_json jsonb!`; `state text!` in preview/confirmed/running/completed/failed/cancelled; `preview_counts_json jsonb!`; `last_entry_id uuid?`; `completed_at timestamptz?` | WFK tracker/versions/entry; from!=to, same template lineage; one running migration per tracker via partial UQ. Row-level retry produces entry revisions idempotently; preserve rejected/invalid entries and do not announce complete until all are resolved. |
 
-A controlled version-aware validator is the source of tracker schema validation, because JSONB cannot use ordinary FKs for every dynamic value. Validate both service writes and the privileged migration path; retain a database object/size CHECK and immutable published definitions. If direct arbitrary SQL access to entries ever becomes a supported path, add a database validator rather than assuming TypeScript ran.
+Tracker schema validation comes from a controlled validator that knows about versions, because JSONB can't use ordinary FKs for every dynamic value. It checks both service writes and the privileged migration path, and the database keeps an object and size CHECK and published definitions that never change. If direct SQL access to entries ever becomes a supported path, add a database validator instead of assuming the TypeScript ran.
 
-Deleting/removing a field marks it retired in a new definition version; old entry JSON and history remain. Number-type conversion requires an explicit mapping/preview. A saved date is a date string, not midnight UTC. Habits need dated check-ins (section 16), not one completion field. A template cannot define executable formulas or replace the financial/career authorities.
+Deleting or removing a field marks it retired in a new definition version; the old entry JSON and history stay. Converting to a number type needs an explicit mapping and preview. A saved date is a date string, not midnight UTC. Habits need dated check-ins (section 16), not one completion field. A template can't define executable formulas or replace finance or career as the source of truth.
 
 ```mermaid
 erDiagram
@@ -844,7 +844,7 @@ Each concrete attachment join below uses J, a composite PK `(workspace_id,<sourc
 
 **`files.group_attachment_link` (G2, G)** has `attachment_id uuid!`, `expense_id,refund_id,settlement_id uuid?`, `label text?`; GFKs, exactly one source, UQ NULLS NOT DISTINCT `(group_id,attachment_id,source columns)`, indexes source and attachment. Private file sharing, if later supported, creates an explicit sanitized group object with separate authorization and user consent, not a public link to the original.
 
-Source membership/ownership is checked before every upload completion and download. Changing group membership cannot be bypassed by a file lookup. The database stores storage keys, not reusable signed URLs. Uploaded content never posts money or changes application state. Deletion sets deleting, removes the object through an idempotent task, then records deleted; failed storage cleanup remains visible and retryable. Whole-account purge inventories keys before removing references so objects cannot become forgotten orphans.
+Membership or ownership of the source is checked before every upload completes and every download. Looking a file up can't get round a change in group membership. The database stores storage keys, never reusable signed URLs. Uploaded content never posts money or changes application state. Deleting sets the state to deleting, removes the object through an idempotent task, then records it as deleted; a failed storage cleanup stays visible and can be retried. A whole-account purge lists the keys before removing references, so no object becomes a forgotten orphan.
 
 #### 15.2 Exports and imports
 
@@ -854,9 +854,9 @@ Source membership/ownership is checked before every upload completion and downlo
 | `ops.import_batch` / F2 / P,M | `source_format text!`; `format_version integer!`; `file_checksum bytea!`; `staging_object_key text?`; `mapping_json jsonb!`; `date_interpretation text!`; `currency text!`; `target_account_id uuid?`; `cutoff_strategy text!` in after_opening/rebase_history; `cutoff_date date?`; `preview_hash bytea?`; `confirmed_preview_hash bytea?`; `state text!` in uploaded/previewed/confirmed/running/completed/partial/failed/cancelled; `command_receipt_id uuid!` | WFK account/receipt; SHA hashes32; currency valid; confirm exact preview before posting. Index checksum and state. Same checksum is a duplicate warning, not necessarily unconditional uniqueness. Raw file/mapping data deleted after configured support window; keep compact posted provenance. |
 | `ops.import_row` / F2 / P | `batch_id uuid!`; `row_no integer!`; `source_row_hash bytea!`; `normalized_json jsonb?`; `validation_errors_json jsonb?`; `duplicate_candidate_action_id uuid?`; `state text!` in invalid/ready/skipped/posted/failed; `client_command_id uuid!`; `command_receipt_id uuid?`; `financial_action_id,job_application_id uuid?`; `safe_error_code text?`; `processed_at timestamptz?` | WFK batch/candidate/receipt/results; UQ `(workspace_id,batch_id,row_no)` and `(workspace_id,client_command_id)`; positive row; posted requires exactly one supported result and receipt/time. Index batch/state/row. Rows are mutable staging until posted, then freeze result identity; retry uses same client command. |
 
-Raw import JSON is not trusted or allowed to bypass domain posting commands. Currency/date mappings and historical cutoff are explicit. Deterministic row IDs/commands persist across retries, and committed financial action IDs survive raw file cleanup. If multiple target domain types are later supported, add concrete result FKs and checks rather than an unrestricted result ID. Counts can be derived from rows; optional cached counts are verified summaries, never the only completion evidence.
+Raw import JSON isn't trusted and can't bypass the domain posting commands. Currency and date mappings and the historical cutoff are explicit. Deterministic row ids and commands survive retries, and committed financial action ids survive the raw file being cleaned up. If several target domain types are supported later, add concrete result FKs and checks instead of an unrestricted result id. Counts can be worked out from rows; optional cached counts are verified summaries, never the only evidence of completion.
 
-CSV schemas name date/centavo/decimal formats, record identifiers and report coverage. Escape formula-leading text for spreadsheet safety through the established CSV library. Do not silently alter exact monetary fields or describe a report CSV as a full database backup. Large exports use consistent database snapshots with bounded lifetime; record the definition version and snapshot financial revision.
+CSV schemas name their date, centavo and decimal formats, record ids and report coverage. Text that starts like a formula is escaped for spreadsheet safety through the established CSV library. Exact monetary fields are never quietly altered, and a report CSV is never described as a full database backup. Large exports use consistent database snapshots with a bounded lifetime, recording the definition version and the snapshot's financial revision.
 
 #### 15.3 Portable restore metadata
 
@@ -864,13 +864,13 @@ CSV schemas name date/centavo/decimal formats, record identifiers and report cov
 
 **`ops.restore_id_map` (F2, J):** PK `(workspace_id,restore_run_id,entity_kind,source_id)`; `restore_run_id uuid!` WFK restore_run; `entity_kind text!` allowlisted by manifest; `source_id text!`; `target_id uuid!`. UQ `(workspace_id,restore_run_id,entity_kind,target_id)`; index restore run. This is staging identity metadata, not a foreign-key permission bypass. Validate all source relationships and typed records before activation; drop mapping details after the restore support window unless necessary provenance is explicitly retained.
 
-Validate the replacement graph in isolated staging (temporary schema/database not exposed as another active user workspace). For bounded initial restores, lock the existing workspace, mark it restoring, suspend jobs/writes, take the explicit recovery export, and use one lifecycle-authorized transaction to replace supported private records under the same workspace identity. Remap entity IDs, preserve financial semantics/reversal links, validate constraints, and return the workspace to active only after success. If the dataset cannot safely fit this bounded transaction, retain the maintenance state and implement a separately reviewed staged-activation mechanism before accepting that size; do not expose partially restored data.
+The replacement graph is validated in isolated staging (a temporary schema or database that's never exposed as another active user workspace). For the first, bounded restores: lock the existing workspace, mark it restoring, pause jobs and writes, take the explicit recovery export, and replace the supported private records under the same workspace identity in one lifecycle-authorized transaction. Entity ids are remapped, financial meaning and reversal links are kept, constraints are checked, and the workspace only goes back to active once it succeeds. If a dataset can't safely fit in this bounded transaction, the workspace stays in maintenance and a separately reviewed staged-activation mechanism is built before accepting that size; partially restored data is never exposed.
 
-After G2, the initial private-restore workflow must refuse unsupported bundles/workspaces with group-linked financial records until a group-reference/privacy mapping policy exists. It cannot silently drop group receivable postings or merge another group's identity. State this limitation in export/restore coverage. Group report exports remain available independently. This preserves the sources' explicitly unresolved cross-group restoration boundary.
+After G2, the first private-restore workflow refuses bundles or workspaces with group-linked financial records until there's a policy for mapping group references and privacy. It can't quietly drop group receivable postings or merge another group's identity, and the export and restore coverage says so. Group report exports are still available separately. This keeps the boundary the sources left explicitly open for restoring across groups.
 
 ### 16. Selective later schema extensions
 
-The following are extension contracts, not migrations to create with V1. Fields use the same type/scoping/default conventions. Where business policy is explicitly open, do not present the suggested columns as a finalized financial workflow.
+These are contracts for later extensions, not migrations to create with V1. Fields follow the same type, scoping and default conventions. Where the business policy is explicitly still open, the suggested columns aren't a finished financial workflow.
 
 | Later table | Proposed columns / key relationships | Constraints, indexes, lifecycle and release gate |
 | --- | --- | --- |
@@ -883,7 +883,7 @@ The following are extension contracts, not migrations to create with V1. Fields 
 | `sharing.simplification_plan` / G,M | `source_group_version integer!`; `currency text!`; `proposal_json jsonb!`; `state text!` in proposed/accepted/expired/applied; `expires_at timestamptz!` | Preserve original bills; proposal validated against zero-sum positions. Index state/expiry. No application until current version and all involved consents match. |
 | `sharing.simplification_consent` / G | `plan_id,participant_id uuid!`; `decision text!` in accepted/rejected; `decided_at timestamptz!` | GFKs; UQ group/plan/participant; immutable consent; applying produces explicit settlement discharge allocations, not edited bills. |
 
-Refinancing needs a typed link between old settlement and new debt-origin actions, never overwriting old debt. Multi-payer, weighted or itemized splits add explicit per-payer/participant allocation policy without changing the meaning of private workspace ownership. Investments/noncash assets, reimbursements, provider imports/OCR suggestions, multiple currencies and shared personal workspaces require new ADRs and accounting/permission rules before physical tables are specified. They are acknowledged roadmap options, not fabricated requirements for a securities valuation engine or household member model.
+Refinancing needs a typed link between the old settlement and the new debt-origin actions, and never overwrites the old debt. Multi-payer, weighted or itemized splits add an explicit allocation policy per payer and participant without changing what private workspace ownership means. Investments and noncash assets, reimbursements, provider imports and OCR suggestions, multiple currencies and shared personal workspaces each need new ADRs and accounting and permission rules before any physical tables are specified. They're options I've acknowledged on the roadmap, not invented requirements for a securities valuation engine or a household member model.
 
 ### 17. Database invariant register
 
@@ -931,7 +931,7 @@ Enforcement labels: **DB** = declarative constraint; **TR** = trigger/finalizati
 | LIFE-01 | Ordinary archive does not erase facts; purge is explicit and cannot resurrect from backup | FK restrict + role-gated purge/tombstones; restore drill. |
 | TRACK-01 | Published template versions and old values survive customization | Immutable definitions/revisions + migration validator; required/type-removal fixtures. |
 
-Finalization checks must execute with visibility of all relevant rows in the same scope, not silently validate a partial RLS-filtered aggregate. A missing parent/scope is an error. They do not need a global tenant-bypassing role; narrowly scoped constraints and a valid transaction context supply the required records. Any security-definer exception must have a specific reason, fixed search path and restricted executable privileges.
+Finalization checks run with every relevant row in the same scope visible, never quietly validating a partial aggregate that RLS filtered. A missing parent or scope is an error. They don't need a global role that bypasses tenants; narrowly scoped constraints and a valid transaction context give them the records they need. Any security-definer exception needs a specific reason, a fixed search path and restricted execute privileges.
 
 ### 18. Transaction, concurrency, and failure protocols
 
@@ -947,7 +947,7 @@ Finalization checks must execute with visibility of all relevant rows in the sam
 8. Mark command receipt completed with result IDs. `SET CONSTRAINTS ALL IMMEDIATE` before returning from the service is useful to surface errors early; COMMIT is still the final success boundary.
 9. Only after successful commit return success and invalidate client queries. A lost response returns the same result through command lookup/retry.
 
-All finance mutation roots use a BEFORE-write lock/guard trigger that locks and checks the workspace before allowing a root financial action/revision, debt schedule, settlement or financial pointer transition. Child changes lock their building parent; finalized children are immutable. This makes the required serialization visible in both services and database mutation paths, rather than depending on an undocumented convention. A new mutation root needs the same guard in its migration. No direct unreviewed bulk insert into financial tables is a supported integration/import path.
+Every finance mutation root has a BEFORE-write lock and guard trigger that locks and checks the workspace before allowing a root financial action or revision, a debt schedule, a settlement or a change to a financial pointer. Child changes lock their parent while it's building, and finalized children can't change. That makes the required serialization visible in both the services and the database's own write paths, rather than resting on an unwritten convention. A new mutation root needs the same guard in its migration. A direct, unreviewed bulk insert into financial tables is never a supported integration or import path.
 
 #### 18.2 Other transaction boundaries
 
@@ -963,7 +963,7 @@ All finance mutation roots use a BEFORE-write lock/guard trigger that locks and 
 | Account deletion request | Lifecycle pending state, request preview evidence, ordinary-session revocation via coordinated auth storage and durable purge intent | Grace period and resumable object/database purge. |
 | Large object upload | Quota reservation and pending metadata | Upload, scan, then separately authorize/finalize metadata. |
 
-Auth sessions and domain data may use distinct credentials but live in the same database. Do not claim an atomic deletion request across independent connections. Implement a narrowly authorized lifecycle procedure/transaction for the pending-state and session invalidation step, or set pending state first (which all protected requests check) and durably revoke auth sessions before reporting deletion initiation complete. Retry safely if the auth step fails; domain access remains blocked.
+Auth sessions and domain data can use different credentials but live in the same database, so a deletion request isn't atomic across independent connections and the docs don't claim it is. Either a narrowly authorized lifecycle procedure or transaction handles setting the pending state and invalidating sessions, or the pending state is set first (every protected request checks it) and auth sessions are revoked durably before deletion is reported as started. If the auth step fails it's retried safely, and domain access stays blocked.
 
 Nonfinancial edits use versioned compare-and-set (`UPDATE ... WHERE version=:expected`) and return conflict on zero updated rows. To prevent deletion races without serializing career edits behind finance, every private domain write first locks the owner's `core.user_profile` row FOR SHARE and checks active lifecycle state. Finance additionally locks its workspace FOR UPDATE. Lifecycle transitions lock the profile FOR UPDATE before changing profile/workspace state, so deletion waits for existing writes and blocks new ones. When group and private records participate together, the global order is group IDs ascending, profile user IDs ascending, then workspace IDs ascending, then child records; never acquire these in reverse. This uses existing rows, not another guard table. Recheck lifecycle before commit-sensitive side effects, and use the same profile guard in financial root triggers and nonfinancial write procedures.
 
@@ -983,13 +983,13 @@ Nonfinancial edits use versioned compare-and-set (`UPDATE ... WHERE version=:exp
 | Purge process interrupted | Request checkpoint remains purging/failed; account never becomes active; retry object/row deletion idempotently. |
 | Restore or migration fails | Isolated staging or transaction rollback preserves active state where applicable; otherwise explicit maintenance mode until verified recovery. |
 
-Keep transactions short and bounded; do not send email, upload/download objects or run network provider calls while holding finance/group locks. Set database statement, lock and idle-in-transaction timeouts appropriate to interactive versus maintenance roles. Start with small bounded pool sizes per role and tune to hosting connection limits; multiplying web replicas must not exhaust PostgreSQL.
+Transactions stay short and bounded; no email, object upload or download, or network calls to providers while holding finance or group locks. Statement, lock and idle-in-transaction timeouts are set to suit interactive roles versus maintenance ones. Pools start small and bounded per role and are tuned to the host's connection limits, so adding web replicas can't exhaust PostgreSQL.
 
 ### 19. Reporting, indexes, and large histories
 
 #### 19.1 Read models and sources of truth
 
-Expose scoped repositories or invoker-security views, not owner-bypassing convenience views. Suggested logical views (create only when they simplify repeated queries):
+Expose scoped repositories or invoker-security views, never convenience views that bypass the owner. Logical views I'd suggest (only create one when it simplifies queries that repeat):
 
 | View / query | Grain and authority | Notes |
 | --- | --- | --- |
@@ -1003,11 +1003,11 @@ Expose scoped repositories or invoker-security views, not owner-bypassing conven
 | Career cohort query | One application in a submitted-date cohort plus history as of cutoff | Distinct applications reaching interviews separate from interview-event counts. |
 | Group net-position query | One participant, current bill/refund facts and confirmed settlement deltas | Never sum private-ledger adoption records into group totals. |
 
-Use read-only REPEATABLE READ for a report's multi-query assembly, capturing workspace financial_revision in the same snapshot. This avoids a header and details describing different committed moments. The generation timestamp does not turn live queries into a permanent historical record. Export_run captures the definition/filter/coverage of an export, not a parallel set of ledger totals.
+A report built from several queries uses read-only REPEATABLE READ and captures the workspace's financial_revision in the same snapshot, so the header and the details never describe different committed moments. The generation timestamp doesn't turn live queries into a permanent historical record. Export_run records an export's definition, filters and coverage, not a parallel set of ledger totals.
 
-Half-open periods: financial effective_date >= start_date AND < end_date_exclusive; timestamp events use timezone-derived UTC bounds. Use local date-only comparisons for overdue debt. Changing timezone does not alter financial effective dates. Opening cutoff D is end-of-day D; ordinary activity starts D+1. Opening records inside a report interval are disclosed baseline adjustments, not income.
+Periods are half-open: financial effective_date >= start_date AND < end_date_exclusive, and timestamp events use UTC bounds derived from the timezone. Overdue debt uses local date-only comparisons. Changing the timezone never changes financial effective dates. An opening cutoff of D means the end of day D, and ordinary activity starts on D+1. Opening records inside a report's interval are shown as baseline adjustments, not income.
 
-Reconciliation identities remain:
+The reconciliation identities are still:
 
 ```text
 cash closing = cash opening + signed external inflows - signed external outflows
@@ -1015,11 +1015,11 @@ cash closing = cash opening + signed external inflows - signed external outflows
 liability closing = liability opening + recognized increases - recognized reductions
 ```
 
-The term “signed external outflows” allows correction reversals to cancel prior outflows within the corrected period. Direction/class inheritance prevents them from becoming fabricated income. Future transit adds a separately identified owned nonliquid movement to the cash identity; it does not become external spending.
+"Signed external outflows" lets correction reversals cancel earlier outflows inside the corrected period, and inheriting the direction and class stops them turning into invented income. Money in transit will add a separately identified owned non-liquid movement to the cash identity; it won't become external spending.
 
 #### 19.2 Index catalogue and pagination
 
-The table contracts identify semantic indexes. Implement at least the following workload paths, inspect actual plans and remove redundant indexes after measurement:
+The table contracts name the semantic indexes. At least these workload paths get built; then look at the actual plans and remove redundant indexes once measured:
 
 | Workload | Index strategy |
 | --- | --- |
@@ -1033,13 +1033,13 @@ The table contracts identify semantic indexes. Implement at least the following 
 | Idempotency | unique scope/client key; compact result lookup and nonfinancial-retention index. |
 | Files/imports | scope/status/date; unique object keys; batch/state/row number; content checksum warning lookup. |
 
-PostgreSQL does not automatically create indexes on the referencing side of every FK. Cover required FK lookups, purge paths and joins without blindly adding duplicates of existing left-prefix indexes. Nullable-source unions can use partial indexes on each nonnull reference. For nullable UQ combinations use PostgreSQL 17's `NULLS NOT DISTINCT` or carefully separated partial unique indexes; ordinary null-distinct uniqueness would allow duplicate default rules or links.
+PostgreSQL doesn't automatically index the referencing side of every FK. Cover the FK lookups, purge paths and joins that need it, without blindly duplicating existing left-prefix indexes. Unions of nullable sources can use a partial index on each non-null reference. For nullable UQ combinations, use PostgreSQL 17's `NULLS NOT DISTINCT` or carefully separated partial unique indexes; ordinary uniqueness, where nulls are distinct, would let duplicate default rules or links in.
 
-Use stable keyset pagination: `(effective_date,id) < (:last_date,:last_id)` for descending journal feeds. Logical action lists use the current revision's primary_effective_date plus action ID. Corrections can move an item between pages; refresh the feed after mutation. If a client needs a consistent multi-page snapshot, use a bounded export/snapshot flow rather than pretending a long-lived cursor freezes changing data. Validate cursor scope/filter hash; it cannot switch ownership or inject arbitrary SQL.
+Stable keyset pagination: `(effective_date,id) < (:last_date,:last_id)` for journal feeds in descending order. Logical action lists use the current revision's primary_effective_date plus the action id. A correction can move an item between pages, so the feed refreshes after a change. A client that needs a consistent snapshot across pages uses a bounded export or snapshot flow, rather than pretending a long-lived cursor freezes data that's changing. The cursor's scope and filter hash are validated, so it can't switch ownership or inject SQL.
 
-No partitioning, materialized financial balances or full-text search cluster initially. Optional PostgreSQL FTS/trigram indexes may support company/description search after profiling. JSONB indexes are limited to demonstrated tracker queries; common title/status/deadline use indexed extracted columns. Keep queue/audit retention maintenance from causing table bloat; monitor autovacuum and connection/lock metrics.
+No partitioning, no materialized financial balances and no full-text search cluster to start with. Optional PostgreSQL FTS or trigram indexes can help company and description search once profiling shows the need. JSONB indexes are only for tracker queries proven to need them; the common title, status and deadline use indexed extracted columns. Queue and audit retention maintenance mustn't bloat tables; watch autovacuum and the connection and lock metrics.
 
-Test the System Architecture's 100-user/20-concurrent fixture, including a 10-year workspace with 50,000 actions and up to 300,000 postings. Meet its read/command/report latency targets before adding caches. If summaries are later introduced, they must carry source revision/freshness and a rebuild/verification path; never validate a financial command against a stale summary.
+Test with the System Architecture's fixture of 100 users, 20 at once, including a 10-year workspace with 50,000 actions and up to 300,000 postings. Meet its read, command and report latency targets before adding caches. If summaries come in later, they carry their source revision and freshness and a way to rebuild and verify them; a financial command is never validated against a stale summary.
 
 ### 20. Migrations, seeds, tests, and operational recovery
 
@@ -1057,23 +1057,23 @@ Test the System Architecture's 100-user/20-concurrent fixture, including a 10-ye
 | G2 | Group identities/invitations/bills/refunds/settlements/history, private links and group RLS | Privacy/historical-access policy plus all six group acceptance scenarios. |
 | T3 | Preset/versioned tracker tables, then editor/migration capabilities | Existing entries survive definition changes. |
 
-Although the table definitions contain forward references, migrations use dependency ordering: create parents without circular pointers, create child/UQ targets, add DEFERRABLE INITIALLY DEFERRED pointer constraints, then expose services. Auth-generated tables and queue tables have independent migration ownership; domain migrations must not accidentally drop them during schema generation.
+The table definitions refer forward to each other, but migrations go in dependency order: create the parents without circular pointers, create the child and UQ targets, add DEFERRABLE INITIALLY DEFERRED pointer constraints, then expose the services. Auth-generated tables and queue tables have their own migration ownership, and domain migrations must never drop them by accident during schema generation.
 
-Use a single deployment migration process with migration credentials and a lock preventing concurrent migration runners. Revoke CREATE on public from runtime roles; schema-qualify tables/functions. Include role/bootstrap and extension requirements in the repository. Do not run migration DDL from every web/worker startup.
+One deployment migration process, with the migration credentials and a lock so two migration runners can't run at once. Runtime roles lose CREATE on public, and tables and functions are schema-qualified. Role bootstrap and extension requirements live in the repository. Migration DDL never runs on every web or worker startup.
 
-For populated tables: add nullable/new-compatible structures; deploy tolerant code; backfill in bounded idempotent batches; validate ownership/totals; add/validate constraints and indexes; switch reads/writes; remove obsolete fields in a later release. Build large indexes concurrently through a migration phase that is not wrapped in an incompatible transaction; handle a failed/invalid index explicitly. Use NOT VALID + VALIDATE where PostgreSQL supports it for FKs/CHECKs, not as a universal shortcut for unique constraints. Review every generated migration for locks, data loss, RLS coverage and downgrade implications.
+For tables that already hold data: add nullable or compatible new structures; deploy code that copes with both; backfill in bounded, idempotent batches; validate ownership and totals; add and validate constraints and indexes; switch reads and writes over; remove obsolete fields in a later release. Large indexes are built concurrently in a migration phase that isn't wrapped in an incompatible transaction, and a failed or invalid index is dealt with explicitly. Use NOT VALID + VALIDATE where PostgreSQL supports it for FKs and CHECKs, not as a universal shortcut for unique constraints. Every generated migration is reviewed for locks, data loss, RLS coverage and what it means for a downgrade.
 
 #### 20.2 Seed and demo policy
 
-Reference seeds create system ledger bucket kinds/codes, default categories and released module/help definitions. Provider names, bank names and family identities are not hardcoded owners. Per-workspace seed commands are idempotent using scoped codes; a new category-seed version must not overwrite user-renamed categories.
+Reference seeds create the system ledger bucket kinds and codes, default categories, and the definitions for released modules and help. Provider names, bank names and family members are never hard-coded as owners. Seed commands per workspace are idempotent through scoped codes, and a new version of the category seed never overwrites categories a user renamed.
 
-Synthetic scenario fixtures run normal command services under two or more users. Test broad volume with drizzle-seed only for safe nonfinancial entities or through generated valid action recipes. Never bypass journal constraints merely to speed a demo. Demo accounts/data live in an isolated database/deployment or separately designed sandbox; resets cannot match real workspaces through a loose is_demo flag.
+Synthetic scenario fixtures go through the normal command services, with two or more users. High-volume tests use drizzle-seed only for safe non-financial entities, or generate valid action recipes. Journal constraints are never bypassed just to make a demo faster. Demo accounts and data live in an isolated database or deployment, or a separately designed sandbox; a reset can't touch real workspaces through a loose is_demo flag.
 
-Do not store real password hashes, financial records, contacts or tokens in repository fixtures/CI logs. Auth fixture creation uses the library's supported APIs/configuration. Keep deterministic seeds and failure reproduction IDs for generated tests.
+Real password hashes, financial records, contacts and tokens never go in repository fixtures or CI logs. Auth fixtures are created through the library's supported APIs and configuration. Generated tests keep deterministic seeds and failure reproduction ids.
 
 #### 20.3 Database test suite
 
-Mandatory tests include:
+Tests that are required:
 
 - Catalog assertions: private tables have RLS enabled/forced, proper scoped FKs, no dangerous public grants and all new financial roots have their guard/finalization triggers.
 - Actual runtime-role tests for every cross-owner reference and report/export/file/reminder path; owner/superuser-only tests are insufficient.
@@ -1085,21 +1085,21 @@ Mandatory tests include:
 - Group tests for one payer, nonparticipants, rounding, refunds after settlement, overpayment advances, manual identities, departed-member projections and private adoption idempotency.
 - Migration tests from empty and last released databases, including auth/queue versions; restore tests recheck all critical sums, FKs and runtime-role policies.
 
-Keep tests independent from implementation formulas: verify expected business values and algebraic invariants, not a duplicate function that repeats the same mistake. Assertions should state which invariant ID they prove. Unit/domain tests do not replace real PostgreSQL locks, deferred triggers, RLS and numeric behavior.
+Tests stay independent of the implementation's formulas: they check expected business values and algebraic invariants, not a copy of the function that repeats the same mistake. Each assertion says which invariant id it proves. Unit and domain tests don't replace real PostgreSQL locks, deferred triggers, RLS and numeric behaviour.
 
 #### 20.4 Backup and restore implications
 
-Follow the established paid managed PITR plus daily encrypted off-provider logical backup, thirty-day controlled retention recommendation and measured 15-minute PITR RPO/four-hour RTO targets. Daily off-provider backups alone imply a weaker up-to-24-hour RPO if managed recovery is unavailable. Confirm actual plan windows and lag before promising either target.
+Follow what's already set: paid managed PITR plus a daily encrypted logical backup outside the provider, the thirty-day controlled retention recommendation, and the measured targets of a 15-minute PITR RPO and a four-hour RTO. Daily backups outside the provider on their own mean a weaker RPO of up to 24 hours if managed recovery isn't available. Confirm the actual plan windows and lag before promising either target.
 
-Back up database objects, functions, triggers, policies, migration history and role/grant bootstrap definitions as well as table data. Database dumps do not include object-storage files or secret-manager keys. Record a compatible application/schema version, storage snapshot/manifest and available decryption key versions. Queue/auth token data in a backup is sensitive and must have the same access controls.
+Back up the database objects, functions, triggers, policies, migration history, and role and grant bootstrap definitions, not just table data. Database dumps don't include object-storage files or secret-manager keys. Record a compatible app and schema version, the storage snapshot or manifest, and which decryption key versions are available. Queue and auth token data in a backup is sensitive and gets the same access controls.
 
-Restore into an isolated target and validate: row counts by scope, journal zero sums, action revision chains, payment/schedule map totals, selected end balances, current RLS/grants, group zero sums, file checksums/references and migration compatibility. Reapply independently stored deletion tombstones; revoke restored sessions/verification credentials; pause emails/reminders and reconcile already-executed external effects. Reopen users only after verification and communicate any recovery cutoff/data loss.
+Restore into an isolated target and check: row counts by scope, journals summing to zero, action revision chains, payment and schedule map totals, some ending balances, current RLS and grants, groups summing to zero, file checksums and references, and migration compatibility. Reapply deletion tombstones stored separately; revoke restored sessions and verification credentials; pause emails and reminders and reconcile external effects that already happened. Let users back in only after verifying, and tell them about any recovery cutoff or data loss.
 
-Run a restore drill before real users, monthly thereafter and after material schema/storage changes. Retain evidence of the drill, not copied financial content in ordinary monitoring. Deletion expiry must include backups, object versions, encrypted job payloads, exports and replicas; a successful row DELETE alone is not a claim of immediate eradication from all retained media.
+Run a restore drill before there are real users, then monthly, and after material schema or storage changes. Keep evidence of the drill, not copies of financial content in ordinary monitoring. Deletion expiry has to cover backups, object versions, encrypted job payloads, exports and replicas; a successful row DELETE on its own doesn't mean the data is gone from everywhere it's kept.
 
 ### 21. Open database decisions
 
-The established stack and ownership/journal decisions are not reopened here. The following gates preserve unresolved source decisions and identify new database consequences.
+The stack and the ownership and journal decisions already made aren't reopened here. These gates keep the source decisions that are still open, and name what they mean for the database.
 
 | Decision | Recommended default / alternatives | Database consequence | Finalize before |
 | --- | --- | --- | --- |
@@ -1182,9 +1182,9 @@ The financial report fixture also remains intact: opening 24,500 + salary 30,000
 
 #### 22.4 Review outcome and implementation handoff
 
-The database design preserves both source documents' behavioral and architectural decisions. It makes concrete the previously conceptual action revisions, scoped parent relationships, payment/schedule mapping, delivery evidence, identity lifecycle and future group/private integration. It does not move optional roadmap modules into the first release or claim that unresolved product policies have already been approved.
+The database design keeps both source documents' behavioural and architectural decisions. It makes concrete what was only conceptual before: action revisions, scoped parent relationships, mapping payments to schedules, delivery evidence, the identity lifecycle and the future group and private integration. It doesn't pull optional roadmap modules into the first release, and doesn't claim open product policies are already approved.
 
-Implement from the column bundles plus each table contract, then the declarative constraints, required triggers/policies and transaction protocols. Verify every invariant ID with actual PostgreSQL before considering its feature complete. Any deviation that changes accounting meaning, identity scope, consent, history retention or release boundaries requires an explicit decision and synchronized updates to the source architecture documents. This review is design evidence; no migrations have been applied and no application/database integration tests are claimed to have run.
+Build from the column bundles plus each table contract, then the declarative constraints, the required triggers and policies, and the transaction protocols. Verify every invariant id on real PostgreSQL before calling its feature complete. Any change to accounting meaning, identity scope, consent, history retention or release boundaries needs an explicit decision and matching updates to the source architecture documents. This review is design evidence: no migrations have been applied, and I'm not claiming any application or database integration tests ran.
 
 ## V1 CSV export contract
 
@@ -1196,13 +1196,13 @@ Authenticated `GET /api/v1/exports/{kind}.csv`, where kind is `transactions`, `d
 
 All use the same server-side period service: `period=week|month|quarter|year|custom`. Standard periods optionally accept `anchorDate=YYYY-MM-DD`; the default anchor is workspace today. Weeks honor workspace week start; quarters and years are calendar periods. Custom ranges require `startDate` and `endDate`, inclusive, at most 366 days. Mixing an anchor with custom dates, supplying custom dates with a standard period, reversed ranges, invalid/duplicate/unknown parameters, and client ownership parameters are rejected. `asOfDate` is an optional Career effective-observation cutoff, no later than workspace today; it does not filter financial effective dates or reconstruct past database knowledge.
 
-Each export reads authoritative sources in a scoped read-only REPEATABLE READ transaction. SQL statement timeout is 10 seconds; preparation is capped at 30 seconds, 10,000 data rows and 10 MiB including metadata. Oversize/failure requests return a problem response before any successful download. CSV is generated with streaming `csv-stringify`, bounded before response, then streamed to the browser in chunks. No CSV object/file is retained on the server. A subsequent request creates a fresh snapshot and may observe a different revision.
+Each export reads the authoritative sources in a scoped, read-only REPEATABLE READ transaction. The SQL statement timeout is 10 seconds; preparing an export is capped at 30 seconds, 10,000 data rows and 10 MiB including metadata. A request that's too big or fails gets a problem response before any download succeeds. The CSV is generated with streaming `csv-stringify`, bounded before the response, then streamed to the browser in chunks. No CSV object or file stays on the server, and a later request takes a fresh snapshot that might see a different revision.
 
 ### Format and repeated manifest columns
 
 UTF-8 with BOM, quoted fields, CRLF records. Null values are empty fields, distinct from supplied zero. UUIDs identify sources. Calendar dates are ISO `YYYY-MM-DD`; recorded/generated instants are ISO UTC. Monetary columns ending `_minor` are exact signed integer **centavos**, never floating point. `_decimal` columns have exactly two decimal places and are derived with integer arithmetic. Parse exact monetary fields as decimal strings/integers, not JavaScript Number or spreadsheet floating point.
 
-The first row has `record_type=manifest`, including when there are no records. Manifest values repeat on every data row. `row_count` excludes the manifest. Empty data columns on the manifest are intentional.
+The first row has `record_type=manifest`, even when there are no records. Manifest values repeat on every data row, and `row_count` doesn't count the manifest. The empty data columns on the manifest row are on purpose.
 
 | Column | Meaning |
 | --- | --- |

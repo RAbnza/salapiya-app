@@ -8,7 +8,7 @@
 
 ## Timeline
 
-The project was built in bounded milestones from 6 to 29 October 2026 (Asia/Manila). Each milestone ended with a written handoff and its verification evidence. Implementation was AI-assisted (see the README, "How it was built"). Dates and hashes below come from the archived records and git history. Status uses: implemented and verified, implemented with limitations, superseded (historical), not implemented.
+I built the project in bounded milestones from 6 to 29 October 2026 (Asia/Manila). Each milestone ended with a written handoff and its verification evidence. I built it with AI assistance (see the README, "How it was built"). The dates and hashes below come from the archived records and git history. The status column uses: implemented and verified, implemented with limitations, superseded (historical), not implemented.
 
 | Dates (2026) | Phase | Outcome | Key evidence | Record |
 | --- | --- | --- | --- | --- |
@@ -53,7 +53,7 @@ The project was built in bounded milestones from 6 to 29 October 2026 (Asia/Mani
 ### Salapiya native (P0-P6, post-P6, release and later work)
 
 - [P0 foundation verification](archive/salapiya/P0_VERIFICATION.md)
-- [Remaining P0 assignments](archive/salapiya/P0_NEXT_ASSIGNMENTS.md)
+- [Remaining P0 work](archive/salapiya/P0_NEXT_ASSIGNMENTS.md)
 - [Salapiya P0 architecture proof handoff](archive/salapiya/P0_ARCHITECTURE_PROOF_HANDOFF.md)
 - [P1 — Local foundation and everyday Money](archive/salapiya/P1_LOCAL_FOUNDATION_HANDOFF.md)
 - [P2 — Connected identity, private synchronization and recovery](archive/salapiya/P2_CONNECTED_IDENTITY_HANDOFF.md)
@@ -82,7 +82,7 @@ The project was built in bounded milestones from 6 to 29 October 2026 (Asia/Mani
 
 ### 18. Implementation sequence and gates
 
-No duration estimate is committed. Complete bounded evidence-producing milestones rather than starting every module at once. The launch scope stays fixed while implementation order follows dependencies.
+I didn't commit to a duration estimate. The plan was to finish bounded milestones that each produce evidence, rather than start every module at once. The launch scope stayed fixed while the build order followed dependencies.
 
 | Stage | Deliverable | Exit evidence |
 | --- | --- | --- |
@@ -92,9 +92,9 @@ No duration estimate is committed. Complete bounded evidence-producing milestone
 | P3 — Shared Expenses | All S01–S10 workflows, invitations, settlements, private effects, former-member rules | Full group arithmetic, permissions, concurrent/offline cases and private nonduplication pass. |
 | P4 — Complete financial scope | All debt/card/statement/installment/recurring/budget/goal/forecast/report/import/file features | Every M01–M17 row mapped to implementation and acceptance; command offline matrix complete. |
 | P5 — Life and native integration | Calendar/reminders, Tasks/Learning/Books, Career essentials, platform UX/accessibility | Life end-to-end flows work offline and sync, with no source duplication; G5/G6 device acceptance. |
-| P6 — Complete private release | Signed upgrade path, backups/recovery, operational setup, capacity/cost checks and complete regression acceptance | All launch rows and release gates pass; the primary user can use real data with documented limitations. |
+| P6 — Complete private release | Signed upgrade path, backups/recovery, operational setup, capacity/cost checks and complete regression acceptance | All launch rows and release gates pass; I can use my real data with documented limitations. |
 
-P0/P2 can use synthetic expense flows to prove the architecture without claiming an early reduced-scope launch. Later milestones may overlap only when their interfaces are stable and the work is explicitly authorized; this plan does not request delegation or parallel agents by itself.
+P0/P2 could use synthetic expense flows to prove the architecture without that counting as an early reduced-scope launch. Later milestones could overlap only once their interfaces were stable and I'd explicitly signed off on it; the plan on its own didn't call for splitting the work up or running pieces in parallel.
 
 #### 18.1 Gate register
 
@@ -110,10 +110,10 @@ P0/P2 can use synthetic expense flows to prove the architecture without claiming
 | G7 | Managed service quotas, free-tier operation and budget | Measured initial sync, active sync, storage/history/files and outage/reactivation behavior; explicit budget decision if paid service required. |
 | G8 | File validation/scanning, backup retention and account/group lifecycle operations | Real configured adapters, restore/deletion reconciliation, owner-loss procedure and recovery documentation. |
 
-A failed gate calls for a bounded redesign or documented alternative. It must not silently reduce financial scope, invent successful tests, or replace the provider because it is convenient for the current implementation.
+If a gate failed, the answer was a bounded redesign or a documented alternative, never quietly shrinking the financial scope, inventing passing tests, or swapping the provider just because it suited the current implementation.
 
 ### 24. Documentation completion record
 
-This version records the approved workshop direction and final Salapiya name. It adds no application code, schema migration, cloud service, logo, subscription or deployment. Repository inspection and official documentation checks informed the plan; native builds, sync prototypes, security tests, physical-device checks and restore drills remain future work at the named gates.
+This version of the plan recorded the direction I approved in the workshop and the final Salapiya name. It added no application code, schema migration, cloud service, logo, subscription or deployment. I based the plan on inspecting the repository and checking the official documentation; native builds, sync prototypes, security tests, physical-device checks and restore drills were left for the named gates.
 
-The intended next step is a separately assigned architecture feasibility milestone with concrete evidence, followed by the complete approved financial and Life release scope.
+The next step I planned was a separate architecture feasibility milestone with concrete evidence, then the complete approved financial and Life release scope.
