@@ -11,7 +11,7 @@
 
 **Tagline:** Your money, on your terms.  
 **Name inspiration:** Salapi + Laya.  
-**Repository:** `RAbnza/Personal-Management-Platform`  
+**Repository:** `RAbnza/salapiya-app` (renamed from `RAbnza/Personal-Management-Platform` on 3 November 2026)  
 **Document version:** 1.0  
 **Decision/documentation date:** October 19, 2026 (Asia/Manila)  
 **Current status (29 October 2026):** Salapiya `0.6.1+8` is **APPROVED FULL RELEASE** for a small private group of users; development **COMPLETE**. [Final release and project closure](OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure) and section 26 override the older gate and release-blocker wording for that audience and scope. I've kept the earlier evidence and the tests I never ran.
@@ -392,7 +392,7 @@ Before starting the next piece of engineering work:
 
 This describes the product I meant to build: what it does at its core and where it stops. It's the starting point for requirements, interface design, data modelling and planning. The full vision is bigger than the first release; I wrote the later features down here so they could be added on purpose later without holding up a usable product.
 
-**Current development direction:** V1 and V2-A through V2-I are complete under their documented acceptance scopes; [V3-A through V3-D are complete and locally accepted under approved targeted verification](archive/web/V3_DEVELOPMENT_HANDOFF.md). The [V3 impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records the local checks I chose; the broader automatic CI passed separately at implementation commit `239c360` ([run](https://github.com/RAbnza/Personal-Management-Platform/actions/runs/38911065106)). That doesn't imply any production, manual or hosted product acceptance.
+**Current development direction:** V1 and V2-A through V2-I are complete under their documented acceptance scopes; [V3-A through V3-D are complete and locally accepted under approved targeted verification](archive/web/V3_DEVELOPMENT_HANDOFF.md). The [V3 impact matrix](OPERATIONS_AND_RELEASE.md#v3-change-impact-acceptance) records the local checks I chose; the broader automatic CI passed separately at implementation commit `239c360` ([run](https://github.com/RAbnza/salapiya-app/actions/runs/38911065106)). That doesn't imply any production, manual or hosted product acceptance.
 
 I approved the [comprehensive UI/UX redesign](archive/web/COMPREHENSIVE_UI_UX_REDESIGN_PLAN.md), the [M1–M6 roadmap](archive/web/UI_UX_REDESIGN_MILESTONES.md) and the [current decisions](archive/web/UI_UX_REDESIGN_DECISIONS_REQUIRED.md) on October 17, 2026. M1 foundations were finished and approved on October 17, 2026 (Asia/Manila); M2 was ready to start on its own ([handoff](archive/web/REDESIGN_M1_HANDOFF.md)), and M2-M6 hadn't started. The order I approved is **completed V3 → UI/UX Redesign → Platform Architecture Planning → Windows/Android Development → Platform-Specific Acceptance**. The web app stayed the place to build and verify things through the redesign; finishing its production deployment and readiness was dropped under [ADR 0005](adr/0005-v3-scope-and-platform-transition.md). The direction stays mostly-offline personal use on Windows and Android, with private data on the device and some online collaboration; the replacement architecture and final branding were still deferred. Everything built in V1–V3 stays: the features, business rules, privacy, authorization, security and integrity.
 

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/release-0.7.0-7c3aed" alt="Release 0.7.0">
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Android-informational" alt="Platforms: Windows and Android">
   <img src="https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.7">
-  <a href="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml"><img src="https://github.com/RAbnza/Personal-Management-Platform/actions/workflows/salapiya-flutter.yml/badge.svg" alt="Salapiya Flutter validation"></a>
+  <a href="https://github.com/RAbnza/salapiya-app/actions/workflows/salapiya-flutter.yml"><img src="https://github.com/RAbnza/salapiya-app/actions/workflows/salapiya-flutter.yml/badge.svg" alt="Salapiya Flutter validation"></a>
   <img src="https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey" alt="License: all rights reserved">
 </p>
 
@@ -90,15 +90,15 @@ Check your setup with `flutter doctor`.
 ### Installation
 
 ```powershell
-git clone https://github.com/RAbnza/Personal-Management-Platform.git
-cd Personal-Management-Platform/apps/salapiya
+git clone https://github.com/RAbnza/salapiya-app.git
+cd salapiya-app/apps/salapiya
 flutter pub get --enforce-lockfile
 flutter run -d windows
 ```
 
 The app starts offline and creates an encrypted profile on your device. Without Google configuration, the sign-in option explains that it's unavailable; everything else works.
 
-Or skip the build: the [latest release](https://github.com/RAbnza/Personal-Management-Platform/releases/latest) has a Windows installer and an Android APK. How they're installed, updated and restored is in [Operations and release](docs/OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure).
+Or skip the build: the [latest release](https://github.com/RAbnza/salapiya-app/releases/latest) has a Windows installer and an Android APK. How they're installed, updated and restored is in [Operations and release](docs/OPERATIONS_AND_RELEASE.md#salapiya--final-release-and-project-closure).
 
 <details>
 <summary>Running the web reference app</summary>
@@ -197,7 +197,7 @@ Known limitations of the current release (unsigned Windows installer, attachment
 
 ## Contributing
 
-This is a personal project and I'm not taking pull requests right now. Bug reports and suggestions are welcome as [GitHub issues](https://github.com/RAbnza/Personal-Management-Platform/issues).
+This is a personal project and I'm not taking pull requests right now. Bug reports and suggestions are welcome as [GitHub issues](https://github.com/RAbnza/salapiya-app/issues).
 
 ## License
 
