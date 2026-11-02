@@ -831,7 +831,8 @@ void main() {
         final chart = tester.getRect(find.byKey(const ValueKey('chart')));
         final shown = [
           for (final m in months)
-            if (find.text(m).evaluate().isNotEmpty) tester.getRect(find.text(m)),
+            if (find.text(m).evaluate().isNotEmpty)
+              tester.getRect(find.text(m)),
         ]..sort((a, b) => a.left.compareTo(b.left));
         // The latest point always keeps its label.
         expect(find.text('Today'), findsOneWidget, reason: '${scale}x');

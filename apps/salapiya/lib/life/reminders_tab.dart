@@ -14,11 +14,7 @@ import 'reminder_page.dart';
 
 /// Reminders: what will remind me, when, and how do I change that?
 class LifeRemindersTab extends StatefulWidget {
-  const LifeRemindersTab({
-    super.key,
-    required this.source,
-    required this.hub,
-  });
+  const LifeRemindersTab({super.key, required this.source, required this.hub});
   final LifeSource source;
   final LifeHub hub;
   @override
@@ -64,7 +60,11 @@ class _LifeRemindersTabState extends State<LifeRemindersTab> {
       context,
       title: 'Turn off reminders on this device?',
       body: Text(
-        '${set == 0 ? 'Nothing is' : set == 1 ? '1 reminder is' : '$set reminders are'} set here${set == 0 ? ', so nothing is cancelled' : ', and will be cancelled'}. Your records and calendar don’t change, and your other devices keep theirs.',
+        '${set == 0
+            ? 'Nothing is'
+            : set == 1
+            ? '1 reminder is'
+            : '$set reminders are'} set here${set == 0 ? ', so nothing is cancelled' : ', and will be cancelled'}. Your records and calendar don’t change, and your other devices keep theirs.',
       ),
       primary: const ModalAction('Turn off', value: true),
     );
@@ -374,48 +374,46 @@ class _LifeRemindersTabState extends State<LifeRemindersTab> {
     );
   }
 
-  Widget logCard(BuildContext context, PrototypeSession session) =>
-      OverviewCard(
-        key: const ValueKey('life-reminders-log'),
-        title: 'What happened',
-        caption: 'Set means your device has it, not that you saw it',
-        child: FutureBuilder<List<ReminderLog>>(
-          future: log,
-          builder: (context, snapshot) {
-            final rows = snapshot.data ?? const <ReminderLog>[];
-            if (rows.isEmpty) {
-              return const EmptyState(
-                icon: Icons.history,
-                title: 'Nothing yet',
-                message: 'Reminders that have gone by show here.',
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget logCard(
+    BuildContext context,
+    PrototypeSession session,
+  ) => OverviewCard(
+    key: const ValueKey('life-reminders-log'),
+    title: 'What happened',
+    caption: 'Set means your device has it, not that you saw it',
+    child: FutureBuilder<List<ReminderLog>>(
+      future: log,
+      builder: (context, snapshot) {
+        final rows = snapshot.data ?? const <ReminderLog>[];
+        if (rows.isEmpty) {
+          return const EmptyState(
+            icon: Icons.history,
+            title: 'Nothing yet',
+            message: 'Reminders that have gone by show here.',
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListGroup(
               children: [
-                ListGroup(
-                  children: [
-                    for (final row in rows.take(8))
-                      AdaptiveRow(
-                        title: row.title,
-                        subtitle:
-                            '${reminderStamp(context, row.due, r.timezone)} · ${reminderLogLine(row.state)}',
-                        onTap: row.row == null
-                            ? null
-                            : () => openLifeReminder(
-                                context,
-                                session,
-                                row.row!.id,
-                              ),
-                      ),
-                  ],
-                ),
-                const ListEnd(),
+                for (final row in rows.take(8))
+                  AdaptiveRow(
+                    title: row.title,
+                    subtitle:
+                        '${reminderStamp(context, row.due, r.timezone)} · ${reminderLogLine(row.state)}',
+                    onTap: row.row == null
+                        ? null
+                        : () => openLifeReminder(context, session, row.row!.id),
+                  ),
               ],
-            );
-          },
-        ),
-      );
+            ),
+            const ListEnd(),
+          ],
+        );
+      },
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {

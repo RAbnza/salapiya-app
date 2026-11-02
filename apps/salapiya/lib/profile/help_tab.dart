@@ -96,7 +96,9 @@ class _HelpTabState extends State<HelpTab> {
           SizedBox(height: Space.cardGapOf(context)),
         ] else ...[
           DashboardGrid(
-            cards: isDesktop(context) ? [for (final c in cards) (c, 6, 12)] : null,
+            cards: isDesktop(context)
+                ? [for (final c in cards) (c, 6, 12)]
+                : null,
             stacked: cards,
           ),
           SizedBox(height: Space.cardGapOf(context)),

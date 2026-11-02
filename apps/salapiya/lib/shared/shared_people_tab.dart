@@ -109,8 +109,7 @@ class _EveryoneCard extends StatelessWidget {
       return p == null ? null : standsWords(m.person, p, me, amount);
     }
 
-    String name(SharedMember m) =>
-        m.person == me ? '${m.name} (you)' : m.name;
+    String name(SharedMember m) => m.person == me ? '${m.name} (you)' : m.name;
     String details(SharedMember m) => detailLine([
       if (m.left != null)
         'Left ${civilDay(m.left!)}'
@@ -247,7 +246,8 @@ class _InvitationsCard extends StatelessWidget {
   Widget build(BuildContext context) => OverviewCard(
     key: const ValueKey('people-invitations'),
     title: 'Invitations',
-    caption: 'Sent in the last seven days. One that’s been used shows here too.',
+    caption:
+        'Sent in the last seven days. One that’s been used shows here too.',
     child: rows.isEmpty
         ? EmptyState(
             icon: Icons.mail_outline,

@@ -199,9 +199,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
         .where((r) => r.id == item.id && r.generation == item.generation)
         .firstOrNull;
     if (current == null) {
-      lifeReject(
-        'This item changed. Open it again to set its reminder.',
-      );
+      lifeReject('This item changed. Open it again to set its reminder.');
     }
     final choice = <String, dynamic>{
       'generation': item.generation,
@@ -221,9 +219,7 @@ class DeviceReminders extends ChangeNotifier with WidgetsBindingObserver {
 
   String state(AgendaItem item) =>
       sourceStates[item.id] ??
-      (preferences['enabled'] == true
-          ? 'Checking'
-          : 'In the app only');
+      (preferences['enabled'] == true ? 'Checking' : 'In the app only');
   Future<void> reconcile() {
     final next = _work.catchError((Object _) {}).then((_) => _reconcile());
     _work = next;
@@ -602,5 +598,7 @@ DateTime deferQuiet(
     );
     if (candidates.isNotEmpty) return candidates.last;
   }
-  lifeReject('Quiet hours can’t end at that time in this timezone. Choose another end time.');
+  lifeReject(
+    'Quiet hours can’t end at that time in this timezone. Choose another end time.',
+  );
 }

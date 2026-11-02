@@ -313,16 +313,12 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
   if (['correction', 'reversal', 'refund'].contains(cmd.kind) &&
       value('source').isNotEmpty &&
       s.revision(value('source')).values.containsKey('financeType')) {
-    reject(
-      'Open this record’s own page to change it.',
-    );
+    reject('Open this record’s own page to change it.');
   }
   if (['correction', 'reversal', 'refund'].contains(cmd.kind) &&
       value('source').isNotEmpty &&
       s.revision(value('source')).values.containsKey('sharedGroup')) {
-    reject(
-      'This record is linked to Shared Expenses, so it’s changed there.',
-    );
+    reject('This record is linked to Shared Expenses, so it’s changed there.');
   }
   BigInt amount(String key, {bool zero = false, bool signed = false}) {
     try {
@@ -335,10 +331,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
         field: key,
       );
     } on RangeError {
-      reject(
-        'Enter an amount up to ₱1 billion.',
-        field: key,
-      );
+      reject('Enter an amount up to ₱1 billion.', field: key);
     }
   }
 
@@ -583,9 +576,7 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
           );
         }
         if (total + withheld > maxComponent) {
-          reject(
-            'The amount plus fees is over the ₱1 billion limit.',
-          );
+          reject('The amount plus fees is over the ₱1 billion limit.');
         }
         effects.add(
           'Transfer principal ${phpDecimal(total)} PHP creates no income or spending.',
@@ -689,7 +680,9 @@ LocalPlan planLocal(LocalSnapshot s, LocalCommand cmd) {
       case 'reconcile':
         final a = s.account(value('account'));
         if (date.compareTo(a.cutoff) < 0) {
-          reject('Choose a date on or after the day this account’s balance starts.');
+          reject(
+            'Choose a date on or after the day this account’s balance starts.',
+          );
         }
         final BigInt observed;
         try {

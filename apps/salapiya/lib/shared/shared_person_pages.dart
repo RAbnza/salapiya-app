@@ -86,7 +86,9 @@ class _PairPage extends StatelessWidget {
     final title = a == me
         ? 'You and ${g.personName(b)}'
         : '${g.personName(a)} and ${g.personName(b)}';
-    final pair = source.complete ? pairBreakdown(g, a, b, me, source.today) : null;
+    final pair = source.complete
+        ? pairBreakdown(g, a, b, me, source.today)
+        : null;
     String words(BigInt net) => net > BigInt.zero
         ? owesWords(g, a, b, me)
         : net < BigInt.zero
@@ -94,6 +96,7 @@ class _PairPage extends StatelessWidget {
         : a == me
         ? 'Nothing between you'
         : 'Nothing between them';
+
     /// The running figure in words, so a row never reads "You owe −₱5.00".
     String soFar(BigInt net) => net == BigInt.zero
         ? 'All square so far'
@@ -121,7 +124,11 @@ class _PairPage extends StatelessWidget {
       rows: [
         for (final r in p.rows)
           () {
-            final change = signedAmount(r.change, amount, hidden: source.hidden);
+            final change = signedAmount(
+              r.change,
+              amount,
+              hidden: source.hidden,
+            );
             final net = signedAmount(r.net, amount, hidden: source.hidden);
             void open() => r.kind == PairRowKind.bill
                 ? flows.openBill(context, g, r.id)
@@ -324,7 +331,8 @@ class _PairPage extends StatelessWidget {
               children: [notCounted(pair), const ListEnd()],
             ),
           );
-    final debtor = net > BigInt.zero ? a : b, creditor = net > BigInt.zero ? b : a;
+    final debtor = net > BigInt.zero ? a : b,
+        creditor = net > BigInt.zero ? b : a;
     final canLog =
         pair != null &&
         net != BigInt.zero &&
@@ -340,8 +348,12 @@ class _PairPage extends StatelessWidget {
             'Log payment',
             key: const ValueKey('pair-log'),
             icon: Icons.payments_outlined,
-            onPressed: () =>
-                flows.logPayment(context, g, sender: debtor, recipient: creditor),
+            onPressed: () => flows.logPayment(
+              context,
+              g,
+              sender: debtor,
+              recipient: creditor,
+            ),
           ),
       ],
       child: DashboardGrid(
@@ -460,7 +472,11 @@ class _PersonPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         line('Paid across bills', b.paid, sign: '+'),
-        line(you ? 'Your part of bills' : 'Their part of bills', b.part, sign: '−'),
+        line(
+          you ? 'Your part of bills' : 'Their part of bills',
+          b.part,
+          sign: '−',
+        ),
         line('Payments made, confirmed', b.sent, sign: '+'),
         line('Payments received, confirmed', b.received, sign: '−'),
         Divider(height: Space.sm, color: c.divider),
@@ -486,8 +502,7 @@ class _PersonPage extends StatelessWidget {
             style: text.labelMedium?.copyWith(color: c.secondary),
           ),
           if (b.waitingOut > BigInt.zero) line('Payments made', b.waitingOut),
-          if (b.waitingIn > BigInt.zero)
-            line('Payments received', b.waitingIn),
+          if (b.waitingIn > BigInt.zero) line('Payments received', b.waitingIn),
         ],
       ],
     );
@@ -517,7 +532,10 @@ class _PersonPage extends StatelessWidget {
             narrow: AdaptiveRow(
               key: ValueKey('person-bill-${r.id}'),
               title: r.name,
-              subtitle: detailLine([civilDay(r.date), 'Paid ${amount(r.paid)}']),
+              subtitle: detailLine([
+                civilDay(r.date),
+                'Paid ${amount(r.paid)}',
+              ]),
               trailing: MoneyAmount(amount(r.part)),
               onTap: list ? null : () => flows.openBill(context, g, r.id),
             ),

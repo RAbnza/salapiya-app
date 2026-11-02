@@ -469,7 +469,9 @@ Map<String, String> validateLifeFields(
     }
     if (!RegExp(r'^[A-Z]{3}$').hasMatch(v['currency']!) ||
         !['hour', 'month', 'year'].contains(v['salaryPeriod'])) {
-      lifeReject('Choose a currency, as three letters like PHP, and a salary period.');
+      lifeReject(
+        'Choose a currency, as three letters like PHP, and a salary period.',
+      );
     }
     for (final key in ['salaryMin', 'salaryMax']) {
       if (v[key]!.isNotEmpty &&
@@ -696,7 +698,9 @@ void validateLifeArchive(
       (life['revisions'] as List).length > 20000 ||
       (life['intents'] as List).length > 20000 ||
       !connected && (life['intents'] as List).isNotEmpty) {
-    lifeReject('This version of Salapiya can’t read this backup’s Life records. Nothing was restored.');
+    lifeReject(
+      'This version of Salapiya can’t read this backup’s Life records. Nothing was restored.',
+    );
   }
   final records = <String, LifeRecord>{}, payloads = <String, String>{};
   for (final raw in life['revisions'] as List) {
@@ -705,7 +709,9 @@ void validateLifeArchive(
     if (c.owner != owner ||
         payloads.containsKey(c.id) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('This backup’s Life history is damaged or incomplete. Nothing was restored.');
+      lifeReject(
+        'This backup’s Life history is damaged or incomplete. Nothing was restored.',
+      );
     }
     records[c.recordId] = applyLifeCommand(records, c);
     payloads[c.id] = c.payload;
@@ -724,7 +730,9 @@ void validateLifeArchive(
           'review',
           'restored',
         ].contains(row['state'])) {
-      lifeReject('A saved Life change in this backup can’t be read. Nothing was restored.');
+      lifeReject(
+        'A saved Life change in this backup can’t be read. Nothing was restored.',
+      );
     }
     // Rejected/conflicting intent is retained as evidence, never applied to the
     // replacement graph or automatically granted authority by an archive.
@@ -738,7 +746,9 @@ void validateLifeArchive(
             !payloads.containsKey(row['replacement_id']) &&
             !intentIds.contains(row['replacement_id']) ||
         DateTime.tryParse(row['recorded_at'] as String) == null) {
-      lifeReject('A saved Life decision in this backup can’t be read. Nothing was restored.');
+      lifeReject(
+        'A saved Life decision in this backup can’t be read. Nothing was restored.',
+      );
     }
   }
   if (life['viewPreferences'] case final Map prefs) {

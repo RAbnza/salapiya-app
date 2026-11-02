@@ -58,9 +58,8 @@ Future<void> forgetDocumentDraft(
   String operation,
 ) async {
   if (session is! LocalSession) return;
-  await LocalLifeDocuments.of(
-    session,
-  ).remove(operation.substring('life-document:'.length));
+  await LocalLifeDocuments.of(session)
+      .remove(operation.substring('life-document:'.length));
 }
 
 /// A real profile's Career documents: the same encrypted store, draft and
@@ -159,11 +158,7 @@ class LocalLifeDocuments implements LifeDocuments {
     await c.store.saveDraft(operation, command.id, {
       'payload': command.payload,
     });
-    await files.write(
-      command.recordId,
-      _record(command).fileMetadata,
-      bytes,
-    );
+    await files.write(command.recordId, _record(command).fileMetadata, bytes);
     await c.store.commitLife(command, draft: operation);
     await c.reload();
     return 'Attached. The file stays on this device, and only its details sync.';
@@ -344,8 +339,7 @@ class _LifeDocumentsCardState extends State<LifeDocumentsCard> {
       careerDocuments(widget.source.records, widget.application);
 
   /// What the rows depend on: a new version reloads them.
-  String get versions =>
-      rows.map((r) => '${r.id}:${r.version}').join(',');
+  String get versions => rows.map((r) => '${r.id}:${r.version}').join(',');
 
   @override
   void initState() {
@@ -357,9 +351,10 @@ class _LifeDocumentsCardState extends State<LifeDocumentsCard> {
   @override
   void didUpdateWidget(LifeDocumentsCard old) {
     super.didUpdateWidget(old);
-    final before = careerDocuments(old.source.records, old.application)
-        .map((r) => '${r.id}:${r.version}')
-        .join(',');
+    final before = careerDocuments(
+      old.source.records,
+      old.application,
+    ).map((r) => '${r.id}:${r.version}').join(',');
     if (before != versions) {
       WidgetsBinding.instance.addPostFrameCallback((_) => load());
     }

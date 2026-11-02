@@ -161,8 +161,7 @@ void main() {
                   b: other,
                   list: true,
                 ),
-                (hub) =>
-                    SharedPersonPage(hub: hub, group: g.id, person: other),
+                (hub) => SharedPersonPage(hub: hub, group: g.id, person: other),
                 (hub) => SharedPersonPage(
                   hub: hub,
                   group: g.id,
@@ -510,7 +509,10 @@ void main() {
       );
       expect(find.text('Left'), findsWidgets);
       expect(find.text('They owe the group'), findsOneWidget);
-      expect(find.textContaining(RegExp('Moved.out.in.September')), findsWidgets);
+      expect(
+        find.textContaining(RegExp('Moved.out.in.September')),
+        findsWidgets,
+      );
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
@@ -538,10 +540,7 @@ void main() {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await tab(tester, session, 'Balances', platform: windows, width: 1200);
-      expect(
-        find.text('Paused while a payment is disputed'),
-        findsOneWidget,
-      );
+      expect(find.text('Paused while a payment is disputed'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
@@ -586,7 +585,10 @@ void main() {
       expect(rows, isNotEmpty);
       for (final s in rows) {
         expect(
-          find.byKey(ValueKey('suggestion-log-${s.recipient}')).evaluate().isNotEmpty,
+          find
+              .byKey(ValueKey('suggestion-log-${s.recipient}'))
+              .evaluate()
+              .isNotEmpty,
           s.direct && canLogFor(g, s.sender, me),
           reason: '${s.sender} → ${s.recipient}',
         );
@@ -642,12 +644,13 @@ void main() {
         width: 1200,
       );
       final rights = [
-        for (final e in find
-            .descendant(
-              of: find.byKey(const ValueKey('pair-table')),
-              matching: find.byType(MoneyAmount),
-            )
-            .evaluate())
+        for (final e
+            in find
+                .descendant(
+                  of: find.byKey(const ValueKey('pair-table')),
+                  matching: find.byType(MoneyAmount),
+                )
+                .evaluate())
           tester.getTopRight(find.byWidget(e.widget)).dx,
       ]..sort();
       expect(rights, isNotEmpty);

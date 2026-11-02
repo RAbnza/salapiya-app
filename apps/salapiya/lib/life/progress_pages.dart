@@ -24,11 +24,7 @@ List<String> progressDetails(ProgressRow r, {bool due = true}) => [
 Widget? progressPill(ProgressRow r) => r.archived
     ? const StatusPill('Archived', icon: Icons.archive_outlined)
     : r.finished
-    ? const StatusPill(
-        'Finished',
-        icon: Icons.task_alt,
-        tone: PillTone.success,
-      )
+    ? const StatusPill('Finished', icon: Icons.task_alt, tone: PillTone.success)
     : r.onHold
     ? const StatusPill('On hold', icon: Icons.pause_circle_outline)
     : r.late
@@ -38,8 +34,11 @@ Widget? progressPill(ProgressRow r) => r.archived
     : null;
 
 /// What a tile or row says when an item has no parts to count.
-String statusWord(ProgressRow r) =>
-    r.finished ? 'Finished' : r.archived ? 'Archived' : r.status;
+String statusWord(ProgressRow r) => r.finished
+    ? 'Finished'
+    : r.archived
+    ? 'Archived'
+    : r.status;
 
 /// How far along, in words and as a bar. One step per lesson or page up to
 /// the kit's limit, then one bar, so a long book is never drawn as finished.
@@ -53,19 +52,16 @@ class ProgressBar extends StatelessWidget {
 }
 
 /// A learning item or book's page, from anywhere.
-void openLifeEntry(
-  BuildContext context,
-  PrototypeSession session,
-  String id,
-) => openDemoPage<void>(
-  context,
-  LifeEntryPage(
-    listenable: Listenable.merge([session, lifeHubOf(session)]),
-    source: (context) => lifeSource(context, session),
-    id: id,
-  ),
-  'life/entry/$id',
-);
+void openLifeEntry(BuildContext context, PrototypeSession session, String id) =>
+    openDemoPage<void>(
+      context,
+      LifeEntryPage(
+        listenable: Listenable.merge([session, lifeHubOf(session)]),
+        source: (context) => lifeSource(context, session),
+        id: id,
+      ),
+      'life/entry/$id',
+    );
 
 /// A learning item or book: how far along, what it is, and what's been done.
 /// It offers only what applies now.
@@ -275,7 +271,8 @@ class _LifeEntryPageState extends State<LifeEntryPage> {
         FactRow('Status', statusWord(r)),
         if (r.detail.isNotEmpty) FactRow(words.detail, r.detail),
         FactRow('Due date', r.due.isEmpty ? 'None' : civilLabel(r.due)),
-        if (r.started.isNotEmpty) FactRow('Date started', civilLabel(r.started)),
+        if (r.started.isNotEmpty)
+          FactRow('Date started', civilLabel(r.started)),
         // A reopened item keeps its old date in its record; it isn't true now.
         if (r.finishedOn != null)
           FactRow('Date finished', civilLabel(r.finishedOn!)),
@@ -393,7 +390,10 @@ class LifeProgressListPage extends StatelessWidget {
       final counts = ProgressCounts(progressRows(s.records, type, s.today));
       final groups = [
         (words.doing, counts.inProgress),
-        (type == LifeType.book ? 'On your list' : 'Not started', counts.notStarted),
+        (
+          type == LifeType.book ? 'On your list' : 'Not started',
+          counts.notStarted,
+        ),
       ];
       return ShareableList<int>(
         title: type == LifeType.book ? 'Reading list' : 'Learning list',

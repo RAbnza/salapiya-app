@@ -137,10 +137,8 @@ void main() {
   }
 
   /// Saving reaches the store on real time, so wait for what it leads to.
-  Future<void> reach(WidgetTester tester, String text) => localWait(
-    tester,
-    () => find.text(text).evaluate().isNotEmpty,
-  );
+  Future<void> reach(WidgetTester tester, String text) =>
+      localWait(tester, () => find.text(text).evaluate().isNotEmpty);
 
   Future<void> more(WidgetTester tester) async {
     await tester.tap(find.text('More details'));
@@ -300,7 +298,10 @@ void main() {
       await tester.tap(submit());
       await tester.pump();
       await tester.pump();
-      expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
+      expect(
+        find.text('This is the demo, so nothing was saved.'),
+        findsOneWidget,
+      );
       expect(life.records.length, before);
     });
   });
@@ -802,11 +803,17 @@ void main() {
       final (edit, id) = await refused(tester, f, c);
       await tester.pumpWidget(page(c, LocalLifeWriter(c)));
       await localSettle(tester);
-      expect(find.textContaining('This changed on another device'), findsOneWidget);
+      expect(
+        find.textContaining('This changed on another device'),
+        findsOneWidget,
+      );
       expect(find.text('Title'), findsOneWidget);
       expect(find.text('Renew my license'), findsOneWidget);
       expect(find.textContaining('payload'), findsNothing);
-      await localTap(tester, find.byKey(ValueKey('life-check-keep-${edit.id}')));
+      await localTap(
+        tester,
+        find.byKey(ValueKey('life-check-keep-${edit.id}')),
+      );
       expect(find.textContaining('It stays on record'), findsOneWidget);
       await localTap(tester, find.text('Keep what’s there').last);
       await localWait(tester, () => c.intents.single['resolved_at'] != null);

@@ -53,9 +53,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ? widget.actions as DemoProfile
       : DemoProfile(session);
   late final ProfileActions actions =
-      widget.actions ??
-      demo ??
-      LocalProfileActions(session as LocalSession);
+      widget.actions ?? demo ?? LocalProfileActions(session as LocalSession);
   late final Listenable changes = Listenable.merge([
     widget.settings,
     session,

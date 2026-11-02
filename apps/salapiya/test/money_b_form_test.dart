@@ -216,9 +216,12 @@ void main() {
         await enter(tester, 'amount', '50.00');
         await enter(tester, 'date', '2026-04-01');
         await save(tester);
-        expect(saved('cardFee').postings.any((p) {
-          return p.ledger == 'expense' && p.category == 'category-fees';
-        }), isTrue);
+        expect(
+          saved('cardFee').postings.any((p) {
+            return p.ledger == 'expense' && p.category == 'category-fees';
+          }),
+          isTrue,
+        );
         expect(saved('cardFee').title, 'Fee · Rewards');
       } finally {
         await close(tester);
@@ -686,7 +689,10 @@ void main() {
         await enter(tester, 'name', 'Class');
         await enter(tester, 'amount', '100.00');
         await localTap(tester, submit());
-        expect(find.text('Choose at least one day of the week.'), findsOneWidget);
+        expect(
+          find.text('Choose at least one day of the week.'),
+          findsOneWidget,
+        );
       } finally {
         await close(tester);
       }

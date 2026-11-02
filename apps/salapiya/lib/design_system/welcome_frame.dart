@@ -37,10 +37,7 @@ class WelcomeFrame extends StatelessWidget {
     final heading = [
       Row(
         children: [
-          if (back) ...[
-            const BackButton(),
-            const SizedBox(width: Space.xs),
-          ],
+          if (back) ...[const BackButton(), const SizedBox(width: Space.xs)],
           Flexible(
             child: Image.asset(
               'assets/branding/display/salapiya_horizontal_on_${c.dark ? 'dark' : 'light'}.png',
@@ -100,7 +97,10 @@ class WelcomeFrame extends StatelessWidget {
                           cards: desktop && aside != null
                               ? [(child, 7, 7), (aside, 5, 5)]
                               : null,
-                          stacked: [?lead, ...stacked ?? [child]],
+                          stacked: [
+                            ?lead,
+                            ...stacked ?? [child],
+                          ],
                         ),
                       ],
                     ),

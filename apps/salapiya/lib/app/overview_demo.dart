@@ -13,11 +13,7 @@ import '../life/life_data.dart' show LifeRow;
 import '../life/life_demo.dart' show demoLife;
 import '../life/life_hub.dart' show lifeHubOf;
 import '../shared/shared_demo.dart'
-    show
-        demoLinkedBill,
-        demoPrivateBill,
-        demoPrivatePayment,
-        demoToConfirmLine;
+    show demoLinkedBill, demoPrivateBill, demoPrivatePayment, demoToConfirmLine;
 import '../prototype/fixtures.dart' show DemoMoney, demoAccounts;
 import '../prototype/scenarios.dart';
 import 'overview_cards.dart';
@@ -987,11 +983,7 @@ OverviewSource demoOverviewSource(
   // The Calendar's own sample, so the two agree.
   final records = demoLife(today, empty: empty).records;
   final agenda = sortedAgenda([
-    for (final item in lifeAgendaItems(
-      records,
-      today,
-      addCivilDays(today, 30),
-    ))
+    for (final item in lifeAgendaItems(records, today, addCivilDays(today, 30)))
       if (lifeHubOf(session).calendarShown(item.kind)) item,
   ]);
   final life = <OverviewRow>[

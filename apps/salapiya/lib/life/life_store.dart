@@ -299,7 +299,9 @@ extension LifeLocalStore on LocalStore {
         receipt['owner_id'] != actor ||
         receipt['profile_id'] != owner ||
         !['accepted', 'rejected'].contains(receipt['outcome'])) {
-      lifeReject('Salapiya couldn’t confirm a Life change with the service. Your records are safe. Try again.');
+      lifeReject(
+        'Salapiya couldn’t confirm a Life change with the service. Your records are safe. Try again.',
+      );
     }
     await db.execute(
       "UPDATE life_intent SET state=?,reason=? WHERE id=? AND state IN ('pending','accepted')",
@@ -378,7 +380,9 @@ extension LifeLocalStore on LocalStore {
       if (receipt['id'] != id ||
           receipt['owner_id'] != actor ||
           receipt['profile_id'] != owner) {
-        lifeReject('The service’s answer doesn’t match this profile. Nothing changed.');
+        lifeReject(
+          'The service’s answer doesn’t match this profile. Nothing changed.',
+        );
       }
       await tx.execute('UPDATE life_intent SET state=?,reason=? WHERE id=?', [
         receipt['outcome'] == 'accepted' ? 'accepted' : 'review',

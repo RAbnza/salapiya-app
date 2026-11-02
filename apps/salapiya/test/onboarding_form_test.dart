@@ -176,9 +176,9 @@ void main() {
     await onDevice(tester, (runtime, _) async {
       await openSetup(tester);
       await tester.runAsync(
-        () => File(
-          '${runtime.profiles.directory.path}/${newLocalId()}.sqlite',
-        ).writeAsString('kept'),
+        () =>
+            File('${runtime.profiles.directory.path}/${newLocalId()}.sqlite')
+                .writeAsString('kept'),
       );
       await enterName(tester, 'Amihan');
       await localTap(tester, find.byKey(const ValueKey('setup-create')));

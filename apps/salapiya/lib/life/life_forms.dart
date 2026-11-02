@@ -136,8 +136,7 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
           if (mounted) {
             setState(() {
               draftFailed = true;
-              error =
-                  'Your draft could not be saved. Check storage before leaving.';
+              error = 'Your draft could not be saved. Check storage before leaving.';
             });
           }
         });
@@ -344,7 +343,8 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
 
 /// The time fields events and Career steps share. A time that doesn't exist
 /// errors as it's picked, and one that happens twice asks which.
-mixin LifeTimeInputs<T extends StatefulWidget> on FormInputs<T>, LifeFormSteps<T> {
+mixin LifeTimeInputs<T extends StatefulWidget>
+    on FormInputs<T>, LifeFormSteps<T> {
   /// The time to come back to when All day is turned off.
   late String lastTime = values['time']!.isEmpty ? '09:00' : values['time']!;
 
@@ -545,7 +545,9 @@ class _LifeEventFormState extends State<LifeEventForm>
 
   @override
   void check() {
-    if (answer('title').isEmpty) lifeReject('Enter a title of at most 200 characters.');
+    if (answer('title').isEmpty) {
+      lifeReject('Enter a title of at most 200 characters.');
+    }
     if (answer('date').isEmpty) {
       lifeReject('Choose a date between 1900 and 2200.');
     }
@@ -739,9 +741,13 @@ class _LifeTaskFormState extends State<LifeTaskForm>
           open: inMore,
           children: [
             textInput('detail', 'Details'),
-            pickInput('status', 'Status', {
-              for (final s in lifeStatuses) s: s,
-            }, required: true, onChanged: (_) => setState(() {})),
+            pickInput(
+              'status',
+              'Status',
+              {for (final s in lifeStatuses) s: s},
+              required: true,
+              onChanged: (_) => setState(() {}),
+            ),
             if (answer('status') == 'Completed')
               dateInput(
                 'completed',

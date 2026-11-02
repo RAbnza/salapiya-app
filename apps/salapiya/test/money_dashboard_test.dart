@@ -281,9 +281,7 @@ void main() {
       expect(where.dy, lessThan(900));
     });
 
-    testWidgets('Due this week matches the Overview’s figure', (
-      tester,
-    ) async {
+    testWidgets('Due this week matches the Overview’s figure', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await show(tester, session, platform: windows, width: 1440);

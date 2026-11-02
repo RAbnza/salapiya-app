@@ -23,20 +23,18 @@ ApplicationRecord app(
   String followUp = '',
   String archived = 'false',
   Map<String, String> more = const {},
-}) =>
-    LifeRecord.read(id(_next++), owner, 1, LifeType.application, {
-          'title': 'Role',
-          'company': company,
-          'status': outcome.isEmpty ? stage : outcome,
-          'pipelineStage': stage,
-          'outcome': outcome,
-          'date': stage == 'Saved' ? '' : date,
-          'stageDate': moved,
-          'followUp': followUp,
-          'archived': archived,
-          ...more,
-        })
-        as ApplicationRecord;
+}) => LifeRecord.read(id(_next++), owner, 1, LifeType.application, {
+  'title': 'Role',
+  'company': company,
+  'status': outcome.isEmpty ? stage : outcome,
+  'pipelineStage': stage,
+  'outcome': outcome,
+  'date': stage == 'Saved' ? '' : date,
+  'stageDate': moved,
+  'followUp': followUp,
+  'archived': archived,
+  ...more,
+}) as ApplicationRecord;
 
 CareerEventRecord step(
   ApplicationRecord on,
@@ -45,17 +43,15 @@ CareerEventRecord step(
   String time = '',
   String timezone = zone,
   String status = 'Scheduled',
-}) =>
-    LifeRecord.read(id(_next++), owner, 1, LifeType.careerEvent, {
-          'title': kind,
-          'eventKind': kind,
-          'application': on.id,
-          'date': date,
-          'time': time,
-          'timezone': timezone,
-          'status': status,
-        })
-        as CareerEventRecord;
+}) => LifeRecord.read(id(_next++), owner, 1, LifeType.careerEvent, {
+  'title': kind,
+  'eventKind': kind,
+  'application': on.id,
+  'date': date,
+  'time': time,
+  'timezone': timezone,
+  'status': status,
+}) as CareerEventRecord;
 
 Map<String, LifeRecord> byId(List<LifeRecord> records) => {
   for (final r in records) r.id: r,
@@ -123,15 +119,13 @@ void main() {
     });
 
     test('an older closed record reads Not recorded', () {
-      final r =
-          LifeRecord.read(id(9000), owner, 1, LifeType.application, {
-                'title': 'Role',
-                'company': 'Old',
-                'status': 'Rejected',
-                'date': '2026-01-01',
-                'stageDate': '2026-01-02',
-              })
-              as ApplicationRecord;
+      final r = LifeRecord.read(id(9000), owner, 1, LifeType.application, {
+        'title': 'Role',
+        'company': 'Old',
+        'status': 'Rejected',
+        'date': '2026-01-01',
+        'stageDate': '2026-01-02',
+      }) as ApplicationRecord;
       expect(r.stage, 'Unspecified in preset v1');
       final row = rows([r]).single;
       expect(row.stage, isNull);
@@ -144,13 +138,18 @@ void main() {
       expect(c.closed, isEmpty);
       expect(c.stage('Applied'), 0);
     });
-
   });
 
   group('steps', () {
     test('a cancelled step isn’t a finished one', () {
       final a = app('x');
-      final s = step(a, 'Interview', '2026-11-10', time: '10:00', status: 'Cancelled');
+      final s = step(
+        a,
+        'Interview',
+        '2026-11-10',
+        time: '10:00',
+        status: 'Cancelled',
+      );
       expect(StepRow(s, today, zone).state, CareerStepState.cancelled);
       expect(StepRow(s, today, zone).open, isFalse);
     });
@@ -350,10 +349,7 @@ void main() {
     });
 
     test('each filter leaves the right rows', () {
-      expect(
-        filterApplications(all, ApplicationFilter.active),
-        hasLength(4),
-      );
+      expect(filterApplications(all, ApplicationFilter.active), hasLength(4));
       expect(
         filterApplications(all, ApplicationFilter.closed).single.company,
         'Done',
@@ -368,23 +364,44 @@ void main() {
     test('search reads company and role, and nothing private', () {
       final a = app('Acme', more: {'notes': 'secret', 'contact': 'Tala'});
       final r = rows([a]);
-      expect(filterApplications(r, ApplicationFilter.all, words: 'ACME'), hasLength(1));
-      expect(filterApplications(r, ApplicationFilter.all, words: 'role'), hasLength(1));
-      expect(filterApplications(r, ApplicationFilter.all, words: 'secret'), isEmpty);
-      expect(filterApplications(r, ApplicationFilter.all, words: 'tala'), isEmpty);
+      expect(
+        filterApplications(r, ApplicationFilter.all, words: 'ACME'),
+        hasLength(1),
+      );
+      expect(
+        filterApplications(r, ApplicationFilter.all, words: 'role'),
+        hasLength(1),
+      );
+      expect(
+        filterApplications(r, ApplicationFilter.all, words: 'secret'),
+        isEmpty,
+      );
+      expect(
+        filterApplications(r, ApplicationFilter.all, words: 'tala'),
+        isEmpty,
+      );
     });
 
     test('a stage narrows it', () {
       final r = rows([app('a', stage: 'Interview'), app('b', stage: 'Offer')]);
       expect(
-        filterApplications(r, ApplicationFilter.all, stage: 'Offer').single.company,
+        filterApplications(
+          r,
+          ApplicationFilter.all,
+          stage: 'Offer',
+        ).single.company,
         'b',
       );
     });
   });
 
   group('salary', () {
-    Map<String, String> v(String low, String high, [String c = 'PHP', String p = 'month']) => {
+    Map<String, String> v(
+      String low,
+      String high, [
+      String c = 'PHP',
+      String p = 'month',
+    ]) => {
       'salaryMin': low,
       'salaryMax': high,
       'currency': c,
@@ -405,8 +422,14 @@ void main() {
         salaryLine(v('3000.5', '3500', 'USD', 'year'), hidden: false),
         'USD 3,000.50 to USD 3,500.00 a year',
       );
-      expect(salaryLine(v('500', '', 'PHP', 'hour'), hidden: false), 'From ₱500.00 an hour');
-      expect(salaryLine(v('', '90000'), hidden: false), 'Up to ₱90,000.00 a month');
+      expect(
+        salaryLine(v('500', '', 'PHP', 'hour'), hidden: false),
+        'From ₱500.00 an hour',
+      );
+      expect(
+        salaryLine(v('', '90000'), hidden: false),
+        'Up to ₱90,000.00 a month',
+      );
       expect(salaryLine(v('5', '5'), hidden: false), '₱5.00 a month');
     });
 
@@ -446,7 +469,10 @@ void main() {
         ('a', c(0, {})),
         ('b', c(1, {'status': 'Screening', 'salaryMin': '5'})),
       ]);
-      expect(changes.first.fields, contains(('status', 'Applied', 'Screening')));
+      expect(
+        changes.first.fields,
+        contains(('status', 'Applied', 'Screening')),
+      );
       expect(changes.first.fields, contains(('salaryMin', '', '5')));
     });
   });
@@ -465,18 +491,15 @@ void main() {
         reason: 'r',
         recordedAt: DateTime.utc(2026),
       );
-      final row = lifeReviewRows(
-        [
-          {
-            'id': edit.id,
-            'payload': edit.payload,
-            'state': 'review',
-            'reason': 'x',
-            'resolved_at': null,
-          },
-        ],
-        byId([closed, s]),
-      ).single;
+      final row = lifeReviewRows([
+        {
+          'id': edit.id,
+          'payload': edit.payload,
+          'state': 'review',
+          'reason': 'x',
+          'resolved_at': null,
+        },
+      ], byId([closed, s])).single;
       expect(row.usable, isFalse);
     });
 
@@ -493,18 +516,15 @@ void main() {
         reason: 'r',
         recordedAt: DateTime.utc(2026),
       );
-      final row = lifeReviewRows(
-        [
-          {
-            'id': edit.id,
-            'payload': edit.payload,
-            'state': 'review',
-            'reason': 'x',
-            'resolved_at': null,
-          },
-        ],
-        byId([a, s]),
-      ).single;
+      final row = lifeReviewRows([
+        {
+          'id': edit.id,
+          'payload': edit.payload,
+          'state': 'review',
+          'reason': 'x',
+          'resolved_at': null,
+        },
+      ], byId([a, s])).single;
       expect(row.usable, isTrue);
     });
   });
@@ -549,7 +569,14 @@ void main() {
         reminderBody(),
         reminderBody(showDate: true, date: item.date),
       ].join(' ');
-      for (final secret in const ['Acme', 'Interview', 'Tala', '60000', 'Private', 'Role']) {
+      for (final secret in const [
+        'Acme',
+        'Interview',
+        'Tala',
+        '60000',
+        'Private',
+        'Role',
+      ]) {
         expect(words, isNot(contains(secret)), reason: secret);
       }
     });
@@ -558,13 +585,24 @@ void main() {
   group('demo sample', () {
     test('it replays on week, month and year edges', () {
       for (final day in [
-        '2026-01-01', '2026-02-28', '2026-03-01', '2026-11-01',
-        '2026-11-30', '2026-12-31', '2027-01-01', '2028-02-29',
+        '2026-01-01',
+        '2026-02-28',
+        '2026-03-01',
+        '2026-11-01',
+        '2026-11-30',
+        '2026-12-31',
+        '2027-01-01',
+        '2028-02-29',
       ]) {
         final life = demoLife(day);
         final r = applicationRows(life.records, day, zone);
-        final c = CareerCounts(r, nextSteps(careerRows(life.records, day, zone)));
-        for (final stage in careerPipelineStages.where((s) => s != 'Accepted')) {
+        final c = CareerCounts(
+          r,
+          nextSteps(careerRows(life.records, day, zone)),
+        );
+        for (final stage in careerPipelineStages.where(
+          (s) => s != 'Accepted',
+        )) {
           expect(c.stage(stage), greaterThan(0), reason: '$day $stage');
         }
         for (final outcome in careerOutcomes) {

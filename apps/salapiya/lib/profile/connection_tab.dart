@@ -37,10 +37,7 @@ class _ConnectionTabState extends State<ConnectionTab> {
   /// What connecting does. It stays this complete on every path here.
   Future<void> disclose() async {
     final a = source.actions;
-    final yes = await showConnectionDisclosure(
-      context,
-      email: a.facts().email,
-    );
+    final yes = await showConnectionDisclosure(context, email: a.facts().email);
     if (yes == true) await a.confirmConnection();
   }
 
@@ -109,7 +106,11 @@ class _ConnectionTabState extends State<ConnectionTab> {
     };
   }
 
-  Widget button(ConnectionAction action, ConnectionFacts f, {required bool main}) {
+  Widget button(
+    ConnectionAction action,
+    ConnectionFacts f, {
+    required bool main,
+  }) {
     final key = ValueKey('connection-${action.name}');
     final press = run(action, f);
     if (action == ConnectionAction.connect ||
@@ -328,7 +329,8 @@ class _Reviews extends StatelessWidget {
     return OverviewCard(
       key: const ValueKey('connection-reviews'),
       title: 'Needs review',
-      caption: 'These aren’t in your balances. Their values stay on this '
+      caption:
+          'These aren’t in your balances. Their values stay on this '
           'device.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

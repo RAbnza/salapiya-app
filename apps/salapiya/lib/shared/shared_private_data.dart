@@ -302,8 +302,7 @@ BigInt myGroupBalance(Iterable<LocalRevision> current, String group) =>
           .expand((r) => r.postings)
           .where(
             (p) =>
-                p.ledger == 'shared_receivable' ||
-                p.ledger == 'shared_payable',
+                p.ledger == 'shared_receivable' || p.ledger == 'shared_payable',
           )
           .map((p) => p.amount),
     );
@@ -453,7 +452,9 @@ class PrivateContext {
   /// What the form starts from. Every key is here, shown or not.
   Map<String, String> startingValues() {
     final current = snapshot.current;
-    final existing = mode == 'bill' && linked == null ? savedPurchase ?? '' : '';
+    final existing = mode == 'bill' && linked == null
+        ? savedPurchase ?? ''
+        : '';
     final categories = snapshot.categories.where((c) => c.kind == 'expense');
     final category = linked?.values['category'] ?? 'category-food';
     return {
@@ -529,10 +530,10 @@ class PrivateContext {
 
   /// The command's values, as they've always been.
   Map<String, String> command(Map<String, String> v) {
-    final chosen = v['existing'] ?? v['existingPayment'] ?? v['existingCardRefund'];
+    final chosen =
+        v['existing'] ?? v['existingPayment'] ?? v['existingCardRefund'];
     final old =
-        linked ??
-        snapshot.current.where((r) => r.id == chosen).firstOrNull;
+        linked ?? snapshot.current.where((r) => r.id == chosen).firstOrNull;
     // Cash forms retain unused card selector values. Only the validated
     // immutable transaction type establishes actual card funding.
     final cardFunded = sharedSourceUsesCard(old);

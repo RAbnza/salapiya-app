@@ -526,11 +526,7 @@ class DueCalendar extends StatelessWidget {
   Widget build(BuildContext context) => MonthGrid(
     days: [
       for (final (date, items) in dues.days)
-        (
-          date: date,
-          count: items.length,
-          late: items.any((i) => i.days < 0),
-        ),
+        (date: date, count: items.length, late: items.any((i) => i.days < 0)),
     ],
     today: dues.today,
     selected: selected,
@@ -589,7 +585,10 @@ class DebtProgressCard extends StatelessWidget {
     spacing: Space.sm,
     runSpacing: Space.xs,
     crossAxisAlignment: WrapCrossAlignment.center,
-    children: [Text(d.debt.title, style: style), pill(d)],
+    children: [
+      Text(d.debt.title, style: style),
+      pill(d),
+    ],
   );
 
   /// The line under the bar. With amounts hidden it keeps to the count.
@@ -647,10 +646,7 @@ class DebtProgressCard extends StatelessWidget {
         child: table
             ? Row(
                 children: [
-                  Expanded(
-                    flex: 4,
-                    child: titleLine(d, text.titleSmall),
-                  ),
+                  Expanded(flex: 4, child: titleLine(d, text.titleSmall)),
                   const SizedBox(width: Space.lg),
                   Expanded(
                     flex: 5,

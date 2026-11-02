@@ -126,10 +126,16 @@ class BackupTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: f.connected
             ? const [
-                FactRow('New device', 'Sign in with Google: what has synced '
-                    'downloads by itself'),
-                FactRow('Not synced yet', 'That needs a backup, or a device '
-                    'that still has it'),
+                FactRow(
+                  'New device',
+                  'Sign in with Google: what has synced '
+                      'downloads by itself',
+                ),
+                FactRow(
+                  'Not synced yet',
+                  'That needs a backup, or a device '
+                      'that still has it',
+                ),
               ]
             : const [
                 FactRow('Open', 'Salapiya on a new device, or with no profile'),

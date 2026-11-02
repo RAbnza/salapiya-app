@@ -224,11 +224,7 @@ class _LifeApplicationFormState extends State<LifeApplicationForm>
         input: FieldInput.amount,
       ),
       if (hasSalary) ...[
-        textInput(
-          'currency',
-          'Currency',
-          helper: 'Three letters, like PHP.',
-        ),
+        textInput('currency', 'Currency', helper: 'Three letters, like PHP.'),
         pickInput('salaryPeriod', 'Paid per', const {
           'hour': 'Hour',
           'month': 'Month',
@@ -483,8 +479,7 @@ class _LifeStageFormState extends State<LifeStageForm>
     if (change == StageChange.outcome && answer('outcome').isEmpty) {
       lifeReject('Choose a stage and an outcome that fit together.');
     }
-    if (stage.isEmpty ||
-        change == StageChange.stage && stage == record.stage) {
+    if (stage.isEmpty || change == StageChange.stage && stage == record.stage) {
       lifeReject('Choose a stage from the list.');
     }
     if (needsDate) lifeReject('Choose a date between 1900 and 2200.');
@@ -669,10 +664,8 @@ class _LifeStepFormState extends State<LifeStepForm>
     clockChanged();
   }
 
-  Map<String, String> get command => Map.unmodifiable({
-    ...values,
-    if (observed) 'status': 'Completed',
-  });
+  Map<String, String> get command =>
+      Map.unmodifiable({...values, if (observed) 'status': 'Completed'});
 
   @override
   void check() {
@@ -711,7 +704,11 @@ class _LifeStepFormState extends State<LifeStepForm>
           required: true,
           onChanged: kindChanged,
         ),
-        dateInput('date', observed ? 'When it happened' : 'Date', required: true),
+        dateInput(
+          'date',
+          observed ? 'When it happened' : 'Date',
+          required: true,
+        ),
         if (!observed && !needsTime) allDayInput(),
         if (!observed && !allDay) timeInput(),
         if (twice) foldInput(),

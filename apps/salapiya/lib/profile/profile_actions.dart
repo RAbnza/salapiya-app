@@ -79,11 +79,7 @@ Future<Map<String, dynamic>> openBackup(List<int> bytes, String secret) async {
 }
 
 class LocalProfileActions implements ProfileActions {
-  LocalProfileActions(
-    this.session, {
-    this.saver = _save,
-    this.picker = _pick,
-  });
+  LocalProfileActions(this.session, {this.saver = _save, this.picker = _pick});
   final LocalSession session;
   final BackupSaver saver;
   final BackupPicker picker;

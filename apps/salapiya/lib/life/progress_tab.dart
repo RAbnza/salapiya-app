@@ -38,13 +38,10 @@ Future<void> startEntry(LifeSource source, LifeHub hub, ProgressRow r) =>
 
 /// An item with no total has nothing to count, so it's finished or not.
 Future<void> finishEntry(LifeSource source, LifeHub hub, ProgressRow r) =>
-    changeEntry(
-      source,
-      hub,
-      r,
-      {'progress': '1', 'status': 'Completed'},
-      'Completed',
-    );
+    changeEntry(source, hub, r, {
+      'progress': '1',
+      'status': 'Completed',
+    }, 'Completed');
 
 /// One item in progress: what it is, how far along, and one tap to log more.
 class ProgressTile extends StatelessWidget {
@@ -63,9 +60,8 @@ class ProgressTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = row;
     final c = CraftTheme.of(context);
-    final muted = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: c.secondary,
-    );
+    final muted = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: c.secondary);
     final details = progressDetails(r);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,10 +91,7 @@ class ProgressTile extends StatelessWidget {
                 builder: (context, box) {
                   final line = Text(
                     r.hasTotal
-                        ? detailLine([
-                            progressLine(r, words),
-                            '${r.left} left',
-                          ])
+                        ? detailLine([progressLine(r, words), '${r.left} left'])
                         : 'No total',
                     style: muted,
                   );
@@ -220,7 +213,9 @@ class LifeProgressTab extends StatelessWidget {
         'In progress',
         Icons.school_outlined,
         number(doing),
-        doing == 0 ? 'Nothing right now' : holdLine(counts, 'Being learned now'),
+        doing == 0
+            ? 'Nothing right now'
+            : holdLine(counts, 'Being learned now'),
         accent: true,
       ),
       tile(
@@ -361,7 +356,9 @@ class LifeProgressTab extends StatelessWidget {
     return OverviewCard(
       key: const ValueKey('life-progress-up-next'),
       title: book ? 'Up next' : 'What’s next',
-      caption: book ? 'On your list, soonest first' : 'By date, then not started',
+      caption: book
+          ? 'On your list, soonest first'
+          : 'By date, then not started',
       child: rows.isEmpty
           ? EmptyState(
               icon: Icons.upcoming_outlined,
@@ -373,7 +370,9 @@ class LifeProgressTab extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ListGroup(children: [for (final r in rows.take(_shown)) nextRow(r)]),
+                ListGroup(
+                  children: [for (final r in rows.take(_shown)) nextRow(r)],
+                ),
                 left > 0
                     ? ListEnd(label: '$left more', onPressed: openList)
                     : const ListEnd(),
@@ -502,7 +501,8 @@ class _LifeProgressListState extends State<LifeProgressList> {
             ],
           ],
         ),
-        if (book) Text(r.rating == null ? '—' : '${r.rating} of 5', style: muted),
+        if (book)
+          Text(r.rating == null ? '—' : '${r.rating} of 5', style: muted),
         Text(when, style: muted),
         Align(
           alignment: AlignmentDirectional.centerStart,

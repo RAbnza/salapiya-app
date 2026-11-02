@@ -157,7 +157,9 @@ void main() {
         final originalIds = c.snapshot.revisions.map((r) => r.id).toList(),
             owner = c.store.owner;
         await localTap(tester, find.byKey(const ValueKey('shell-profile')));
-        final menu = find.byKey(const ValueKey('profile-menu-Backup & recovery'));
+        final menu = find.byKey(
+          const ValueKey('profile-menu-Backup & recovery'),
+        );
         await localTap(
           tester,
           menu.evaluate().isNotEmpty

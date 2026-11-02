@@ -83,7 +83,8 @@ class SharedBalancesTab extends StatelessWidget {
           ? 'Nobody owes you here'
           : 'From ${people(totals.fromPeople)}',
     );
-    final open = counts?.waitingCount ?? 0, disputed = counts?.disputedCount ?? 0;
+    final open = counts?.waitingCount ?? 0,
+        disputed = counts?.disputedCount ?? 0;
     final waiting = KpiTile(
       key: const ValueKey('balances-waiting'),
       labels: labels,
@@ -425,10 +426,7 @@ class _CountedCard extends StatelessWidget {
     );
     Widget heading(String label) => Padding(
       padding: const EdgeInsets.only(bottom: Space.xxs),
-      child: Text(
-        label,
-        style: text.labelMedium?.copyWith(color: c.secondary),
-      ),
+      child: Text(label, style: text.labelMedium?.copyWith(color: c.secondary)),
     );
     return OverviewCard(
       key: const ValueKey('balances-counted'),

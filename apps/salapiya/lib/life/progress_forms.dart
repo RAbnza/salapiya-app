@@ -127,8 +127,7 @@ class _LifeEntryFormState extends State<LifeEntryForm>
   }
 
   @override
-  Future<void> save() =>
-      writer.saveEntry(widget.type, command, old: widget.id);
+  Future<void> save() => writer.saveEntry(widget.type, command, old: widget.id);
 
   String get saveLabel => widget.id == null ? words.adding : 'Save changes';
 
@@ -196,7 +195,8 @@ class _LifeEntryFormState extends State<LifeEntryForm>
       children: [
         notices(),
         FactRow('Title', answer('title')),
-        if (answer('detail').isNotEmpty) FactRow(words.detail, answer('detail')),
+        if (answer('detail').isNotEmpty)
+          FactRow(words.detail, answer('detail')),
         FactRow(
           'Progress',
           hasTotal
@@ -205,7 +205,8 @@ class _LifeEntryFormState extends State<LifeEntryForm>
         ),
         FactRow('Due date', date('due')),
         FactRow('Status', finished ? 'Finished' : answer('status')),
-        if (answer('started').isNotEmpty) FactRow('Date started', date('started')),
+        if (answer('started').isNotEmpty)
+          FactRow('Date started', date('started')),
         if (finished && answer('completed').isNotEmpty)
           FactRow('Date finished', date('completed')),
         if (book && answer('rating').isNotEmpty)

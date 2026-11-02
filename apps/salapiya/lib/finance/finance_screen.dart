@@ -1236,7 +1236,8 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
         try {
           if (await c.store.hasReceipt(id)) {
             await c.reload();
-            result = 'It’s saved. Profile › Connection shows whether it synced.';
+            result =
+                'It’s saved. Profile › Connection shows whether it synced.';
           } else {
             reviewed = null;
             plan = null;
@@ -2994,8 +2995,7 @@ class _NativeFinanceEditorState extends State<NativeFinanceEditor>
                   child: const Text('Edit'),
                 ),
         ),
-        if (unknown)
-          FormEvidence(children: [SelectableText('Change: $id')]),
+        if (unknown) FormEvidence(children: [SelectableText('Change: $id')]),
       ],
     ],
   );

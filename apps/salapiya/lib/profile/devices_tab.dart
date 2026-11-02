@@ -33,7 +33,10 @@ class _DevicesTabState extends State<DevicesTab> {
   Timer? window;
 
   bool canList(ConnectionFacts f) =>
-      f.connected && f.configured && !f.deleted && phaseOf(f) != ConnectionPhase.signedOut;
+      f.connected &&
+      f.configured &&
+      !f.deleted &&
+      phaseOf(f) != ConnectionPhase.signedOut;
 
   @override
   void initState() {
@@ -96,9 +99,7 @@ class _DevicesTabState extends State<DevicesTab> {
       await work();
     } catch (e) {
       if (mounted) {
-        setState(
-          () => problem = e is LocalRuleException ? e.message : failure,
-        );
+        setState(() => problem = e is LocalRuleException ? e.message : failure);
       }
     } finally {
       if (mounted) setState(() => working = false);
@@ -359,8 +360,7 @@ class _DevicesTabState extends State<DevicesTab> {
     final f = source.connection;
     final remove = removeOrDelete(f);
     final notices = [
-      if (message != null)
-        InlineNotice(message!, live: true),
+      if (message != null) InlineNotice(message!, live: true),
       if (problem != null && devices != null)
         InlineNotice(problem!, tone: NoticeTone.warning, live: true),
     ];

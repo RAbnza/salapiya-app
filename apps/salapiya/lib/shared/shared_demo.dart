@@ -570,7 +570,6 @@ List<SharedGroup> demoSharedGroups(String today, {bool empty = false}) {
   ];
 }
 
-
 /// The bill a queued or refused sample command adds.
 String _demoCommand(String group, String name, String today) => jsonEncode({
   'contract': 3,

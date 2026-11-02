@@ -43,10 +43,7 @@ class _Effects extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
-      children: [
-        group('What changes', changes),
-        group('What stays', stays),
-      ],
+      children: [group('What changes', changes), group('What stays', stays)],
     );
   }
 }
@@ -269,11 +266,7 @@ Future<bool> _open(
 }
 
 /// Add a person: someone with no account, who the owner answers for.
-Future<bool> showAddPerson(
-  BuildContext context,
-  SharedHub hub,
-  SharedGroup g,
-) {
+Future<bool> showAddPerson(BuildContext context, SharedHub hub, SharedGroup g) {
   // One id for this person, so a lost answer can't add them twice.
   final participant = newLocalId();
   return _open(
@@ -359,9 +352,7 @@ Future<void> _showCode(BuildContext context, String code, bool demo) async {
           ),
           const SizedBox(height: Space.md),
           Text(
-            demo
-                ? 'This is the demo, so this code won’t work.'
-                : 'It works once, for seven days, and only for that Google account. This code won’t show again.',
+            demo ? 'This is the demo, so this code won’t work.' : 'It works once, for seven days, and only for that Google account. This code won’t show again.',
           ),
         ],
       ),
@@ -437,8 +428,7 @@ Future<bool> showLeave(
       group: g,
       op: 'leave',
       effects: _Effects(
-        changes:
-            'You can’t add bills or payments here, and you won’t see anything new. To come back, you’d need a new invitation.',
+        changes: 'You can’t add bills or payments here, and you won’t see anything new. To come back, you’d need a new invitation.',
         stays:
             '$standing Your earlier bills and payments stay, and you can still answer payments on them.',
       ),
@@ -502,8 +492,7 @@ Future<bool> showTransfer(
     people: person == null ? ownerCandidates(g) : null,
     peopleLabel: 'New owner',
     effects: const _Effects(
-      changes:
-          'They add people, send invitations and archive the group. You become a member, and only they can make you the owner again.',
+      changes: 'They add people, send invitations and archive the group. You become a member, and only they can make you the owner again.',
       stays: 'Every bill, payment and balance.',
     ),
     reason: true,
@@ -527,14 +516,13 @@ Future<bool> showArchive(BuildContext context, SharedHub hub, SharedGroup g) {
       group: g,
       op: 'archive',
       effects: _Effects(
-        changes: restoring
-            ? 'People can add bills and payments here again.'
-            : 'Nobody can add bills or payments. Payments already waiting can still be answered. You can restore it later.',
-        stays:
-            'Every bill, payment and balance. Archiving doesn’t clear what anyone owes.',
+        changes: restoring ? 'People can add bills and payments here again.' : 'Nobody can add bills or payments. Payments already waiting can still be answered. You can restore it later.',
+        stays: 'Every bill, payment and balance. Archiving doesn’t clear what anyone owes.',
       ),
       reason: true,
-      reasonLabel: restoring ? 'Why you’re restoring it' : 'Why you’re archiving it',
+      reasonLabel: restoring
+          ? 'Why you’re restoring it'
+          : 'Why you’re archiving it',
       values: (a) => {'reason': a.reason, 'archived': !restoring},
     ),
   );

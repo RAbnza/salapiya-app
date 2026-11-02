@@ -102,9 +102,7 @@ class _SharedHistoryTabState extends State<SharedHistoryTab> {
           ? EmptyState(
               icon: Icons.history,
               title: g.complete ? 'Nothing here yet' : 'No history here',
-              message: g.complete
-                  ? 'What happens in this group shows here.'
-                  : 'You’ve left this group. Your earlier bills and payments are on Bills and Payments.',
+              message: g.complete ? 'What happens in this group shows here.' : 'You’ve left this group. Your earlier bills and payments are on Bills and Payments.',
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

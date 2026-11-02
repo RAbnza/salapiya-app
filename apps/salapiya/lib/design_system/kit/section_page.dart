@@ -54,15 +54,9 @@ class SectionPage extends StatelessWidget {
     final gutter = Space.pageGutter(width);
     final info = [
       if (!android)
-        Semantics(
-          header: true,
-          child: Text(title, style: text.headlineMedium),
-        ),
+        Semantics(header: true, child: Text(title, style: text.headlineMedium)),
       if (caption != null)
-        Text(
-          caption!,
-          style: text.bodyMedium?.copyWith(color: c.secondary),
-        ),
+        Text(caption!, style: text.bodyMedium?.copyWith(color: c.secondary)),
       ?status,
     ];
     final heading = Wrap(

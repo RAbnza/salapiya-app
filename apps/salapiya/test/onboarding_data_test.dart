@@ -212,7 +212,8 @@ void main() {
         ).happened,
         two,
       );
-      const links = 'Some of this profile’s files are links, so nothing was '
+      const links =
+          'Some of this profile’s files are links, so nothing was '
           'removed.';
       expect(
         startupWords(

@@ -314,7 +314,10 @@ void main() {
             of: wrap,
             matching: find.byType(StatusPill),
           );
-          final room = tester.renderObject<RenderBox>(wrap).constraints.maxWidth;
+          final room = tester
+              .renderObject<RenderBox>(wrap)
+              .constraints
+              .maxWidth;
           final fits =
               tester.getSize(name).width +
                   Space.sm +

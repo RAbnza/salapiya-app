@@ -161,10 +161,8 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  Future<void> reach(WidgetTester tester, String text) => localWait(
-    tester,
-    () => find.textContaining(text).evaluate().isNotEmpty,
-  );
+  Future<void> reach(WidgetTester tester, String text) =>
+      localWait(tester, () => find.textContaining(text).evaluate().isNotEmpty);
 
   Future<void> attach(WidgetTester tester, TestDocuments d) async {
     d.chosen = ('resume.png', bytes);
@@ -200,12 +198,17 @@ void main() {
     expect(r.fields['mime'], 'image/png');
     expect(r.fields['size'], '${bytes.length}');
     expect(r.fields['sourceVersion'], '1');
-    final kept = await tester.runAsync(() => d.files.readMetadata(r.id, r.fileMetadata));
+    final kept = await tester.runAsync(
+      () => d.files.readMetadata(r.id, r.fileMetadata),
+    );
     expect(kept, bytes);
     final drafts = await tester.runAsync(() => f.store.drafts());
     expect(drafts, isEmpty);
     final saved = await tester.runAsync(() => LocalLifeWriter(c).history(r.id));
-    expect(saved!.single.$2.reason, 'Attached private Career document metadata');
+    expect(
+      saved!.single.$2.reason,
+      'Attached private Career document metadata',
+    );
     await close(tester, f, c);
   });
 
@@ -264,15 +267,13 @@ void main() {
         },
         reason: 'Attached private Career document metadata',
       );
-      final record =
-          LifeRecord.read(
-                command.recordId,
-                command.owner,
-                1,
-                LifeType.document,
-                command.fields,
-              )
-              as CareerDocumentRecord;
+      final record = LifeRecord.read(
+        command.recordId,
+        command.owner,
+        1,
+        LifeType.document,
+        command.fields,
+      ) as CareerDocumentRecord;
       await tester.runAsync(() async {
         await c.store.saveDraft(
           'life-document:${command.recordId}',
@@ -426,14 +427,23 @@ void main() {
       final r = await linked(tester, c, d, id);
       expect(find.textContaining('On this device'), findsOneWidget);
       await menu(tester, r.id);
-      for (final key in const ['preview', 'open', 'save', 'remove', 'archive']) {
+      for (final key in const [
+        'preview',
+        'open',
+        'save',
+        'remove',
+        'archive',
+      ]) {
         expect(
           find.byKey(ValueKey('life-document-$key-${r.id}')),
           findsOneWidget,
           reason: key,
         );
       }
-      expect(find.byKey(ValueKey('life-document-restore-${r.id}')), findsNothing);
+      expect(
+        find.byKey(ValueKey('life-document-restore-${r.id}')),
+        findsNothing,
+      );
       await close(tester, f, c);
     });
 
@@ -445,7 +455,10 @@ void main() {
       final id = await addApplication(tester, c);
       final r = await linked(tester, c, d, id);
       await menu(tester, r.id);
-      await localTap(tester, find.byKey(ValueKey('life-document-remove-${r.id}')));
+      await localTap(
+        tester,
+        find.byKey(ValueKey('life-document-remove-${r.id}')),
+      );
       await reach(tester, 'Remove this file from your device?');
       expect(find.textContaining('keep your original first'), findsOneWidget);
       await localTap(tester, find.text('Remove from this device').last);
@@ -457,7 +470,10 @@ void main() {
       expect(find.byKey(ValueKey('life-document-open-${r.id}')), findsNothing);
       expect(find.byKey(ValueKey('life-document-save-${r.id}')), findsNothing);
       d.chosen = ('resume.png', bytes);
-      await localTap(tester, find.byKey(ValueKey('life-document-restore-${r.id}')));
+      await localTap(
+        tester,
+        find.byKey(ValueKey('life-document-restore-${r.id}')),
+      );
       await reach(tester, 'Restored from your original.');
       final back = await tester.runAsync(() => d.present(r.id));
       expect(back, isTrue);
@@ -491,15 +507,24 @@ void main() {
       final id = await addApplication(tester, c);
       final r = await linked(tester, c, d, id);
       await menu(tester, r.id);
-      await localTap(tester, find.byKey(ValueKey('life-document-archive-${r.id}')));
+      await localTap(
+        tester,
+        find.byKey(ValueKey('life-document-archive-${r.id}')),
+      );
       await reach(tester, 'Archive this link?');
       expect(find.textContaining('you can restore the link'), findsOneWidget);
       await localTap(tester, find.text('Archive link').last);
       await reach(tester, 'Show archived');
       expect(c.records[r.id]!.archived, isTrue);
-      await localTap(tester, find.byKey(const ValueKey('life-document-archived')));
+      await localTap(
+        tester,
+        find.byKey(const ValueKey('life-document-archived')),
+      );
       await menu(tester, r.id);
-      await localTap(tester, find.byKey(ValueKey('life-document-unarchive-${r.id}')));
+      await localTap(
+        tester,
+        find.byKey(ValueKey('life-document-unarchive-${r.id}')),
+      );
       await localWait(tester, () => c.records[r.id]!.archived == false);
       final kept = await tester.runAsync(() => d.present(r.id));
       expect(kept, isTrue);
@@ -538,33 +563,31 @@ void main() {
         reason: 'x',
         recordedAt: DateTime.utc(2026),
       );
-      final row = lifeReviewRows(
-        [
-          {
-            'id': edit.id,
-            'payload': edit.payload,
-            'state': 'review',
-            'reason': 'x',
-            'resolved_at': null,
-          },
-        ],
-        c.records,
-      ).single;
+      final row = lifeReviewRows([
+        {
+          'id': edit.id,
+          'payload': edit.payload,
+          'state': 'review',
+          'reason': 'x',
+          'resolved_at': null,
+        },
+      ], c.records).single;
       expect(row.usable, isFalse);
       await close(tester, f, c);
     });
 
     test('a file’s name that can’t be stored says so', () {
       expect(
-        () => LifeRecord.read(newLocalId(), newLocalId(), 1, LifeType.document, {
-          'title': 'a/b.png',
-          'application': newLocalId(),
-          'sourceVersion': '1',
-          'mime': 'image/png',
-          'size': '1',
-          'checksum': 'a' * 64,
-          'status': 'Linked',
-        }),
+        () =>
+            LifeRecord.read(newLocalId(), newLocalId(), 1, LifeType.document, {
+              'title': 'a/b.png',
+              'application': newLocalId(),
+              'sourceVersion': '1',
+              'mime': 'image/png',
+              'size': '1',
+              'checksum': 'a' * 64,
+              'status': 'Linked',
+            }),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
@@ -592,7 +615,9 @@ void main() {
           ),
         );
 
-    testWidgets('it shows each state and says what it can’t do', (tester) async {
+    testWidgets('it shows each state and says what it can’t do', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 1600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);

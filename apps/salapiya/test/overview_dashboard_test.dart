@@ -1152,13 +1152,9 @@ void main() {
       final logged = moneyActivity(
         sample,
         (id) =>
-            sample.categories.where((c) => c.id == id).firstOrNull?.name ??
-            '',
+            sample.categories.where((c) => c.id == id).firstOrNull?.name ?? '',
       ).where((r) => r.date.compareTo(today) <= 0).length;
-      expect(
-        end('overview-recent').label,
-        '${logged - 5} more in Activity',
-      );
+      expect(end('overview-recent').label, '${logged - 5} more in Activity');
       expect(end('overview-recent').onPressed, isNotNull);
       await tester.tap(find.byKey(const ValueKey(OverviewTab.spending)));
       await tester.pump();

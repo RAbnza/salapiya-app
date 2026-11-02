@@ -137,7 +137,9 @@ class LocalStore {
     final rows = await tx.getAll('SELECT id FROM local_profile');
     if (rows.isNotEmpty) {
       if (rows.single['id'] != owner) {
-        reject('These records belong to a different profile. Your files are safe.');
+        reject(
+          'These records belong to a different profile. Your files are safe.',
+        );
       }
       return;
     }
@@ -165,7 +167,9 @@ class LocalStore {
     }
     final profile = await db.getAll('SELECT id,revision FROM local_profile');
     if (profile.length != 1 || profile.single['id'] != owner) {
-      reject('These records belong to a different profile. Your files are safe.');
+      reject(
+        'These records belong to a different profile. Your files are safe.',
+      );
     }
     final commands = await db.get(
       'SELECT count(*) AS n FROM local_command WHERE owner_id=?',
@@ -188,7 +192,9 @@ class LocalStore {
               r.postings.where((p) => p.date == date).map((p) => p.amount),
             ) !=
             BigInt.zero) {
-          reject('Your records don’t add up. Your files are safe. A backup you’ve checked can restore them on another device.');
+          reject(
+            'Your records don’t add up. Your files are safe. A backup you’ve checked can restore them on another device.',
+          );
         }
       }
     }
@@ -522,6 +528,7 @@ class LocalStore {
           as String,
     ) as Map,
   );
+
   /// Tells a later look whether anything a backup holds has changed.
   Future<String> _backupMark(SqliteReadContext tx) async {
     final row = await tx.get(

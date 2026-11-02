@@ -56,7 +56,11 @@ class SharedLifecycleTab extends StatelessWidget {
       key: const ValueKey('shared-lifecycle-grid'),
       cards: android
           ? null
-          : [(can, 7, 12), (about, 5, 12), ?(work == null ? null : (work, 12, 12))],
+          : [
+              (can, 7, 12),
+              (about, 5, 12),
+              ?(work == null ? null : (work, 12, 12)),
+            ],
       stacked: [?work, can, about],
     );
   }
@@ -101,8 +105,7 @@ class _CanCard extends StatelessWidget {
           ? const EmptyState(
               icon: Icons.logout,
               title: 'You’ve left this group',
-              message:
-                  'Your earlier records stay here. To come back, ask the owner for a new invitation.',
+              message: 'Your earlier records stay here. To come back, ask the owner for a new invitation.',
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,7 +126,8 @@ class _CanCard extends StatelessWidget {
                         key: const ValueKey('lifecycle-remove'),
                         leading: Icons.person_remove_outlined,
                         title: 'Remove someone',
-                        subtitle: 'They can’t add anything. Their balance stays.',
+                        subtitle:
+                            'They can’t add anything. Their balance stays.',
                         onTap: onRemove,
                       ),
                     if (choices.archive)

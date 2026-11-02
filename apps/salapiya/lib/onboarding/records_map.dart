@@ -124,10 +124,7 @@ class RecordsMap extends StatelessWidget {
       children: [
         Opacity(
           opacity: 0,
-          child: Text(
-            recordsCaption(RecordsView.restore),
-            style: style,
-          ),
+          child: Text(recordsCaption(RecordsView.restore), style: style),
         ),
         Positioned.fill(
           child: Align(
@@ -176,9 +173,7 @@ class RecordsMap extends StatelessWidget {
                     caption,
                   ],
                 );
-                return fill
-                    ? SizedBox(height: box.minHeight, child: map)
-                    : map;
+                return fill ? SizedBox(height: box.minHeight, child: map) : map;
               },
             ),
     );
@@ -202,9 +197,8 @@ List<Widget> _fullMap(
 }) {
   Widget place(RecordsPlace p) =>
       _Place(place: p, facts: places[p]!, desktop: desktop);
-  Widget link(Widget child) => fill
-      ? Expanded(child: child)
-      : SizedBox(height: Space.xl, child: child);
+  Widget link(Widget child) =>
+      fill ? Expanded(child: child) : SizedBox(height: Space.xl, child: child);
   return [
     // If one wraps in a narrow window, both stay the same height.
     IntrinsicHeight(
@@ -284,10 +278,7 @@ class _Place extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.xs),
-          Text(
-            facts.holds,
-            style: text.bodySmall?.copyWith(color: ink),
-          ),
+          Text(facts.holds, style: text.bodySmall?.copyWith(color: ink)),
         ],
       ),
     );
@@ -332,8 +323,7 @@ class _LinkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LinkPainter old) =>
-      old.lit != lit || old.color != color;
+  bool shouldRepaint(_LinkPainter old) => old.lit != lit || old.color != color;
 }
 
 /// The same places in one row, this device first, with the lines behind them.
@@ -359,7 +349,9 @@ class _SlimMap extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final place in order)
-            Expanded(child: _SlimPlace(place: place, lit: places[place]!.lit)),
+            Expanded(
+              child: _SlimPlace(place: place, lit: places[place]!.lit),
+            ),
         ],
       ),
     );
@@ -401,9 +393,7 @@ class _SlimPlace extends StatelessWidget {
         Text(
           name,
           textAlign: TextAlign.center,
-          style: text.labelSmall?.copyWith(
-            color: lit ? c.text : c.secondary,
-          ),
+          style: text.labelSmall?.copyWith(color: lit ? c.text : c.secondary),
         ),
       ],
     );
@@ -445,7 +435,5 @@ class _SlimLinksPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SlimLinksPainter old) =>
-      !listEquals(old.lit, lit) ||
-      old.solid != solid ||
-      old.dashed != dashed;
+      !listEquals(old.lit, lit) || old.solid != solid || old.dashed != dashed;
 }

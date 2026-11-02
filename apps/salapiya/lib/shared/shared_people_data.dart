@@ -294,7 +294,9 @@ BalanceCounts balanceCounts(SharedGroup g) {
   final waiting = inState('pending');
   final disputed = inState('disputed');
   return BalanceCounts(
-    bills: sumMinor(g.bills.keys.map((id) => sharedMinor(g.revision(id)['total']))),
+    bills: sumMinor(
+      g.bills.keys.map((id) => sharedMinor(g.revision(id)['total'])),
+    ),
     billCount: g.bills.length,
     refunds: sumMinor(refunds.map((f) => sharedMinor(f['total']))),
     refundCount: refunds.length,
@@ -409,8 +411,7 @@ class SharedMember {
   String get can => !active && role != MemberRole.deleted
       ? 'Can’t add anything now. Keeps their earlier records and can still answer payments on them.'
       : switch (role) {
-          MemberRole.owner =>
-            'Adds people, sends invitations, archives the group and answers for people who aren’t registered.',
+          MemberRole.owner => 'Adds people, sends invitations, archives the group and answers for people who aren’t registered.',
           MemberRole.member =>
             'Adds bills, logs their own payments and answers payments to them.',
           MemberRole.notRegistered =>

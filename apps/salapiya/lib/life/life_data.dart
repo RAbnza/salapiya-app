@@ -192,7 +192,8 @@ class LifeCalendar {
   LifeRow? get next {
     for (final r in rows) {
       if (r.days > 0) return r;
-      if (r.days == 0 && (r.allDay || now == null || r.time.compareTo(now!) >= 0)) {
+      if (r.days == 0 &&
+          (r.allDay || now == null || r.time.compareTo(now!) >= 0)) {
         return r;
       }
     }
@@ -415,9 +416,9 @@ int _taskOrder(TaskRow a, TaskRow b) {
 }
 
 /// Every task, in the order the list reads.
-List<TaskRow> taskRows(Map<String, LifeRecord> records, String today) => [
-  for (final r in records.values.whereType<TaskRecord>()) TaskRow(r, today),
-]..sort(_taskOrder);
+List<TaskRow> taskRows(Map<String, LifeRecord> records, String today) =>
+    [for (final r in records.values.whereType<TaskRecord>()) TaskRow(r, today)]
+      ..sort(_taskOrder);
 
 /// What [filter] and the typed [words] leave. Words look through the title
 /// and details.
@@ -723,8 +724,11 @@ enum CareerStepState {
 }
 
 /// A cancelled step isn't a finished one, and only a follow-up can be late.
-CareerStepState stepState(CareerEventRecord r, String today, String shownDate) =>
-    r.status == 'Cancelled'
+CareerStepState stepState(
+  CareerEventRecord r,
+  String today,
+  String shownDate,
+) => r.status == 'Cancelled'
     ? CareerStepState.cancelled
     : careerObservations.contains(r.kind)
     ? CareerStepState.logged
@@ -754,9 +758,11 @@ class StepRow {
   bool get observed => careerObservations.contains(kind);
 
   /// Still ahead of the user: it can be done or cancelled.
-  bool get open =>
-      const {CareerStepState.scheduled, CareerStepState.past, CareerStepState.overdue}
-          .contains(state);
+  bool get open => const {
+    CareerStepState.scheduled,
+    CareerStepState.past,
+    CareerStepState.overdue,
+  }.contains(state);
 
   /// Coming up first, nearest first, then the rest, newest first.
   static int compare(StepRow a, StepRow b) {
@@ -800,15 +806,13 @@ class ApplicationRow {
   bool get saved => stage == 'Saved';
 
   /// The stage, or null on an older closed record that never had one.
-  String? get stage => careerPipelineStages.contains(record.stage)
-      ? record.stage
-      : null;
+  String? get stage =>
+      careerPipelineStages.contains(record.stage) ? record.stage : null;
   String? get outcome => record.outcome.isEmpty ? null : record.outcome;
 
   /// One word for where it stands: its outcome, or its stage.
-  String get standing => outcome != null
-      ? careerOutcomeLabel(outcome!)
-      : stage ?? 'Not recorded';
+  String get standing =>
+      outcome != null ? careerOutcomeLabel(outcome!) : stage ?? 'Not recorded';
   String get applied => record.fields['date']!;
   String get stageDate => record.fields['stageDate']!;
   String get followUp => record.fields['followUp']!;
@@ -859,9 +863,9 @@ List<ApplicationRow> applicationRows(
 ) {
   final steps = <String, List<StepRow>>{};
   for (final r in records.values.whereType<CareerEventRecord>()) {
-    steps.putIfAbsent(r.applicationId, () => []).add(
-      StepRow(r, today, timezone),
-    );
+    steps
+        .putIfAbsent(r.applicationId, () => [])
+        .add(StepRow(r, today, timezone));
   }
   final next = <String, LifeRow>{};
   for (final r in nextSteps(careerRows(records, today, timezone))) {
@@ -920,9 +924,8 @@ class CareerCounts {
   ];
   int stage(String name) => active.where((r) => r.stage == name).length;
   int get saved => stage('Saved');
-  int get interviewing => active
-      .where((r) => careerInterviewing.contains(r.stage))
-      .length;
+  int get interviewing =>
+      active.where((r) => careerInterviewing.contains(r.stage)).length;
   List<ApplicationRow> get closed => [
     for (final r in rows)
       if (!r.archived && r.closed) r,
@@ -1000,7 +1003,9 @@ const lifeReasons = {
 };
 
 String lifeReason(String? reason) =>
-    lifeReasons[reason] ?? reason ?? 'This changed before your edit reached it.';
+    lifeReasons[reason] ??
+    reason ??
+    'This changed before your edit reached it.';
 
 /// What a person calls a stored field.
 const lifeFieldNames = {
@@ -1041,7 +1046,12 @@ const lifeFieldNames = {
 
 /// A refused edit, against what's there now.
 class LifeReviewRow {
-  LifeReviewRow(this.original, this.reason, this.current, {this.allowed = true});
+  LifeReviewRow(
+    this.original,
+    this.reason,
+    this.current, {
+    this.allowed = true,
+  });
   final LifeCommand original;
 
   /// Whether the rules would take this edit now. A step on an application
@@ -1356,8 +1366,7 @@ class LifeSource {
       through,
       timezone: timezone,
     ))
-      if (visible(item.kind))
-        LifeRow.record(item, records, today, timezone),
+      if (visible(item.kind)) LifeRow.record(item, records, today, timezone),
     if (complete)
       for (final s in namedDueSources(
         snapshot,

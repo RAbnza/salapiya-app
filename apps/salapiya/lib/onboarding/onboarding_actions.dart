@@ -151,7 +151,13 @@ class LocalOnboardingActions implements OnboardingActions {
 
   @override
   String newProfileName() =>
-      (runtime.connected.flow?.client.auth.currentUser?.userMetadata?['full_name']
+      (runtime
+                      .connected
+                      .flow
+                      ?.client
+                      .auth
+                      .currentUser
+                      ?.userMetadata?['full_name']
                   as String? ??
               'My profile')
           .trim();
@@ -181,9 +187,7 @@ class LocalOnboardingActions implements OnboardingActions {
   @override
   void openConnectionTab(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => ConnectionPage(runtime: runtime),
-      ),
+      MaterialPageRoute<void>(builder: (_) => ConnectionPage(runtime: runtime)),
       (route) => route.isFirst,
     );
   }

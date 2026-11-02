@@ -287,23 +287,29 @@ void main() {
         platform: windows,
         width: 1200,
       );
-      await tester.tap(find.descendant(
-        of: find.byKey(const ValueKey('profile-theme')),
-        matching: find.text('Dark'),
-      ));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('profile-theme')),
+          matching: find.text('Dark'),
+        ),
+      );
       await tester.pump();
       expect(settings.themeMode, ThemeMode.dark);
 
-      await tester.tap(find.descendant(
-        of: find.byKey(const ValueKey('profile-text-size')),
-        matching: find.text('150%'),
-      ));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('profile-text-size')),
+          matching: find.text('150%'),
+        ),
+      );
       await tester.pump();
       expect(settings.textScale, 1.5);
-      await tester.tap(find.descendant(
-        of: find.byKey(const ValueKey('profile-text-size')),
-        matching: find.text('System'),
-      ));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('profile-text-size')),
+          matching: find.text('System'),
+        ),
+      );
       await tester.pump();
       expect(settings.textScale, isNull);
 
@@ -456,7 +462,10 @@ void main() {
 
         await tester.enterText(find.byType(TextField), '  Mara Reyes ');
         await tester.tap(find.text('Save name'));
-        await localWait(tester, () => find.text('Save name').evaluate().isEmpty);
+        await localWait(
+          tester,
+          () => find.text('Save name').evaluate().isEmpty,
+        );
         expect(session.profile.name, 'Mara Reyes');
         expect(
           await tester.runAsync(session.localFinance.store.displayName),
@@ -519,7 +528,10 @@ void main() {
       expect(find.textContaining('Borrowed money isn’t income'), findsNothing);
       await tester.tap(find.text('Is a loan income?'));
       await tester.pump();
-      expect(find.textContaining('Borrowed money isn’t income'), findsOneWidget);
+      expect(
+        find.textContaining('Borrowed money isn’t income'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Open Debts'));
       await tester.pump();
       expect(log.calls, [(AppDestination.debts, 'Summary')]);

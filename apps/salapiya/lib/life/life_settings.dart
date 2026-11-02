@@ -87,8 +87,7 @@ class _LifeSettingsState extends State<LifeSettings> {
               key: const ValueKey('life-field-display-timezone'),
               label: 'Show times in',
               value: view['timezone'] as String,
-              helper:
-                  'Events keep their own timezone. All-day items and due dates never move.',
+              helper: 'Events keep their own timezone. All-day items and due dates never move.',
               searchLabel: 'Search timezones',
               options: timezoneOptions(),
               onChanged: (v) => save(hub, {...view, 'timezone': v}),

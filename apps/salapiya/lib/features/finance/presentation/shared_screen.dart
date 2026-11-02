@@ -126,8 +126,7 @@ class _SharedScreenState extends State<SharedScreen> {
           '${source.pendingCount} ${source.pendingCount == 1 ? 'change is' : 'changes are'} waiting for the group.',
           live: true,
         ),
-      if (source.needsReview)
-        SyncReviewNotice(onReview: source.onReview),
+      if (source.needsReview) SyncReviewNotice(onReview: source.onReview),
       if (g != null && !g.active(me))
         const InlineNotice(
           'You’ve left this group, so these are only your earlier records.',

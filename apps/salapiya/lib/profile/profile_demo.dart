@@ -25,8 +25,7 @@ class DemoToolsCard extends StatelessWidget {
     return OverviewCard(
       key: const ValueKey('demo-tools'),
       title: 'Demo tools',
-      caption:
-          'Fictional profile. Everything here resets when the app closes.',
+      caption: 'Fictional profile. Everything here resets when the app closes.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -73,16 +72,18 @@ class DemoToolsCard extends StatelessWidget {
                   'design-gallery',
                 ),
               ),
-              AppButton.tertiary('Reset demo scenario', onPressed: session.reset),
+              AppButton.tertiary(
+                'Reset demo scenario',
+                onPressed: session.reset,
+              ),
             ],
           ),
           const SizedBox(height: Space.sm),
           Text(
             'Gallery specimens use their own sample amounts, so Hide amounts '
             'doesn’t cover them.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: c.secondary),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: c.secondary),
           ),
         ],
       ),
@@ -165,7 +166,8 @@ class DemoProfile extends ChangeNotifier implements ProfileActions {
   ConnectionPhase get shown =>
       phase ??
       switch (session.scenario) {
-        OverviewScenario.local || OverviewScenario.empty => ConnectionPhase.local,
+        OverviewScenario.local ||
+        OverviewScenario.empty => ConnectionPhase.local,
         OverviewScenario.current => ConnectionPhase.synced,
         OverviewScenario.waiting => ConnectionPhase.unreachable,
         OverviewScenario.pending => ConnectionPhase.waiting,
@@ -275,7 +277,8 @@ class DemoProfile extends ChangeNotifier implements ProfileActions {
           ReviewRow(
             id: '00000000-0000-4000-8000-000000000001',
             title: 'Market groceries',
-            reason: changeReasons['account unavailable, archived or before cutoff']!,
+            reason:
+                changeReasons['account unavailable, archived or before cutoff']!,
             facts: [
               ('Date', '21 Oct 2026'),
               ('Amount', session.amount(BigInt.from(125000))),
@@ -319,8 +322,9 @@ class DemoProfile extends ChangeNotifier implements ProfileActions {
   @override
   Future<void> syncNow() async => said('A sync starts here.');
   @override
-  Future<void> setPaused(bool paused) async =>
-      set(() => phase = paused ? ConnectionPhase.paused : ConnectionPhase.synced);
+  Future<void> setPaused(bool paused) async => set(
+    () => phase = paused ? ConnectionPhase.paused : ConnectionPhase.synced,
+  );
   @override
   Future<void> signOut() async => said('This device signs out here.');
   @override
@@ -442,41 +446,38 @@ class DemoStateBar extends StatelessWidget {
   final String tab;
   final DemoProfile demo;
 
-  Widget picker<T>(T value, List<(T, String)> options, ValueChanged<T> onPick) =>
-      DropdownButtonFormField<T>(
-        key: ValueKey('demo-state-$tab'),
-        initialValue: value,
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Show a state'),
-        items: [
-          for (final (v, label) in options)
-            DropdownMenuItem(value: v, child: Text(label)),
-        ],
-        onChanged: (v) {
-          if (v != null) onPick(v);
-        },
-      );
+  Widget picker<T>(
+    T value,
+    List<(T, String)> options,
+    ValueChanged<T> onPick,
+  ) => DropdownButtonFormField<T>(
+    key: ValueKey('demo-state-$tab'),
+    initialValue: value,
+    isExpanded: true,
+    decoration: const InputDecoration(labelText: 'Show a state'),
+    items: [
+      for (final (v, label) in options)
+        DropdownMenuItem(value: v, child: Text(label)),
+    ],
+    onChanged: (v) {
+      if (v != null) onPick(v);
+    },
+  );
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       switch (tab) {
-        'Connection' => picker<ConnectionPhase>(
-          demo.shown,
-          [for (final e in _phaseNames.entries) (e.key, e.value)],
-          (v) => demo.set(() => demo.phase = v),
-        ),
-        'Devices' => picker<DemoDevices>(
-          demo.device,
-          [for (final d in DemoDevices.values) (d, d.label)],
-          (v) => demo.set(() => demo.device = v),
-        ),
-        _ => picker<DemoBackup>(
-          demo.backup,
-          [for (final b in DemoBackup.values) (b, b.label)],
-          (v) => demo.set(() => demo.backup = v),
-        ),
+        'Connection' => picker<ConnectionPhase>(demo.shown, [
+          for (final e in _phaseNames.entries) (e.key, e.value),
+        ], (v) => demo.set(() => demo.phase = v)),
+        'Devices' => picker<DemoDevices>(demo.device, [
+          for (final d in DemoDevices.values) (d, d.label),
+        ], (v) => demo.set(() => demo.device = v)),
+        _ => picker<DemoBackup>(demo.backup, [
+          for (final b in DemoBackup.values) (b, b.label),
+        ], (v) => demo.set(() => demo.backup = v)),
       },
       if (demo.note != null) ...[
         const SizedBox(height: Space.sm),

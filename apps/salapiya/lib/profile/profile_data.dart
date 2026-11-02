@@ -47,10 +47,7 @@ DefaultGroupChoices? defaultGroupChoices(SharedSource source, String? saved) {
   if (active.length < 2) return null;
   final usable = active.any((r) => r.group.id == saved);
   return DefaultGroupChoices(
-    [
-      (null, askEachTime),
-      for (final r in active) (r.group.id, r.group.name),
-    ],
+    [(null, askEachTime), for (final r in active) (r.group.id, r.group.name)],
     usable ? saved : null,
     lost: saved != null && !usable,
   );

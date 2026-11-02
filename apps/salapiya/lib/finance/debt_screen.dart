@@ -363,8 +363,7 @@ class _DebtsDashboardState extends State<DebtsDashboard> {
           '${source.pendingCount} ${source.pendingCount == 1 ? 'change is' : 'changes are'} waiting to sync. Debts include them, so totals here can differ from the Overview until they sync.',
           live: true,
         ),
-      if (source.needsReview)
-        SyncReviewNotice(onReview: source.onReview),
+      if (source.needsReview) SyncReviewNotice(onReview: source.onReview),
     ];
 
     // Summary's tiles: the four answers, with the trend hidden with amounts.

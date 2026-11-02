@@ -162,7 +162,9 @@ class LocalProfiles {
     final previous = await vault.read();
     final old = previous == null ? null : jsonDecode(previous) as Map;
     if (active != null || (old != null && old['phase'] != 'empty')) {
-      reject('A profile is already set up on this device. Try again to open it.');
+      reject(
+        'A profile is already set up on this device. Try again to open it.',
+      );
     }
     await directory.create(recursive: true);
     if (await directory.list().any(
@@ -198,7 +200,9 @@ class LocalProfiles {
     final prior = previous == null ? null : jsonDecode(previous) as Map;
     final hasCurrent = prior != null && prior['phase'] != 'empty';
     if (hasCurrent && !preserveCurrent) {
-      reject('A profile is already open on this device. Review the switch first.');
+      reject(
+        'A profile is already open on this device. Review the switch first.',
+      );
     }
     if (!RegExp(r'^[0-9a-f-]{36}$').hasMatch(id) ||
         name.trim().isEmpty ||
@@ -432,13 +436,17 @@ class LocalProfiles {
             p.basename(directory.path),
           ),
         )) {
-      reject('This profile’s folder points somewhere else, so nothing was removed.');
+      reject(
+        'This profile’s folder points somewhere else, so nothing was removed.',
+      );
     }
     // Validate every target before deleting any; never traverse a link/junction.
     for (final path in paths) {
       final type = await FileSystemEntity.type(path, followLinks: false);
       if (type == FileSystemEntityType.link) {
-        reject('Some of this profile’s files are links, so nothing was removed.');
+        reject(
+          'Some of this profile’s files are links, so nothing was removed.',
+        );
       }
       if (type == FileSystemEntityType.directory) {
         await for (final entity in Directory(
@@ -446,7 +454,9 @@ class LocalProfiles {
         ).list(recursive: true, followLinks: false)) {
           if (await FileSystemEntity.type(entity.path, followLinks: false) ==
               FileSystemEntityType.link) {
-            reject('Some of this profile’s attached files are links, so nothing was removed.');
+            reject(
+              'Some of this profile’s attached files are links, so nothing was removed.',
+            );
           }
         }
       }
@@ -627,9 +637,7 @@ class LocalBackup {
                     ).kind ==
                     'financialFile';
               }).length) {
-        reject(
-          'This backup’s file list doesn’t add up. Nothing changed.',
-        );
+        reject('This backup’s file list doesn’t add up. Nothing changed.');
       }
     }
     Map<String, String>.from(b['preferences'] as Map);
@@ -669,7 +677,9 @@ class LocalBackup {
         reject('This backup is damaged. Nothing changed.');
       }
       final intents = b['intents'] as List;
-      if (intents.length > 20000) reject('This backup is damaged. Nothing changed.');
+      if (intents.length > 20000) {
+        reject('This backup is damaged. Nothing changed.');
+      }
       final intentIds = <String>{};
       var last = 0;
       for (final raw in intents) {

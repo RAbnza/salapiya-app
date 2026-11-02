@@ -69,9 +69,10 @@ void main() {
     expect(error, isNull, reason: '$label: $error');
   }
 
-  String idOf(String title) => demoLife(
-    civilToday(),
-  ).records.values.firstWhere((r) => r.title == title).id;
+  String idOf(String title) =>
+      demoLife(civilToday()).records.values
+          .firstWhere((r) => r.title == title)
+          .id;
 
   group('sweep', () {
     for (final (tab, tiles) in const [('Learning', 4), ('Books', 3)]) {
@@ -105,15 +106,27 @@ void main() {
       for (final tab in const ['Learning', 'Books']) {
         for (final (platform, width) in sizes) {
           session.togglePrivacy();
-          await app(tester, life(session, tab), platform: platform, width: width);
+          await app(
+            tester,
+            life(session, tab),
+            platform: platform,
+            width: width,
+          );
           expect(find.textContaining('₱'), findsNothing);
           clean(tester, 'hidden $tab $platform $width');
           session.togglePrivacy();
 
           session.select(OverviewScenario.empty);
-          await app(tester, life(session, tab), platform: platform, width: width);
+          await app(
+            tester,
+            life(session, tab),
+            platform: platform,
+            width: width,
+          );
           expect(
-            find.text(tab == 'Books' ? 'No books yet' : 'No learning goals yet'),
+            find.text(
+              tab == 'Books' ? 'No books yet' : 'No learning goals yet',
+            ),
             findsOneWidget,
           );
           clean(tester, 'empty $tab $platform $width');
@@ -261,10 +274,7 @@ void main() {
           type: LifeType.book,
           id: idOf('Dekada ’70'),
         ),
-        LifeProgressForm(
-          writer: writer,
-          id: idOf('The Art of Noticing'),
-        ),
+        LifeProgressForm(writer: writer, id: idOf('The Art of Noticing')),
       ]) {
         for (final (platform, width) in sizes) {
           for (final text in [1.0, 2.0]) {
@@ -294,7 +304,12 @@ void main() {
         progressRows(records, LifeType.learning, today),
       );
       final books = ProgressCounts(progressRows(records, LifeType.book, today));
-      await app(tester, life(session, 'Learning'), platform: windows, width: 1200);
+      await app(
+        tester,
+        life(session, 'Learning'),
+        platform: windows,
+        width: 1200,
+      );
       expect(
         find.textContaining('${learning.inProgress.length} in progress'),
         findsOneWidget,
@@ -304,7 +319,12 @@ void main() {
         find.textContaining('${books.inProgress.length} reading'),
         findsOneWidget,
       );
-      await app(tester, life(session, 'Learning'), platform: android, width: 412);
+      await app(
+        tester,
+        life(session, 'Learning'),
+        platform: android,
+        width: 412,
+      );
       expect(find.text('${learning.overdue} overdue'), findsOneWidget);
     });
 
@@ -343,7 +363,12 @@ void main() {
     testWidgets('an item with no total shows no bar', (tester) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
-      await app(tester, life(session, 'Learning'), platform: windows, width: 1200);
+      await app(
+        tester,
+        life(session, 'Learning'),
+        platform: windows,
+        width: 1200,
+      );
       final tile = find.ancestor(
         of: find.text('Public speaking').first,
         matching: find.byType(ProgressTile),
@@ -364,9 +389,10 @@ void main() {
       addTearDown(session.dispose);
       for (final tab in const ['Learning', 'Books']) {
         await app(tester, life(session, tab), platform: windows, width: 1200);
-        final tops = find.byType(KpiTile).evaluate().map(
-          (e) => tester.getTopLeft(find.byWidget(e.widget)).dy,
-        );
+        final tops = find
+            .byType(KpiTile)
+            .evaluate()
+            .map((e) => tester.getTopLeft(find.byWidget(e.widget)).dy);
         expect(tops.toSet(), hasLength(1), reason: tab);
       }
     });
@@ -396,8 +422,16 @@ void main() {
     ) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
-      for (final (platform, width) in const [(windows, 1200.0), (android, 360.0)]) {
-        await app(tester, life(session, 'Books'), platform: platform, width: width);
+      for (final (platform, width) in const [
+        (windows, 1200.0),
+        (android, 360.0),
+      ]) {
+        await app(
+          tester,
+          life(session, 'Books'),
+          platform: platform,
+          width: width,
+        );
         final card = find.byKey(const ValueKey('life-progress-now'));
         final title = find
             .descendant(of: card, matching: find.text('The Art of Noticing'))
@@ -440,11 +474,19 @@ void main() {
     ) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
-      await app(tester, life(session, 'Learning'), platform: windows, width: 1200);
+      await app(
+        tester,
+        life(session, 'Learning'),
+        platform: windows,
+        width: 1200,
+      );
       final id = idOf('Public speaking');
       await tester.tap(find.byKey(ValueKey('life-finish-$id')));
       await tester.pump();
-      expect(find.text('This is the demo, so nothing was saved.'), findsOneWidget);
+      expect(
+        find.text('This is the demo, so nothing was saved.'),
+        findsOneWidget,
+      );
       clean(tester, 'finish');
     });
 
@@ -456,7 +498,10 @@ void main() {
       lifeHubOf(session).setProgressFilter(LifeType.book, ProgressFilter.all);
       await app(tester, life(session, 'Books'), platform: windows, width: 1440);
       final list = find.byKey(const ValueKey('life-progress-list-book'));
-      expect(find.descendant(of: list, matching: find.text('Due')), findsOneWidget);
+      expect(
+        find.descendant(of: list, matching: find.text('Due')),
+        findsOneWidget,
+      );
       final finished = progressRows(
         demoLife(civilToday()).records,
         LifeType.book,
@@ -563,7 +608,10 @@ void main() {
       await page(tester, s, 'Public speaking');
       expect(find.byKey(const ValueKey('life-entry-finish')), findsOneWidget);
       expect(find.byKey(const ValueKey('life-entry-log')), findsNothing);
-      expect(find.text('This has no total. Add one to count lessons.'), findsOneWidget);
+      expect(
+        find.text('This has no total. Add one to count lessons.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('an archived item only restores', (tester) async {

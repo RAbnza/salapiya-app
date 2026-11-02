@@ -590,7 +590,10 @@ LifeCommand lifeProgressCommand(
 
 /// Refuses a second application to the same company and role until the user
 /// says it's a separate one. A later attempt is fine; it just can't be silent.
-void lifeCheckDuplicate(Map<String, LifeRecord> records, Map<String, String> v) {
+void lifeCheckDuplicate(
+  Map<String, LifeRecord> records,
+  Map<String, String> v,
+) {
   if (v['duplicateConsent'] != 'true' && lifeIsDuplicate(records, v)) {
     lifeReject(
       'You already have this company and role. Confirm this is a separate application.',

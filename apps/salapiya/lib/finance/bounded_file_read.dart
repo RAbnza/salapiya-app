@@ -11,18 +11,14 @@ Future<Uint8List> readBoundedFinancialFile(
 ) async {
   final reported = await file.length();
   if (reported == null || reported < 1 || reported > maximum) {
-    reject(
-      'This file is too big, or it can’t be read. Choose another.',
-    );
+    reject('This file is too big, or it can’t be read. Choose another.');
   }
   final buffer = BytesBuilder(copy: false);
   var count = 0;
   await for (final bytes in file.readAsByteStream()) {
     count += bytes.length;
     if (count > maximum) {
-      reject(
-        'This file changed or is too big. Nothing was saved.',
-      );
+      reject('This file changed or is too big. Nothing was saved.');
     }
     buffer.add(bytes);
   }

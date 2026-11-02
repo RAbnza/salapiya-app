@@ -17,12 +17,9 @@ import 'life_pages_detail.dart' show LifeHistoryCard;
 Future<void> toggleTask(LifeSource source, LifeHub hub, TaskRow r) async {
   hub.setProblem(null);
   try {
-    await source.writer.change(
-      r.id,
-      r.record.version,
-      {'status': r.done ? 'In progress' : 'Completed'},
-      r.done ? 'Reopened' : 'Completed',
-    );
+    await source.writer.change(r.id, r.record.version, {
+      'status': r.done ? 'In progress' : 'Completed',
+    }, r.done ? 'Reopened' : 'Completed');
     if (source.writer.demo) {
       hub.setProblem('This is the demo, so nothing was saved.');
     }
@@ -299,7 +296,13 @@ class LifeTasksTab extends StatelessWidget {
               (list, 12, 12),
             ]
           : null,
-      stacked: [KeyedSubtree(child: t.first), ...t.skip(1), next, priority, list],
+      stacked: [
+        KeyedSubtree(child: t.first),
+        ...t.skip(1),
+        next,
+        priority,
+        list,
+      ],
     );
   }
 }
@@ -361,9 +364,7 @@ List<AppTableRow> taskTable(
         ),
       );
     }
-    out.add(
-      taskTableRow(context, r, () => onCheck(r), () => onOpen(r)),
-    );
+    out.add(taskTableRow(context, r, () => onCheck(r), () => onOpen(r)));
   }
   return out;
 }
@@ -525,10 +526,7 @@ class LifeTaskListPage extends StatelessWidget {
           children: [
             for (final (group, tasks) in _grouped(rows)) ...[
               Padding(
-                padding: const EdgeInsets.only(
-                  top: Space.md,
-                  bottom: Space.xs,
-                ),
+                padding: const EdgeInsets.only(top: Space.md, bottom: Space.xs),
                 child: Text(
                   group.label,
                   style: Theme.of(context).textTheme.labelLarge,
@@ -566,20 +564,17 @@ class LifeTaskListPage extends StatelessWidget {
 }
 
 /// A task's page, from anywhere.
-void openLifeTask(
-  BuildContext context,
-  PrototypeSession session,
-  String id,
-) => openDemoPage<void>(
-  context,
-  LifeTaskPage(
-    listenable: Listenable.merge([session, lifeHubOf(session)]),
-    source: (context) => lifeSource(context, session),
-    hub: lifeHubOf(session),
-    id: id,
-  ),
-  'life/entry/$id',
-);
+void openLifeTask(BuildContext context, PrototypeSession session, String id) =>
+    openDemoPage<void>(
+      context,
+      LifeTaskPage(
+        listenable: Listenable.merge([session, lifeHubOf(session)]),
+        source: (context) => lifeSource(context, session),
+        hub: lifeHubOf(session),
+        id: id,
+      ),
+      'life/entry/$id',
+    );
 
 /// A task: what it is, when it's due, and what's been done to it.
 class LifeTaskPage extends StatefulWidget {
@@ -647,8 +642,7 @@ class _LifeTaskPageState extends State<LifeTaskPage> {
         MenuItemButton(
           key: const ValueKey('life-task-restore'),
           leadingIcon: const Icon(Icons.restore),
-          onPressed: () =>
-              change(source, r, {'archived': 'false'}, 'Restored'),
+          onPressed: () => change(source, r, {'archived': 'false'}, 'Restored'),
           child: const Text('Restore task'),
         )
       else
@@ -695,10 +689,7 @@ class _LifeTaskPageState extends State<LifeTaskPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FactRow('Status', r.status),
-            FactRow(
-              'Due date',
-              r.due.isEmpty ? 'None' : civilLabel(r.due),
-            ),
+            FactRow('Due date', r.due.isEmpty ? 'None' : civilLabel(r.due)),
             FactRow('Priority', r.priority),
             if (detail.isNotEmpty) FactRow('Details', detail),
             // A reopened task keeps its old date in its record; it isn't true now.
@@ -724,12 +715,14 @@ class _LifeTaskPageState extends State<LifeTaskPage> {
       final reminder = OverviewCard(
         key: const ValueKey('life-task-reminder'),
         title: 'Reminder',
-        child: item ?? Text(
-          !r.open
-              ? 'Finished and archived tasks don’t remind you.'
-              : 'Add a due date to get a reminder.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        child:
+            item ??
+            Text(
+              !r.open
+                  ? 'Finished and archived tasks don’t remind you.'
+                  : 'Add a due date to get a reminder.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
       );
       final history = LifeHistoryCard(
         writer: source.writer,
@@ -760,9 +753,8 @@ class _LifeTaskPageState extends State<LifeTaskPage> {
                     'Complete task',
                     key: const ValueKey('life-task-complete'),
                     icon: Icons.task_alt,
-                    onPressed: () => change(source, r, {
-                      'status': 'Completed',
-                    }, 'Completed'),
+                    onPressed: () =>
+                        change(source, r, {'status': 'Completed'}, 'Completed'),
                   ),
           more(source, r),
         ],

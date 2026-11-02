@@ -94,9 +94,8 @@ void main() {
     });
 
     test('a date finished only counts while it’s finished', () {
-      final reopened = rows([
-        item(LifeType.book, completed: '2026-10-01'),
-      ]).single;
+      final reopened = rows([item(LifeType.book, completed: '2026-10-01')])
+          .single;
       final done = rows([
         item(LifeType.book, status: 'Completed', completed: '2026-10-01'),
       ]).single;
@@ -163,8 +162,18 @@ void main() {
     final all = rows([
       item(LifeType.book, title: 'Open', detail: 'Solnit'),
       item(LifeType.book, title: 'Held', status: 'On hold'),
-      item(LifeType.book, title: 'Older', status: 'Completed', completed: '2025-01-01'),
-      item(LifeType.book, title: 'Newer', status: 'Completed', completed: '2026-01-01'),
+      item(
+        LifeType.book,
+        title: 'Older',
+        status: 'Completed',
+        completed: '2025-01-01',
+      ),
+      item(
+        LifeType.book,
+        title: 'Newer',
+        status: 'Completed',
+        completed: '2026-01-01',
+      ),
       item(LifeType.book, title: 'Undated', status: 'Completed'),
       item(LifeType.book, title: 'Gone', archived: 'true'),
     ]);
@@ -197,24 +206,27 @@ void main() {
   });
 
   group('counts', () {
-    test('what’s next has dates, then what hasn’t started, and nothing held', () {
-      final counts = ProgressCounts(
-        rows([
-          item(LifeType.learning, title: 'Dated', due: '2026-12-01'),
-          item(LifeType.learning, title: 'Open, no date'),
-          item(LifeType.learning, title: 'Waiting', status: 'Not started'),
-          item(
-            LifeType.learning,
-            title: 'Held',
-            status: 'On hold',
-            due: '2026-11-05',
-          ),
-          item(LifeType.learning, title: 'Done', status: 'Completed'),
-        ], LifeType.learning),
-      );
-      expect(counts.next.map((r) => r.title), ['Dated', 'Waiting']);
-      expect(counts.nextDated?.title, 'Dated');
-    });
+    test(
+      'what’s next has dates, then what hasn’t started, and nothing held',
+      () {
+        final counts = ProgressCounts(
+          rows([
+            item(LifeType.learning, title: 'Dated', due: '2026-12-01'),
+            item(LifeType.learning, title: 'Open, no date'),
+            item(LifeType.learning, title: 'Waiting', status: 'Not started'),
+            item(
+              LifeType.learning,
+              title: 'Held',
+              status: 'On hold',
+              due: '2026-11-05',
+            ),
+            item(LifeType.learning, title: 'Done', status: 'Completed'),
+          ], LifeType.learning),
+        );
+        expect(counts.next.map((r) => r.title), ['Dated', 'Waiting']);
+        expect(counts.nextDated?.title, 'Dated');
+      },
+    );
 
     test('overdue comes first as the next date', () {
       final counts = ProgressCounts(
@@ -250,11 +262,11 @@ void main() {
   group('Log progress', () {
     final book = item(LifeType.book, total: 10, progress: 2) as ProgressRecord;
 
-    LifeCommand command(Map<String, String> v) => lifeProgressCommand(owner, book, {
-      '__command': id(9000),
-      '__version': '1',
-      ...v,
-    });
+    LifeCommand command(Map<String, String> v) => lifeProgressCommand(
+      owner,
+      book,
+      {'__command': id(9000), '__version': '1', ...v},
+    );
 
     test('sends the same fields as the old action', () {
       final c = command({'progress': '5', 'note': ' Chapter 2 '});
@@ -274,17 +286,16 @@ void main() {
       expect(command({'progress': '10'}).fields['status'], 'Completed');
       expect(command({'progress': '10'}).fields['completed'], '');
       expect(
-        command({
-          'progress': '10',
-          'completed': '2026-11-01',
-        }).fields['completed'],
+        command({'progress': '10', 'completed': '2026-11-01'})
+            .fields['completed'],
         '2026-11-01',
       );
     });
 
     test('a date is ignored short of the total', () {
       expect(
-        command({'progress': '9', 'completed': '2026-11-01'}).fields['completed'],
+        command({'progress': '9', 'completed': '2026-11-01'})
+            .fields['completed'],
         '',
       );
     });
@@ -351,8 +362,14 @@ void main() {
   group('demo sample', () {
     test('it replays on week, month and year edges', () {
       for (final day in [
-        '2026-01-01', '2026-02-28', '2026-03-01', '2026-11-01',
-        '2026-11-30', '2026-12-31', '2027-01-01', '2028-02-29',
+        '2026-01-01',
+        '2026-02-28',
+        '2026-03-01',
+        '2026-11-01',
+        '2026-11-30',
+        '2026-12-31',
+        '2027-01-01',
+        '2028-02-29',
       ]) {
         final life = demoLife(day);
         for (final type in [LifeType.learning, LifeType.book]) {
@@ -366,7 +383,11 @@ void main() {
           expect(r.where((x) => !x.hasTotal), isNotEmpty, reason: '$day $type');
         }
         expect(
-          progressRows(life.records, LifeType.learning, day).where((r) => r.late),
+          progressRows(
+            life.records,
+            LifeType.learning,
+            day,
+          ).where((r) => r.late),
           isNotEmpty,
           reason: day,
         );

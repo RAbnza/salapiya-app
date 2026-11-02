@@ -46,7 +46,11 @@ Future<Backup> makeBackup(
     await runtime.create(name, ThemeMode.system);
     final store = runtime.session!.localFinance.store;
     if (connected) {
-      await store.stageConnection(newLocalId(), 'amihan@example.com', newLocalId());
+      await store.stageConnection(
+        newLocalId(),
+        'amihan@example.com',
+        newLocalId(),
+      );
     }
     final secret = await PortableRecovery.newRecoverySecret();
     final bundle = await LocalBackup.capture(store);
@@ -94,8 +98,7 @@ Future<void> onNewDevice(
         home: RestorePage(
           actions: LocalOnboardingActions(
             runtime,
-            picker:
-                picker ?? () async => PickedBackup(fileName, file()),
+            picker: picker ?? () async => PickedBackup(fileName, file()),
           ),
           onDone: onDone ?? () {},
         ),
@@ -167,35 +170,30 @@ void main() {
   ) async {
     final backup = await makeBackup(tester);
     var done = false;
-    await onNewDevice(
-      tester,
-      () => backup.bytes,
-      (runtime, _) async {
-        await toReview(tester, backup);
-        expect(find.textContaining('Saved'), findsWidgets);
-        expect(find.text('What doesn’t come back'), findsOneWidget);
-        expect(find.text('Reminders'), findsOneWidget);
-        expect(find.textContaining('not a place in a group'), findsOneWidget);
-        expect(runtime.session, isNull);
+    await onNewDevice(tester, () => backup.bytes, (runtime, _) async {
+      await toReview(tester, backup);
+      expect(find.textContaining('Saved'), findsWidgets);
+      expect(find.text('What doesn’t come back'), findsOneWidget);
+      expect(find.text('Reminders'), findsOneWidget);
+      expect(find.textContaining('not a place in a group'), findsOneWidget);
+      expect(runtime.session, isNull);
 
-        await localTap(tester, find.byKey(const ValueKey('restore-confirm')));
-        expect(find.text('Restore Amihan on this device?'), findsOneWidget);
-        expect(find.textContaining('backup file doesn’t change'), findsOne);
-        expect(find.textContaining('Devices'), findsOneWidget);
-        await localTap(tester, find.text('Cancel'));
-        expect(runtime.session, isNull);
+      await localTap(tester, find.byKey(const ValueKey('restore-confirm')));
+      expect(find.text('Restore Amihan on this device?'), findsOneWidget);
+      expect(find.textContaining('backup file doesn’t change'), findsOne);
+      expect(find.textContaining('Devices'), findsOneWidget);
+      await localTap(tester, find.text('Cancel'));
+      expect(runtime.session, isNull);
 
-        await confirmRestore(tester);
-        await longWait(tester, () => runtime.session != null);
-        expect(runtime.session!.profile.name, 'Amihan');
-        expect(runtime.session!.localFinance.store.owner, backup.owner);
-        expect(find.text('Amihan is back on this device'), findsOneWidget);
-        expect(find.byType(BackButton), findsNothing);
-        await localTap(tester, find.byKey(const ValueKey('restore-open-app')));
-        expect(done, isTrue);
-      },
-      onDone: () => done = true,
-    );
+      await confirmRestore(tester);
+      await longWait(tester, () => runtime.session != null);
+      expect(runtime.session!.profile.name, 'Amihan');
+      expect(runtime.session!.localFinance.store.owner, backup.owner);
+      expect(find.text('Amihan is back on this device'), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      await localTap(tester, find.byKey(const ValueKey('restore-open-app')));
+      expect(done, isTrue);
+    }, onDone: () => done = true);
   });
 
   testWidgets('Open waits for a file and a secret', (tester) async {
@@ -321,10 +319,7 @@ void main() {
       () => backup.bytes,
       (runtime, _) async {
         await toReview(tester, backup);
-        expect(
-          find.textContaining('already on this device'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('already on this device'), findsOneWidget);
         expect(find.byKey(const ValueKey('restore-confirm')), findsNothing);
         await localTap(tester, find.byKey(const ValueKey('restore-again')));
         expect(find.byKey(const ValueKey('restore-form')), findsOneWidget);

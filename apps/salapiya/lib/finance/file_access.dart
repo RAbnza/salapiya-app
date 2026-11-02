@@ -121,10 +121,12 @@ Future<void> previewImage(
 
 /// Writes a plain copy where another app can read it, and opens it. Null once
 /// it's opened; otherwise what went wrong. See [clearOpenedCopies].
-Future<String?> openPlainCopy(String title, String? mime, List<int> bytes) async {
-  final folder = Directory(
-    p.join((await _openedFolder()).path, newLocalId()),
-  );
+Future<String?> openPlainCopy(
+  String title,
+  String? mime,
+  List<int> bytes,
+) async {
+  final folder = Directory(p.join((await _openedFolder()).path, newLocalId()));
   await folder.create(recursive: true);
   final copy = File(p.join(folder.path, openedName(title, mime)));
   await copy.writeAsBytes(bytes, flush: true);
@@ -364,21 +366,19 @@ class LocalFileAccess implements FileAccess {
       });
 
   @override
-  Future<void> preview(
-    BuildContext context,
-    LocalRevision file,
-  ) => _run(context, () async {
-    final bytes = await files.read(file.id);
-    if (!context.mounted) return null;
-    await previewImage(
-      context,
-      title: file.title,
-      mime: file.values['mime'],
-      bytes: bytes,
-      open: () => _open(file),
-    );
-    return null;
-  });
+  Future<void> preview(BuildContext context, LocalRevision file) =>
+      _run(context, () async {
+        final bytes = await files.read(file.id);
+        if (!context.mounted) return null;
+        await previewImage(
+          context,
+          title: file.title,
+          mime: file.values['mime'],
+          bytes: bytes,
+          open: () => _open(file),
+        );
+        return null;
+      });
 
   @override
   Future<void> openElsewhere(BuildContext context, LocalRevision file) =>

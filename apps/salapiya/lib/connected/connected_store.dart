@@ -268,9 +268,7 @@ extension ConnectedLocalStore on LocalStore {
     final old = await connectionIn(tx);
     if (old != null) {
       if (old['remote_owner'] != actor) {
-        reject(
-          'Sign in with the Google account this profile uses.',
-        );
+        reject('Sign in with the Google account this profile uses.');
       }
       return;
     }
@@ -371,7 +369,9 @@ extension ConnectedLocalStore on LocalStore {
         }
       } else {
         final snap = await _snapshot(tx);
-        if (snap.version != i) reject('Some downloaded records are missing. Sync again.');
+        if (snap.version != i) {
+          reject('Some downloaded records are missing. Sync again.');
+        }
         final plan = planLocal(snap, rebaseCommand(c, snap.version));
         if (canonicalJson(financialPlanJson(plan)) !=
             canonicalJson(jsonDecode(row['plan'] as String))) {
@@ -392,7 +392,9 @@ extension ConnectedLocalStore on LocalStore {
       );
       if (intents.isNotEmpty) {
         if (intents.single['payload'] != c.payload) {
-          reject('A downloaded confirmation doesn’t match what was saved here. Your records are safe.');
+          reject(
+            'A downloaded confirmation doesn’t match what was saved here. Your records are safe.',
+          );
         }
         // Require the authenticated receipt persisted by the connector/recovery.
         if (intents.single['state'] == 'accepted') {
@@ -408,7 +410,9 @@ extension ConnectedLocalStore on LocalStore {
       [owner],
     );
     if (total['revision'] != boundary) {
-      reject('Your records here and on the service don’t match yet. Sync again.');
+      reject(
+        'Your records here and on the service don’t match yet. Sync again.',
+      );
     }
     // Download may beat upload acknowledgement. A later reconciliation retires
     // it; the NOT EXISTS overlay rule already prevents counting it twice.

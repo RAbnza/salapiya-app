@@ -21,15 +21,13 @@ class FormSyncStatus extends StatelessWidget {
       _ => 'Sync status unknown',
     },
     message: switch (state) {
-      'pending' =>
-        'Saved on this device. It syncs when there’s a connection.',
+      'pending' => 'Saved on this device. It syncs when there’s a connection.',
       'accepted' => 'It shows as synced after the next download.',
       'reconciled' => 'Saved on this device and synced.',
-      'review' =>
-        'The service didn’t accept this change. It’s kept; check it on Profile › Connection.',
-      'restored' =>
-        'This change came back with a restored backup. Check it on Profile › Connection before it’s sent.',
-      _ => 'Saved on this device. Profile › Connection shows whether it synced.',
+      'review' => 'The service didn’t accept this change. It’s kept; check it on Profile › Connection.',
+      'restored' => 'This change came back with a restored backup. Check it on Profile › Connection before it’s sent.',
+      _ =>
+        'Saved on this device. Profile › Connection shows whether it synced.',
     },
     tone: state == 'reconciled' ? NoticeTone.success : NoticeTone.warning,
   );
@@ -100,7 +98,10 @@ class FormStatus extends StatelessWidget {
                 children: [
                   Text(title, style: text.titleLarge?.copyWith(color: ink)),
                   const SizedBox(height: Space.xs),
-                  Text(message, style: text.bodyMedium?.copyWith(color: c.text)),
+                  Text(
+                    message,
+                    style: text.bodyMedium?.copyWith(color: c.text),
+                  ),
                 ],
               ),
             ),

@@ -47,7 +47,14 @@ Future<void> editPersonalEvent(
 }) => openEventForm(context, s, id: event?.id);
 
 /// Life's tabs, in order. Calendar and Reminders can't be hidden.
-const lifeTabs = ['Calendar', 'Tasks', 'Reminders', 'Learning', 'Books', 'Career'];
+const lifeTabs = [
+  'Calendar',
+  'Tasks',
+  'Reminders',
+  'Learning',
+  'Books',
+  'Career',
+];
 
 class LifeScreen extends StatefulWidget {
   const LifeScreen({

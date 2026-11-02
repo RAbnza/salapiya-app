@@ -85,8 +85,14 @@ class _RecordPage extends StatelessWidget {
             ('Your part', [shown(r.part), shown(stored('shareAmount'))]),
           ],
           PrivateKind.refund => [
-            ('Came back to you', [shown(r.paid), shown(stored('fundingAmount'))]),
-            ('Your part went down', [shown(r.part), shown(stored('shareAmount'))]),
+            (
+              'Came back to you',
+              [shown(r.paid), shown(stored('fundingAmount'))],
+            ),
+            (
+              'Your part went down',
+              [shown(r.part), shown(stored('shareAmount'))],
+            ),
           ],
           PrivateKind.payment => [
             ('Amount', [shown(r.group), shown(stored('fundingAmount'))]),
@@ -183,7 +189,11 @@ class _RecordPage extends StatelessWidget {
       ],
       child: DashboardGrid(
         cards: isDesktop(context)
-            ? [(compare, 8, 12), (about, 4, 12), ?(history == null ? null : (history, 12, 12))]
+            ? [
+                (compare, 8, 12),
+                (about, 4, 12),
+                ?(history == null ? null : (history, 12, 12)),
+              ]
             : null,
         stacked: [compare, about, ?history],
       ),

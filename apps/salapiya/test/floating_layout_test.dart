@@ -51,9 +51,7 @@ void main() {
         await tester.pumpAndSettle();
         if (dockRect != null) expect(tester.getRect(dock), dockRect);
         expect(
-          tester
-              .getBottomLeft(find.textContaining('Tala logged'))
-              .dy,
+          tester.getBottomLeft(find.textContaining('Tala logged')).dy,
           lessThan(dockRect?.top ?? tester.getBottomLeft(scroll).dy),
         );
         if (platform == TargetPlatform.android) {

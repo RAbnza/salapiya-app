@@ -146,12 +146,16 @@ void main() {
       'at': at,
       'actor': 'me',
     };
-    SharedJson intent(String id, String op, SharedJson values, {String? state}) =>
-        {
-          'id': id,
-          'state': state ?? 'reconciled',
-          'payload': jsonEncode({'op': op, 'values': values}),
-        };
+    SharedJson intent(
+      String id,
+      String op,
+      SharedJson values, {
+      String? state,
+    }) => {
+      'id': id,
+      'state': state ?? 'reconciled',
+      'payload': jsonEncode({'op': op, 'values': values}),
+    };
     final g = crew(
       activity: [
         sent('old', '2026-10-23 01:00:00+00'),
@@ -324,12 +328,7 @@ void main() {
           ),
         },
         'activity': [
-          event(
-            'j',
-            'accept',
-            at: '2026-10-02 01:00:00+00',
-            actor: 'ben',
-          ),
+          event('j', 'accept', at: '2026-10-02 01:00:00+00', actor: 'ben'),
           event('t', 'transfer', at: '2026-10-03 01:00:00+00'),
           event('x', 'remove', at: '2026-10-04 01:00:00+00'),
         ],
@@ -512,7 +511,10 @@ void main() {
       expect(writer.sent.length, 2);
       expect(writer.sent.first.$2, 'manual');
       expect(writer.sent.first.$3['name'], 'Lola Ines');
-      expect(writer.sent.first.$3['participant'], writer.sent.last.$3['participant']);
+      expect(
+        writer.sent.first.$3['participant'],
+        writer.sent.last.$3['participant'],
+      );
       expect(writer.sent.first.$5, writer.sent.last.$5);
       expect(writer.sent.first.$4, 4);
     });
@@ -540,10 +542,7 @@ void main() {
           .widget<SelectableText>(find.byKey(const ValueKey('invite-code')))
           .data!;
       expect(code.startsWith('g.'), isTrue);
-      expect(
-        SharedRepository.tokenHash(code.split('.').last),
-        values['hash'],
-      );
+      expect(SharedRepository.tokenHash(code.split('.').last), values['hash']);
     });
 
     testWidgets('Inviting someone to a place names it, and warns', (
@@ -614,7 +613,10 @@ void main() {
       picker.onChanged!(b);
       await tester.pump();
       await press(tester, 'Remove from group');
-      expect(writer.sent.single.$3, {'reason': 'Asked to go', 'participant': b});
+      expect(writer.sent.single.$3, {
+        'reason': 'Asked to go',
+        'participant': b,
+      });
     });
 
     testWidgets('Make someone the owner offers only registered members', (
@@ -654,12 +656,8 @@ void main() {
     testWidgets('Revoke sends the invitation, with no reason', (tester) async {
       final writer = await open(
         tester,
-        (x, h, g) => showRevoke(
-          x,
-          h,
-          g,
-          const OpenInvitation('i', today, today, null),
-        ),
+        (x, h, g) =>
+            showRevoke(x, h, g, const OpenInvitation('i', today, today, null)),
       );
       expect(find.byKey(const ValueKey('change-reason')), findsNothing);
       await press(tester, 'Revoke invitation');
@@ -841,27 +839,28 @@ void main() {
       }
     }
 
-    testWidgets('Manage Group: an owner sees theirs, and why they can’t leave', (
-      tester,
-    ) async {
-      final session = PrototypeSession();
-      addTearDown(session.dispose);
-      await tab(tester, session, 'Manage Group');
-      for (final key in const [
-        'lifecycle-transfer',
-        'lifecycle-remove',
-        'lifecycle-archive',
-      ]) {
-        expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
-      }
-      expect(find.byKey(const ValueKey('lifecycle-leave')), findsNothing);
-      expect(find.byKey(const ValueKey('lifecycle-restore')), findsNothing);
-      expect(
-        find.textContaining('As the owner, you can’t leave.'),
-        findsOneWidget,
-      );
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
+    testWidgets(
+      'Manage Group: an owner sees theirs, and why they can’t leave',
+      (tester) async {
+        final session = PrototypeSession();
+        addTearDown(session.dispose);
+        await tab(tester, session, 'Manage Group');
+        for (final key in const [
+          'lifecycle-transfer',
+          'lifecycle-remove',
+          'lifecycle-archive',
+        ]) {
+          expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
+        }
+        expect(find.byKey(const ValueKey('lifecycle-leave')), findsNothing);
+        expect(find.byKey(const ValueKey('lifecycle-restore')), findsNothing);
+        expect(
+          find.textContaining('As the owner, you can’t leave.'),
+          findsOneWidget,
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
 
     testWidgets('Manage Group: a member can only leave', (tester) async {
       final session = PrototypeSession();
@@ -955,7 +954,9 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('History: no raw operation names or timestamps', (tester) async {
+    testWidgets('History: no raw operation names or timestamps', (
+      tester,
+    ) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await tab(tester, session, 'History');
@@ -983,7 +984,9 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('History: a group you left says why it’s empty', (tester) async {
+    testWidgets('History: a group you left says why it’s empty', (
+      tester,
+    ) async {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await tab(tester, session, 'History', index: 3);

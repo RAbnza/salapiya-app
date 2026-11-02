@@ -120,8 +120,7 @@ class NativeNotificationDevice implements NotificationDevice {
       const AndroidNotificationChannel(
         'salapiya_private_reminders',
         'Private reminders',
-        description:
-            'Reminders you turned on. They never change your records.',
+        description: 'Reminders you turned on. They never change your records.',
         importance: Importance.defaultImportance,
       ),
     );

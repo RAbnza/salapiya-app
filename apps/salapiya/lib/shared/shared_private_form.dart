@@ -142,8 +142,7 @@ class _SharedPrivateFormState extends State<SharedPrivateForm>
         values['existing'] ??
         values['existingPayment'] ??
         values['existingCardRefund'];
-    return p.linked ??
-        p.snapshot.current.where((r) => r.id == id).firstOrNull;
+    return p.linked ?? p.snapshot.current.where((r) => r.id == id).firstOrNull;
   }
 
   /// A saved purchase or refund, not a new one, fixes these fields.
@@ -375,19 +374,17 @@ class _SharedPrivateFormState extends State<SharedPrivateForm>
           onChanged: (id) => take(p, id),
         ),
       if (refund && p.linked == null && p.cardRefunds.isNotEmpty)
-        pickInput(
-          'existingCardRefund',
-          'Is this a card refund in Money?',
-          {
-            '': 'No, add it now',
-            for (final r in p.cardRefunds) r.id: recordLine(r, r.amount),
-          },
-          onChanged: (id) => take(p, id),
-        ),
+        pickInput('existingCardRefund', 'Is this a card refund in Money?', {
+          '': 'No, add it now',
+          for (final r in p.cardRefunds) r.id: recordLine(r, r.amount),
+        }, onChanged: (id) => take(p, id)),
       if (locked)
         Padding(
           padding: gapAbove(),
-          child: FactRow('Amount', c.amountsHidden ? 'Amount hidden' : c.amount(funded)),
+          child: FactRow(
+            'Amount',
+            c.amountsHidden ? 'Amount hidden' : c.amount(funded),
+          ),
         )
       else if (p.isClear)
         Padding(
@@ -624,7 +621,13 @@ Future<bool?> showKeepRecord(
     context,
     title: 'Keep my record as it is',
     purpose: ModalPurpose.choice,
-    body: _KeepRecord(key: form, hub: hub, group: g, bill: bill, record: record),
+    body: _KeepRecord(
+      key: form,
+      hub: hub,
+      group: g,
+      bill: bill,
+      record: record,
+    ),
     primary: ModalAction(
       'Keep my record',
       onPressed: () async => await form.currentState?.save() ?? false,
@@ -670,7 +673,9 @@ class _KeepRecordState extends State<_KeepRecord> {
     });
     if (why.isEmpty) return false;
     if (!source.online) {
-      setState(() => problem = 'This needs a connection. What you entered is kept.');
+      setState(
+        () => problem = 'This needs a connection. What you entered is kept.',
+      );
       return false;
     }
     try {

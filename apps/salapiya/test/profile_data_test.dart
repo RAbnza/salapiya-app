@@ -74,10 +74,7 @@ void main() {
         phaseOf(bound('connected', active: true, reachable: false)),
         ConnectionPhase.syncing,
       );
-      expect(
-        phaseOf(bound('connected', busy: true)),
-        ConnectionPhase.syncing,
-      );
+      expect(phaseOf(bound('connected', busy: true)), ConnectionPhase.syncing);
       expect(
         phaseOf(bound('connected', reachable: false, waiting: 2, review: 1)),
         ConnectionPhase.unreachable,
@@ -220,7 +217,10 @@ void main() {
         expect(why, isNotEmpty);
       }
       expect(phaseWords(bound('connected', waiting: 1)).$1, '1 change waiting');
-      expect(phaseWords(bound('connected', waiting: 3)).$1, '3 changes waiting');
+      expect(
+        phaseWords(bound('connected', waiting: 3)).$1,
+        '3 changes waiting',
+      );
     });
   });
 
@@ -281,8 +281,14 @@ void main() {
         manilaWhen('2025-12-31T16:00:00.000Z', today: '2026-01-02'),
         'Yesterday, 12:00 AM',
       );
-      expect(manilaWhen('2026-10-20T04:05:00.000Z', today: today), contains('12:05 PM'));
-      expect(manilaWhen('2026-10-20T04:05:00.000Z', today: today), contains('2026'));
+      expect(
+        manilaWhen('2026-10-20T04:05:00.000Z', today: today),
+        contains('12:05 PM'),
+      );
+      expect(
+        manilaWhen('2026-10-20T04:05:00.000Z', today: today),
+        contains('2026'),
+      );
     });
 
     test('nothing recorded never reads as a time', () {

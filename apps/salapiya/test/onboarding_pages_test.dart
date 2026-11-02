@@ -93,6 +93,7 @@ class FakeActions extends ChangeNotifier implements OnboardingActions {
     note('restore');
     await gate?.future;
   }
+
   @override
   void openConnectionTab(BuildContext context) => note('connection');
 }
@@ -116,9 +117,8 @@ Future<void> show(
       themeAnimationDuration: Duration.zero,
       theme: SalapiyaTheme.build(brightness, platform: platform),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(scale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
       home: page,
@@ -180,14 +180,13 @@ Future<void> throughRestore(WidgetTester tester) async {
 }
 
 /// Whether the row with [key] does anything when pressed.
-bool tappable(WidgetTester tester, String key) =>
-    find
-        .descendant(
-          of: find.byKey(ValueKey(key)),
-          matching: find.byIcon(Icons.chevron_right),
-        )
-        .evaluate()
-        .isNotEmpty;
+bool tappable(WidgetTester tester, String key) => find
+    .descendant(
+      of: find.byKey(ValueKey(key)),
+      matching: find.byIcon(Icons.chevron_right),
+    )
+    .evaluate()
+    .isNotEmpty;
 
 void main() {
   group('every screen fits', () {
@@ -197,7 +196,8 @@ void main() {
         start: const DeviceStart(
           phase: 'empty',
           keptFiles: true,
-          keptName: 'A name long enough to wrap across the row in a narrow '
+          keptName:
+              'A name long enough to wrap across the row in a narrow '
               'window',
         ),
       ),
@@ -212,12 +212,14 @@ void main() {
       'setup': () => ProfileSetupPage(actions: FakeActions()),
       'setup, part-way': () => ProfileSetupPage(
         actions: FakeActions(
-          start: const DeviceStart(phase: 'initializing', pendingName: 'Amihan'),
+          start: const DeviceStart(
+            phase: 'initializing',
+            pendingName: 'Amihan',
+          ),
         ),
       ),
       'opening': () => const OpeningScreen(),
-      'greeting': () =>
-          GreetingPage(actions: FakeActions(), onStart: () {}),
+      'greeting': () => GreetingPage(actions: FakeActions(), onStart: () {}),
       for (final state in DemoFirstRun.values)
         if (state.isGoogle)
           state.label: () => GooglePage(actions: DemoOnboarding(state)),
@@ -444,9 +446,9 @@ void main() {
     ) async {
       final a = on(const ConnectionFacts(signedIn: true));
       await show(tester, const SizedBox());
-      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
-        MaterialPageRoute<void>(builder: (_) => GooglePage(actions: a)),
-      );
+      Navigator.of(
+        tester.element(find.byType(SizedBox).first),
+      ).push(MaterialPageRoute<void>(builder: (_) => GooglePage(actions: a)));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(GooglePage), findsOneWidget);
@@ -488,9 +490,9 @@ void main() {
         ),
       )..gate = gate;
       await show(tester, const SizedBox(), size: const Size(1200, 900));
-      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
-        MaterialPageRoute<void>(builder: (_) => RestorePage(actions: a)),
-      );
+      Navigator.of(
+        tester.element(find.byType(SizedBox).first),
+      ).push(MaterialPageRoute<void>(builder: (_) => RestorePage(actions: a)));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await throughRestore(tester);
@@ -558,10 +560,8 @@ void main() {
         tester,
         ListenableBuilder(
           listenable: settings,
-          builder: (context, _) => FirstRunPreview(
-            initial: DemoFirstRun.setup,
-            settings: settings,
-          ),
+          builder: (context, _) =>
+              FirstRunPreview(initial: DemoFirstRun.setup, settings: settings),
         ),
       );
       await tester.tap(find.text('Dark'));
@@ -684,10 +684,7 @@ void main() {
       tester,
     ) async {
       // 640 tall fits too, in Geist. The test font is wider, and overflows it.
-      for (final (width, height) in const [
-        (360.0, 780.0),
-        (412.0, 915.0),
-      ]) {
+      for (final (width, height) in const [(360.0, 780.0), (412.0, 915.0)]) {
         await show(
           tester,
           GreetingPage(actions: FakeActions(), onStart: () {}),
@@ -813,9 +810,7 @@ void main() {
       await show(
         tester,
         GreetingPage(
-          actions: FakeActions(
-            start: const DeviceStart(phase: 'initializing'),
-          ),
+          actions: FakeActions(start: const DeviceStart(phase: 'initializing')),
           onStart: () => started++,
         ),
       );
@@ -855,7 +850,11 @@ void main() {
   group('Welcome', () {
     testWidgets('offers all three ways on a new device', (tester) async {
       await show(tester, welcome());
-      for (final key in ['welcome-local', 'welcome-google', 'welcome-restore']) {
+      for (final key in [
+        'welcome-local',
+        'welcome-google',
+        'welcome-restore',
+      ]) {
         expect(tappable(tester, key), isTrue, reason: key);
       }
       expect(find.text('Your profile and your privacy'), findsOneWidget);
@@ -952,7 +951,11 @@ void main() {
 
     testWidgets('nothing starts while Google is connecting', (tester) async {
       await show(tester, welcome(f: const ConnectionFacts(busy: true)));
-      for (final key in ['welcome-local', 'welcome-google', 'welcome-restore']) {
+      for (final key in [
+        'welcome-local',
+        'welcome-google',
+        'welcome-restore',
+      ]) {
         expect(tappable(tester, key), isFalse, reason: key);
       }
       expect(find.textContaining('Connecting to Google'), findsOneWidget);
@@ -994,9 +997,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await show(tester, welcome());
       expect(
-        find.bySemanticsLabel(
-          recordsWords(RecordsView.local, desktop: true),
-        ),
+        find.bySemanticsLabel(recordsWords(RecordsView.local, desktop: true)),
         findsOneWidget,
       );
       handle.dispose();

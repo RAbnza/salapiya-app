@@ -171,7 +171,8 @@ class LifeHub extends ChangeNotifier {
   }
 
   bool tabShown(String tab) => (view['tabs'] as Map)[tab] != false;
-  bool calendarShown(String module) => (view['calendar'] as Map)[module] != false;
+  bool calendarShown(String module) =>
+      (view['calendar'] as Map)[module] != false;
 
   late final demoReminders = DemoReminders(this);
 
@@ -262,14 +263,13 @@ class LocalLifeWriter implements LifeWriter {
     Map<String, String> values,
   ) => store.saveDraft(operation, command, values);
   @override
-  Future<void> discardDraft(String operation) =>
-      store.discardDraft(operation);
+  Future<void> discardDraft(String operation) => store.discardDraft(operation);
   @override
   LifeCommand eventCommand(Map<String, String> v, {String? old}) =>
       c.eventCommand(v, old: old);
   @override
-  Future<void> saveEvent(Map<String, String> v, {String? old}) async => c
-      .saveEvent(v, old: c.events.where((e) => e.id == old).firstOrNull);
+  Future<void> saveEvent(Map<String, String> v, {String? old}) async =>
+      c.saveEvent(v, old: c.events.where((e) => e.id == old).firstOrNull);
   @override
   Future<void> change(
     String id,
@@ -362,8 +362,7 @@ class LocalLifeWriter implements LifeWriter {
   String savedLine(String command) =>
       c.intents.any(
         (i) =>
-            i['id'] == command &&
-            ['pending', 'accepted'].contains(i['state']),
+            i['id'] == command && ['pending', 'accepted'].contains(i['state']),
       )
       ? 'Saved on this device. It’s waiting to sync.'
       : 'Saved.';
@@ -404,12 +403,8 @@ LifeSource localLifeSource(BuildContext context, LocalSession session) {
       openTask: (id) => openLifeTask(context, session, id),
       addEntry: (type) => openEntryForm(context, session, type),
       openEntry: (id) => openLifeEntry(context, session, id),
-      editEntry: (id) => openEntryForm(
-        context,
-        session,
-        c.records[id]!.type,
-        id: id,
-      ),
+      editEntry: (id) =>
+          openEntryForm(context, session, c.records[id]!.type, id: id),
       logProgress: (id) => openProgressForm(context, session, id),
       addApplication: () => openApplicationForm(context, session),
       openApplication: (id) => openLifeApplication(context, session, id),
@@ -441,23 +436,20 @@ LifeSource localLifeSource(BuildContext context, LocalSession session) {
 
 /// A row's own page: an event's, a debt's, a statement's, or a recurring
 /// item's. It never opens another copy of the section.
-void openLifeRow(
-  BuildContext context,
-  LocalSession session,
-  LifeRow row,
-) => switch (row.module) {
-  'Personal' => openLifeEvent(context, session, row.sourceId),
-  'Tasks' => openLifeTask(context, session, row.sourceId),
-  'Learning' || 'Books' => openLifeEntry(context, session, row.sourceId),
-  'Career' => openCareerItem(context, session, row.id, row.sourceId),
-  'Debts' => openDebtDue(
-    localDebtsSource(context, session.localFinance, session),
-    row.sourceId,
-  ),
-  'Cards' || 'Recurring' => localMoneySource(
-    context,
-    session.localFinance,
-    session,
-  ).actions.openItem(row.sourceId),
-  _ => openLifeSource(context, session, row.item),
-};
+void openLifeRow(BuildContext context, LocalSession session, LifeRow row) =>
+    switch (row.module) {
+      'Personal' => openLifeEvent(context, session, row.sourceId),
+      'Tasks' => openLifeTask(context, session, row.sourceId),
+      'Learning' || 'Books' => openLifeEntry(context, session, row.sourceId),
+      'Career' => openCareerItem(context, session, row.id, row.sourceId),
+      'Debts' => openDebtDue(
+        localDebtsSource(context, session.localFinance, session),
+        row.sourceId,
+      ),
+      'Cards' || 'Recurring' => localMoneySource(
+        context,
+        session.localFinance,
+        session,
+      ).actions.openItem(row.sourceId),
+      _ => openLifeSource(context, session, row.item),
+    };

@@ -167,9 +167,7 @@ class _GooglePageState extends State<GooglePage> {
                 spacing: Space.sm,
                 runSpacing: Space.sm,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  for (final action in actions) button(action, f),
-                ],
+                children: [for (final action in actions) button(action, f)],
               ),
             ],
           ],

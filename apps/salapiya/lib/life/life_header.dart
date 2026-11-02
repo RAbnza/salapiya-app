@@ -123,7 +123,11 @@ class LifeHeader extends StatelessWidget {
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [title, const SizedBox(height: Space.md), chips],
+                children: [
+                  title,
+                  const SizedBox(height: Space.md),
+                  chips,
+                ],
               );
       },
     );

@@ -163,7 +163,8 @@ class ConnectedRuntime extends ChangeNotifier {
           changed();
         }
       } catch (_) {
-        error = 'Can’t connect right now. Your records are safe on this device.';
+        error =
+            'Can’t connect right now. Your records are safe on this device.';
         changed();
       }
     }
@@ -403,9 +404,7 @@ class ConnectedRuntime extends ChangeNotifier {
     final user = flow!.client.auth.currentUser;
     if (user == null) reject('Finish signing in with Google first.');
     if (binding != null && binding!['remote_owner'] != user.id) {
-      reject(
-        'Sign in with the Google account this profile uses.',
-      );
+      reject('Sign in with the Google account this profile uses.');
     }
     cloud = await boundary();
     final store = local.session?.localFinance.store;
@@ -540,9 +539,7 @@ class ConnectedRuntime extends ChangeNotifier {
       reject('Check the profile on this Google account before switching.');
     }
     if (binding != null && binding!['phase'] != 'staged') {
-      reject(
-        'A connected profile can’t move to another Google account.',
-      );
+      reject('A connected profile can’t move to another Google account.');
     }
   }
 
@@ -565,16 +562,16 @@ class ConnectedRuntime extends ChangeNotifier {
         },
       ) as Map;
       if (result['profile_id'] != state['profile_id']) {
-        reject('Salapiya couldn’t confirm this cancellation. Your records here are safe.');
+        reject(
+          'Salapiya couldn’t confirm this cancellation. Your records here are safe.',
+        );
       }
       if (result['outcome'] == 'published') {
         await local.session!.localFinance.store.db.execute(
           "UPDATE connected_profile SET phase='published' WHERE profile_id=?",
           [state['profile_id']],
         );
-        reject(
-          'Your profile has finished connecting. Sync to carry on.',
-        );
+        reject('Your profile has finished connecting. Sync to carry on.');
       }
       if (result['outcome'] != 'cancelled') {
         reject(
@@ -753,7 +750,9 @@ class ConnectedRuntime extends ChangeNotifier {
       ) as Map;
       if (result['id'] != row['id'] ||
           result['owner_id'] != binding!['remote_owner']) {
-        reject('The service’s answer doesn’t match this profile. Nothing changed.');
+        reject(
+          'The service’s answer doesn’t match this profile. Nothing changed.',
+        );
       }
       final outcome = result['outcome'];
       await store.db.execute(
@@ -784,7 +783,9 @@ class ConnectedRuntime extends ChangeNotifier {
       params: {'command_id': id, 'command_payload': row['payload']},
     ) as Map;
     if (result['id'] != id || result['owner_id'] != binding!['remote_owner']) {
-      reject('The service’s answer doesn’t match this profile. Nothing changed.');
+      reject(
+        'The service’s answer doesn’t match this profile. Nothing changed.',
+      );
     }
     if (result['outcome'] != 'missing') {
       final accepted = result['outcome'] == 'accepted';
@@ -824,9 +825,7 @@ class ConnectedRuntime extends ChangeNotifier {
 
   Future<void> detachForLocalRemoval() async {
     if (busy) {
-      reject(
-        'Wait for the connection to finish, then remove this profile.',
-      );
+      reject('Wait for the connection to finish, then remove this profile.');
     }
     await _downloads?.cancel();
     await _intents?.cancel();

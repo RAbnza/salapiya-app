@@ -80,10 +80,8 @@ List<String> stepWhen(BuildContext context, StepRow r, String timezone) {
 }
 
 /// "Interview · Wed, 4 Nov", for a next step in a table.
-String nextLine(LifeRow r) => detailLine([
-  r.title.split(' · ').first,
-  civilLabel(r.date),
-]);
+String nextLine(LifeRow r) =>
+    detailLine([r.title.split(' · ').first, civilLabel(r.date)]);
 
 /// An agenda row's page: a step's, or the application's for its follow-up date.
 void openCareerItem(
@@ -313,11 +311,7 @@ class _LifeApplicationPageState extends State<LifeApplicationPage>
                           '${-next.days} ${next.days == -1 ? 'day' : 'days'} overdue',
                       ]),
               ),
-              (
-                label: 'Steps',
-                value: '${r.steps.length}',
-                detail: null,
-              ),
+              (label: 'Steps', value: '${r.steps.length}', detail: null),
             ],
           ),
         ],
@@ -584,8 +578,7 @@ class _LifeStepPageState extends State<LifeStepPage> with _PageChanges {
       title: 'Cancel this step?',
       body: ReasonForm(
         key: form,
-        message:
-            'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
+        message: 'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
         label: 'Why you’re cancelling',
         missing: 'Say why you’re cancelling.',
         fieldKey: const ValueKey('life-step-cancel-why'),
@@ -610,12 +603,7 @@ class _LifeStepPageState extends State<LifeStepPage> with _PageChanges {
 
   Widget more(LifeSource source, StepRow r) => menu('life-step-more', [
     if (r.open) ...[
-      (
-        'life-step-done',
-        'Mark as done',
-        Icons.task_alt,
-        () => done(source, r),
-      ),
+      ('life-step-done', 'Mark as done', Icons.task_alt, () => done(source, r)),
       (
         'life-step-cancel',
         'Cancel step',
@@ -665,8 +653,7 @@ class _LifeStepPageState extends State<LifeStepPage> with _PageChanges {
       final app = source.records[record.applicationId];
       final a = source.actions;
       final company = app is ApplicationRecord ? app.company : '';
-      final locked =
-          app is! ApplicationRecord || app.archived || app.terminal;
+      final locked = app is! ApplicationRecord || app.archived || app.terminal;
       final when = LifeWhenCard(
         key: const ValueKey('life-step-when'),
         record: record,

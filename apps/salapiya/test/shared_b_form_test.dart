@@ -203,7 +203,9 @@ void main() {
 
   Future<void> pick(WidgetTester tester, String key, String value) async {
     tester
-        .widget<OptionPicker<String>>(find.byKey(ValueKey('native-select-$key')))
+        .widget<OptionPicker<String>>(
+          find.byKey(ValueKey('native-select-$key')),
+        )
         .onChanged!(value);
     await tester.pump();
   }

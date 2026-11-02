@@ -173,8 +173,7 @@ StartupWords startupWords(
     ),
     StartupProblem.restoreUnfinished => StartupWords(
       title: 'A restore didn’t finish',
-      happened:
-          message != null && message.startsWith('A restore didn’t finish')
+      happened: message != null && message.startsWith('A restore didn’t finish')
           ? message
           : 'Salapiya was restoring a backup here and stopped part-way.',
       safe: 'Your backup file isn’t affected.',

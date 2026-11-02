@@ -56,7 +56,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('goals-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native buffer');
         await nativeEnter(tester, 'amount', '1000.00');
@@ -67,7 +68,8 @@ void main() {
         await localTap(tester, find.byKey(ValueKey('goal-aside-$goal')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Reserve actual cash');
         await debtSelect(tester, 'account', 'Planning wallet');
@@ -78,7 +80,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('budgets-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native zero budget');
         await debtSelect(tester, 'category', 'Food');
@@ -89,7 +92,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('recurring-add')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native recurring bill');
         await nativeEnter(tester, 'amount', '100.00');
@@ -121,7 +125,8 @@ void main() {
         await localTap(tester, find.byKey(const ValueKey('recurring-link')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native partial actual link');
         await nativeEnter(tester, 'amount', '50.00');
@@ -148,7 +153,8 @@ void main() {
         await localTap(tester, find.byKey(ValueKey('date-unlink-${link.id}')));
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', 'Native exact link reversal');
         await nativeEnter(

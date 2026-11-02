@@ -17,17 +17,25 @@ BigInt minor(int n) => BigInt.from(n);
 
 void main() {
   final dinner = bill([
-    revision('r1', 'Dinner', '2026-10-10', '30000', {a: '30000'}, {
-      a: '10000',
-      b: '10000',
-      c: '10000',
-    }, method: 'equal'),
+    revision(
+      'r1',
+      'Dinner',
+      '2026-10-10',
+      '30000',
+      {a: '30000'},
+      {a: '10000', b: '10000', c: '10000'},
+      method: 'equal',
+    ),
   ]);
   final lunch = bill([
-    revision('r2', 'Lunch', '2026-10-12', '20000', {b: '20000'}, {
-      a: '10000',
-      b: '10000',
-    }),
+    revision(
+      'r2',
+      'Lunch',
+      '2026-10-12',
+      '20000',
+      {b: '20000'},
+      {a: '10000', b: '10000'},
+    ),
   ], creator: b);
 
   group('between two people', () {
@@ -100,7 +108,9 @@ void main() {
 
     test('paid ahead counts, on no bill', () {
       final g = sample(
-        settlements: {'p1': payment(a, b, '2500', 'confirmed', advance: '2500')},
+        settlements: {
+          'p1': payment(a, b, '2500', 'confirmed', advance: '2500'),
+        },
       );
       final p = pairBreakdown(g, a, b, a, today)!;
       expect(p.rows.single.change, minor(-2500));
@@ -110,11 +120,14 @@ void main() {
     test('refunds sit inside the bill they belong to', () {
       final refunded = bill(
         [
-          revision('r1', 'Dinner', '2026-10-10', '30000', {a: '30000'}, {
-            a: '10000',
-            b: '10000',
-            c: '10000',
-          }),
+          revision(
+            'r1',
+            'Dinner',
+            '2026-10-10',
+            '30000',
+            {a: '30000'},
+            {a: '10000', b: '10000', c: '10000'},
+          ),
         ],
         refunds: [
           {
@@ -126,37 +139,31 @@ void main() {
           },
         ],
       );
-      final p = pairBreakdown(
-        sample(bills: {'x': refunded}),
-        b,
-        a,
-        b,
-        today,
-      )!;
+      final p = pairBreakdown(sample(bills: {'x': refunded}), b, a, b, today)!;
       expect(p.rows.single.change, minor(7000));
       expect(p.rows.single.detail, 'Refunded');
     });
 
     test('a corrected bill reads from its current version', () {
       final corrected = bill([
-        revision('r1', 'Dinner', '2026-10-10', '30000', {a: '30000'}, {
-          a: '10000',
-          b: '10000',
-          c: '10000',
-        }),
-        revision('r2', 'Dinner', '2026-10-09', '60000', {a: '60000'}, {
-          a: '20000',
-          b: '20000',
-          c: '20000',
-        }),
+        revision(
+          'r1',
+          'Dinner',
+          '2026-10-10',
+          '30000',
+          {a: '30000'},
+          {a: '10000', b: '10000', c: '10000'},
+        ),
+        revision(
+          'r2',
+          'Dinner',
+          '2026-10-09',
+          '60000',
+          {a: '60000'},
+          {a: '20000', b: '20000', c: '20000'},
+        ),
       ]);
-      final p = pairBreakdown(
-        sample(bills: {'x': corrected}),
-        b,
-        a,
-        b,
-        today,
-      )!;
+      final p = pairBreakdown(sample(bills: {'x': corrected}), b, a, b, today)!;
       expect(p.rows.single.date, '2026-10-09');
       expect(p.rows.single.change, minor(20000));
       expect(p.rows.single.detail, 'Corrected');
@@ -205,9 +212,14 @@ void main() {
         bills: {
           'x': dinner,
           'y': bill([
-            revision('r3', 'Rent', '2026-10-01', '90000', {c: '90000'}, {
-              b: '90000',
-            }),
+            revision(
+              'r3',
+              'Rent',
+              '2026-10-01',
+              '90000',
+              {c: '90000'},
+              {b: '90000'},
+            ),
           ], creator: c),
         },
       );
@@ -259,14 +271,24 @@ void main() {
       final g = sample(
         bills: {
           'x': bill([
-            revision('r1', 'One', '2026-10-01', '1000', {a: '1000'}, {
-              b: '1000',
-            }),
+            revision(
+              'r1',
+              'One',
+              '2026-10-01',
+              '1000',
+              {a: '1000'},
+              {b: '1000'},
+            ),
           ]),
           'y': bill([
-            revision('r2', 'Two', '2026-10-02', '1000', {b: '1000'}, {
-              c: '1000',
-            }),
+            revision(
+              'r2',
+              'Two',
+              '2026-10-02',
+              '1000',
+              {b: '1000'},
+              {c: '1000'},
+            ),
           ]),
         },
       );
@@ -282,19 +304,34 @@ void main() {
       final g = sample(
         bills: {
           'x': bill([
-            revision('r1', 'One', '2026-10-01', '1000', {a: '1000'}, {
-              c: '1000',
-            }),
+            revision(
+              'r1',
+              'One',
+              '2026-10-01',
+              '1000',
+              {a: '1000'},
+              {c: '1000'},
+            ),
           ]),
           'y': bill([
-            revision('r2', 'Two', '2026-10-02', '2000', {a: '2000'}, {
-              b: '2000',
-            }),
+            revision(
+              'r2',
+              'Two',
+              '2026-10-02',
+              '2000',
+              {a: '2000'},
+              {b: '2000'},
+            ),
           ]),
           'z': bill([
-            revision('r3', 'Three', '2026-10-03', '2000', {b: '2000'}, {
-              c: '2000',
-            }),
+            revision(
+              'r3',
+              'Three',
+              '2026-10-03',
+              '2000',
+              {b: '2000'},
+              {c: '2000'},
+            ),
           ]),
         },
       );
@@ -354,13 +391,7 @@ void main() {
               'x': {'revision': 'r1', 'amount': '3000'},
             },
           ),
-          'p2': payment(
-            b,
-            c,
-            '500',
-            'confirmed',
-            advance: '500',
-          ),
+          'p2': payment(b, c, '500', 'confirmed', advance: '500'),
           'p3': payment(c, a, '700', 'pending'),
         },
       );
@@ -400,10 +431,7 @@ void main() {
       'kind': 'deleted',
       'active': false,
       'intervals': const [
-        {
-          'joined': '2026-01-01 04:00:00+00',
-          'role': 'member',
-        },
+        {'joined': '2026-01-01 04:00:00+00', 'role': 'member'},
         {
           'left': '2026-02-01 04:00:00+00',
           'reason': 'Provider identity deleted',
@@ -416,10 +444,7 @@ void main() {
       'kind': 'registered',
       'active': false,
       'intervals': const [
-        {
-          'joined': '2026-01-01 04:00:00+00',
-          'role': 'member',
-        },
+        {'joined': '2026-01-01 04:00:00+00', 'role': 'member'},
         {
           'left': '2026-03-01 04:00:00+00',
           'actor': 'marco',
@@ -433,15 +458,10 @@ void main() {
       'kind': 'registered',
       'active': true,
       'intervals': const [
-        {
-          'joined': '2025-12-31 20:00:00+00',
-          'role': 'owner',
-        },
+        {'joined': '2025-12-31 20:00:00+00', 'role': 'owner'},
       ],
     };
-    final g = sample(
-      people: {a: owner, b: manual, c: left, 'd': deleted},
-    );
+    final g = sample(people: {a: owner, b: manual, c: left, 'd': deleted});
 
     test('roles, status and dates on the Asia/Manila calendar', () {
       final rows = sharedMembers(g, a);
@@ -517,26 +537,36 @@ void main() {
       source: source,
     );
     final corrected = bill([
-      revision('r1', 'Dinner', '2026-10-10', '30000', {a: '30000'}, {
-        a: '10000',
-        b: '10000',
-        c: '10000',
-      }),
-      revision('r2', 'Dinner', '2026-10-10', '30000', {a: '30000'}, {
-        a: '10000',
-        b: '10000',
-        c: '10000',
-      }),
+      revision(
+        'r1',
+        'Dinner',
+        '2026-10-10',
+        '30000',
+        {a: '30000'},
+        {a: '10000', b: '10000', c: '10000'},
+      ),
+      revision(
+        'r2',
+        'Dinner',
+        '2026-10-10',
+        '30000',
+        {a: '30000'},
+        {a: '10000', b: '10000', c: '10000'},
+      ),
     ]);
 
     test('a bill the user isn’t on is never offered', () {
       final g = sample(
         bills: {
           'x': bill([
-            revision('r1', 'Theirs', '2026-10-10', '10000', {b: '10000'}, {
-              b: '5000',
-              c: '5000',
-            }),
+            revision(
+              'r1',
+              'Theirs',
+              '2026-10-10',
+              '10000',
+              {b: '10000'},
+              {b: '5000', c: '5000'},
+            ),
           ], creator: b),
         },
       );
@@ -638,7 +668,12 @@ void main() {
             'kind': 'registered',
             'active': false,
           },
-          b: {'name': 'Ben', 'user': 'ben', 'kind': 'registered', 'active': true},
+          b: {
+            'name': 'Ben',
+            'user': 'ben',
+            'kind': 'registered',
+            'active': true,
+          },
           c: {'name': 'Cy', 'user': 'cy', 'kind': 'registered', 'active': true},
         },
         complete: false,
@@ -665,13 +700,7 @@ void main() {
 
     test('what needs the user comes first', () {
       final g = sample(bills: {'x': dinner, 'y': corrected});
-      final rows = privateRows(
-        g,
-        a,
-        [record('y', 'bill')],
-        const [],
-        today,
-      );
+      final rows = privateRows(g, a, [record('y', 'bill')], const [], today);
       expect(rows.first.state, PrivateState.needsLook);
       expect(privateCounts(rows), (needs: 1, added: 1, notAdded: 1));
     });
@@ -739,9 +768,7 @@ void main() {
       expect(myGroupBalance(mine, g.id), isNot(BigInt.zero));
       // Accounts still end on the demo's balances.
       expect(
-        sumMinor(
-          s.accounts.map((a) => s.balance(a.id, through: date)),
-        ),
+        sumMinor(s.accounts.map((a) => s.balance(a.id, through: date))),
         BigInt.from(2930075),
       );
     });

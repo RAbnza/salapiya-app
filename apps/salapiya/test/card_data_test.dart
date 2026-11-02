@@ -282,10 +282,7 @@ void main() {
         statementRows(book.s, card, today).single.status,
         DebtDueStatus.dueToday,
       );
-      expect(
-        statementRows(book.s, card, '2026-10-16').single.overdue,
-        isTrue,
-      );
+      expect(statementRows(book.s, card, '2026-10-16').single.overdue, isTrue);
     });
 
     test('a payment dated after today is not matched yet', () {
@@ -304,10 +301,7 @@ void main() {
         'amount': '100.00',
         'verified': 'true',
       });
-      expect(
-        statementRows(book.s, card, today).single.stillDue,
-        php(100),
-      );
+      expect(statementRows(book.s, card, today).single.stillDue, php(100));
       expect(
         statementRows(book.s, card, '2026-10-20').single.stillDue,
         BigInt.zero,
@@ -432,11 +426,7 @@ void main() {
       book.buy(b, '50.00', date: '2026-09-10');
       book.pay(b, bank, '80.00', date: '2026-10-01');
       final months = cardDebtByMonth(book.s, today, months: 3);
-      expect(months.map((m) => m.$1), [
-        '2026-08-31',
-        '2026-09-30',
-        today,
-      ]);
+      expect(months.map((m) => m.$1), ['2026-08-31', '2026-09-30', today]);
       expect(months.map((m) => m.$2), [BigInt.zero, php(150), php(100)]);
     });
 

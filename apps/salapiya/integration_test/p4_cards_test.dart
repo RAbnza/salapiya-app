@@ -161,7 +161,8 @@ void main() {
         await open();
         await localWait(
           tester,
-          () => find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
+          () =>
+              find.byKey(const ValueKey('native-submit')).evaluate().isNotEmpty,
         );
         await nativeEnter(tester, 'name', name);
         for (final field in fields.entries) {
@@ -208,10 +209,7 @@ void main() {
         statementRecordedBalance(c.snapshot, c.snapshot.revision(statement)),
         BigInt.from(-30000),
       );
-      await localTap(
-        tester,
-        find.byKey(ValueKey('row-statement-$statement')),
-      );
+      await localTap(tester, find.byKey(ValueKey('row-statement-$statement')));
       await record(
         () => menu('statement-more', 'statement-match-activity'),
         'Native confirmed membership',
@@ -248,10 +246,7 @@ void main() {
         () => localTap(tester, find.byKey(const ValueKey('plan-match'))),
         'Native installment application',
         {'amount': '300.00'},
-        choices: {
-          'row': 'first',
-          'payment': 'Native provider allocation',
-        },
+        choices: {'row': 'first', 'payment': 'Native provider allocation'},
         verified: true,
       );
       await back();

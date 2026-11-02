@@ -186,8 +186,10 @@ class LocalReminders implements LifeReminders {
   }
 
   @override
-  Future<void> configure(Map<String, dynamic> changes, {bool request = false}) =>
-      d!.configure(changes, request: request);
+  Future<void> configure(
+    Map<String, dynamic> changes, {
+    bool request = false,
+  }) => d!.configure(changes, request: request);
   @override
   Future<void> choose(ReminderRow row, String mode, String action) =>
       c.reminder(row.item, mode, action);

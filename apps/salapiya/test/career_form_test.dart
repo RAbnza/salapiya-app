@@ -367,7 +367,10 @@ void main() {
       await localSettle(tester);
       await enter(tester, 'position', 'Lead designer');
       await tapReal(tester, submit());
-      await reach(tester, 'Say why you’re changing this, in up to 2,000 characters.');
+      await reach(
+        tester,
+        'Say why you’re changing this, in up to 2,000 characters.',
+      );
       await enter(tester, 'reason', 'Retitled');
       await save(tester, 'Application saved');
       final r = c.records[id]! as ApplicationRecord;
@@ -378,40 +381,44 @@ void main() {
       await close(tester, f, c);
     });
 
-    testWidgets('with Hide amounts on, a salary stays, unseen, through a save', (
-      tester,
-    ) async {
-      sized(tester);
-      final (f, c) = await open(tester);
-      final id = await addApplication(
-        tester,
-        c,
-        more: {'salaryMin': '12345.67', 'salaryMax': '20000'},
-      );
-      await tester.pumpWidget(
-        app(
-          LifeApplicationForm(
-            writer: LocalLifeWriter(c),
-            id: id,
-            hidden: true,
+    testWidgets(
+      'with Hide amounts on, a salary stays, unseen, through a save',
+      (tester) async {
+        sized(tester);
+        final (f, c) = await open(tester);
+        final id = await addApplication(
+          tester,
+          c,
+          more: {'salaryMin': '12345.67', 'salaryMax': '20000'},
+        );
+        await tester.pumpWidget(
+          app(
+            LifeApplicationForm(
+              writer: LocalLifeWriter(c),
+              id: id,
+              hidden: true,
+            ),
           ),
-        ),
-      );
-      await localSettle(tester);
-      await more(tester);
-      expect(find.byKey(const ValueKey('life-field-salaryMin')), findsNothing);
-      expect(find.textContaining('12345'), findsNothing);
-      await enter(tester, 'reason', 'Tidying');
-      await tapReal(tester, submit());
-      await reach(tester, 'Step 2 of 2 · Review');
-      expect(find.textContaining('12,345'), findsNothing);
-      expect(find.text('Amount hidden'), findsOneWidget);
-      await tapReal(tester, submit());
-      await reach(tester, 'Application saved');
-      expect(find.textContaining('12,345'), findsNothing);
-      expect(c.records[id]!.fields['salaryMin'], '12345.67');
-      await close(tester, f, c);
-    });
+        );
+        await localSettle(tester);
+        await more(tester);
+        expect(
+          find.byKey(const ValueKey('life-field-salaryMin')),
+          findsNothing,
+        );
+        expect(find.textContaining('12345'), findsNothing);
+        await enter(tester, 'reason', 'Tidying');
+        await tapReal(tester, submit());
+        await reach(tester, 'Step 2 of 2 · Review');
+        expect(find.textContaining('12,345'), findsNothing);
+        expect(find.text('Amount hidden'), findsOneWidget);
+        await tapReal(tester, submit());
+        await reach(tester, 'Application saved');
+        expect(find.textContaining('12,345'), findsNothing);
+        expect(c.records[id]!.fields['salaryMin'], '12345.67');
+        await close(tester, f, c);
+      },
+    );
   });
 
   group('Change stage', () {
@@ -496,7 +503,10 @@ void main() {
       await enter(tester, 'reason', 'Said yes');
       await tapReal(tester, submit());
       await reach(tester, 'Step 2 of 2 · Review');
-      expect(find.textContaining('This closes the application'), findsOneWidget);
+      expect(
+        find.textContaining('This closes the application'),
+        findsOneWidget,
+      );
       await tapReal(tester, submit());
       await reach(tester, 'Outcome saved');
       final r = c.records[id]! as ApplicationRecord;
@@ -540,9 +550,7 @@ void main() {
           'reason': 'Yes',
         }, old: c.applications.single),
       );
-      await tester.pumpWidget(
-        form(LocalLifeWriter(c), id, StageChange.reopen),
-      );
+      await tester.pumpWidget(form(LocalLifeWriter(c), id, StageChange.reopen));
       await localSettle(tester);
       await enter(tester, 'reason', 'Fell through');
       await tapReal(tester, submit());
@@ -738,19 +746,43 @@ void main() {
     test('each form’s draft has a real title', () {
       final id = newLocalId();
       for (final (key, values, title, form) in [
-        ('new-career', const <String, String>{}, 'Add an application', 'application'),
-        ('new-career-event-$id', const <String, String>{}, 'Add a step', 'step'),
+        (
+          'new-career',
+          const <String, String>{},
+          'Add an application',
+          'application',
+        ),
+        (
+          'new-career-event-$id',
+          const <String, String>{},
+          'Add a step',
+          'step',
+        ),
         ('stage:$id', const <String, String>{}, 'Change stage', 'stage'),
         ('outcome:$id', const <String, String>{}, 'Record outcome', 'outcome'),
-        ('reopen:$id', const <String, String>{}, 'Reopen application', 'reopen'),
-        (id, const {'company': 'x', 'position': 'y'}, 'Edit application', 'edit-application'),
-        (id, const {'kind': 'Interview', 'timezone': 'x'}, 'Edit step', 'edit-step'),
+        (
+          'reopen:$id',
+          const <String, String>{},
+          'Reopen application',
+          'reopen',
+        ),
+        (
+          id,
+          const {'company': 'x', 'position': 'y'},
+          'Edit application',
+          'edit-application',
+        ),
+        (
+          id,
+          const {'kind': 'Interview', 'timezone': 'x'},
+          'Edit step',
+          'edit-step',
+        ),
       ]) {
-        expect(
-          lifeDraftKind('life:$key', values),
-          (title: title, form: form),
-          reason: key,
-        );
+        expect(lifeDraftKind('life:$key', values), (
+          title: title,
+          form: form,
+        ), reason: key);
       }
     });
 

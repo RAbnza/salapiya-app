@@ -102,8 +102,7 @@ List<Widget> moneyNotices(MoneySource source) => [
       '${source.pendingCount} ${source.pendingCount == 1 ? 'change is' : 'changes are'} waiting to sync. Balances here include them, so they can differ from the Overview until they sync.',
       live: true,
     ),
-  if (source.needsReview)
-    SyncReviewNotice(onReview: source.onReview),
+  if (source.needsReview) SyncReviewNotice(onReview: source.onReview),
 ];
 
 /// "How much do I have, where is it, what changed, and does anything need

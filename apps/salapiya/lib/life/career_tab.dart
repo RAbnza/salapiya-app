@@ -298,13 +298,7 @@ class _LifeApplicationListState extends State<LifeApplicationList> {
     return AppTableRow(
       id: r.id,
       onTap: () => open(r.id),
-      spoken: [
-        r.company,
-        r.position,
-        r.standing,
-        applied,
-        ?next,
-      ].join(', '),
+      spoken: [r.company, r.position, r.standing, applied, ?next].join(', '),
       money: const [],
       narrow: AdaptiveRow(
         key: ValueKey('life-application-${r.id}'),

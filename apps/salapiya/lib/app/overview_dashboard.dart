@@ -205,7 +205,12 @@ OverviewSource localOverviewSource(
       for (final item in agenda.take(3))
         nextUpRow(
           context,
-          LifeRow.record(item, (life as DurableLifeController).records, today, life.displayTimezone),
+          LifeRow.record(
+            item,
+            (life as DurableLifeController).records,
+            today,
+            life.displayTimezone,
+          ),
           () => openLifeSource(context, session, item),
         ),
     ],
@@ -261,7 +266,9 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
   ValueChanged<PreviewSource> get open => widget.open;
 
   void _openDue(OverviewSource source, FinancialReminderSource s) =>
-      s.kind == 'Debt due' ? open(PreviewSource.debt) : source.openItem(s.source);
+      s.kind == 'Debt due'
+      ? open(PreviewSource.debt)
+      : source.openItem(s.source);
 
   Future<void> _calendar(BuildContext context, String today) async {
     var picked = today;
@@ -495,8 +502,7 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
           'With waiting changes, available money is ${source.projected == null ? MoneyAmount.unknown.toLowerCase() : amount(source.projected!)}.',
           live: true,
         ),
-      if (source.needsReview)
-        SyncReviewNotice(onReview: source.onReview),
+      if (source.needsReview) SyncReviewNotice(onReview: source.onReview),
     ];
 
     // KPI tiles: value, change and sparkline (hidden with amounts).

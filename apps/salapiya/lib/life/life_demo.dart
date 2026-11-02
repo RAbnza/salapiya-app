@@ -68,9 +68,8 @@ DemoLife _build(String today, bool empty) {
     int daysAgo = 7,
   }) {
     final id = _id(record);
-    final at = DateTime.parse(
-      '${addCivilDays(today, -daysAgo)}T01:00:00Z',
-    ).add(Duration(minutes: serial));
+    final at = DateTime.parse('${addCivilDays(today, -daysAgo)}T01:00:00Z')
+        .add(Duration(minutes: serial));
     final c = LifeCommand(
       id: _id(1000 + serial++),
       owner: _owner,
@@ -304,13 +303,7 @@ DemoLife _build(String today, bool empty) {
     progress: 32,
   );
   book(43, 'Piranesi', 'Susanna Clarke', status: 'Not started', due: 45);
-  book(
-    44,
-    'Noli Me Tangere',
-    'José Rizal',
-    status: 'Not started',
-    total: 480,
-  );
+  book(44, 'Noli Me Tangere', 'José Rizal', status: 'Not started', total: 480);
   book(45, 'The Overstory', 'Richard Powers', status: 'Not started');
   book(
     46,
@@ -418,8 +411,7 @@ DemoLife _build(String today, bool empty) {
       'source': 'A friend at the studio',
       'postingUrl': 'https://example.com/careers/product-designer',
       'technologies': 'Figma, Flutter',
-      'description':
-          'Design and ship the mobile product with a small team. Portfolio review, then two interviews.',
+      'description': 'Design and ship the mobile product with a small team. Portfolio review, then two interviews.',
       'contact': 'Tala Reyes, recruiter · tala@example.com',
       'resume': 'Resume v4',
       'salaryMin': '60000',
@@ -544,13 +536,7 @@ DemoLife _build(String today, bool empty) {
     moved: -60,
   );
   close(56, 'Accepted', -50, stage: 'Accepted');
-  application(
-    57,
-    'Hangin Tech',
-    'Frontend developer',
-    'Applied',
-    applied: -34,
-  );
+  application(57, 'Hangin Tech', 'Frontend developer', 'Applied', applied: -34);
   step(
     77,
     57,
@@ -569,23 +555,9 @@ DemoLife _build(String today, bool empty) {
     moved: -44,
   );
   close(58, 'Withdrawn', -30);
-  application(
-    59,
-    'Daloy Works',
-    'UX lead',
-    'Offer',
-    applied: -70,
-    moved: -55,
-  );
+  application(59, 'Daloy Works', 'UX lead', 'Offer', applied: -70, moved: -55);
   close(59, 'Declined offer', -52);
-  application(
-    60,
-    'Palay Inc.',
-    'Designer',
-    'Offer',
-    applied: -80,
-    moved: -66,
-  );
+  application(60, 'Palay Inc.', 'Designer', 'Offer', applied: -80, moved: -66);
   close(60, 'Expired offer', -56);
   application(
     61,
@@ -612,21 +584,16 @@ DemoLife _build(String today, bool empty) {
     String mime,
     int size, {
     String archived = 'false',
-  }) => save(
-    record,
-    LifeType.document,
-    {
-      'title': name,
-      'application': _id(40),
-      'sourceVersion': '1',
-      'status': 'Linked',
-      'mime': mime,
-      'size': '$size',
-      'checksum': 'a' * 64,
-      'archived': archived,
-    },
-    reason: 'Attached private Career document metadata',
-  );
+  }) => save(record, LifeType.document, {
+    'title': name,
+    'application': _id(40),
+    'sourceVersion': '1',
+    'status': 'Linked',
+    'mime': mime,
+    'size': '$size',
+    'checksum': 'a' * 64,
+    'archived': archived,
+  }, reason: 'Attached private Career document metadata');
   document(80, 'Resume v4.pdf', 'application/pdf', 182400);
   document(81, 'Portfolio cover.png', 'image/png', 920000);
   document(82, 'Old resume.pdf', 'application/pdf', 164000, archived: 'true');
@@ -684,8 +651,7 @@ class DemoLifeWriter implements LifeWriter {
     Map<String, String> values,
   ) async => drafts[operation] = values;
   @override
-  Future<void> discardDraft(String operation) async =>
-      drafts.remove(operation);
+  Future<void> discardDraft(String operation) async => drafts.remove(operation);
   @override
   LifeCommand eventCommand(Map<String, String> v, {String? old}) =>
       lifeCommandFor(
@@ -795,10 +761,8 @@ class DemoLifeWriter implements LifeWriter {
     Map<String, String> v,
     String application, {
     String? old,
-  }) async => applyLifeCommand(
-    life.records,
-    stepCommand(v, application, old: old),
-  );
+  }) async =>
+      applyLifeCommand(life.records, stepCommand(v, application, old: old));
   @override
   LifeCommand progressCommand(Map<String, String> v, String id) {
     final r = record(id);
@@ -817,8 +781,7 @@ class DemoLifeWriter implements LifeWriter {
   @override
   Future<void> keepCurrent(String original) async {}
   @override
-  String savedLine(String command) =>
-      'This is the demo, so nothing was saved.';
+  String savedLine(String command) => 'This is the demo, so nothing was saved.';
   @override
   Future<List<(String, LifeCommand)>> history(String id) async => [
     for (final (at, c) in life.log)
@@ -829,7 +792,8 @@ class DemoLifeWriter implements LifeWriter {
 /// The demo has no encrypted store, so its files are only their details.
 class DemoDocuments implements LifeDocuments {
   const DemoDocuments();
-  static const _nothing = 'Files need the encrypted store, so the demo can’t open or save them.';
+  static const _nothing =
+      'Files need the encrypted store, so the demo can’t open or save them.';
 
   @override
   bool get demo => true;
@@ -1031,10 +995,8 @@ LifeSource demoLifeSource(BuildContext context, PrototypeSession session) {
     'Learning' || 'Books' => openLifeEntry(context, session, id),
     'Career' => openLifeApplication(context, session, id),
     'Debts' => openDebtDue(demoDebtsSource(context, session), id),
-    'Cards' || 'Recurring' => demoMoneySource(
-      context,
-      session,
-    ).actions.openItem(id),
+    'Cards' ||
+    'Recurring' => demoMoneySource(context, session).actions.openItem(id),
     _ => hub.openTab?.call(module),
   };
   return LifeSource(
@@ -1060,12 +1022,8 @@ LifeSource demoLifeSource(BuildContext context, PrototypeSession session) {
       openTask: (id) => openLifeTask(context, session, id),
       addEntry: (type) => openEntryForm(context, session, type),
       openEntry: (id) => openLifeEntry(context, session, id),
-      editEntry: (id) => openEntryForm(
-        context,
-        session,
-        life.records[id]!.type,
-        id: id,
-      ),
+      editEntry: (id) =>
+          openEntryForm(context, session, life.records[id]!.type, id: id),
       logProgress: (id) => openProgressForm(context, session, id),
       addApplication: () => openApplicationForm(context, session),
       openApplication: (id) => openLifeApplication(context, session, id),

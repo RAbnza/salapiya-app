@@ -47,7 +47,8 @@ class ProfileTab extends StatelessWidget {
               trailing: id == choices.chosen
                   ? Icon(Icons.check, color: CraftTheme.of(context).primary)
                   : null,
-              onTap: () => Navigator.of(context, rootNavigator: true).pop((id,)),
+              onTap: () =>
+                  Navigator.of(context, rootNavigator: true).pop((id,)),
             ),
         ],
       ),
@@ -351,9 +352,8 @@ class _Privacy extends StatelessWidget {
       child: Text(
         'Amounts read “Amount hidden” on every screen, and charts are hidden '
         'too, so you can use Salapiya with people around.',
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: c.secondary),
+        style: Theme.of(context).textTheme.bodyMedium
+            ?.copyWith(color: c.secondary),
       ),
     );
   }

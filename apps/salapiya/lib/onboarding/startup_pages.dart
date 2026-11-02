@@ -130,10 +130,7 @@ class StartupFailurePage extends StatelessWidget {
       if (message != null) Text(message!, style: text.bodySmall),
       if (desktop && folder != null) ...[
         if (message != null) const SizedBox(height: Space.xs),
-        SelectableText(
-          'Your profile’s folder: $folder',
-          style: text.bodySmall,
-        ),
+        SelectableText('Your profile’s folder: $folder', style: text.bodySmall),
       ],
     ];
     return WelcomeFrame(

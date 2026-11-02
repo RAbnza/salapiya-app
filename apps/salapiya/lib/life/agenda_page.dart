@@ -113,7 +113,10 @@ enum LifePeriod {
 
 /// What a shareable list shows.
 class LifeListScope {
-  const LifeListScope.week() : period = LifePeriod.week, day = null, late = false;
+  const LifeListScope.week()
+    : period = LifePeriod.week,
+      day = null,
+      late = false;
   const LifeListScope.month()
     : period = LifePeriod.month,
       day = null,

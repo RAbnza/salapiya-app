@@ -214,9 +214,10 @@ void main() {
 
   group('Life', () {
     /// The text of every `lifeReject(...)` in [source].
-    Iterable<String> lifeMessages(String source) => RegExp(
-      r"lifeReject\(\s*'([^']*)'",
-    ).allMatches(source).map((m) => m[1]!);
+    Iterable<String> lifeMessages(String source) =>
+        RegExp(r"lifeReject\(\s*'([^']*)'")
+            .allMatches(source)
+            .map((m) => m[1]!);
     const lifeFiles = [
       'lib/life/life_domain.dart',
       'lib/life/life_controller.dart',
@@ -392,16 +393,17 @@ void main() {
           expect(
             message.contains('Restore a backup'),
             isFalse,
-            reason: 'The rules refuse a restore once a profile exists: $message',
+            reason:
+                'The rules refuse a restore once a profile exists: $message',
           );
         }
       }
     });
 
     test('messages that assume a profile read properly without one', () {
-      final source = File(
-        'lib/connected/connected_runtime.dart',
-      ).readAsStringSync().replaceAll(RegExp(r"'\s+'"), '');
+      final source = File('lib/connected/connected_runtime.dart')
+          .readAsStringSync()
+          .replaceAll(RegExp(r"'\s+'"), '');
       for (final message in noProfileErrors.keys) {
         expect(source, contains(message));
       }
@@ -411,7 +413,8 @@ void main() {
     });
 
     test('the sync rule still starts as the forms expect', () {
-      final store = File('lib/connected/connected_store.dart').readAsStringSync();
+      final store = File('lib/connected/connected_store.dart')
+          .readAsStringSync();
       final forms = File('lib/finance/form_mechanics.dart').readAsStringSync();
       final start = RegExp(r"startsWith\('([^']+)'\)").firstMatch(forms)![1]!;
       expect(store, contains(start));

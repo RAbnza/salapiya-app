@@ -365,14 +365,11 @@ class _Review extends StatelessWidget {
           FactRow('Saved drafts', '${b.drafts}'),
           if (b.connected) ...[
             if (b.email != null) FactRow('Google account', b.email!),
-            FactRow(
-              'After you sign in',
-              switch (b.toCheck) {
-                0 => 'It’s checked against your account',
-                1 => '1 change is checked against your account',
-                final n => '$n changes are checked against your account',
-              },
-            ),
+            FactRow('After you sign in', switch (b.toCheck) {
+              0 => 'It’s checked against your account',
+              1 => '1 change is checked against your account',
+              final n => '$n changes are checked against your account',
+            }),
           ],
           const SizedBox(height: Space.sm),
           const Divider(height: 1),
@@ -382,7 +379,10 @@ class _Review extends StatelessWidget {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: Space.xs),
-          const FactRow('Anything newer', 'What you added after this was saved'),
+          const FactRow(
+            'Anything newer',
+            'What you added after this was saved',
+          ),
           FactRow('Your files', filesLine(b.filesListed)),
           const FactRow('Reminders', 'They start off. Turn them on in Life'),
           const FactRow('Sign-ins', 'Sign in again on this device'),

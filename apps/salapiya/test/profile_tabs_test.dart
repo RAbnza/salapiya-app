@@ -75,7 +75,8 @@ class FakeActions extends DemoProfile {
   @override
   Future<void> send(String id) async => calls.add('send $id');
   @override
-  Future<void> revoke(DeviceRow device) async => calls.add('revoke ${device.id}');
+  Future<void> revoke(DeviceRow device) async =>
+      calls.add('revoke ${device.id}');
   @override
   Future<void> removeProfile() async => calls.add('remove');
   @override
@@ -212,7 +213,9 @@ void main() {
   }
 
   bool enabled(WidgetTester tester, String label) =>
-      tester.widget<AppButton>(find.widgetWithText(AppButton, label)).onPressed !=
+      tester
+          .widget<AppButton>(find.widgetWithText(AppButton, label))
+          .onPressed !=
       null;
 
   group('sweep', () {
@@ -510,7 +513,10 @@ void main() {
       await tester.tap(key('connection-sign-out'));
       await tester.pumpAndSettle();
       expect(find.textContaining('2 changes stay waiting'), findsOneWidget);
-      expect(find.textContaining('records stay on this device'), findsOneWidget);
+      expect(
+        find.textContaining('records stay on this device'),
+        findsOneWidget,
+      );
       expect(actions.calls, isEmpty);
       await tester.tap(find.widgetWithText(AppButton, 'Sign out'));
       await tester.pumpAndSettle();
@@ -725,7 +731,9 @@ void main() {
       expect(find.textContaining('This device signs out too'), findsOneWidget);
     });
 
-    testWidgets('Delete takes a fresh sign-in, then its phrase', (tester) async {
+    testWidgets('Delete takes a fresh sign-in, then its phrase', (
+      tester,
+    ) async {
       final d = demo();
       final actions = fake(d.session, connected);
       await app(tester, page(d.session, d.settings, actions, 'Devices'));
@@ -748,11 +756,7 @@ void main() {
       await tester.tap(key('delete-account'));
       await tester.pumpAndSettle();
       expect(enabled(tester, 'Delete account'), isFalse);
-      await confirmTyped(
-        tester,
-        'DELETE CONNECTED ACCOUNT',
-        'Delete account',
-      );
+      await confirmTyped(tester, 'DELETE CONNECTED ACCOUNT', 'Delete account');
       expect(actions.calls, contains('delete'));
     });
 
@@ -812,13 +816,12 @@ void main() {
       await tester.pump();
       await tester.tap(key('delete-account'));
       await tester.pumpAndSettle();
-      await confirmTyped(
-        tester,
-        'DELETE CONNECTED ACCOUNT',
-        'Delete account',
-      );
+      await confirmTyped(tester, 'DELETE CONNECTED ACCOUNT', 'Delete account');
       expect(actions.calls.where((c) => c == 'delete'), hasLength(1));
-      expect(find.textContaining('couldn’t confirm the deletion'), findsOneWidget);
+      expect(
+        find.textContaining('couldn’t confirm the deletion'),
+        findsOneWidget,
+      );
       expect(find.text('Sign in again'), findsOneWidget);
     });
 
@@ -1058,7 +1061,10 @@ void main() {
         await tester.tap(key('backup-save-file'));
         await localWait(
           tester,
-          () => find.text('Enter the whole recovery secret.').evaluate().isNotEmpty,
+          () => find
+              .text('Enter the whole recovery secret.')
+              .evaluate()
+              .isNotEmpty,
         );
         expect(key('backup-saved'), findsNothing);
       });
@@ -1207,7 +1213,9 @@ void main() {
           await tester.pumpAndSettle();
           await enter(tester, secret);
           await tester.tap(key('backup-choose'));
-          final refused = find.text('This file isn’t a complete Salapiya backup.');
+          final refused = find.text(
+            'This file isn’t a complete Salapiya backup.',
+          );
           await localWait(tester, () => refused.evaluate().isNotEmpty);
         });
       });
@@ -1393,9 +1401,8 @@ void main() {
         runtime.connected
           ..reviewCount = 1
           ..changed();
-        ShellNavigation.of(
-          tester.element(find.byType(ShellSidebar)),
-        ).select(AppDestination.debts);
+        ShellNavigation.of(tester.element(find.byType(ShellSidebar)))
+            .select(AppDestination.debts);
         await tester.pumpAndSettle();
         final review = find.descendant(
           of: find.byType(SyncReviewNotice),

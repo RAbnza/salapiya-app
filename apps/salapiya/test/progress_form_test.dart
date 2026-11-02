@@ -209,7 +209,10 @@ void main() {
       );
       status.onChanged!('Completed');
       await tester.pump();
-      expect(find.byKey(const ValueKey('life-field-completed')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('life-field-completed')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('life-field-rating')), findsOneWidget);
       await close(tester, f, c);
     });
@@ -262,7 +265,10 @@ void main() {
       await enter(tester, 'started', '2026-10-02');
       await enter(tester, 'completed', '2026-10-01');
       await tapReal(tester, submit());
-      await reach(tester, 'The date finished can’t be before the date started.');
+      await reach(
+        tester,
+        'The date finished can’t be before the date started.',
+      );
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('life-field-completed')),
@@ -273,19 +279,28 @@ void main() {
       await close(tester, f, c);
     });
 
-    testWidgets('Edit asks why, and keeps what it doesn’t show', (tester) async {
+    testWidgets('Edit asks why, and keeps what it doesn’t show', (
+      tester,
+    ) async {
       sized(tester);
       final (f, c) = await open(tester);
       final id = await addBook(tester, c);
       await tester.pumpWidget(
         app(
-          LifeEntryForm(writer: LocalLifeWriter(c), type: LifeType.book, id: id),
+          LifeEntryForm(
+            writer: LocalLifeWriter(c),
+            type: LifeType.book,
+            id: id,
+          ),
         ),
       );
       await localSettle(tester);
       await enter(tester, 'title', 'A better title');
       await tapReal(tester, submit());
-      await reach(tester, 'Say why you’re changing this, in up to 2,000 characters.');
+      await reach(
+        tester,
+        'Say why you’re changing this, in up to 2,000 characters.',
+      );
       await enter(tester, 'reason', 'Typo');
       await tapReal(tester, submit());
       await reach(tester, 'Step 2 of 2 · Review');
@@ -321,7 +336,9 @@ void main() {
       final r = c.records[id]! as BookRecord;
       expect(r.progress, 6);
       expect(r.status, 'In progress');
-      final history = await tester.runAsync(() => LocalLifeWriter(c).history(id));
+      final history = await tester.runAsync(
+        () => LocalLifeWriter(c).history(id),
+      );
       expect(history!.last.$2.reason, 'Chapter 3');
       await close(tester, f, c);
     });
@@ -336,7 +353,10 @@ void main() {
       await localSettle(tester);
       expect(find.byKey(const ValueKey('life-field-completed')), findsNothing);
       await enter(tester, 'progress', '10');
-      expect(find.byKey(const ValueKey('life-field-completed')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('life-field-completed')),
+        findsOneWidget,
+      );
       await tapReal(tester, submit());
       await reach(tester, 'Step 2 of 2 · Review');
       await tapReal(tester, submit());
@@ -382,7 +402,9 @@ void main() {
       await reach(tester, 'Progress saved');
       expect(writer.ids, hasLength(2));
       expect(writer.ids.toSet(), hasLength(1));
-      final history = await tester.runAsync(() => LocalLifeWriter(c).history(id));
+      final history = await tester.runAsync(
+        () => LocalLifeWriter(c).history(id),
+      );
       expect(history, hasLength(2));
       expect(c.records[id]!.fields['progress'], '6');
       await close(tester, f, c);
@@ -490,18 +512,18 @@ void main() {
         lifeDraftKind('life:${newLocalId()}', {'total': '2', 'rating': ''}),
         (title: 'Edit book', form: 'edit-entry'),
       );
-      expect(
-        lifeDraftKind('life:${newLocalId()}', {'total': '2'}),
-        (title: 'Edit learning goal', form: 'edit-entry'),
-      );
-      expect(
-        lifeDraftKind('life:progress:${newLocalId()}', const {}),
-        (title: 'Log progress', form: 'progress'),
-      );
-      expect(
-        lifeDraftKind('life:Log progress · Old', const {}),
-        (title: 'Log progress', form: 'progress'),
-      );
+      expect(lifeDraftKind('life:${newLocalId()}', {'total': '2'}), (
+        title: 'Edit learning goal',
+        form: 'edit-entry',
+      ));
+      expect(lifeDraftKind('life:progress:${newLocalId()}', const {}), (
+        title: 'Log progress',
+        form: 'progress',
+      ));
+      expect(lifeDraftKind('life:Log progress · Old', const {}), (
+        title: 'Log progress',
+        form: 'progress',
+      ));
     });
 
     testWidgets('an old Log progress draft opens the new form', (tester) async {
@@ -576,7 +598,11 @@ void main() {
       );
       await tester.pumpWidget(
         app(
-          LifeEntryForm(writer: LocalLifeWriter(c), type: LifeType.book, id: id),
+          LifeEntryForm(
+            writer: LocalLifeWriter(c),
+            type: LifeType.book,
+            id: id,
+          ),
         ),
       );
       await localSettle(tester);

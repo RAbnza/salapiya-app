@@ -59,9 +59,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
         r.values['sharedKey'] == sourceKey &&
         r.values['sharedMode'] == mode,
   )) {
-    reject(
-      'This is already in your Money. Open it to check it.',
-    );
+    reject('This is already in your Money. Open it to check it.');
   }
   if (!['bill', 'payment', 'refund', 'clear', 'unclear'].contains(mode)) {
     reject('Unsupported private group effect.');
@@ -141,9 +139,7 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
           .map((p) => p.amount),
     );
     if (recognizedCardMovement != (mode == 'bill' ? -paid : paid)) {
-      reject(
-        'That doesn’t match your card record. Use its amount.',
-      );
+      reject('That doesn’t match your card record. Use its amount.');
     }
     if (value('card') != card.actionId ||
         old.date != date ||
@@ -176,13 +172,13 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
             old.date != date ||
             old.values['split'] == 'true' ||
             (!cardFunded && old.values['account'] != value('account'))) {
-          reject(
-            'Keep the amount, date and account from your saved purchase.',
-          );
+          reject('Keep the amount, date and account from your saved purchase.');
         }
       } else if (old.values['sharedGroup'] != group ||
           old.values['sharedKey'] != sourceKey) {
-        reject('This record is linked to another bill, so it can’t be used here.');
+        reject(
+          'This record is linked to another bill, so it can’t be used here.',
+        );
       } else if (value('acknowledgeFunding') != 'true' &&
           (old.values['fundingAmount'] != value('fundingAmount') ||
               old.values['account'] != value('account'))) {
@@ -236,7 +232,9 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
           r.values['sharedRevision'] == value('billRevision'),
     );
     if (value('coverage') != (adopted ? 'adopted' : 'clearing')) {
-      reject('This bill’s place in your Money changed. Check it and try again.');
+      reject(
+        'This bill’s place in your Money changed. Check it and try again.',
+      );
     }
     if (adopted) {
       expense(-share);
@@ -259,7 +257,9 @@ LocalPlan planSharedPrivate(LocalSnapshot s, LocalCommand cmd) {
         clearing.values['sharedKey'] != sourceKey ||
         clearing.values['fundingAmount'] != value('fundingAmount') ||
         s.current.any((r) => r.source == clearing.id)) {
-      reject('This was already taken out of your group balance, or it changed.');
+      reject(
+        'This was already taken out of your group balance, or it changed.',
+      );
     }
     final outgoing = clearing.values['direction'] == 'out';
     if (value('sharedAccounting') == '2') {

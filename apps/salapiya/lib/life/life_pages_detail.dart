@@ -13,19 +13,16 @@ import 'life_domain.dart';
 import 'life_hub.dart';
 
 /// An event's page, from anywhere.
-void openLifeEvent(
-  BuildContext context,
-  PrototypeSession session,
-  String id,
-) => openDemoPage<void>(
-  context,
-  LifeEventPage(
-    listenable: session,
-    source: (context) => lifeSource(context, session),
-    id: id,
-  ),
-  'life/event',
-);
+void openLifeEvent(BuildContext context, PrototypeSession session, String id) =>
+    openDemoPage<void>(
+      context,
+      LifeEventPage(
+        listenable: session,
+        source: (context) => lifeSource(context, session),
+        id: id,
+      ),
+      'life/event',
+    );
 
 /// What a person sees for a field's stored value.
 String lifeFieldValue(BuildContext context, String key, String value) {
@@ -95,7 +92,8 @@ class _LifeHistoryCardState extends State<LifeHistoryCard> {
   late Future<List<(String, LifeCommand)>> saved = load();
   int shown = page;
 
-  Future<List<(String, LifeCommand)>> load() => widget.writer.history(widget.id);
+  Future<List<(String, LifeCommand)>> load() =>
+      widget.writer.history(widget.id);
 
   @override
   void didUpdateWidget(LifeHistoryCard old) {
@@ -291,8 +289,7 @@ class _LifeEventPageState extends State<LifeEventPage> {
       title: 'Cancel this event?',
       body: ReasonForm(
         key: form,
-        message:
-            'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
+        message: 'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
         label: 'Why you’re cancelling',
         missing: 'Say why you’re cancelling.',
         fieldKey: const ValueKey('life-cancel-why'),
@@ -322,8 +319,7 @@ class _LifeEventPageState extends State<LifeEventPage> {
             source,
             r,
             title: 'Mark this event as done?',
-            body:
-                'It leaves your calendar and its reminder stops. Its history stays.',
+            body: 'It leaves your calendar and its reminder stops. Its history stays.',
             label: 'Mark as done',
             fields: {'status': 'Completed'},
             reason: 'Completed event',
@@ -366,8 +362,7 @@ class _LifeEventPageState extends State<LifeEventPage> {
             source,
             r,
             title: 'Archive this event?',
-            body:
-                'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
+            body: 'It leaves your calendar and its reminder stops. Its history stays, and you can restore it.',
             label: 'Archive event',
             fields: {'archived': 'true'},
             reason: 'Archived',
@@ -394,7 +389,6 @@ class _LifeEventPageState extends State<LifeEventPage> {
       ),
     );
   }
-
 
   Widget aboutCard(BuildContext context, PersonalRecord r, EventState state) =>
       OverviewCard(
@@ -594,8 +588,7 @@ class LifeRetiredPage extends StatelessWidget {
               ? const EmptyState(
                   icon: Icons.event_available_outlined,
                   title: 'Nothing here yet',
-                  message:
-                      'Events you finish, cancel or archive show here.',
+                  message: 'Events you finish, cancel or archive show here.',
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

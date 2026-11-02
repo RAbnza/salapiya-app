@@ -591,10 +591,8 @@ class HelpTextField extends StatelessWidget {
       keyboardType:
           keyboardType ??
           switch (guarded) {
-            FieldInput.amount ||
-            FieldInput.rating => const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
+            FieldInput.amount || FieldInput.rating =>
+              const TextInputType.numberWithOptions(decimal: true),
             FieldInput.signedAmount => const TextInputType.numberWithOptions(
               decimal: true,
               signed: true,
@@ -1120,9 +1118,8 @@ class _SearchListState extends State<_SearchList> {
               ? Center(
                   child: Text(
                     'Nothing matches',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: c.secondary),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: c.secondary),
                   ),
                 )
               : ListView.builder(

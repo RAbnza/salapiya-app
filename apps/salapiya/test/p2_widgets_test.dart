@@ -90,7 +90,10 @@ void main() {
           // press, and what's waiting still shows.
           expect(find.text('Can’t connect in this build'), findsOneWidget);
           expect(find.textContaining('1\u00A0waiting'), findsOneWidget);
-          expect(find.byKey(const ValueKey('connection-syncNow')), findsNothing);
+          expect(
+            find.byKey(const ValueKey('connection-syncNow')),
+            findsNothing,
+          );
           expect(tester.takeException(), isNull);
         } finally {
           debugDefaultTargetPlatformOverride = null;

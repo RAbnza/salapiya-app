@@ -70,4 +70,3 @@ class AccountMiniCard extends StatelessWidget with PairCard {
     );
   }
 }
-

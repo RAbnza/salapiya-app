@@ -69,9 +69,8 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
         life.device!.navigate = (item) {
           if (!mounted) return;
           if (item == null) {
-            lifeHubOf(session).setProblem(
-              'This changed, so its reminder no longer applies.',
-            );
+            lifeHubOf(session)
+                .setProblem('This changed, so its reminder no longer applies.');
             navigation.select(AppDestination.life, tab: 'Calendar');
             return;
           }
@@ -931,8 +930,7 @@ class _SalapiyaShellState extends State<SalapiyaShell> {
               onGoTo: goTo,
               onStatus: syncDetails,
               onHideAmounts: session.togglePrivacy,
-              onCalendar: () =>
-                  openCalendar(),
+              onCalendar: () => openCalendar(),
             ),
             child: PopScope(
               canPop:

@@ -71,9 +71,8 @@ void main() {
   LifeRecord find_(bool Function(LifeRecord) test) =>
       demoLife(civilToday()).records.values.firstWhere(test);
 
-  String appId(String company) => find_(
-    (r) => r is ApplicationRecord && r.company == company,
-  ).id;
+  String appId(String company) =>
+      find_((r) => r is ApplicationRecord && r.company == company).id;
 
   String stepId(String company, String kind) => find_(
     (r) =>
@@ -387,7 +386,10 @@ void main() {
         find.descendant(of: card, matching: find.byType(ListEnd)),
         findsOneWidget,
       );
-      final first = find.descendant(of: card, matching: find.byType(AdaptiveRow));
+      final first = find.descendant(
+        of: card,
+        matching: find.byType(AdaptiveRow),
+      );
       expect(
         tester.getTopLeft(first.first).dy - tester.getTopLeft(card).dy,
         lessThan(Space.xxxl * 2),
@@ -398,9 +400,10 @@ void main() {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await app(tester, life(session), platform: windows, width: 1200);
-      final tops = find.byType(KpiTile).evaluate().map(
-        (e) => tester.getTopLeft(find.byWidget(e.widget)).dy,
-      );
+      final tops = find
+          .byType(KpiTile)
+          .evaluate()
+          .map((e) => tester.getTopLeft(find.byWidget(e.widget)).dy);
       expect(tops.toSet(), hasLength(1));
     });
 
@@ -410,7 +413,9 @@ void main() {
       await app(tester, life(session), platform: windows, width: 1440);
       final list = find.byKey(const ValueKey('life-career-list'));
       // The column's heading, not a stage's pill.
-      final left = find.descendant(of: list, matching: find.text('Applied')).first;
+      final left = find
+          .descendant(of: list, matching: find.text('Applied'))
+          .first;
       final dates = find.descendant(
         of: list,
         matching: find.textContaining(RegExp(r'^(Not sent|[A-Z][a-z]{2}, )')),
@@ -498,10 +503,7 @@ void main() {
       final session = PrototypeSession();
       addTearDown(session.dispose);
       await app(tester, life(session), platform: windows, width: 1200);
-      expect(
-        find.textContaining('in Sydney'),
-        findsWidgets,
-      );
+      expect(find.textContaining('in Sydney'), findsWidgets);
     });
   });
 
@@ -564,8 +566,14 @@ void main() {
       final s = PrototypeSession();
       addTearDown(s.dispose);
       await show(tester, application(s, 'Bayan Digital'));
-      expect(find.byKey(const ValueKey('life-application-step')), findsOneWidget);
-      expect(find.byKey(const ValueKey('life-application-stage')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('life-application-step')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('life-application-stage')),
+        findsOneWidget,
+      );
       await menu(tester, 'life-application-more');
       for (final key in const ['edit', 'outcome', 'followed', 'archive']) {
         expect(
@@ -574,7 +582,10 @@ void main() {
           reason: key,
         );
       }
-      expect(find.byKey(const ValueKey('life-application-reopen')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('life-application-reopen')),
+        findsNothing,
+      );
     });
 
     testWidgets('a closed application reopens, and takes no steps', (
@@ -584,10 +595,19 @@ void main() {
       addTearDown(s.dispose);
       await show(tester, application(s, 'Hangin Tech'));
       expect(find.byKey(const ValueKey('life-application-step')), findsNothing);
-      expect(find.byKey(const ValueKey('life-application-stage')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('life-application-stage')),
+        findsNothing,
+      );
       await menu(tester, 'life-application-more');
-      expect(find.byKey(const ValueKey('life-application-reopen')), findsOneWidget);
-      expect(find.byKey(const ValueKey('life-application-outcome')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('life-application-reopen')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('life-application-outcome')),
+        findsNothing,
+      );
     });
 
     testWidgets('an archived application only restores', (tester) async {
@@ -596,9 +616,15 @@ void main() {
       await show(tester, application(s, 'Ilog Partners'));
       expect(find.byKey(const ValueKey('life-application-step')), findsNothing);
       await menu(tester, 'life-application-more');
-      expect(find.byKey(const ValueKey('life-application-restore')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('life-application-restore')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('life-application-edit')), findsNothing);
-      expect(find.byKey(const ValueKey('life-application-archive')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('life-application-archive')),
+        findsNothing,
+      );
     });
 
     testWidgets('a saved application doesn’t say Applied', (tester) async {
@@ -670,9 +696,8 @@ void main() {
     ) async {
       final s = PrototypeSession();
       addTearDown(s.dispose);
-      final id = find_(
-        (r) => r is CareerEventRecord && r.status == 'Cancelled',
-      ).id;
+      final id = find_((r) => r is CareerEventRecord && r.status == 'Cancelled')
+          .id;
       await show(tester, stepPage(s, id));
       expect(find.text('Cancelled'), findsWidgets);
       expect(find.text('Done'), findsNothing);
@@ -755,6 +780,5 @@ void main() {
         expect(find.textContaining(text), findsNothing, reason: text);
       }
     });
-
   });
 }

@@ -72,8 +72,7 @@ class _LifeChecksPageState extends State<LifeChecksPage> {
       title: 'Use your edit?',
       body: ReasonForm(
         key: form,
-        message:
-            'Your edit replaces what’s there now. What’s there stays in Edit history.',
+        message: 'Your edit replaces what’s there now. What’s there stays in Edit history.',
         label: 'Why you’re using it',
         missing: 'Say why you’re using it.',
         fieldKey: const ValueKey('life-check-why'),

@@ -142,7 +142,10 @@ class _WelcomePageState extends State<WelcomePage> {
 
   List<Widget> _notices(ConnectionFacts f, DeviceStart held) => [
     if (f.busy)
-      const InlineNotice('Connecting to Google. This takes a moment.', live: true)
+      const InlineNotice(
+        'Connecting to Google. This takes a moment.',
+        live: true,
+      )
     else if (f.signingIn || f.signedIn)
       InlineNotice(
         f.signingIn

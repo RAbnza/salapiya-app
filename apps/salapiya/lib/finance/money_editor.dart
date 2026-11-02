@@ -1121,8 +1121,7 @@ class _MoneyEditorState extends State<MoneyEditor>
                   child: const Text('Edit'),
                 ),
         ),
-        if (unknown)
-          FormEvidence(children: [SelectableText('Change: $id')]),
+        if (unknown) FormEvidence(children: [SelectableText('Change: $id')]),
       ],
     ],
   );

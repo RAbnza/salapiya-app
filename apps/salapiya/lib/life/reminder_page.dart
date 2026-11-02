@@ -27,8 +27,7 @@ String reminderLine(BuildContext context, ReminderRow r, String timezone) {
       'Reminds you ${reminderStamp(context, view.at!, timezone)}',
     ReminderState.snoozed =>
       'Snoozed until ${reminderStamp(context, view.at!, timezone)}',
-    ReminderState.queued =>
-      'Waiting: only the nearest 128 are set at a time',
+    ReminderState.queued => 'Waiting: only the nearest 128 are set at a time',
     ReminderState.passed =>
       'Its time passed. Salapiya can’t tell whether it showed.',
     ReminderState.off => 'In the app only',
@@ -67,11 +66,7 @@ void openLifeReminder(
 
 /// A page's Reminder card: what will happen, and a way to change it.
 class ReminderSummary extends StatelessWidget {
-  const ReminderSummary({
-    super.key,
-    required this.session,
-    required this.item,
-  });
+  const ReminderSummary({super.key, required this.session, required this.item});
   final PrototypeSession session;
   final AgendaItem item;
   @override
@@ -128,7 +123,12 @@ class LifeReminderPage extends StatefulWidget {
 class _LifeReminderPageState extends State<LifeReminderPage> {
   String? problem;
 
-  Future<void> run(LifeReminders r, ReminderRow row, String mode, String action) async {
+  Future<void> run(
+    LifeReminders r,
+    ReminderRow row,
+    String mode,
+    String action,
+  ) async {
     setState(() => problem = null);
     try {
       await r.choose(row, mode, action);
@@ -167,8 +167,7 @@ class _LifeReminderPageState extends State<LifeReminderPage> {
             child: EmptyState(
               icon: Icons.notifications_none,
               title: 'There’s no reminder for this',
-              message:
-                  'It may be finished, or more than 90 days away. Calendar still shows what’s coming up.',
+              message: 'It may be finished, or more than 90 days away. Calendar still shows what’s coming up.',
             ),
           ),
         );
@@ -262,11 +261,7 @@ class _LifeReminderPageState extends State<LifeReminderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: actions,
-            ),
+            Wrap(spacing: Space.sm, runSpacing: Space.sm, children: actions),
             const SizedBox(height: Space.md),
             Text(
               'This only changes the reminder on this device. It never completes anything or marks anything as paid.',
@@ -297,14 +292,7 @@ class _LifeReminderPageState extends State<LifeReminderPage> {
             ],
             DashboardGrid(
               cards: isDesktop(context)
-                  ? [
-                      (
-                        SideStack(top: when, rest: what),
-                        7,
-                        12,
-                      ),
-                      (change, 5, 12),
-                    ]
+                  ? [(SideStack(top: when, rest: what), 7, 12), (change, 5, 12)]
                   : null,
               stacked: [when, change, what],
             ),

@@ -74,9 +74,7 @@ Future<void> releaseRemovalJourney(
     );
     expect(
       tester
-          .widget<AppButton>(
-            find.widgetWithText(AppButton, 'Remove profile'),
-          )
+          .widget<AppButton>(find.widgetWithText(AppButton, 'Remove profile'))
           .onPressed,
       isNull,
     );

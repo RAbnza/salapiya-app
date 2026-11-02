@@ -103,7 +103,9 @@ void main() {
     });
 
     test('an overdue task is late; an event gone by is only past', () {
-      final s = source(byId([task('2026-11-02'), event('2026-11-02', '10:00')]));
+      final s = source(
+        byId([task('2026-11-02'), event('2026-11-02', '10:00')]),
+      );
       final rows = s.rowsThrough(today);
       final t = rows.firstWhere((r) => !r.event);
       final e = rows.firstWhere((r) => r.event);
@@ -167,9 +169,7 @@ void main() {
     });
 
     test('an event in the display timezone has no second time', () {
-      final rows = source(
-        byId([event(today, '09:00')]),
-      ).rowsThrough(today);
+      final rows = source(byId([event(today, '09:00')])).rowsThrough(today);
       expect(rows.single.recordedZone, isNull);
     });
 
@@ -186,9 +186,9 @@ void main() {
       final s = demoSample(today);
       final calendar = source(const {}, snapshot: s);
       final due = overviewDueSources(s, today);
-      final through = due.map((r) => r.date).reduce(
-        (a, b) => a.compareTo(b) > 0 ? a : b,
-      );
+      final through = due
+          .map((r) => r.date)
+          .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
       final rows = calendar.rowsThrough(through);
       expect(rows.map((r) => r.id).toSet(), due.map((r) => r.id).toSet());
       expect(
@@ -203,9 +203,10 @@ void main() {
 
     test('a recurring bill is a money row, added dates only', () {
       final s = demoSample(today);
-      final rows = source(const {}, snapshot: s).rowsThrough(
-        addCivilDays(today, 60),
-      );
+      final rows = source(
+        const {},
+        snapshot: s,
+      ).rowsThrough(addCivilDays(today, 60));
       final bills = rows.where((r) => r.module == 'Recurring');
       expect(bills, isNotEmpty);
       for (final r in bills) {
@@ -267,10 +268,7 @@ void main() {
         event(today, '15:00'),
       ], now: '12:00');
       expect(c.next?.time, '15:00');
-      expect(
-        calendar([event(today, '09:00')], now: '12:00').next,
-        isNull,
-      );
+      expect(calendar([event(today, '09:00')], now: '12:00').next, isNull);
     });
 
     test('a month grid has every day, and marks what is late', () {
@@ -282,14 +280,8 @@ void main() {
     });
 
     test('February and year ends hold', () {
-      expect(
-        calendar(const [], day: '2028-02-29').days,
-        hasLength(29),
-      );
-      expect(
-        calendar(const [], day: '2027-02-10').days,
-        hasLength(28),
-      );
+      expect(calendar(const [], day: '2028-02-29').days, hasLength(29));
+      expect(calendar(const [], day: '2027-02-10').days, hasLength(28));
       expect(
         calendar([task('2027-01-01')], day: '2026-12-31').comingUp,
         hasLength(1),
@@ -343,9 +335,15 @@ void main() {
 
   group('events', () {
     test('each event has one state', () {
-      PersonalRecord r(String date, {String status = 'Scheduled', String a = 'false'}) =>
-          event(date, '', status: status, archived: a) as PersonalRecord;
-      expect(eventState(r('2026-11-05'), today, '2026-11-05'), EventState.scheduled);
+      PersonalRecord r(
+        String date, {
+        String status = 'Scheduled',
+        String a = 'false',
+      }) => event(date, '', status: status, archived: a) as PersonalRecord;
+      expect(
+        eventState(r('2026-11-05'), today, '2026-11-05'),
+        EventState.scheduled,
+      );
       expect(eventState(r(today), today, today), EventState.scheduled);
       expect(eventState(r('2026-11-03'), today, '2026-11-03'), EventState.past);
       expect(
@@ -356,7 +354,10 @@ void main() {
         eventState(r(today, status: 'Cancelled'), today, today),
         EventState.cancelled,
       );
-      expect(eventState(r(today, a: 'true'), today, today), EventState.archived);
+      expect(
+        eventState(r(today, a: 'true'), today, today),
+        EventState.archived,
+      );
     });
 
     test('retired events are the ones off the Calendar, newest first', () {
@@ -656,14 +657,8 @@ void main() {
     });
 
     test('nearest first, never oldest first', () {
-      final soon = row(
-        ReminderState.scheduled,
-        at: DateTime.utc(2026, 11, 5),
-      );
-      final later = row(
-        ReminderState.scheduled,
-        at: DateTime.utc(2026, 12, 5),
-      );
+      final soon = row(ReminderState.scheduled, at: DateTime.utc(2026, 11, 5));
+      final later = row(ReminderState.scheduled, at: DateTime.utc(2026, 12, 5));
       final gone = row(ReminderState.passed);
       final off = row(ReminderState.off);
       // Off today, so it sits before what's set for next month.
