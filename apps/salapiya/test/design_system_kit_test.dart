@@ -781,6 +781,75 @@ void main() {
     });
   });
 
+  group('Charts', () {
+    testWidgets('axis labels never overlap or leave the chart at 200% text', (
+      tester,
+    ) async {
+      const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Today'];
+      for (final scale in [1.0, 2.0]) {
+        tester.view.physicalSize = const Size(360, 400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SalapiyaTheme.build(
+              Brightness.light,
+              platform: TargetPlatform.android,
+            ),
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: const Size(360, 400),
+                textScaler: TextScaler.linear(scale),
+              ),
+              child: Scaffold(
+                body: Padding(
+                  padding: const EdgeInsets.all(Space.lg),
+                  child: OverviewLineChart(
+                    key: const ValueKey('chart'),
+                    lines: [
+                      (
+                        values: [
+                          for (var i = 0; i < months.length; i++)
+                            BigInt.from(i * 100),
+                        ],
+                        color: Colors.teal,
+                        dashed: false,
+                        fill: false,
+                      ),
+                    ],
+                    label: (i) => months[i],
+                    tooltip: (_, i) => months[i],
+                    semanticsLabel: 'Chart',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        // fl_chart fits the edge labels after measuring them, a frame later.
+        await tester.pumpAndSettle();
+        final chart = tester.getRect(find.byKey(const ValueKey('chart')));
+        final shown = [
+          for (final m in months)
+            if (find.text(m).evaluate().isNotEmpty) tester.getRect(find.text(m)),
+        ]..sort((a, b) => a.left.compareTo(b.left));
+        // The latest point always keeps its label.
+        expect(find.text('Today'), findsOneWidget, reason: '${scale}x');
+        // A label keeps its full line height (bodySmall, 16 at 100%), so
+        // large text isn't cut at the bottom.
+        for (final r in shown) {
+          expect(r.left, greaterThanOrEqualTo(chart.left - 0.5));
+          expect(r.right, lessThanOrEqualTo(chart.right + 0.5));
+          expect(r.height, greaterThanOrEqualTo(Space.lg * scale - 0.5));
+          expect(r.bottom, lessThanOrEqualTo(chart.bottom + 0.5));
+        }
+        for (var i = 1; i < shown.length; i++) {
+          expect(shown[i].left, greaterThan(shown[i - 1].right));
+        }
+      }
+    });
+  });
+
   group('Component gallery', () {
     for (final size in const [Size(1400, 900), Size(400, 800)]) {
       testWidgets('builds every section at ${size.width.toInt()} wide', (

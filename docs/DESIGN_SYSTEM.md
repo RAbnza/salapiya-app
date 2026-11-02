@@ -16,8 +16,7 @@ The pre-redesign design system, including its research and history, is archived 
 6. [Form help pattern](#6-form-help-pattern)
 7. [Wording glossary](#7-wording-glossary)
 8. [Dashboard data inventory](#8-dashboard-data-inventory)
-9. [Redesign roadmap (temporary)](#9-redesign-roadmap-temporary)
-10. [Decision log](#10-decision-log)
+9. [Decision log](#9-decision-log)
 
 ## 1. Design principles
 
@@ -200,7 +199,7 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
 
 ### Overview dashboard (Chat 6)
 
-`lib/app/overview_dashboard.dart` (layout, tabs and sources), `overview_cards.dart` (cards), `overview_controls.dart` (compact controls and tiles), `overview_charts.dart` (charts), `overview_data.dart` (display-only derivations) and `overview_demo.dart` (the demo sample); tested in `test/overview_dashboard_test.dart`. Goal: within five seconds, where your money stands, what is due and what changed. Owner review 1 (2026-10-30) reworked it after the owner's reference dashboards: compact sizes, KPI tiles with sparklines, mixed card widths, more widget types and tabs.
+`lib/app/overview_dashboard.dart` (layout, tabs and sources), `overview_cards.dart` (cards), `overview_controls.dart` (compact controls and tiles), `kit/charts.dart` (charts, moved to the kit in Chat 7), `overview_data.dart` (display-only derivations) and `overview_demo.dart` (the demo sample); tested in `test/overview_dashboard_test.dart`. Goal: within five seconds, where your money stands, what is due and what changed. Owner review 1 (2026-10-30) reworked it after the owner's reference dashboards: compact sizes, KPI tiles with sparklines, mixed card widths, more widget types and tabs.
 
 - **Header.**
   - Windows: a `PageHeader` with "Overview" and the long date ("Friday, 30 October 2026"). From 1104 wide the quick actions sit on the same row, right-aligned so they end at the content's right edge (the cards' and tab row's edge), centered on the title; they wrap from the end if needed. Narrower, they go under it.
@@ -219,14 +218,14 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
     - Calendar: the calendar, Overdue on top and the day filter. Summary shows 4 rows per group before "Show all N"; the Debts & Dues tab shows 6. Overdue days are tinted rose as well as marked with the icon.
     - Calendar or List is chosen from a settings icon (`AppIconButton`, tooltip "Layout: ‹current›") in the card's top-right corner, which opens a menu with both (the current one checked). This week | This month stays a segmented control.
     - List (owner review 2, for sharing a screenshot): "This month · 1–31 Oct · as of Fri, 30 Oct", the totals plus "Total due" when something is overdue, then every item of the period in one table (Due date with "N days overdue", Item, Type, Status, Amount), sorted by date, with no row limit. Narrow cards show the same items as rows.
-  - **Recent activity** (5 rows) beside **At a glance**; then **Next up in Life** and **Shared Expenses**.
+  - **Recent activity** (5 rows, closing with "N more in Activity", the count Money's Activity holds; Chat 17) beside **At a glance**; then **Next up in Life** and **Shared Expenses**.
 - **Spending:**
   - **Spending by category:** a donut (top five and "Other") with "Top category" in the hole, and a legend of each category's share and exact amount. Net-negative categories are left out of the shares.
     - Legend rows: the swatch and name are vertically centered beside the share and amount; the share sits over the amount, or beside it on one line when the legend is wide. Only under 192 × the text scale does the amount take its own line.
     - Hovering (Windows) or tapping (Android) a section selects it: it grows 4 outward, the hole shows its name, share and amount, and its legend row is highlighted. Legend rows select their section the same way (hover, tap, or Enter by keyboard). Leaving the chart or tapping its hole clears it.
   - **Budgets:** a half-circle gauge of the total used across budgets with a limit (warning tone when over), beside each budget's slim bar and line ("45.13% used", "₱X over", zero-limit). An empty state when there are none.
-  - **Largest expenses this month:** the five largest, as a table.
-- **Debts & Dues:** Due and overdue beside **What you owe over time** (filled line, then a stat strip: Today, Since end of ‹month› with Paid down / Added, Highest; then "By debt": each debt with what you owe on it and a slim bar of its share); then **Debt payoff** as a table: name and pill, a bar with one step per scheduled payment (a continuous bar above 24), the progress line, and what you owe.
+  - **Largest expenses this month:** the five largest, as a table, closing with "N more expenses in Activity" (Chat 17).
+- **Debts & Dues:** Due and overdue beside **What you owe over time** (filled line, then a stat strip: Today, Since end of ‹month› with Paid down / Added, Highest; then "By debt": each debt with what you owe on it and a slim bar of its share); then **Debt payoff** as a table: the name with its pill on the same line (under the name only when both don't fit; Chat 17), a bar with one step per scheduled payment (a continuous bar above 24), the progress line, and what you owe.
 - **Accounts & Activity:** an account card per active account (type icon, balance, 30-day sparkline, "Last 30 days"), a Card debt card ("Available credit ₱X, not money you have"), then **Recent activity** (10 rows).
 - **Uneven rows:** a card can center its content in the height its grid row gives it (`OverviewCard(centered: true)`): the header stays at the top and the space left is split above and below the content. The Spending tab's category and budgets cards use it, so whichever is shorter doesn't leave a gap at its bottom.
 - **"Show values"** sits 16 below the figures above it.
@@ -234,10 +233,10 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
 - **Sizes (dashboard only):** card titles `titleSmall`, captions `bodySmall`; KPI and chart totals `MoneySize.tile`; card actions are small links (`CardLink`, `labelMedium` in `primary` with a chevron); segmented controls (`MiniSegmented`) and quick-action chips look 32 tall. On Android every one of them keeps a 48 × 48 hit area (`TouchArea` adds transparent space around it). The rest of the app keeps its sizes.
 - **States:**
   - An incomplete download shows "Not available yet" in every money value, list and chart; changes and sparklines are hidden.
-  - Hidden amounts hide charts, the donut and every change line and sparkline ("Amounts hidden"); other values show "Amount hidden".
+  - Hidden amounts hide charts, the donut and every change line and sparkline ("Amounts hidden"); other values show "Amount hidden". At a glance leaves the amounts out of its sentences ("1 payment is overdue.") rather than say "Amount hidden" inside one (Chat 17).
   - Each card has its own empty state.
 - **Dates:** "Today" is `civilToday()` (Asia/Manila), with `debtDueStatus` for every row. "This week" is Monday to Sunday; "This month" is the calendar month. Period rows start today; anything earlier is only under Overdue. "Last month" covers the same days, stopping at its own last day.
-- **Changes** (`ChangeLine`): an arrow and the change in whole basis points of the earlier value, shown with one decimal and rounded toward zero ("↑ 4.2%"), then what it compares with. Rises in available money and income use the success tone; rises in spending and what you owe use warning; no change is neutral; an earlier zero shows "New". Screen readers hear "Up 4.2% vs 1–28 Sep".
+- **Changes** (`ChangeLine`): an arrow and the change in whole basis points of the earlier value, shown with one decimal and rounded toward zero ("↑ 4.2%"), then what it compares with. Rises in available money and income use the success tone; rises in spending and what you owe use warning; no change is neutral; an earlier zero shows "New", and zero then and zero now is no change ("– 0.0%"; Chat 17). Screen readers hear "Up 4.2% vs 1–28 Sep".
 - **Snapshots:** money values, charts and sparklines use accepted history. Dues and debt progress use the Debts screen's records, which include waiting work.
 - **Layout** (`DashboardGrid`, a 12-column grid by content width; at 150% text the width counts as two-thirds):
   - From 1104: tiles 3 columns each; hero 8 + dues 4; Recent activity 8 + At a glance 4; Life 6 + Shared 6; category 5 + budgets 7; dues 6 + owed 6; account cards 3 each; tables full width.
@@ -255,8 +254,8 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
 - **Tabs** (`AppTabs`): Summary · Schedule · Payments · History. They also show in the sidebar, the rail flyout and Go to, and take part in back and forward.
 - **Notices**, under the tabs, only when they apply: first download not finished; changes waiting to sync (Debts include them, so totals can differ from the Overview until they sync); sync needs review.
 - **Summary:**
-  - **KPI tiles:** What you owe (the one accent, with the change since last month end and a sparkline), Overdue ("N payments · oldest N days"), Next payment (amount, then the debt, date and "in N days"; same-day payments are summed) and Due this month.
-  - **Your debts** (8): every debt, most urgent first, then a finished schedule with money still owed, then Settled and Closed. A filter (All, Overdue, Upcoming, No schedule, Paid off; a debt is under exactly one besides All). Each row: name and lender, pill, `SegmentBar`, the progress line, the next payment, what you owe and a "Log payment" link.
+  - **KPI tiles:** What you owe (the one accent, with the change since last month end and a sparkline), Overdue ("N payments · oldest N days"), Next payment (amount, then the debt, date and "in N days"; "None" when nothing is scheduled, never ₱0.00 (Chat 17); same-day payments are summed) and Due this month.
+  - **Your debts** (8): every debt, most urgent first, then a finished schedule with money still owed, then Settled and Closed. A filter (All, Overdue, Upcoming, No schedule, Paid off; a debt is under exactly one besides All). Each row: the name with its pill on the same line (under the name only when both don't fit; Chat 17), the lender, `SegmentBar`, the progress line, the next payment, what you owe and a "Log payment" link.
   - **Due next** (4): overdue, then the next 5 rows, debts only, each with "Log payment". It closes with "N more on Schedule" or "That's everything".
   - **What you owe over time** (`OwedCard`, 7) beside **Needs your input** (5): set a schedule, check a varied amount, break down a payment. Hidden when there is nothing to do; the chart then takes the row.
 - **Schedule:** **Due and overdue**, the Overview's card. Its corner menu picks Calendar or List, All dues or Debts only, and "Open as a page". Calendar sits at 7 beside **Upcoming by month** at 5; List takes the full width with the chart under it.
@@ -280,7 +279,7 @@ Approved 2026-10-30 and built in Chat 15b. Android gets the title bar's features
 - **Notices**, under the tabs, only when they apply: first download not finished; changes waiting to sync (balances here include them, so they can differ from the Overview until they sync); sync needs review.
 - **Balances include waiting changes,** as Debts does: something just logged moves the balance at once.
 - **Accounts:**
-  - **KPI tiles:** Available money (the one accent, with the change since last month end and a 30-day sparkline), Money in, Money out (each against the same days of last month) and Due this week ("N due · M overdue", opening Debts › Schedule). Money in and out are cash movements, so a transfer between accounts counts only its fee, card purchases aren't counted and opening balances aren't movement. Together they explain the balance's change, which is why they differ from the Overview's Income and Spending.
+  - **KPI tiles:** Available money (the one accent, with the change since last month end and a 30-day sparkline), Money in, Money out (each against the same days of last month) and Due this week (the Overview's figure, overdue left out; "N due · M overdue" counts both; Chat 17), opening Debts › Schedule). Money in and out are cash movements, so a transfer between accounts counts only its fee, card purchases aren't counted and opening balances aren't movement. Together they explain the balance's change, which is why they differ from the Overview's Income and Spending.
   - **Where your money is** (8, or 12 with nothing needing attention): a table of Account, Share, This month and Balance, largest first, closing with a total that adds up: Archived accounts (when they hold money), Available money, then Card debt, which isn't counted. Active | Archived shows when an account is archived. `CardLink` Add account; a corner menu has Categories, Saved drafts and Imported history.
   - **Needs your attention** (4): accounts below zero, each account's newest balance check if it's unresolved, and saved drafts, each row going where it's handled. Hidden when there's nothing.
   - **Balance over time** (7) beside **Recent activity** (5, six rows, "See all" switches tab).
@@ -422,7 +421,7 @@ Five-second questions. People: who's in this group, and what can each of them do
 Five-second question: what's coming up, what's today, and is anything late?
 
 - **`LifeHub`:** one per session (`lifeHubOf`), because the shell keys the section's screen on its tab. It holds the chosen day, the month on show, Calendar or Agenda, the Show filter and the search. The title bar's calendar, Android's date sheet and the Android pill all land on it.
-- **Header.** Windows: a `PageHeader`, "As of ‹long date› · N things this week", with Add task and Add event as chips. Android: the 48-tall date row with a pill ("N overdue", else "N today"), no action buttons.
+- **Header.** Windows: a `PageHeader`, "As of ‹long date› · N things this week", with Add task and Add event as chips. Android: the 48-tall date row with a pill ("N overdue", else "N today"), no action buttons. During an unfinished download the Calendar's tiles read "Not available yet", so its caption drops the count and the pill hides (Chat 17).
 - **Tabs** (`AppTabs`): the shell's list. A tab hidden in Preferences while it's open goes back to the Calendar.
 - **Notices,** under the tabs, only when they apply: first download not finished (for Life's records, and for money rows); changes waiting to sync, including that a reminder can still go off for something already logged until they sync; Life couldn't refresh.
 - **Calendar:**
@@ -612,7 +611,7 @@ Five-second question: where do my applications stand, and what's my next step?
 
 ### Section screen standard (the Overview's quality bar)
 
-Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section chat from Chat 7 on. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
+Approved by the owner on 2026-10-30. The Overview (above) is the reference for every section screen. A section keeps its own content and features, chosen to answer its own questions, but builds them in the same design language, at the same level of finish. Don't copy Overview cards one for one. Pick the widgets that suit the section, and build them the same way.
 
 - **Start from the user's question.** Write down the section's five-second question, e.g. "what do I owe and what's next?" for Debts. The first tab, or the top of the screen, answers it. Detail goes in the other tabs.
 - **Page anatomy.**
@@ -633,7 +632,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - **KPI tiles** (`KpiTile`): icon badge, label, a `MoneySize.tile` value, a `ChangeLine`, a `Sparkline` and a caption. Tiles in a set share a label height, so their values line up.
 - **Data display:**
   - **Tables:** shown as columns at 528 × the text scale and wider, and as rows below that. The amount column has one measured width (`moneyColumnWidth`), so every column starts at the same x on every row. Headers use `labelMedium` in `secondary`, with hairline dividers.
-  - **Charts:** use the `overview_charts.dart` wrappers and follow the §5 chart rules.
+  - **Charts:** use the `kit/charts.dart` wrappers and follow the §5 chart rules.
     - Put a `StatStrip` under a chart when it adds meaning.
     - "Show values" sits 16 below the content above it.
     - An interactive chart (hover or tap to select) shows the same detail elsewhere too, such as in its legend, by keyboard and to screen readers.
@@ -646,7 +645,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
     - Controls look about one step smaller than today's 48 on Android: buttons and segmented controls around 40, fields as tight as their label and helper text allow.
     - Spacing between fields and groups tightens.
     - **Readability floor:** typed values and body text never go below `bodyMedium` (14 on Android, 13 on Windows). Labels, helper and error text never go below 12. Errors and help (§6) stay fully visible.
-    - **Rollout:** the first section chat that redesigns a form applies this through the theme and kit, shows the owner a sample form before rolling it out, then records the metrics in §3 and §5.
+    - **Metrics:** §3's compact form scale (`CompactForm`), approved on a sample form in Chat 7; every redesigned form uses it.
   - **Android:** every control keeps a 48 × 48 hit area (`TouchArea`).
   - **Large text:** nothing is truncated at 200% text. Controls scroll sideways or wrap rather than shrink their text.
 - **Shareable views:** when users show a list to other people (dues, balances owed, statements, a group's bills), offer a List layout. It has a period heading with "as of ‹date›", the totals, and every item in one table with no row limit, so one screenshot says it all.
@@ -658,7 +657,7 @@ Approved by the owner on 2026-10-30. The Overview (above) is the reference for e
   - **Demo sample test:** the sample replays on week, month and year edges.
 - **Reuse:**
   - **Where the parts live:** the shared ones are in the kit (§5 Dashboard kit). `DuesCard`, `DuesList`, `DueCalendar`, `DebtProgressCard`, `OwedCard` and `ActivityCard` stay in `lib/app/overview_cards.dart` because they use finance types. The donut, gauge and account cards stay in `lib/app` until another section needs them.
-  - **Moving more to the kit:** the first section chat that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
+  - **Moving more to the kit:** the first screen that needs one moves it into `lib/design_system/kit/` without changing its look, then documents it in §5.
 - **Lessons from the Overview reviews** (check them before showing the owner):
   - empty space beside a taller card;
   - columns that shift with each row's amount;
@@ -721,7 +720,7 @@ Status is always shown with an icon and a label too, never by color alone.
 - **Chart series** (`chartSeries`, in order): violet `#6546A3` / `#CABDFA`, teal `#266C80` / `#79C4D2`, plum `#9A4C72` / `#E6BCD4`, ochre `#80631B` / `#E4C572`, blue `#395EB2` / `#A9BCFF`, neutral `#59616F` / `#B9B9C6` (light / dark).
 - **Windows title bar:** `titleBar` (= `canvas`) with a `divider` hairline below, `text` glyphs, and `secondary` glyphs while the window is inactive. Minimize and maximize hover with `windowControlHover` (`text` at 6%) and press with `windowControlPressed` (`text` at 4%), Windows 11's subtle fills. Close hovers with `windowCloseHover` `#C42B1C` and a white glyph and presses with `windowClosePressed` (that red at 90%), following the OS convention. In high contrast all three fill with `text` and invert the glyph.
 - **High contrast** (`CraftTheme(highContrast: true)`): `secondary`, `border` and `divider` become `text`, and tinted status surfaces become `surface`. Effects are already off in high contrast.
-- **Legacy:** `Palette` (`mint`, `peach`, `lilac`, `ink`, `porcelain`, `midnight`, `violet`, `lavender`) and the craft accents (`warm`, `plum`, `blue`, `focalStart`/`focalEnd`, `latticeEdge`) remain only so existing screens compile. Section chats replace their uses with the roles above; new code must not use them.
+- **Legacy:** `Palette` (`mint`, `peach`, `lilac`, `ink`, `porcelain`, `midnight`, `violet`, `lavender`) and the craft accents (`warm`, `plum`, `blue`, `focalStart`/`focalEnd`, `latticeEdge`) remain only for the demo build and the gallery. Real-use code uses none of them, and `consistency_sweep_test` checks it; new code must not use them.
 
 ### Type scale (Geist)
 
@@ -771,7 +770,7 @@ Windows uses a compact scale, one step below Android, so the whole app matches t
   - `Density.of(context)` is true on pointer platforms. It reads the theme's platform, as `isDesktop` does.
   - `SalapiyaTheme.build(..., platform:)` builds the scale for a platform; it defaults to the running one.
   - Context-aware tokens: `Radii.controlOf`/`cardOf`/`overlayOf(context)`, `Space.cardPaddingOf`/`cardGapOf(context)` and `ListRow.leadingSize(context)`. `FocusRing` and `Pressable` default to `Radii.controlOf(context)`.
-  - Screens built from the text theme, the stock Material themes and the kit shrink at once. Section chats replace the remaining hard-coded literals (about 70 font sizes, plus radii) as they redesign each screen.
+  - Screens built from the text theme, the stock Material themes and the kit shrink at once. Real-use code has no hard-coded size, spacing, radius or color left (§4's Chat 16 recount), and `consistency_sweep_test` keeps it that way.
   - The sidebar keeps its own approved metrics: its rail buttons stay 40 (`navRailButton`).
 - **Rule for all new Windows UI:** take sizes from this table, never from the Android column.
 
@@ -895,7 +894,7 @@ These rules are checkable. "Token" means a named value from [§3](#3-tokens). Th
 - **Form column:** max width 640 for a single column, 760 for review layouts.
 - **Dialogs:** 24 padding, 12 from title to content, 24 above the actions. Actions are right-aligned on Windows (primary rightmost). On Android they stack full width when they don't fit on one row.
 
-### Review checklist (each section chat)
+### Review checklist (every screen change)
 
 1. Spacing grep is clean on the changed files.
 2. Card gaps are equal in both axes, and row heights are equal.
@@ -930,7 +929,7 @@ The kit lives in `apps/salapiya/lib/design_system/kit/`; screens import `kit/kit
 | Destructive | Removing records; only as a modal's confirming action or after one | Filled, `error` fill |
 | Icon | Compact actions with an obvious icon; `standard`, `filled` or `outlined` | `IconButton`; the tooltip is required |
 
-- **Metrics:** label 14 / 20 semibold, height 40 on Windows and 48 on Android, control radius.
+- **Metrics:** label 14 / 20 semibold (13 / 18 on Windows), height 32 on Windows and 48 on Android (§3), control radius. In a compact form an Android button looks 40 with a 48 hit area.
 - **Busy:** a spinner replaces the icon and the button disables. A button that can be busy has an icon, so its width doesn't change.
 - **Disabled with reason:** pass `disabledReason`. It shows as a tooltip on hover and is read by screen readers.
 
@@ -1034,7 +1033,7 @@ Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Wi
 - Underline tabs that switch between views of one page: `labelLarge` text, `secondary` (medium weight) or `primary` (semibold) when selected, with a 2 px `primary` underline on the row's `divider` hairline. 12 between tabs.
 - Each tab is `hitTarget` tall (32 on Windows, 48 on Android). The row scrolls sideways when it doesn't fit; text never shrinks.
 - Screen readers hear each tab as a selected or unselected button in a group. Each tab's key is `ValueKey(value)`.
-- First used by the Overview. Section screens adopt it in their own chats.
+- Every section and Profile and settings use it.
 
 ### List rows (`ListRow`, `ListGroup`)
 
@@ -1134,6 +1133,7 @@ Checkboxes are the stock widget, themed. Switches are `AppSwitch`: 20 tall on Wi
 - **Rules:**
   - Charts never animate (`duration: Duration.zero`).
   - No money appears on an axis, because axis labels would have to abbreviate it. Exact values appear in tooltips and in "Show values" (`ChartValues`, a disclosure of rows).
+  - **Axis labels** never leave the chart or overlap (Chat 17): the edge ones stay inside the plot, the band is as tall as the labels at the current text size, and when they don't all fit the width every other one (or fewer) shows, counted back from the last, so the latest point keeps its label. Each label is keyed by its measured width, because fl_chart measures a label once and a text-size change would leave it stale.
   - Each chart has a screen-reader summary.
   - Series differ by more than color: solid against dashed, with a `ChartLegend`.
 - **Progress bars** on the Overview are `SlimBar` (6 tall, pill ends) and `SegmentBar` (one 8-tall step per scheduled payment, 2 apart). Both are decorative; their row carries the words in its semantics label.
@@ -1165,7 +1165,11 @@ Chat 9 moved `CardMenu`, `FactRow`, `OverviewDonut` and `BudgetGauge` here, same
 
 ### Form exits (`FormExitGuard`)
 
-An optional `discardDraft` adds Discard draft beside Keep draft & close, for forms that bring a draft back on reopening. `MoneyEditor` passes it, and Saved drafts can discard one too. Other forms keep the two choices they had.
+Leaving a form with changes asks first, in the kit's confirmation (`showAppDialog`, Chat 17), with Keep editing and one main action:
+
+- **A form that keeps drafts** (`keepDraft`): "Keep this draft for later?", with Keep draft & close as the primary. The draft is written first; if that fails the form stays open and says so.
+- **A form without drafts:** "Discard your changes?", with Discard changes as the destructive button, and focus starts on Keep editing so Enter never discards.
+- A draft is discarded from Saved drafts (Money's page holds Money's and Life's; Shared Expenses has its own), not from this dialog, so it keeps §5's two actions.
 
 ### Review step (`kit/review.dart`; Chat 16)
 
@@ -1190,10 +1194,9 @@ An optional `discardDraft` adds Discard draft beside Keep draft & close, for for
 
 A page opened from a section. Windows starts with the title; Android starts with a 48-tall back row, because the app bar hides on pages. `status` sits with the title and `actions` end the heading. `maxWidth` narrows the page's column, title included, so a form's title lines up with the form. `RouteEscape` moved here with it.
 
-### Deferred to section chats
+### Not built
 
-- **Pager:** not needed so far; lists use `ShowMore`.
-- **Tabs:** built in Chat 6's owner review (`AppTabs`, above) for the Overview. Section screens keep their existing tab controls until their own chats adopt it.
+- **Pager:** not needed; long lists use `ShowMore`.
 
 ### Component gallery (debug only)
 
@@ -1417,7 +1420,16 @@ This glossary applies to **user-facing strings only**. Class, field, table, rout
 - **Short:** one idea per sentence. Captions fit on one line at expanded width.
 - **No technical or accounting jargon** in the main reading path. Exact detail goes in disclosures.
 - **Friendly, not cute:** no slogans as screen titles. "Overview", not "Your day, in balance."
-- **Glossary maintenance:** when a section chat finds a new term, it adds a row here before changing strings.
+- **Glossary maintenance:** a change that brings a new term adds a row here before changing strings.
+
+### Rule messages
+
+The rules' error messages are user-facing too. They follow this glossary, and what the rules allow never changes with the words.
+
+- **Changing a message:** propose the wording in the glossary's terms and change only what the owner approves. A message only a developer can reach (a wrong command id, an unsupported version) keeps its words.
+- **Messages on their field:** a rule that names no field is matched by its words, first match first, through the form's table (`nativeRuleFields`, `moneyRuleFields`, `importRuleFields`, `privateRuleFields`, `lifeRuleFields`). Update the table with the message, and check a new phrase can't be caught by an older one. `test/rule_messages_test.dart` holds the tables to the rule files and runs the jargon check; a new rule file joins it.
+- **Words the code reads:** below-zero refusals keep the word "negative", which the forms look for. `isSyncBlock` reads the start of the sync rule's message, so the two change together. Life's rules throw through `lifeReject`; the failure screen's words are held to the rules by `startupMessages`.
+- **Stored words stay as stored:** import row notes, Shared's server reasons, Life's stored reasons and the reasons on a change to check are written by the rules or the server. Screens show them plainly through `importRowNote`, `sharedReason`, `lifeReason` and `lifeReasonText`, and `changeReasons`, without changing what's stored.
 
 ## 8. Dashboard data inventory
 
@@ -1426,7 +1438,7 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Data | Source | Status |
 | --- | --- | --- |
 | Available money (confirmed); projected available money with waiting work | `LocalSession.accepted`, `.projected` (`lib/local/local_runtime.dart`) | Readable |
-| This month's spending and income; spending by category | Postings in `localFinance.acceptedSnapshot` (already summed in `app/workspace_overview.dart`); `categoryName` | Readable (existing view aggregation) |
+| This month's spending and income; spending by category | Postings in `localFinance.acceptedSnapshot` (summed in `app/overview_data.dart`: `spendingByCategory`, `dailySpending`); `categoryName` | Readable (existing view aggregation) |
 | Daily spending | Expense postings in `acceptedSnapshot`, grouped by date (`dailySpending` in `app/overview_data.dart`). `spendingOn(date)` reads the projected snapshot (it includes waiting work), so the Overview doesn't use it. | UI aggregation (approved, Chat 6) |
 | Account balances | `snapshot.accounts`, `snapshot.balance(id, through:)` | Readable |
 | Card debt and available credit | `LocalFinancialController.cardLiabilityAndCredit` | Readable |
@@ -1458,7 +1470,7 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Cards: what you owe at month ends, each card's positive balance | `cardDebtByMonth` | UI aggregation (approved, Chat 9) |
 | Cards: paid, still due, status and difference from your records per statement; each card's newest statement | `StatementRow`, `newestStatements` | UI aggregation (approved, Chat 9) |
 | Cards: payments per installment plan; unused pending charges; what needs the user; activity matched to a statement and activity posted in its period | `PlanRow`, `pendingCharges`, `cardTasks`, `matchedActivity`, `unmatchedActivity` | UI aggregation (approved, Chat 9) |
-| Planning: budgets by when they apply, period labels, whether they share a period and basis | `BudgetRow`, `budgetPeriodLabel`, `lastDay`, `sameBudgetTerms` (`lib/finance/planning_data.dart`) | UI aggregation (approved, Chat 9) |
+| Planning: budgets by when they apply, period labels, whether they share a period and basis | `BudgetProgress` (`lib/app/overview_data.dart`), `budgetPeriodLabel`, `lastDay`, `sameBudgetTerms` (`lib/finance/planning_data.dart`) | UI aggregation (approved, Chat 9) |
 | Planning: funding per goal and per account, from `supportedSavings` | `GoalRow`, `goalAccounts` | UI aggregation (approved, Chat 9) |
 | Planning: per item next date, dates and states; what's coming up in 30 days, with recurring dates not added yet | `RecurringRow`, `recurringDatesFor`, `upcomingRows` | UI aggregation (approved, Chat 9) |
 | Reports: the dates a period covers, what it's compared with, and what a filter can't answer | `ReportFilter`, `reportSpan` (`lib/finance/report_data.dart`) | UI aggregation (approved, Chat 9) |
@@ -1508,62 +1520,7 @@ This inventory covers what the Overview can show without new domain logic. **Rea
 | Onboarding: a backup's Google account, and how many changes it holds to check after signing in | `BackupContents.email`, `.toCheck`, from the opened backup | UI aggregation (Chat 15) |
 | Balance-based payoff progress, net position (available money minus what you owe) | Not defined | New logic (not built) |
 
-## 9. Redesign roadmap (temporary)
-
-Remove this section when the redesign is finished.
-
-| Chat | Stage | Status |
-| --- | --- | --- |
-| 1 | Audit and design spec (this document) | Done |
-| 2 | Tokens: color, spacing, radii, type, elevation, motion; light and dark | Done |
-| 3 | Components and the debug-only component gallery; form help; dialogs; Google button | Done |
-| 4 | App shell: navigation, profile entry, navigation state for the title bar | Done |
-| 4b | Windows density: the compact scale in the theme and kit (§3) | Done |
-| 5 | Windows custom title bar | Done |
-| 6 | Overview dashboard (with Android's tappable date and calendar sheet, §2) | Done |
-| 7 | Debts | Done |
-| 8 | Money A: Accounts, Activity, transaction form | Done |
-| 9 | Money B: Cards, Planning, Reports, Import, Files | Done |
-| 10 | Shared Expenses A: groups, Bills, Payments | Done |
-| 11 | Shared Expenses B: Balances, People, Private review, History, Lifecycle. Also, moved here from Chat 10: the shareable **Between you and one person** list (every bill and payment between you and one member, with the running net; it's the §17–18 pair breakdown of DOMAIN_RULES), the private forms still on `_SharedForm` (redesign them with their rule messages), and the positions card at the top of Balances (`SharedPositionsCard`, built in Chat 10; rebuild the tab around it), and three fixes those forms still need: invite, add person and lifecycle make a new id on each Save, so a lost answer can send a second command (give them one id per form, as Chat 10's do); the Private review pickers print amounts with Hide amounts on; `run` shows errors in a dialog. **All three stages built and approved** (Balances, a person, two people, My Records, the private forms and their rule messages, People, History, Manage Group and the group forms) | Done |
-| 12 | Life A: Calendar, Tasks, reminders. Three stages: 12a Calendar, 12b Tasks, 12c Reminders | Done |
-| 13 | Life B: Learning, Books, Career. Three stages: 13a Learning and Books, 13b Career, 13c Documents and cleanup | Done |
-| 14 | Profile and settings: connection, devices, backup and recovery, preferences, help. Also the default shared group: list it here, on the same saved value (`sharedDefaultGroup`). Two stages: 14a frame, Profile, Help; 14b Connection, Devices, Backup, rule messages | Done |
-| 15 | Onboarding: welcome, local setup, Google, restore. Two stages: 1 frame, opening, startup failure, Welcome, local setup; 2 Google, Restore, demo preview, retirements | Done |
-| 15b | Android parity: app bar actions (Go to, bell), status row (tappable sync pill, Hide amounts), calculator in the + sheet (§2) | Done |
-| 16 | Consistency sweep (spacing grep, glossary, both themes, both platforms, 200% text). Four stages: 1 retire demo code, 2 tokens, 3 glossary, 4 the cross-platform sweep | Done, waiting for the owner's review |
-| 17 | Final review | Planned |
-
-Each section chat:
-
-1. Applies §4, §6 and §7.
-2. Updates the tests whose text finders change.
-3. Runs only targeted tests.
-4. Ends with manual checks for the owner.
-5. Gives its amount fields the calculator button with "Use result" (Android parity, §2).
-6. Rewords the rule messages it owns (below), at the same time as the screens that show them.
-
-### Rule messages to reword, by chat
-
-Error messages written in rule files stay as they are until the chat that works on their screens. Debts' and Money's messages are done (Chats 8 and 9), including `planning_queries.dart`, `cash_import_rules.dart`, `file_rules.dart`, `file_store.dart` and the review notes. The six import row notes stay as stored, because the server writes them too; `importRowNote` shows them plainly. In each chat:
-
-- Propose the wording in the plan, in the glossary's terms (§7), and reword only what the owner approves. What the rules allow doesn't change.
-- Rules that name no field are matched by their words, first match first, so update the form's table with them (`nativeRuleFields`, `moneyRuleFields`, `importRuleFields`, or that section's own), and check a new phrase can't be caught by an older one. `test/rule_messages_test.dart` holds the tables to the rule files; add the chat's rule files to its jargon check.
-- Keep the word "negative" in the below-zero refusals, or update the forms that look for it. `isSyncBlock` reads the start of the sync rule's message, so change them together.
-- Messages only a developer can reach, such as a wrong command id or an unsupported version, need no plain wording unless a person can really see them.
-
-| Chat | Rule files | Messages left | Examples |
-| --- | --- | --- | --- |
-| 10 | `shared_domain.dart`, `shared_repository.dart`, `shared_store.dart` | Done: 15, plus the connected-identity message | The server's reasons stay as they are; `sharedReason` shows them plainly, and a test holds that table to the SQL |
-| 11 | `shared_private_domain.dart` | Done: 21, plus 2 review notes. 5 only a developer can reach stay as they are | `privateRuleFields` puts them on their fields, and a test holds that table to the rules |
-| 12 | `life_domain.dart`, `life_controller.dart`, `device_reminders.dart`, `life_store.dart` | Done: 18, plus Life's reasons on screen through `lifeReason`. 1 was already plain and 18 only a developer can reach stay as they are | `lifeRuleFields` puts them on their fields, and a test holds that table, the 72 calls and the reasons to the rules and the SQL |
-| 13 | `life_domain.dart`, `life_controller.dart`, `career_documents.dart` | Done: 28 | `lifeRuleFields` puts them on their fields, and a test holds that table to the rules |
-| 14 | `connected_store.dart`, `local_store.dart`, `connected_runtime.dart`'s connection messages, what Check a backup reaches in `local_profiles.dart`, and 7 of Life's in `life_domain.dart` and `life_store.dart` | Done, with the status labels. A few only a developer can reach stay as they are | `rule_messages_test` holds them to the glossary, and the reasons on Needs review to the SQL |
-| 15 | `connected_runtime.dart`'s sign-in messages (4 distinct, 5 calls, one also in `connected_store.dart`), and `local_profiles.dart`'s startup, create, retrieve, restore and removal messages, with 3 in `local_store.dart` and 3 in `bounded_file_read.dart` | Done: 26, with 1 already plain and 5 only a developer can reach staying as they are | `startupMessages` holds the failure screen to the rules' words, and `noProfileErrors` holds the connection's messages to theirs |
-
-Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 calls across `life_domain.dart`, `life_store.dart`, `life_controller.dart`, `device_reminders.dart` and `career_documents.dart`. The other counts are from 2026-10-31, and count each distinct message once.
-
-## 10. Decision log
+## 9. Decision log
 
 | Date | Decision | Status |
 | --- | --- | --- |
@@ -1744,6 +1701,16 @@ Life's rules use `lifeReject`, not `reject`, and throw `FormatException`: 74 cal
 | 2026-11-02 | Chat 16 stage 3: the glossary rows above (Chat 16) are applied. The Review step, the saved state, the exit dialog and the connected Review notice use plain words. Debts', Cards' and Planning's saved titles are the record in the past tense (`savedTitles`). View details holds the change id and version, not the rules' notes. Review groups keep a group gap above their heading. The bell's waiting row counts group changes. "Profile › Connection" never breaks across lines. The four rule messages checked (import staging, the shared card contract, the daylight-saving choice, the upload connector) can't reach a person, so they stay. | Done |
 | 2026-11-02 | Chat 16 stage 4: `test/consistency_sweep_test.dart` answers the sweep's five-second question: the shell and every first tab, and Profile and settings, on both platforms, at Android 320, 360 and 412 and Windows 720, 1200 and 1440, at 100% and 200%, in light, dark and both high-contrast themes, plus the source checks. It found 23 controls a screen reader could hear but not press (tabs, segmented controls, card links, quick actions, table rows, the calendar's days, the rail and more); each now passes its callback as `onTap` with `container: true`. The renders found Money's narrow account rows breaking inside a detail ("This month −" / "₱3,444.50"); they use `detailLine` now, which keeps a sign on its amount. | Done |
 | 2026-11-02 | Owner review of Chat 16: on Android the date sat too far under the sync pill: the status row's spare height, the page's top 16 and the date row's own height added up. The destinations now start `Space.xs` below the status row, as pages do; Windows keeps the page top. | Done |
+| 2026-11-02 | Chat 17 (final review) audits the redesign against its own five-second question: can a new user trust and use every screen without help? It found 8 real-use breaches and 0 demo-only ones, and fixes only those, in stages A, B1 to B4 and C. | Approved |
+| 2026-11-02 | Chat 17 stage A: Debts' "Sync needs review" notice gets Review, which opens Profile › Connection, as Overview, Money and Shared do. | Approved |
+| 2026-11-02 | Chat 17 stage A: the demo controller's group actions stay. Removing them would edit the real `LocalFinancialController`, and they're demo-only. Closed as demo debt. | Approved |
+| 2026-11-02 | Chat 17 stage A: the redesign's open items that need logic outside the UI stay deferred. They're recorded in PRODUCT_AND_FEATURES §22 as known limits, so they outlive the untracked handoff. | Approved |
+| 2026-11-02 | Chat 17 stage B1: zero then and zero now reads "– 0.0%", not "New" (`changeBasisPoints`), on every `ChangeLine`. With amounts hidden, At a glance drops each sentence's amount. Money's Due this week shows what's due this week, the Overview's figure, and counts overdue in its caption only. Debts' Next payment reads "None" when nothing is scheduled. | Approved |
+| 2026-11-02 | Chat 17 stage B2: the Overview's Recent activity and Largest expenses close with `ListEnd`, saying how many more Activity holds (the demo counts as Money does, so the two agree). A debt's status pill sits at the end of its name's line in Debts' Your debts and the Overview's Debt payoff (`DebtProgressCard.titleLine`), dropping under the name only when both don't fit. This replaces Chats 6 and 7's pill under the name, under the standing rule that a pill never sits under a row's text. | Approved |
+| 2026-11-03 | Chat 17 stage B3: during an unfinished download, Life's Calendar header drops its pill and its "N things this week", because those counts include money dues the download leaves out and the tiles under them read "Not available yet". Tasks, Learning, Books and Career keep theirs; their counts hold no money. | Approved |
+| 2026-11-03 | Chat 17 stage B4: `FormExitGuard` asks through the kit's confirmation instead of a stock `AlertDialog`: Keep editing plus Keep draft & close, or a destructive Discard changes with focus on Keep editing. Discard draft leaves the exit dialog in Money, Life and Shared's bill and payment forms (`discardDraft` is gone); drafts are discarded from Saved drafts. | Approved |
+| 2026-11-03 | Chat 17 stage C: this document matches the code again (chart and Overview file names, `BudgetProgress`, Windows button height, tabs everywhere). §9, the temporary roadmap, is retired; its lasting rules on rule messages are §7's Rule messages, and the decision log is §9. Lines that described work still to come now describe what's done. The intro, the Scope paragraph and CLAUDE.md's redesign block change only when the owner calls the redesign finished. | Approved |
+| 2026-11-03 | Chat 17, after stage C (owner's go-ahead on both recommendations): chart axis labels follow §1 at 200% (kept inside the plot, thinned from the last when they don't fit, a band as tall as the labels). At 100% only the edge labels move, inside the plot. `p3_widgets_test`'s invitation is now sent on the day the test runs; it had a fixed date that expired after seven days. | Approved |
 | 2026-11-02 | The demo controller's group actions stay for now: `LocalFinancialController`'s constructor resets the base controller and clears its group state, so removing that state changes the real controller. | Needs approval |
 | 2026-11-02 | Owner review: Chat 15b looks good on the emulator, which finishes it. | Approved |
 | 2026-11-02 | Chat 15b, the owner's picks: phones use the dock's names in the app bar, and the title drops under the actions only when it doesn't fit (a wrapped title broke inside a word at 200%); Go to's page groups its entries in cards; one stage. | Approved |

@@ -213,6 +213,14 @@ void main() {
         session.select(OverviewScenario.empty);
         await show(tester, session, platform: platform, width: width);
         expect(find.text('No debts yet'), findsOneWidget);
+        // No next payment reads None, never ₱0.00.
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('debts-next')),
+            matching: find.text('None'),
+          ),
+          findsOneWidget,
+        );
         await everyTab(tester, 'empty $platform $width');
         session.select(OverviewScenario.local);
       }
@@ -283,6 +291,49 @@ void main() {
         await show(tester, session, platform: platform, width: width);
         for (final row in rows) {
           expect({for (final key in row) top(key)}, hasLength(1));
+        }
+      }
+    });
+
+    testWidgets('a debt’s pill sits on its name’s line, never under it', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      for (final (platform, width) in [(windows, 1440.0), (android, 360.0)]) {
+        await show(tester, session, platform: platform, width: width);
+        final yours = find.byKey(const ValueKey('debts-yours'));
+        final lines = find.descendant(of: yours, matching: find.byType(Wrap));
+        expect(lines, findsWidgets);
+        for (final line in lines.evaluate()) {
+          final wrap = find.byWidget(line.widget);
+          final name = find
+              .descendant(of: wrap, matching: find.byType(Text))
+              .first;
+          final pill = find.descendant(
+            of: wrap,
+            matching: find.byType(StatusPill),
+          );
+          final room = tester.renderObject<RenderBox>(wrap).constraints.maxWidth;
+          final fits =
+              tester.getSize(name).width +
+                  Space.sm +
+                  tester.getSize(pill).width <=
+              room;
+          // Beside the name when both fit (the test font is wider than
+          // Geist, so some don't here); otherwise right under it.
+          if (fits) {
+            expect(
+              (tester.getCenter(pill).dy - tester.getCenter(name).dy).abs(),
+              lessThan(Space.sm),
+              reason: '$platform $width',
+            );
+          } else {
+            expect(
+              tester.getTopLeft(pill).dy,
+              greaterThanOrEqualTo(tester.getBottomLeft(name).dy),
+            );
+          }
         }
       }
     });

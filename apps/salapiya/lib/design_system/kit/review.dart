@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'modals.dart';
 
 /// A form's Review step and saved state, moved from `form_presentation.dart`,
 /// `editorial.dart` and `workspace.dart` (Chat 16), same look on tokens.
@@ -257,6 +258,8 @@ class ReviewNotes extends StatelessWidget {
 
 /// Routes wait for protected draft writes before leaving; failed writes keep
 /// the form open. A form without draft storage requires explicit discard.
+/// The question is a kit confirmation (§5): Keep editing and one main
+/// action. A draft is discarded from Saved drafts, not here (Chat 17).
 class FormExitGuard extends StatefulWidget {
   const FormExitGuard({
     super.key,
@@ -264,14 +267,10 @@ class FormExitGuard extends StatefulWidget {
     required this.dirty,
     required this.busy,
     this.keepDraft,
-    this.discardDraft,
   });
   final Widget child;
   final bool dirty, busy;
   final Future<void> Function()? keepDraft;
-
-  /// Offers to drop the draft too, for forms that bring it back on reopening.
-  final Future<void> Function()? discardDraft;
   @override
   State<FormExitGuard> createState() => _FormExitGuardState();
 }
@@ -282,46 +281,26 @@ class _FormExitGuardState extends State<FormExitGuard> {
     if (leaving || widget.busy) return;
     leaving = true;
     try {
-      final choice = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(
-            widget.keepDraft == null
-                ? 'Discard your changes?'
-                : 'Keep this draft for later?',
-          ),
-          content: Text(
-            widget.keepDraft == null
-                ? 'Leaving discards this unfinished form. Nothing was saved.'
-                : 'Your unfinished form stays encrypted on this device. Nothing is logged until you save it.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Keep editing'),
-            ),
-            if (widget.discardDraft != null)
-              TextButton(
-                onPressed: () => Navigator.pop(context, 'discard'),
-                child: const Text('Discard draft'),
-              ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, 'keep'),
-              child: Text(
-                widget.keepDraft == null
-                    ? 'Discard changes'
-                    : 'Keep draft & close',
-              ),
-            ),
-          ],
+      final draft = widget.keepDraft != null;
+      // Without a draft, leaving loses the form, so it's the destructive
+      // button and focus starts on Keep editing.
+      final leave = await showAppDialog<bool>(
+        context,
+        title: draft ? 'Keep this draft for later?' : 'Discard your changes?',
+        body: Text(
+          draft
+              ? 'Your unfinished form stays encrypted on this device. Nothing is logged until you save it.'
+              : 'Leaving discards this unfinished form. Nothing was saved.',
         ),
+        primary: ModalAction(
+          draft ? 'Keep draft & close' : 'Discard changes',
+          value: true,
+          destructive: !draft,
+        ),
+        secondary: const ModalAction.cancel(label: 'Keep editing'),
       );
-      if (choice == null) return;
-      if (choice == 'discard') {
-        await widget.discardDraft!.call();
-      } else {
-        await widget.keepDraft?.call();
-      }
+      if (leave != true) return;
+      await widget.keepDraft?.call();
       if (!mounted) return;
       setState(() => allowed = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -128,6 +128,15 @@ class _LifeScreenState extends State<LifeScreen> {
               : calendar.onToday.length);
       final week = calendar.thisWeek.length;
       final reminding = current == 'Reminders';
+      // The Calendar's counts include money dues, which an unfinished
+      // download leaves out, so its tiles read "Not available yet" and the
+      // header counts nothing either.
+      final unknown =
+          !source.complete &&
+          !reminding &&
+          !onTasks &&
+          entries == null &&
+          !onCareer;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -143,6 +152,8 @@ class _LifeScreenState extends State<LifeScreen> {
                       : '${entries.inProgress.length} in progress'
                 : onCareer
                 ? '${career.active.length} active'
+                : unknown
+                ? null
                 : '$week ${week == 1 ? 'thing' : 'things'} this week',
             actions: reminding
                 ? const []
@@ -163,7 +174,7 @@ class _LifeScreenState extends State<LifeScreen> {
                     ),
                   ]
                 : widget.actions,
-            pill: reminding
+            pill: reminding || unknown
                 ? null
                 : late > 0
                 ? StatusPill(

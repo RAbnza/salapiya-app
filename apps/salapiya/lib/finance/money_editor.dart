@@ -1137,10 +1137,6 @@ class _MoneyEditorState extends State<MoneyEditor>
         await writes;
         if (draftFailed) throw StateError('Draft not saved');
       },
-      discardDraft: () async {
-        await writes;
-        await c.discardDraft(operation);
-      },
       child: CompactForm(
         child: SectionPage(
           title: title,

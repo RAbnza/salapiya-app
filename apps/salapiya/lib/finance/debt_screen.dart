@@ -5,6 +5,7 @@ import '../app/overview_cards.dart';
 import '../app/overview_dashboard.dart' show overviewLongDate;
 import '../app/overview_data.dart';
 import '../app/shell_navigation.dart';
+import '../connected/connection_view.dart';
 import '../design_system/kit/kit.dart';
 import '../design_system/theme.dart';
 import '../local/finance_domain.dart';
@@ -57,6 +58,9 @@ DebtsSource localDebtsSource(
     pendingCount: session is LocalSession ? session.pendingCount : 0,
     needsReview: session?.needsReview ?? false,
     syncLabel: session?.syncLabel ?? '',
+    onReview: session is LocalSession
+        ? () => openConnection(context, session.runtime)
+        : null,
     actions: DebtActions(
       logPayment: (debt, payment) => editor(
         'debtPayment',
@@ -421,8 +425,9 @@ class _DebtsDashboardState extends State<DebtsDashboard> {
         labels: tileLabels,
         icon: Icons.event_outlined,
         label: 'Next payment',
+        // With nothing scheduled there is no next payment, not one of ₱0.00.
         value: MoneyAmount(
-          known(summary.nextTotal),
+          complete && next.isEmpty ? 'None' : known(summary.nextTotal),
           size: MoneySize.tile,
           textAlign: TextAlign.start,
         ),

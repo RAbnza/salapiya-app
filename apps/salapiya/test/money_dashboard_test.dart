@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:salapiya/app/overview_data.dart';
 import 'package:salapiya/app/overview_demo.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/design_system/theme.dart';
@@ -278,6 +279,40 @@ void main() {
       expect(find.text('Needs your attention'), findsOneWidget);
       final where = tester.getTopLeft(find.text('Where your money is'));
       expect(where.dy, lessThan(900));
+    });
+
+    testWidgets('Due this week matches the Overview’s figure', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      await show(tester, session, platform: windows, width: 1440);
+      final today = civilToday();
+      final week = OverviewDues.from(
+        overviewDueSources(sample(), today),
+        today,
+        DuePeriod.week,
+      );
+      // The demo has something overdue, which the tile leaves to its caption.
+      expect(week.overdue, isNotEmpty);
+      final tile = find.byKey(const ValueKey('money-due'));
+      expect(
+        tester
+            .widget<MoneyAmount>(
+              find.descendant(of: tile, matching: find.byType(MoneyAmount)),
+            )
+            .text,
+        session.amount(week.upcomingTotal),
+      );
+      expect(
+        find.descendant(
+          of: tile,
+          matching: find.text(
+            '${week.upcoming.length} due · ${week.overdue.length} overdue',
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the table adds up to the tile', (tester) async {

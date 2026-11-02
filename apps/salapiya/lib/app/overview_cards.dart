@@ -583,6 +583,15 @@ class DebtProgressCard extends StatelessWidget {
         )
       : duePill(d.due.status!);
 
+  /// The debt's name with its [pill] at the end of the same line. When
+  /// both don't fit, the pill moves under the name, never into it.
+  static Widget titleLine(DebtProgress d, TextStyle? style) => Wrap(
+    spacing: Space.sm,
+    runSpacing: Space.xs,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [Text(d.debt.title, style: style), pill(d)],
+  );
+
   /// The line under the bar. With amounts hidden it keeps to the count.
   static String progressLine(
     DebtProgress d,
@@ -640,14 +649,7 @@ class DebtProgressCard extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(d.debt.title, style: text.titleSmall),
-                        const SizedBox(height: Space.xs),
-                        pill(d),
-                      ],
-                    ),
+                    child: titleLine(d, text.titleSmall),
                   ),
                   const SizedBox(width: Space.lg),
                   Expanded(
@@ -675,13 +677,8 @@ class DebtProgressCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   LabelAmount(
-                    label: Text(d.debt.title, style: text.titleSmall),
+                    label: titleLine(d, text.titleSmall),
                     amount: owed(d),
-                  ),
-                  const SizedBox(height: Space.xs),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: pill(d),
                   ),
                   if (d.fraction != null) ...[
                     const SizedBox(height: Space.sm),

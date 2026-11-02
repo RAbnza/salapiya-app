@@ -67,6 +67,7 @@ class OverviewSource {
     this.projected,
     this.needsReview = false,
     this.lifeMore = 0,
+    this.activityCount = 0,
     this.syncLabel = '',
     this.onReview,
     this.onAddAccount,
@@ -80,6 +81,10 @@ class OverviewSource {
 
   /// How many more of Life's next items there are than [life] shows.
   final int lifeMore;
+
+  /// How many rows Activity holds through today, so a list of [recent]
+  /// can say how many more there are.
+  final int activityCount;
   final int pendingCount;
   final BigInt? available, projected;
   final String syncLabel;
@@ -126,6 +131,11 @@ OverviewSource localOverviewSource(
             if (life.calendarVisible(item.kind)) item,
         ]
       : const <AgendaItem>[];
+  // Activity's rows through today, newest first, as Money lists them.
+  final logged = moneyActivity(
+    c.snapshot,
+    c.categoryName,
+  ).where((r) => r.date.compareTo(today) <= 0).toList();
   void openRecord(String id, String title) =>
       openMoneyRecord(context, c, id, session: session);
   return OverviewSource(
@@ -200,12 +210,9 @@ OverviewSource localOverviewSource(
         ),
     ],
     lifeMore: agenda.length > 3 ? agenda.length - 3 : 0,
+    activityCount: logged.length,
     recent: [
-      for (final r
-          in moneyActivity(
-            c.snapshot,
-            c.categoryName,
-          ).where((r) => r.date.compareTo(today) <= 0).take(10))
+      for (final r in logged.take(10))
         (
           icon: moneyIcon(r),
           title: r.title,
@@ -321,6 +328,7 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
             categories: categories,
             budgets: budgets,
             amount: amount,
+            hidden: hidden,
           )
         : const <String>[];
     final range = overviewSpan(start, today);
@@ -688,6 +696,12 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
         'View all',
         onPressed: () => open(PreviewSource.activity),
       ),
+      footer: source.activityCount > count
+          ? ListEnd(
+              label: '${source.activityCount - count} more in Activity',
+              onPressed: () => open(PreviewSource.activity),
+            )
+          : const ListEnd(),
       empty: !complete
           ? const NotAvailable('Activity shows once your records are complete.')
           : const EmptyState(
@@ -697,9 +711,16 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
             ),
     );
 
-    final largest = complete
-        ? largestExpenses(accepted, start, today)
+    // Every expense this month, largest first; the card shows five.
+    final spending = complete
+        ? largestExpenses(
+            accepted,
+            start,
+            today,
+            count: accepted.current.length,
+          )
         : const <(LocalRevision, BigInt)>[];
+    final largest = spending.take(5).toList();
     final largestCard = ActivityCard(
       key: const ValueKey('overview-largest'),
       title: 'Largest expenses this month',
@@ -721,6 +742,13 @@ class _OverviewDashboardState extends State<OverviewDashboard> {
         'View all',
         onPressed: () => open(PreviewSource.activity),
       ),
+      footer: spending.length > largest.length
+          ? ListEnd(
+              label:
+                  '${spending.length - largest.length} more ${spending.length - largest.length == 1 ? 'expense' : 'expenses'} in Activity',
+              onPressed: () => open(PreviewSource.activity),
+            )
+          : const ListEnd(),
       empty: !complete
           ? const NotAvailable('Spending shows once your records are complete.')
           : const EmptyState(

@@ -10,7 +10,7 @@ import 'package:salapiya/local/finance_domain.dart';
 import 'package:salapiya/local/local_finance_controller.dart';
 import 'package:salapiya/local/local_store.dart';
 
-import 'local_money_journey.dart' show localSettle, localTap;
+import 'local_money_journey.dart' show localSettle, localTap, localWait;
 import 'local_test_support.dart';
 import 'p1_widgets_test.dart' show closeWithWidgetClock;
 
@@ -1011,7 +1011,7 @@ void main() {
       }
     });
 
-    testWidgets('leaving offers to keep or discard it', (tester) async {
+    testWidgets('leaving offers to keep it or keep editing', (tester) async {
       sized(tester);
       final (f, c, _, _) = await open(tester);
       try {
@@ -1046,10 +1046,18 @@ void main() {
         await tester.pump();
         await tester.binding.handlePopRoute();
         await localSettle(tester);
-        expect(find.text('Discard draft'), findsOneWidget);
-        await tester.tap(find.text('Discard draft'));
-        await localSettle(tester);
-        expect(await tester.runAsync(() => c.store.drafts()), isEmpty);
+        // The kit's confirmation: Keep editing and one main action. A draft
+        // is discarded from Saved drafts, not here.
+        expect(find.byType(ModalScaffold<bool>), findsOneWidget);
+        expect(find.text('Keep editing'), findsOneWidget);
+        expect(find.text('Discard draft'), findsNothing);
+        await tester.tap(find.text('Keep draft & close'));
+        // The draft is written to the encrypted store first, then it closes.
+        await localWait(
+          tester,
+          () => find.byType(MoneyEditor).evaluate().isEmpty,
+        );
+        expect(await tester.runAsync(() => c.store.drafts()), hasLength(1));
       } finally {
         await close(tester, f, c);
       }

@@ -1388,6 +1388,26 @@ void main() {
       });
     });
 
+    testWidgets('Debts’ review notice opens Connection', (tester) async {
+      await shell(tester, (runtime) async {
+        runtime.connected
+          ..reviewCount = 1
+          ..changed();
+        ShellNavigation.of(
+          tester.element(find.byType(ShellSidebar)),
+        ).select(AppDestination.debts);
+        await tester.pumpAndSettle();
+        final review = find.descendant(
+          of: find.byType(SyncReviewNotice),
+          matching: find.text('Review'),
+        );
+        expect(review, findsOneWidget);
+        await tester.tap(review);
+        await tester.pumpAndSettle();
+        expect(find.byType(ConnectionTab), findsOneWidget);
+      });
+    });
+
     testWidgets('the waiting row counts the group’s changes too', (
       tester,
     ) async {

@@ -269,12 +269,6 @@ mixin SharedFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
                 await writes;
                 if (draftFailed) throw StateError('Draft not saved');
               },
-        discardDraft: !keepDraft
-            ? null
-            : () async {
-                await writes;
-                await writer.discardDraft(id);
-              },
         child: CompactForm(
           child: SectionPage(
             title: title,

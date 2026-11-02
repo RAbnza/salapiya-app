@@ -394,7 +394,7 @@ class ChangeLine extends StatelessWidget {
     required this.meaning,
   });
 
-  /// Null when the earlier value was zero.
+  /// Null when the earlier value was zero and the current one isn't.
   final int? basisPoints;
   final String versus;
   final ChangeMeaning meaning;

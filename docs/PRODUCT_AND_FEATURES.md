@@ -356,6 +356,22 @@ The following do not prevent this document from recording the approved product d
 - Group owner-loss administrative recovery and exact account deletion/retained-history operations.
 - Final logo/icon assets and brand availability checks before broader distribution.
 
+**Known limits left by the native UI redesign (2026-11-02).** Each needs logic, a rule, a migration or server work outside the UI, so each stays deferred until it's assigned as its own stage. The screens already say so where it matters.
+
+- **Native Google account sheet on Android.** Sign-in opens the browser. The system account sheet needs a sign-in package, an Android OAuth client for each signing key, `signInWithIdToken`, and a retest of account deletion, whose server check expects a recent `oauth` sign-in.
+- **Restore on a device that can't open its profile.** The rules refuse a restore unless the device holds no profile, so a missing or damaged profile can't be restored on that installation. Offering it where the key can't be read could overwrite the only key.
+- **A preserved profile can't be reached.** Nothing reopens it, and its own backup can't restore on that installation while its file is there.
+- **Leftover `.staging` files.** An interrupted restore or a same-profile refusal leaves one behind with its key gone. Nothing cleans them up.
+- **The device is listed before the disclosure.** `boundary()` registers the device during review. The screens say so; moving it changes the flow.
+- **A deleted account after a restart.** Nothing on the device records it, so the profile reads as signed out and paused. It needs a saved marker or a call to `p7_deletion_status`.
+- **A renamed profile.** A connected profile's name isn't synced, so devices can differ. The form says so. It needs a rule and a command.
+- **Reminders reset on any edit.** A reminder is tied to its record's version, so editing a note cancels a dismissal or snooze, which ARCHITECTURE §12.2 says an unrelated edit shouldn't.
+- **Which invitations are open.** The server keeps invitations to itself, so the app can't tell one was used or revoked on another device, and revoking a used one is refused.
+- **Rejected group commands stay in review.** Nothing moves them on, so one refusal keeps the sync status on Needs review. It needs a store state and a migration.
+- **Editing or unarchiving an account, and changing a card's limit once it has activity.** No rule allows them, so they aren't offered.
+- **Overview figures not built:** payoff progress by balance, net position, "last synced", and group balances on the Overview.
+- **The sync rule for connected profiles** (`dependencySensitive`): relaxing the one-minute limit or allowing a first schedule offline.
+
 For the next engineering assignment:
 
 1. Read this blueprint and the relevant current domain documentation/code.

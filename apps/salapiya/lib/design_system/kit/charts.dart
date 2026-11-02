@@ -77,10 +77,36 @@ class Sparkline extends StatelessWidget {
   }
 }
 
-FlTitlesData _titles(BuildContext context, String? Function(int) label) {
+/// The x-axis labels. They never leave the plot or overlap: the edge ones
+/// stay inside it, and when the labels don't all fit the width (a narrow
+/// card, large text) every other one, or fewer, shows, counted back from
+/// the last, so the latest point keeps its label (§1: nothing cut at 200%).
+FlTitlesData _titles(
+  BuildContext context,
+  String? Function(int) label,
+  int length,
+) {
   final c = CraftTheme.of(context);
   final style = Theme.of(context).textTheme.bodySmall
       ?.copyWith(color: c.secondary);
+  final labeled = [
+    for (var i = 0; i < length; i++)
+      if (label(i) != null) i,
+  ];
+  final widths = <int, double>{};
+  var tallest = 0.0;
+  for (final i in labeled) {
+    final painter = TextPainter(
+      text: TextSpan(text: label(i), style: style),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    widths[i] = painter.width;
+    tallest = math.max(tallest, painter.height);
+    painter.dispose();
+  }
+  final widest = widths.values.fold<double>(0, math.max);
   return FlTitlesData(
     topTitles: const AxisTitles(),
     leftTitles: const AxisTitles(),
@@ -89,18 +115,34 @@ FlTitlesData _titles(BuildContext context, String? Function(int) label) {
       sideTitles: SideTitles(
         showTitles: true,
         interval: 1,
-        reservedSize: Space.xl,
+        // Tall enough for the labels at any text size.
+        reservedSize: math.max(Space.xl, tallest + Space.xs),
         getTitlesWidget: (value, meta) {
-          final text = value == value.roundToDouble()
-              ? label(value.toInt())
-              : null;
-          return text == null
-              ? const SizedBox.shrink()
-              : SideTitleWidget(
-                  meta: meta,
-                  space: Space.xs,
-                  child: Text(text, style: style),
-                );
+          final at = labeled.indexOf(value.toInt());
+          if (value != value.roundToDouble() || at < 0) {
+            return const SizedBox.shrink();
+          }
+          var step = 1;
+          while (step < labeled.length &&
+              (labeled.length / step).ceil() * (widest + Space.sm) >
+                  meta.parentAxisSize) {
+            step++;
+          }
+          if ((labeled.length - 1 - at) % step != 0) {
+            return const SizedBox.shrink();
+          }
+          // fl_chart measures a label once, so a new width (another text
+          // size) gets a new widget and is measured again.
+          return SideTitleWidget(
+            key: ValueKey((at, widths[labeled[at]])),
+            meta: meta,
+            space: Space.xs,
+            fitInside: SideTitleFitInsideData.fromTitleMeta(
+              meta,
+              distanceFromEdge: 0,
+            ),
+            child: Text(label(value.toInt())!, style: style),
+          );
         },
       ),
     ),
@@ -153,7 +195,7 @@ class OverviewBarChart extends StatelessWidget {
                 alignment: BarChartAlignment.spaceAround,
                 gridData: _grid(context),
                 borderData: FlBorderData(show: false),
-                titlesData: _titles(context, label),
+                titlesData: _titles(context, label, values.length),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (_) => c.raised,
@@ -239,7 +281,7 @@ class OverviewLineChart extends StatelessWidget {
             maxX: length < 2 ? 1 : (length - 1).toDouble(),
             gridData: _grid(context),
             borderData: FlBorderData(show: false),
-            titlesData: _titles(context, label),
+            titlesData: _titles(context, label, length),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
                 getTooltipColor: (_) => c.raised,

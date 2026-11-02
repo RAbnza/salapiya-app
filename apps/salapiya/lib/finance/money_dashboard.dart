@@ -243,8 +243,10 @@ class AccountsTab extends StatelessWidget {
         labels: labels,
         icon: Icons.event_outlined,
         label: 'Due this week',
+        // What's due this week, as the Overview's tile says; overdue is
+        // counted in the caption only, so the two never differ.
         value: MoneyAmount(
-          known(week.upcomingTotal + week.overdueTotal),
+          known(week.upcomingTotal),
           size: MoneySize.tile,
           textAlign: TextAlign.start,
         ),
@@ -253,7 +255,7 @@ class AccountsTab extends StatelessWidget {
             : week.isEmpty
             ? 'Nothing due this week'
             : [
-                '${week.upcoming.length} due',
+                if (week.upcoming.isNotEmpty) '${week.upcoming.length} due',
                 if (week.overdue.isNotEmpty) '${week.overdue.length} overdue',
               ].join(' · '),
         onTap: onDues,

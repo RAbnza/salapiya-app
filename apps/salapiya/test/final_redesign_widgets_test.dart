@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salapiya/app.dart';
 import 'package:salapiya/design_system/theme.dart';
+import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/design_system/kit/review.dart';
 
 import 'shell_journey.dart' show newItem;
@@ -80,4 +81,41 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+
+  testWidgets('leaving a form with no draft is a destructive confirmation', (
+    tester,
+  ) async {
+    final nav = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: nav,
+        theme: SalapiyaTheme.build(Brightness.light),
+        home: const Scaffold(body: Text('Home')),
+      ),
+    );
+    nav.currentState!.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const FormExitGuard(
+          dirty: true,
+          busy: false,
+          child: Scaffold(body: Text('Unposted form')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await nav.currentState!.maybePop();
+    await tester.pumpAndSettle();
+    // §5: the kit's dialog, a red main action, focus on the safe choice.
+    expect(find.text('Discard your changes?'), findsOneWidget);
+    final discard = tester.widget<AppButton>(
+      find.widgetWithText(AppButton, 'Discard changes'),
+    );
+    expect(discard.variant, AppButtonVariant.destructive);
+    final keep = find.widgetWithText(AppButton, 'Keep editing');
+    expect(tester.widget<AppButton>(keep).autofocus, isTrue);
+    await tester.tap(find.text('Discard changes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -10,6 +10,7 @@ import 'package:salapiya/finance/card_data.dart';
 import 'package:salapiya/finance/planning_cards.dart';
 import 'package:salapiya/finance/planning_data.dart';
 import 'package:salapiya/app/overview_demo.dart';
+import 'package:salapiya/finance/money_data.dart' show moneyActivity;
 import 'package:salapiya/prototype/scenarios.dart';
 import 'package:salapiya/design_system/kit/kit.dart';
 import 'package:salapiya/design_system/theme.dart';
@@ -315,6 +316,22 @@ void main() {
           'Your largest spending category this month is Food.',
         ],
       );
+      // Hidden amounts leave the amounts out of the sentences.
+      expect(
+        overviewInsights(
+          week: week,
+          comparison: null,
+          categories: [('Food', BigInt.from(100))],
+          budgets: const [],
+          amount: (_) => 'Amount hidden',
+          hidden: true,
+        ),
+        [
+          '1 payment is overdue.',
+          '2 payments are due by Sunday.',
+          'Your largest spending category this month is Food.',
+        ],
+      );
     });
   });
 
@@ -607,6 +624,13 @@ void main() {
     );
     expect(pill('Settled'), findsOneWidget);
     expect(find.text('All 3 payments logged'), findsOneWidget);
+    // The pill sits on the name’s line, not under it.
+    expect(
+      (tester.getCenter(pill('Settled')).dy -
+              tester.getCenter(find.text(debt.title)).dy)
+          .abs(),
+      lessThan(Space.sm),
+    );
     final bar = tester.widget<SegmentBar>(find.byType(SegmentBar));
     expect((bar.done, bar.total), (3, 3));
     await pump(
@@ -622,6 +646,8 @@ void main() {
       expect(changeBasisPoints(BigInt.from(90), BigInt.from(100)), -1000);
       expect(changeBasisPoints(BigInt.from(1), BigInt.from(3)), -6666);
       expect(changeBasisPoints(BigInt.one, BigInt.zero), isNull);
+      // Nothing then and nothing now is no change, not "New".
+      expect(changeBasisPoints(BigInt.zero, BigInt.zero), 0);
       expect(percentLabel(-6666), '66.6%');
       expect(percentLabel(42), '0.4%');
       expect(shareBasisPoints(BigInt.one, BigInt.from(3)), 3333);
@@ -1101,6 +1127,45 @@ void main() {
           findsOneWidget,
         );
       }
+    });
+
+    testWidgets('activity lists close by saying how many more there are', (
+      tester,
+    ) async {
+      final session = PrototypeSession();
+      addTearDown(session.dispose);
+      await show(
+        tester,
+        session,
+        platform: TargetPlatform.windows,
+        width: 1440,
+      );
+      ListEnd end(String card) => tester.widget<ListEnd>(
+        find.descendant(
+          of: find.byKey(ValueKey(card)),
+          matching: find.byType(ListEnd),
+        ),
+      );
+      // The same count Money's Activity gives, five of them shown here.
+      final today = civilToday();
+      final sample = demoSample(today);
+      final logged = moneyActivity(
+        sample,
+        (id) =>
+            sample.categories.where((c) => c.id == id).firstOrNull?.name ??
+            '',
+      ).where((r) => r.date.compareTo(today) <= 0).length;
+      expect(
+        end('overview-recent').label,
+        '${logged - 5} more in Activity',
+      );
+      expect(end('overview-recent').onPressed, isNotNull);
+      await tester.tap(find.byKey(const ValueKey(OverviewTab.spending)));
+      await tester.pump();
+      expect(
+        end('overview-largest').label,
+        matches(r'^\d+ more expenses? in Activity$'),
+      );
     });
 
     testWidgets('hidden amounts, an incomplete download and an empty profile', (

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../connected/financial_contract.dart';
 import '../local/finance_domain.dart';
 import '../local/local_store.dart' show defaultLocalCategories;
+import '../finance/money_data.dart' show moneyActivity;
 import '../finance/money_demo.dart';
 import '../life/life_cards.dart' show nextUpRow;
 import '../life/life_controller.dart' show lifeAgendaItems, sortedAgenda;
@@ -1033,6 +1034,11 @@ OverviewSource demoOverviewSource(
           ],
     life: life,
     lifeMore: agenda.length > 3 ? agenda.length - 3 : 0,
+    // Every row Money's Activity holds through today, so both say the same.
+    activityCount: moneyActivity(
+      s,
+      name,
+    ).where((r) => r.date.compareTo(today) <= 0).length,
     recent: [
       for (final r in recent.take(10))
         (

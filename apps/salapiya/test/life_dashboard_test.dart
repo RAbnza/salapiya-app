@@ -125,6 +125,9 @@ void main() {
         expect(find.text('Your first download isn’t finished'), findsOneWidget);
         expect(find.text('Not available yet'), findsWidgets);
         expect(find.textContaining('₱'), findsNothing);
+        // The tiles can't count, so the header doesn't either.
+        expect(find.byKey(const ValueKey('life-pill')), findsNothing);
+        expect(find.textContaining('this week'), findsNothing);
         clean(tester, 'incomplete $platform $width');
 
         session.select(OverviewScenario.empty);

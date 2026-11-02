@@ -327,7 +327,6 @@ mixin LifeFormSteps<T extends StatefulWidget> on State<T>, FormInputs<T> {
       await keep();
       if (draftFailed) throw StateError('Draft not saved');
     },
-    discardDraft: unknown ? null : discard,
     child: CompactForm(
       child: SectionPage(
         title: title,

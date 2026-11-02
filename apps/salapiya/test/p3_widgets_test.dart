@@ -105,7 +105,8 @@ void main() {
                   {
                     'id': invitation,
                     'op': 'invite',
-                    'at': '2026-10-26T00:00:00Z',
+                    // Invitations stay open for seven days, so it's sent today.
+                    'at': '${civilToday()}T00:00:00Z',
                   },
                 ],
               });

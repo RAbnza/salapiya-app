@@ -470,11 +470,11 @@ List<(String, BigInt)> dailyIncome(LocalSnapshot s, String from, String to) => [
 ];
 
 /// The change from [previous] to [current] in whole basis points of
-/// [previous], rounded toward zero. Null when [previous] is zero, which has
-/// no percentage.
+/// [previous], rounded toward zero. Zero to zero is no change. Null when only
+/// [previous] is zero, which has no percentage.
 int? changeBasisPoints(BigInt current, BigInt previous) =>
     previous == BigInt.zero
-    ? null
+    ? (current == BigInt.zero ? 0 : null)
     : ((current - previous) * BigInt.from(10000) ~/ previous.abs()).toInt();
 
 /// [part] of [whole] in whole basis points, rounded down; null for a zero or
@@ -539,24 +539,27 @@ List<(LocalRevision, BigInt)> largestExpenses(
 }
 
 /// O12: short plain sentences from the values above. [amount] is the
-/// session's formatter, so hidden amounts stay hidden.
+/// session's formatter. With [hidden], the sentences leave their amounts out
+/// rather than say "Amount hidden" in the middle of one.
 List<String> overviewInsights({
   required OverviewDues week,
   required SpendingComparison? comparison,
   required List<(String, BigInt)> categories,
   required List<BudgetProgress> budgets,
   required String Function(BigInt) amount,
+  bool hidden = false,
 }) {
   String count(int n, String one, String many) => n == 1 ? one : many;
+  String total(BigInt value) => hidden ? '' : ', ${amount(value)} in total';
   final overBudget = budgets.where((b) => b.overLimit).length;
   final top = categories.where((c) => c.$2 > BigInt.zero).firstOrNull;
   return [
     if (week.overdue.isNotEmpty)
-      '${week.overdue.length} ${count(week.overdue.length, 'payment is', 'payments are')} overdue, ${amount(week.overdueTotal)} in total.',
+      '${week.overdue.length} ${count(week.overdue.length, 'payment is', 'payments are')} overdue${total(week.overdueTotal)}.',
     if (week.upcoming.isNotEmpty)
-      '${week.upcoming.length} ${count(week.upcoming.length, 'payment is', 'payments are')} due by Sunday, ${amount(week.upcomingTotal)} in total.',
+      '${week.upcoming.length} ${count(week.upcoming.length, 'payment is', 'payments are')} due by Sunday${total(week.upcomingTotal)}.',
     if (comparison != null && comparison.difference != BigInt.zero)
-      'You have spent ${amount(comparison.difference.abs())} ${comparison.difference > BigInt.zero ? 'more' : 'less'} than by this day last month.',
+      'You have spent ${hidden ? '' : '${amount(comparison.difference.abs())} '}${comparison.difference > BigInt.zero ? 'more' : 'less'} than by this day last month.',
     if (top != null) 'Your largest spending category this month is ${top.$1}.',
     if (overBudget > 0)
       '$overBudget ${count(overBudget, 'budget is', 'budgets are')} over the limit.',

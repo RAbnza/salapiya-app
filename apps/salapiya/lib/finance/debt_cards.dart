@@ -134,7 +134,7 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(d.debt.title, style: text.titleSmall),
+        DebtProgressCard.titleLine(d, text.titleSmall),
         if (lender.isNotEmpty)
           Text(lender, style: text.bodySmall?.copyWith(color: c.secondary)),
       ],
@@ -153,15 +153,7 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
       money: [widget.amount(d.outstanding)],
       action: log,
       cells: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            name,
-            const SizedBox(height: Space.xs),
-            DebtProgressCard.pill(d),
-          ],
-        ),
+        name,
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -189,11 +181,6 @@ class _YourDebtsCardState extends State<YourDebtsCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   LabelAmount(label: name, amount: owed),
-                  const SizedBox(height: Space.xs),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: DebtProgressCard.pill(d),
-                  ),
                   const SizedBox(height: Space.sm),
                   ...progress(d),
                 ],
