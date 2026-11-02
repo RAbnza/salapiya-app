@@ -179,7 +179,7 @@ An unknown or mixed environment refuses to connect and stays usable offline. Sig
 - [x] Private release `0.6.1+8` (29 October 2026)
 - [x] Debt payment scheduling and urgency
 - [x] Full UI redesign and design system, released as `0.7.0` (3 November 2026)
-- [ ] Next major update: new features and changes built on the design system
+- [ ] Next major update, 0.8: recurring budgets, groceries and meals, groups as a shared space, and Android polish ([plan](docs/UPDATE_0.8_PLAN.md))
 - [ ] Trusted Windows code signing and a wider range of tested phones
 
 Known limitations of the current release (unsigned Windows installer, attachments kept on the device, no store distribution) are listed in [accepted limitations](docs/OPERATIONS_AND_RELEASE.md#accepted-limitations). The full timeline is in [Development history](docs/DEVELOPMENT_HISTORY.md).
@@ -194,6 +194,7 @@ Known limitations of the current release (unsigned Windows installer, attachment
 - [Operations and release](docs/OPERATIONS_AND_RELEASE.md), including [native development setup](docs/OPERATIONS_AND_RELEASE.md#salapiya-native-development-foundation) and [testing](docs/OPERATIONS_AND_RELEASE.md#verification)
 - [Development history](docs/DEVELOPMENT_HISTORY.md)
 - [Architecture decision records](docs/adr/)
+- [0.8 update plan](docs/UPDATE_0.8_PLAN.md) (in progress)
 
 ## Contributing
 
